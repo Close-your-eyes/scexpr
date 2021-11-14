@@ -10,7 +10,7 @@
 #' @param file_path path to a position-sorted bam file; index file (.bai) has to be in the same directory
 #' @param genomic_ranges GRanges object with n genomic ranges
 #' @param add_flags a named list of columns to add; each element must have n elements (length of genomic_ranges)
-#' @param add_tags tags to extract from bam file, passed to Rsamtools::ScanBamParam()
+#' @param add_tags tags to extract from bam file, passed to Rsamtools::ScanBamParam(); character(0) for nothing; missing tags do not seem to matter
 #' @param read_scores calculate read scores from PhredQuality
 #' @param revcomp_minus_strand calculate reverse complement of reads on minus strand
 #'
@@ -21,7 +21,7 @@
 reads_from_bam <- function(file_path,
                            genomic_ranges,
                            add_tags = c("CR", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
-                           add_flags = NA,
+                           add_flags = NULL,
                            read_scores = T,
                            revcomp_minus_strand = T) {
 
@@ -35,7 +35,7 @@ reads_from_bam <- function(file_path,
   params <- Rsamtools::ScanBamParam(which = genomic_ranges, what = Rsamtools::scanBamWhat(), tag = add_tags) # ... #reverseComplement = FALSE --> all seqs refer to the (+)Strand, reads are (-)Strand are provided as rev.comp
   reads <- Rsamtools::scanBam(file_path, param = params)
 
-  if (!all(is.na(add_flags))) {
+  if (!is.null(add_flags)) {
     for (k in 1:length(reads)) {
       for (p in 1:length(add_flags)) {
         reads[[k]][[names(add_flags)[p]]] <- add_flags[[p]][k]
@@ -58,7 +58,7 @@ reads_from_bam <- function(file_path,
       temp[,i] <- reads[[x]][["tag"]][[i]]
     }
 
-    if (!all(is.na(add_flags))) {
+    if (is.null(add_flags)) {
       for (k in 1:length(reads)) {
         for (p in 1:length(add_flags)) {
           temp[,names(add_flags)[p]] <- add_flags[[p]][x]
@@ -70,9 +70,9 @@ reads_from_bam <- function(file_path,
 
   if (read_scores) {
     print("Calculating read score.")
-    reads$minQual <- min(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"))
-    reads$meanQual <- mean(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"))
-    reads$n_belowQ30 <- sum(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList") < 30)
+    reads$minQual <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), min)
+    reads$meanQual <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), mean)
+    reads$n_belowQ30 <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), function(x) sum(x < 30))
   }
 
   if (revcomp_minus_strand) {
