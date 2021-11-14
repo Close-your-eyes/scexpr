@@ -14,3 +14,6 @@ Imports:
     stringr,
     tidyr,
     xml2
+Suggests: 
+    Biostrings,
+    Rsamtools

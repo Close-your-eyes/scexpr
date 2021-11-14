@@ -7,7 +7,7 @@
 hla_df_from_xml(file_path, lapply_fun = lapply, ...)
 }
 \arguments{
-\item{file_path}{xml file path}
+\item{file_path}{path to the xml file, may be in zipped format}
 
 \item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 
