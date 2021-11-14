@@ -36,8 +36,8 @@ reads_from_bam <- function(file_path,
   reads <- Rsamtools::scanBam(file_path, param = params)
 
   if (!is.null(add_flags)) {
-    for (k in 1:length(reads)) {
-      for (p in 1:length(add_flags)) {
+    for (k in seq_along(reads)) {
+      for (p in seq_along(add_flags)) {
         reads[[k]][[names(add_flags)[p]]] <- add_flags[[p]][k]
         names(add_flags[[p]]) <- names(reads)
       }
@@ -58,9 +58,9 @@ reads_from_bam <- function(file_path,
       temp[,i] <- reads[[x]][["tag"]][[i]]
     }
 
-    if (is.null(add_flags)) {
-      for (k in 1:length(reads)) {
-        for (p in 1:length(add_flags)) {
+    if (!is.null(add_flags)) {
+      for (k in seq_along(reads)) {
+        for (p in seq_along(add_flags)) {
           temp[,names(add_flags)[p]] <- add_flags[[p]][x]
         }
       }
@@ -79,6 +79,8 @@ reads_from_bam <- function(file_path,
     print ("Calculating reverse-complement of reads on minus strand.")
     reads[which(reads$strand == "-"),"seq"] <- as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(reads[which(reads$strand == "-"),"seq"])))
   }
+
+  reads$end <- reads$start + reads$length
 
   return(reads)
 }
