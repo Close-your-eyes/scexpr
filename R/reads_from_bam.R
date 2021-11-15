@@ -32,7 +32,7 @@ reads_from_bam <- function(file_path,
   }
 
   print ("Reading BAM file.")
-  params <- Rsamtools::ScanBamParam(which = genomic_ranges, what = Rsamtools::scanBamWhat(), tag = add_tags) # ... #reverseComplement = FALSE --> all seqs refer to the (+)Strand, reads are (-)Strand are provided as rev.comp
+  params <- Rsamtools::ScanBamParam(which = genomic_ranges, what = Rsamtools::scanBamWhat(), tag = add_tags, reverseComplement = revcomp_minus_strand) # ... #reverseComplement = FALSE --> all seqs refer to the (+)Strand, reads are (-)Strand are provided as rev.comp
   reads <- Rsamtools::scanBam(file_path, param = params)
 
   if (!is.null(add_flags)) {
@@ -73,11 +73,6 @@ reads_from_bam <- function(file_path,
     reads$minQual <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), min)
     reads$meanQual <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), mean)
     reads$n_belowQ30 <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), function(x) sum(x < 30))
-  }
-
-  if (revcomp_minus_strand) {
-    print ("Calculating reverse-complement of reads on minus strand.")
-    reads[which(reads$strand == "-"),"seq"] <- as.character(Biostrings::reverseComplement(Biostrings::DNAStringSet(reads[which(reads$strand == "-"),"seq"])))
   }
 
   reads$end <- reads$start + reads$length
