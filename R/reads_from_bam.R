@@ -1,6 +1,9 @@
 #' Get reads from a bam file
 #'
-#' to do
+#' This is basically a wrapper around Rsamtools::ScanBamParam and Rsamtools::scanBam. The output from scanBam is processed to a data frame and additional columns
+#' are attached. Providing an exact range has been found to not always work as expected. E.g. there were reads in chr6 outside the exonic regions of HLA-A
+#' that could be mapped to HLA-A. This may be an individual problem of the underlying BAM file (mapping). In order to not miss any relevant reads, one may pass
+#' a wider genomic range for reads to return (e.g. whole chr6 if HLA loci are of interest, see example).
 #'
 #' Read scores: https://support.illumina.com/help/BaseSpace_OLH_009008/Content/Source/Informatics/BS/QualityScoreEncoding_swBS.htm
 #' CellRanger tags: Cell barcode (CR), Cell barcode read quality (CY), Alignment score (AS), UMI (UR),
@@ -16,10 +19,42 @@
 #' @param lapply_fun function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
-#' @return a data frame with flagged (annotated) reads
+#' @return a data frame of reads
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # genomic range over whole chromosome 6
+#' chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 1, end = 536870912))
+#'
+#' # alternatively multiple regions of HLA-A exons; these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
+#' hlaa <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
+#' ranges = IRanges::IRanges(
+#' start = c(29910247, 29910534, 29911045, 29911899, 29912277, 29912836, 29913011, 29913228),
+#' end = c(29910403, 29910803, 29911320, 29912174, 29912393, 29912868, 29913058, 29913661)))
+#'
+#' reads_raw_6 <- scexpr::reads_from_bam(file_path = "my_bam_path",
+#' genomic_ranges = chr6,
+#' lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores())
+#'
+#' # passing multiple regions may return reads twice or multiple times
+#' # if these reads overlap two or more of the regions (see ?scanBam and ?ScanBamParam)
+#' reads_raw_hlaa <- scexpr::reads_from_bam(file_path = "my_bam_path",
+#' genomic_ranges = hlaa,
+#' lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
+#' add_flags = list(exon = c(1:8), gene = rep("A", 8)))
+#'
+#' # filter and process reads
+#' reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27),]
+#' reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3),]
+#' # filter duplicate reads; if additional flags like exons have been passed these columns will prevent dplyr::distinct from filtering
+#' reads_raw_6 <- dplyr::distinct(reads_raw_6, start, seq, .keep_all = T)
+#' # only reads with
+#' reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""), function(x) !x %in% c("C", "G", "T", "A"), simplify = F), any)),] # how to with Biostrings?
+#' # readNames were found to be not unique in any case (same name for reads with different start and different seq)
+#' reads_raw_6$readName <- make.unique(reads_raw_6$readName)
+#'
+#' }
 reads_from_bam <- function(file_path,
                            genomic_ranges,
                            add_tags = c("CR", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
@@ -76,12 +111,12 @@ reads_from_bam <- function(file_path,
 
   if (read_scores) {
     print("Calculating read score.")
-    reads$minQual <- unlist(lapply_fun(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), min, ...))
-    reads$meanQual <- unlist(lapply_fun(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), mean, ...))
-    reads$n_belowQ30 <- unlist(lapply_fun(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), function(x) sum(x < 30), ...))
+    tl <- as.list(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"))
+    reads$minQual <- unlist(lapply_fun(tl, min, ...))
+    reads$meanQual <- unlist(lapply_fun(tl, mean, ...))
+    reads$n_belowQ30 <- unlist(lapply_fun(tl, function(x) sum(x < 30), ...))
   }
-
-  reads$end <- reads$start + reads$length
 
   return(reads)
 }
+

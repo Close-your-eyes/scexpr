@@ -1,15 +1,16 @@
 #' Prepare a data frame from a xml file containing hla allele information
 #'
 #' The xml file required for this function may be downloaded from the GitHub repository of the IMGT/HLA organization:
-#' https://github.com/ANHIG/IMGTHLA/blob/Latest/xml/hla.xml.zip. The function then creates a datafrema from this xml
-#' which can be used subsequently to match reads of HLA-loci from bulk or single cell RNA seq.
+#' https://github.com/ANHIG/IMGTHLA/blob/Latest/xml/hla.xml.zip. The function then creates a dataframe from this xml
+#' which can be used subsequently to match reads of HLA-loci from bulk or single cell RNA seq. By default the sequence
+#' of the 2nd + 3rd exon are returned in an extra column as these will most likely be used to infer the HLA type in case of MHC-I.
 #'
 #' HLA nomenclature: http://hla.alleles.org/nomenclature/naming.html
 #'
 #' @param file_path path to the xml file, may be in zipped format
 #' @param lapply_fun function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
 #' @param replace_none_pg replace "None" in p_group and g_group with allele_protein and allele_coding, respectively
-#' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
+#' @param ... additional argument to the lapply function; e.g. mc.cores may be passed when parallel::mclapply is chosen above
 #'
 #' @return a data frame
 #' @export
