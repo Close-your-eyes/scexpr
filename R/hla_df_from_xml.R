@@ -8,6 +8,7 @@
 #'
 #' @param file_path path to the xml file, may be in zipped format
 #' @param lapply_fun function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
+#' @param replace_none_pg replace "None" in p_group and g_group with allele_protein and allele_coding, respectively
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
 #' @return a data frame
@@ -18,7 +19,7 @@
 #' hla_df_from_xml(file_path = "path/hla.xml", lapply_fun = parallel::mclapply,
 #' mc.cores = parallel::detectCores())
 #' }
-hla_df_from_xml <- function(file_path, lapply_fun = lapply, ...) {
+hla_df_from_xml <- function(file_path, lapply_fun = lapply, replace_none_pg = T, ...) {
 
   if (grepl("zip$", file_path)) {
     utils::unzip(file_path, exdir = tempdir())
@@ -40,14 +41,20 @@ hla_df_from_xml <- function(file_path, lapply_fun = lapply, ...) {
   df$prefix <- substr(df$allele, 1,3)
   df$gene <- stringr::str_sub(stringr::str_extract(df$allele, "-.{1,}\\*"), 2, -2)
   df$gene[which(is.na(df$gene))] <- substr(gsub("-", "", df$allele[which(is.na(df$gene))]), 4,4) # for MIC
+
   df$allele_coding <- gsub(":[[:digit:]]{2}[[:alpha:]]{0,}$", "", df$allele)
   df$allele_coding <- gsub("MIC", "", gsub("HLA-", "", df$allele_coding))
-  df$allele_protein <- gsub(":[[:digit:]]{2}[[:alpha:]]{0,}$", "", df$allele_coding)
-  df$allele_group <- gsub(":[[:digit:]]{2}[[:alpha:]]{0,}$", "", df$allele_protein)
+  df$allele_group <- sapply(strsplit(df$allele_coding, ":"), "[", 1)
+  df$allele_protein <- paste0(df$allele_group, ":", sapply(strsplit(df$allele_coding, ":"), "[", 2))
   df$seq_length <- nchar(df$seq)
 
   df$seq_Exon2_3 <- substr(df$seq, as.numeric(sapply(strsplit(df$Exon2, "_"), "[", 1)), as.numeric(sapply(strsplit(df$Exon3, "_"), "[", 2)))
   df$seq_Exon2_3_length <- nchar(df$seq_Exon2_3)
+
+  if (replace_none_pg) {
+    df$g_group <- ifelse(df$g_group == "None", df$allele_coding, df$g_group)
+    df$p_group <- ifelse(df$p_group == "None", df$allele_protein, df$p_group)
+  }
 
   return(df)
 }

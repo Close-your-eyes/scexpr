@@ -12,7 +12,9 @@
 #' @param add_flags a named list of columns to add; each element must have n elements (length of genomic_ranges)
 #' @param add_tags tags to extract from bam file, passed to Rsamtools::ScanBamParam(); character(0) for nothing; missing tags do not seem to matter
 #' @param read_scores calculate read scores from PhredQuality
-#' @param revcomp_minus_strand calculate reverse complement of reads on minus strand
+#' @param revcomp_minus_strand calculate reverse complement of reads on minus strand; passed to reverseComplement of Rsamtools::ScanBamParam
+#' @param lapply_fun function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
+#' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
 #' @return a data frame with flagged (annotated) reads
 #' @export
@@ -23,7 +25,11 @@ reads_from_bam <- function(file_path,
                            add_tags = c("CR", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
                            add_flags = NULL,
                            read_scores = T,
-                           revcomp_minus_strand = T) {
+                           revcomp_minus_strand = T,
+                           lapply_fun = lapply,
+                           ...) {
+
+  lapply_fun <- match.fun(lapply_fun)
 
   if (!missing(add_flags)) {
     if (any(length(genomic_ranges) != sapply(add_flags, length))) {
@@ -70,9 +76,9 @@ reads_from_bam <- function(file_path,
 
   if (read_scores) {
     print("Calculating read score.")
-    reads$minQual <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), min)
-    reads$meanQual <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), mean)
-    reads$n_belowQ30 <- sapply(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), function(x) sum(x < 30))
+    reads$minQual <- unlist(lapply_fun(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), min, ...))
+    reads$meanQual <- unlist(lapply_fun(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), mean, ...))
+    reads$n_belowQ30 <- unlist(lapply_fun(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"), function(x) sum(x < 30), ...))
   }
 
   reads$end <- reads$start + reads$length
