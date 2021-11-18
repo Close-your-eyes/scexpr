@@ -24,8 +24,8 @@
 #'
 #' @examples
 #' \dontrun{
-#' # genomic range over whole chromosome 6
-#' chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 1, end = 536870912))
+#' # genomic range over part of chromosome 6 (or whole)
+#' chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 29000000, end = 35000000)) # IRanges::IRanges(start = 1, end = 536870912))
 #'
 #' # alternatively multiple regions of HLA-A exons; these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
 #' hlaa <- GenomicRanges::GRanges(seqnames = "6", strand = "+",

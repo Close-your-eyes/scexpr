@@ -180,14 +180,15 @@ hla_typing <- function(hla_ref,
 
   pairwise.plot <- cowplot::plot_grid(rank.plot.p1, rank.plot.p2, rank.read.plot, ncol = 1, align = "v", rel_heights = c(height.1,height.2,height.3))
 
-  return(list(top_single_res = top_single_res_df,
-              top_pairwise_res = top_pairwise_results_df,
-              top_pairwise_res_for_plotting = top_pairwise_results_df.plot,
+  return(list(top_single_res_df = top_single_res_df,
+              top_single_res_matrix = top_single_res,
+              top_pairwise_res_df = top_pairwise_results_df,
+              top_pairwise_res_for_plotting_df = top_pairwise_results_df.plot,
               top_single_res_plot = single.plot,
               top_pairwise_res_plot = pairwise.plot,
-              rank.plot.p1 = rank.plot.p1,
-              rank.plot.p2 = rank.plot.p2,
-              rank.read.plot = rank.read.plot))
+              rank_plot_p1 = rank.plot.p1,
+              rank_plot_p2 = rank.plot.p2,
+              rank_read_plot = rank.read.plot))
 }
 
 reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
