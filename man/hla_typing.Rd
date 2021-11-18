@@ -2,21 +2,63 @@
 % Please edit documentation in R/hla_typing.R
 \name{hla_typing}
 \alias{hla_typing}
-\title{Title}
+\title{Align reads from (sc)RNAseq to known HLA reference alleles and infer the HLA type}
 \usage{
 hla_typing(
   hla_ref,
   reads,
-  diff_allele_hits_single_results = 5,
-  lapply_fun = lapply
+  allele_diff = 5,
+  top_n_pairwise_results = 50,
+  hla_seq_colName = "seq_Exon2_3",
+  read_seq_colName = "seq",
+  hla_allele_colName = "allele",
+  read_name_colName = "readName",
+  p_group_colName = "p_group",
+  g_group_colName = "g_group",
+  lapply_fun = lapply,
+  ...
 )
 }
 \arguments{
-\item{lapply_fun}{}
+\item{hla_ref}{a data frame preferentially prepared with scexpr::hla_df_from_xml}
+
+\item{reads}{a data frame preferentially prepared with scexpr::reads_from_bam}
+
+\item{allele_diff}{maximum allowed difference (factor) of read abundances between two alleles;
+e.g. if highest abundant HLA-A allele 1 has 20 matched reads and diff_allele_hits_single_results = 5, then other alleles need to have
+at least 4 (=20/5) matched reads to be considered in the subsequent pairwise matching. In other words, what is the maximum expected/allowed
+expression difference of alleles HLA-A from father and HLA-A from mother. Intended to speed up the subsequent pairwise matching.}
+
+\item{top_n_pairwise_results}{top ranks of unique_explained_reads_rank and total_explained_reads_rank of pairwise matches used for plotting}
+
+\item{hla_seq_colName}{column name of hla sequences in hla_ref}
+
+\item{read_seq_colName}{column name read sequences in reads}
+
+\item{hla_allele_colName}{column name of allele names in hla_ref}
+
+\item{read_name_colName}{column name of read names in reads}
+
+\item{p_group_colName}{column name of p_group in hla_ref}
+
+\item{g_group_colName}{column name of g_group in hla_ref}
+
+\item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
+
+\item{...}{additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen}
 }
 \value{
-
+list of data frames and ggplot2 objects
 }
 \description{
-Title
+This function tries to infer the HLA type by plotting the number of matching reads. Inspection of output-plots is seen as an alternative to statistical analysis.
+Please provide data (read and hla_ref) for only one gene at a time, e.g. only HLA-A or HLA-B or HLA-C. Run the function sequentially for every single gene.
+Not every allele-combination is easily inferred. Results may vary with respect to persuasiveness. It is assumed that inferring the p-group is sufficient. Also deeper typing becomes uncertain.
+The results of pairwise matches are hence plotted by p-groups.
+}
+\details{
+Reads are checked for perfect matches (hits) in all provided hla reference alleles (or a sub-sequence of them, e.g. only exon 2 and 3 which are subject to highest variation).
+For every hla allele the number of hits are counted - the allele can 'explain' a number of reads. This is done for every allele on its own.
+Then pairwise combinations of alleles are checked for the number of reads that they explain redundantly (double_explained_reads) or uniquely (uniquely_explained_reads) and in total (total_explained_reads).
+The allele-combinations with the highest ranks (combination of total_explained_reads and uniquely_explained_reads) likely reflect the cells' HLA type.
 }

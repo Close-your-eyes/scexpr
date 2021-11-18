@@ -3,3 +3,4 @@
 export(hla_df_from_xml)
 export(hla_typing)
 export(reads_from_bam)
+importFrom(magrittr,"%>%")

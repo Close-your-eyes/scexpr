@@ -27,7 +27,9 @@
 #' @param g_group_colName column name of g_group in hla_ref
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
-#' @return
+#'@importFrom magrittr %>%
+#'
+#' @return list of data frames and ggplot2 objects
 #' @export
 #'
 #' @examples
@@ -123,7 +125,7 @@ hla_typing <- function(hla_ref,
     ggplot2::xlab("allele") +
     ggplot2::ylab("n explained reads") +
     ggplot2::theme_bw() +
-    ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), panel.grid.minor = element_blank(), strip.background = element_rect(fill = "white"), panel.grid.major.x = element_blank(), text=element_text(family = "Courier")) +
+    ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
     ggplot2::facet_wrap(ggplot2::vars(allele_group), scales = "free_x")
 
   rank.plot.p1 <- ggplot2::ggplot(top_pairwise_results_df.plot, ggplot2::aes(x = as.factor(row.number.rank), y = stats::reorder(p_group.1, row.number.rank), fill = plot.color)) +
@@ -131,21 +133,21 @@ hla_typing <- function(hla_ref,
     ggplot2::ylab("p group 1") +
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pairwise_results_df), 10)) +
     ggplot2::theme_bw() +
-    ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "none", panel.grid.minor = element_blank(), panel.grid.major.x = element_blank(), text=element_text(family = "Courier"))
+    ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "none", panel.grid.minor = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier"))
 
   rank.plot.p2 <- ggplot2::ggplot(top_pairwise_results_df.plot, ggplot2::aes(x = as.factor(row.number.rank), y = stats::reorder(p_group.2, row.number.rank), fill = plot.color)) +
     ggplot2::geom_point(size = 2, shape = 21) +
     ggplot2::ylab("p group 2") +
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pairwise_results_df), 10)) +
     ggplot2::theme_bw() +
-    ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "none", panel.grid.minor = element_blank(), panel.grid.major.x = element_blank(), text=element_text(family = "Courier"))
+    ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "none", panel.grid.minor = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier"))
 
   rank.read.plot <- ggplot2::ggplot(top_pairwise_results_df.plot, ggplot2::aes(x = as.factor(row.number.rank), y = total_explained_reads, fill = plot.color)) +
     ggplot2::geom_point(size = 2, shape = 21) +
     ggplot2::xlab("rank") +
     ggplot2::ylab("total explained reads") +
     ggplot2::theme_bw() +
-    ggplot2::theme(legend.position = "none", panel.grid.minor = element_blank(), panel.grid.major.x = element_blank(), text=element_text(family = "Courier")) +
+    ggplot2::theme(legend.position = "none", panel.grid.minor = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pairwise_results_df), 10))
 
   n_Hit <- as.numeric(levels(as.factor(top_pairwise_results_df.plot$n_Hit)))
