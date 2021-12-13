@@ -28,7 +28,7 @@ reads_from_bam(
 
 \item{revcomp_minus_strand}{calculate reverse complement of reads on minus strand; passed to reverseComplement of Rsamtools::ScanBamParam}
 
-\item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
+\item{lapply_fun}{lapply function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 
 \item{...}{additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen}
 }
@@ -49,8 +49,8 @@ Region type (E = exonic, N = intronic, I = intergenic) (RE)
 }
 \examples{
 \dontrun{
-# genomic range over whole chromosome 6
-chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 1, end = 536870912))
+# genomic range over part of chromosome 6 (or whole)
+chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 29000000, end = 35000000)) # IRanges::IRanges(start = 1, end = 536870912))
 
 # alternatively multiple regions of HLA-A exons; these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
 hlaa <- GenomicRanges::GRanges(seqnames = "6", strand = "+",

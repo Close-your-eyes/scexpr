@@ -27,7 +27,7 @@
 #' @param g_group_colName column name of g_group in hla_ref
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
-#'@importFrom magrittr %>%
+#' @importFrom magrittr %>%
 #'
 #' @return list of data frames and ggplot2 objects
 #' @export
