@@ -28,24 +28,39 @@ col_pal <- function(name) {
 
   tt <- c("grey65", "darkgoldenrod1", "cornflowerblue", "forestgreen", "tomato2", "mediumpurple3", "turquoise3", "lightgreen", "navy", "red4",
           "plum1", "tan4", "khaki1", "cadetblue2", "olivedrab1", "orange", "purple4", "yellowgreen", "violetred3", "rosybrown3", "aquamarine3",
-          "grey35", "lavender", "bisque", "mintcream", "yellow", "lightyellow2", "grey10")
+          "grey35", "lavender", "bisque", "mintcream", "yellow", "lightyellow2", "grey10", "blue", "green", "magenta", "blueviolet")
+
+  tt <- tt <- c("grey65", "darkgoldenrod1", "cornflowerblue", "forestgreen", "tomato2", "mediumpurple3", "blue", "green", "magenta")
 show_col(tt)
 
   install.packages("schemr")
   library(schemr)
-  install.packages("ColorNameR")
-  library(ColorNameR)
 
   r_color <- colors()
-  r_color <- r_color[which(!grepl("^grey|^gray", r_color))]
   out <- as.data.frame(schemr::rgb_to_lab(t(col2rgb(r_color))))
   rownames(out) <- r_color
 
-  euclidean <- function(x, mat) {
-    sqrt(sum((as.numeric(mat[as.character(x[[1]]),]) - as.numeric(mat[x[2],]))^2))
-  }
-  table <- data.frame(dist = unlist(pbapply::pblapply(combn(r_color[1:100], 2, simplify = F), mat = out, euclidean)))
+  r_color <- r_color[which(!grepl("^grey|^gray|black|white", r_color))]
 
+
+  euclidean <- function(x, mat) {
+    sqrt(sum((as.numeric(mat[x[1],]) - as.numeric(mat[x[2],]))^2))
+  }
+  euclidean2 <- function(x, mat) {
+    sqrt(sum((as.numeric(mat[x[1,1],]) - as.numeric(mat[x[1,2],]))^2))
+  }
+
+  ## make this a loop
+
+  # find max distant color
+  res <- dplyr::bind_rows(pbapply::pblapply(split(expand.grid(setdiff(r_color, tt), tt, stringsAsFactors=F), 1:nrow(expand.grid(setdiff(r_color, tt), tt))), function(x) {
+    data.frame(dist = euclidean2(x, mat = out), col1 = x[1,1], col2 = x[1,2])
+  }))
+  # min dist - best measure?!
+  res2 <- res %>% dplyr::group_by(col1) %>% summarise(mean_dist = mean(dist), min_dist = min(dist))
+
+  # distance matrix
+  table <- data.frame(dist = unlist(pbapply::pblapply(combn(r_color[1:100], 2, simplify = F), mat = out, euclidean)))
   table$col1 <- sapply(combn(r_color[1:100], 2, simplify = F), "[", 1)
   table$col2 <- sapply(combn(r_color[1:100], 2, simplify = F), "[", 2)
   library(tidyverse)
