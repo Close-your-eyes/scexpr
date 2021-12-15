@@ -10,15 +10,20 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Imports: 
+    colorRamps,
     cowplot,
     dplyr,
     ggplot2,
     magrittr,
     Matrix,
     methods,
+    RColorBrewer,
     stringr,
     tibble,
     tidyr,
+    viridis,
+    viridisLite,
+    wesanderson,
     xml2
 Suggests: 
     Biostrings,
