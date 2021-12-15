@@ -4,7 +4,7 @@
 #' Moreover three custom palettes: "custom", "dutch" and "spanish".
 #'
 #' See availalbe pallettes:
-#' c(ls("package:viridisLite"), ls("package:colorRamps"), rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish")
+#' c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)], rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish")
 #'
 #' @param name name of the palette
 #' @param n number of colors to return; may not work for every palette
@@ -24,8 +24,8 @@ col_pal <- function(name = "custom",
 
 
   scl <- NULL
-  if (any(grepl(name, c(ls("package:viridisLite"), ls("package:colorRamps")), ignore.case = T))) {
-    colfun <- match.fun(grep(name, c(ls("package:viridisLite"), ls("package:colorRamps")), ignore.case = T, value = T))
+  if (any(grepl(name, c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)]), ignore.case = T))) {
+    colfun <- match.fun(grep(name, c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)]), ignore.case = T, value = T))
     scl <- colfun(n)
   }
 
