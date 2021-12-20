@@ -24,6 +24,8 @@ col_pal <- function(name = "custom",
 
 
   scl <- NULL
+  library(viridisLite)
+  library(colorRamps)
   if (any(grepl(name, c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)]), ignore.case = T))) {
     colfun <- match.fun(grep(name, c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)]), ignore.case = T, value = T))
     scl <- colfun(n)
