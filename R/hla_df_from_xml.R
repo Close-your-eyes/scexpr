@@ -20,7 +20,9 @@
 #' hla_df_from_xml(file_path = "path/hla.xml", lapply_fun = parallel::mclapply,
 #' mc.cores = parallel::detectCores())
 #' }
-hla_df_from_xml <- function(file_path, lapply_fun = lapply, replace_none_pg = T, ...) {
+hla_df_from_xml <- function(file_path,
+                            lapply_fun = lapply,
+                            replace_none_pg = T, ...) {
 
   if (grepl("zip$", file_path)) {
     utils::unzip(file_path, exdir = tempdir())

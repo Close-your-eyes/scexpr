@@ -4,16 +4,27 @@
 \alias{col_pal}
 \title{Color palettes}
 \usage{
-col_pal(name)
+col_pal(name = "custom", n = 100, nbrew = NULL, reverse = F)
 }
 \arguments{
 \item{name}{name of the palette}
+
+\item{n}{number of colors to return; may not work for every palette}
+
+\item{nbrew}{number of color from brewer palettes}
+
+\item{reverse}{reverse the palette}
 }
 \value{
-a color palette
+a color palette as character vector
 }
 \description{
-Color palettes
+Common function to get color palettes from different packages. Provided are palettes from viridisLite, colorRamps, wesanderson and RColorBrewer.
+Moreover three custom palettes: "custom", "dutch" and "spanish".
+}
+\details{
+See availalbe pallettes:
+c(rev(ls("package:viridisLite"))\link{-c(1:2)}, rev(ls("package:colorRamps"))\link{-c(2:3)}, rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish")
 }
 \examples{
 \dontrun{

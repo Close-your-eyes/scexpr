@@ -10,14 +10,17 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Imports: 
+    BiocManager,
     colorRamps,
     cowplot,
     dplyr,
     ggplot2,
+    harmony,
     magrittr,
     Matrix,
     methods,
     RColorBrewer,
+    Seurat,
     stringr,
     tibble,
     tidyr,
