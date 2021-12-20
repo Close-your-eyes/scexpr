@@ -67,6 +67,10 @@ reads_from_bam <- function(file_path,
   if (!requireNamespace("Biostrings", quietly = T)){
     BiocManager::install("Biostrings")
   }
+  if (!requireNamespace("Rsamtools", quietly = T)){
+    BiocManager::install("Rsamtools")
+  }
+
 
   lapply_fun <- match.fun(lapply_fun)
 
