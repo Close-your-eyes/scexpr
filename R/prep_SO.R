@@ -28,7 +28,7 @@
 #' @param ... additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 #' Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 #' Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
-#' prefix respective arguments by the function to pass it to, e.g. RunHarmony__theta or RunTSNE__theta
+#' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -89,7 +89,7 @@ prep_SO <- function(SO_unprocessed,
   }
 
   if (batch_corr == "harmony" && !any(grepl("RunHarmony__group.by.vars", names(mydots)))) {
-    stop(paste0("Please provide one or more group.by.vars (RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
+    stop(paste0("Please provide one or more group.by.vars from meta.data (with prefix: RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
   }
 
   if (downsample > 1 && downsample < min_cells) {
@@ -181,17 +181,19 @@ prep_SO <- function(SO_unprocessed,
       k.filter <- as.integer(min(200, min(sapply(SO.list, ncol))/2))
       k.score <- as.integer(min(30, min(sapply(SO.list, ncol))/6))
       if (normalization == "SCT") {
-        dots <- mydots[which(grepl("^PrepSCTIntegration__", names(mydots), ignore.case = T))]
-        names(dots) <- gsub("^PrepSCTIntegration__", "", names(dots), ignore.case = T)
-        SO.list <- do.call(Seurat::PrepSCTIntegration, args = c(list(object.list = SO.list, verbose = F), dots))
+'        dots <- mydots[which(grepl("^PrepSCTIntegration__", names(mydots), ignore.case = T))]
+        names(dots) <- gsub("^PrepSCTIntegration__", "", names(dots), ignore.case = T)'
+        #SO.list <- do.call(Seurat::PrepSCTIntegration, args = c(list(object.list = SO.list, verbose = F), dots))
+        SO.list <- Seurat::PrepSCTIntegration(object.list = SO.list, verbose = F, ...)
       }
-      dots <- mydots[which(grepl("^FindIntegrationAnchors__", names(mydots), ignore.case = T))]
-      names(dots) <- gsub("^FindIntegrationAnchors__", "", names(dots), ignore.case = T)
-      anchorset <- do.call(Seurat::FindIntegrationAnchors, args = c(list(object.list = SO.list, dims = 1:nintdims, normalization.method = normalization, reference = ref_sample, k.filter = k.filter, k.score = k.score, reduction = integr_reduction), dots))
-
-      dots <- mydots[which(grepl("^IntegrateData__", names(mydots), ignore.case = T))]
-      names(dots) <- gsub("^IntegrateData__", "", names(dots), ignore.case = T)
-      SO <- do.call(Seurat::IntegrateData, args = c(list(anchorset = anchorset, dims = 1:nintdims, normalization.method = normalization, features.to.integrate = rownames(Seurat::GetAssayData(SO.list[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"))), k.weight = k.filter), dots))
+'      dots <- mydots[which(grepl("^FindIntegrationAnchors__", names(mydots), ignore.case = T))]
+      names(dots) <- gsub("^FindIntegrationAnchors__", "", names(dots), ignore.case = T)'
+      #anchorset <- do.call(Seurat::FindIntegrationAnchors, args = c(list(object.list = SO.list, dims = 1:nintdims, normalization.method = normalization, reference = ref_sample, k.filter = k.filter, k.score = k.score, reduction = integr_reduction), dots))
+      anchorset <- Seurat::FindIntegrationAnchors(object.list = SO.list, dims = 1:nintdims, normalization.method = normalization, reference = ref_sample, k.filter = k.filter, k.score = k.score, reduction = integr_reduction, ...)
+'      dots <- mydots[which(grepl("^IntegrateData__", names(mydots), ignore.case = T))]
+      names(dots) <- gsub("^IntegrateData__", "", names(dots), ignore.case = T)'
+      #SO <- do.call(Seurat::IntegrateData, args = c(list(anchorset = anchorset, dims = 1:nintdims, normalization.method = normalization, features.to.integrate = rownames(Seurat::GetAssayData(SO.list[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"))), k.weight = k.filter), dots))
+      SO <- Seurat::IntegrateData(anchorset = anchorset, dims = 1:nintdims, normalization.method = normalization, features.to.integrate = rownames(Seurat::GetAssayData(SO.list[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"))), k.weight = k.filter, ...)
       Seurat::DefaultAssay(SO) <- "integrated"
 
       if (normalization == "SCT") {
@@ -208,22 +210,28 @@ prep_SO <- function(SO_unprocessed,
 
   red <- switch(batch_corr, harmony = "harmony", integration = "pca", regression = "pca", none = "pca")
   if (any(grepl("umap", reductions, ignore.case = T))) {
-    dots <- mydots[which(grepl("^RunUMAP__", names(mydots), ignore.case = T))]
-    names(dots) <- gsub("^RunUMAP__", "", names(dots), ignore.case = T)
-    SO <- do.call(Seurat::RunUMAP, args = c(list(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T), dots))
+'    dots <- mydots[which(grepl("^RunUMAP__", names(mydots), ignore.case = T))]
+    names(dots) <- gsub("^RunUMAP__", "", names(dots), ignore.case = T)'
+    SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, ...)
+    #SO <- do.call(Seurat::RunUMAP, args = c(list(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T), dots))
   }
   if (any(grepl("tsne", reductions, ignore.case = T))) {
-    dots <- mydots[which(grepl("^RunTSNE__", names(mydots), ignore.case = T))]
-    names(dots) <- gsub("^RunTSNE__", "", names(dots), ignore.case = T)
-    SO <- do.call(Seurat::RunTSNE, args = c(list(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0), dots))
+'    dots <- mydots[which(grepl("^RunTSNE__", names(mydots), ignore.case = T))]
+    names(dots) <- gsub("^RunTSNE__", "", names(dots), ignore.case = T)'
+    SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0, ...)
+    #SO <- do.call(Seurat::RunTSNE, args = c(list(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0), dots))
   }
-  dots <- mydots[which(grepl("^FindNeighbors__", names(mydots), ignore.case = T))]
-  names(dots) <- gsub("^FindNeighbors__", "", names(dots), ignore.case = T)
-  SO <- do.call(Seurat::FindNeighbors, args = c(list(object = SO, reduction = red, dims = 1:npcs), dots))
 
-  dots <- mydots[which(grepl("^FindClusters__", names(mydots), ignore.case = T))]
-  names(dots) <- gsub("^FindClusters__", "", names(dots), ignore.case = T)
-  SO <- do.call(Seurat::FindClusters, args = c(list(object = SO, resolution = cluster_resolutions), dots))
+
+'  dots <- mydots[which(grepl("^FindNeighbors__", names(mydots), ignore.case = T))]
+  names(dots) <- gsub("^FindNeighbors__", "", names(dots), ignore.case = T)'
+  SO <- Seurat::FindNeighbors(object = SO, reduction = red, dims = 1:npcs, ...)
+  #SO <- do.call(Seurat::FindNeighbors, args = c(list(object = SO, reduction = red, dims = 1:npcs), dots))
+
+'  dots <- mydots[which(grepl("^FindClusters__", names(mydots), ignore.case = T))]
+  names(dots) <- gsub("^FindClusters__", "", names(dots), ignore.case = T)'
+  SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, ...)
+  #SO <- do.call(Seurat::FindClusters, args = c(list(object = SO, resolution = cluster_resolutions), dots))
 
   dir.create(save_path, showWarnings = F, recursive = T)
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
