@@ -99,6 +99,11 @@ prep_SO <- function(SO_unprocessed,
 
   if (missing(samples)) {
     samples <- names(SO.list)
+  } else {
+    if (any(!samples %in% names(SO.list))) {
+      print(paste0("samples not found in SO_unprocessed: ", samples[which(!samples %in% names(SO.list))]))
+    }
+
   }
   samples <- names(SO.list)[which(grepl(paste(samples, collapse = "|"), names(SO.list)))]
   SO.list <- SO.list[which(names(SO.list) %in% samples)]
@@ -144,7 +149,7 @@ prep_SO <- function(SO_unprocessed,
     if (normalization == "SCT") {
       SO <- Seurat::NormalizeData(SO, verbose = F)
       SO <- Seurat::ScaleData(SO)
-      SO <- Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = F)
+      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = F))
     } else if (normalization == "LogNormalize") {
       SO <- Seurat::NormalizeData(SO, verbose = F)
       SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = F)
@@ -160,7 +165,7 @@ prep_SO <- function(SO_unprocessed,
         print("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")
       }
       if (normalization == "SCT") {
-        SO <- Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = F)
+        SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = F))
       } else if (normalization == "LogNormalize") {
         SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = F), selection.method = "vst", nfeatures = nhvf, verbose = F), vars.to.regress = vars.to.regress)
       }
