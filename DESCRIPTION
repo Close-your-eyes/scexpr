@@ -10,7 +10,6 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Imports: 
-    AnnotationDbi,
     BiocManager,
     colorRamps,
     cowplot,
@@ -19,7 +18,6 @@ Imports:
     ggplot2,
     ggrepel,
     harmony,
-    limma,
     magrittr,
     Matrix,
     methods,
@@ -35,6 +33,8 @@ Imports:
     xml2
 Suggests: 
     presto,
+    limma,
+    AnnotationDbi,
     Biostrings,
     Rsamtools,
     org.Hs.eg.db,
