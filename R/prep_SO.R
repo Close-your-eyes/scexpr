@@ -208,6 +208,9 @@ prep_SO <- function(SO_unprocessed,
     }
   }
 
+  ### do.call on large SeuratObject became super slow, not praticable!
+
+
   red <- switch(batch_corr, harmony = "harmony", integration = "pca", regression = "pca", none = "pca")
   if (any(grepl("umap", reductions, ignore.case = T))) {
 '    dots <- mydots[which(grepl("^RunUMAP__", names(mydots), ignore.case = T))]
