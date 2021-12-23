@@ -38,7 +38,7 @@
 #' }
 prep_SO <- function(SO_unprocessed,
                     samples,
-                    cells,
+                    cells = NULL,
                     min_cells = 50,
                     downsample = 1,
                     export_prefix = NULL,
@@ -103,10 +103,19 @@ prep_SO <- function(SO_unprocessed,
   samples <- names(SO.list)[which(grepl(paste(samples, collapse = "|"), names(SO.list)))]
   SO.list <- SO.list[which(names(SO.list) %in% samples)]
 
-  if (!missing(cells)) {
+  if (!is.null(cells)) {
     SO.list <- lapply(SO.list, function (x) {
-      subset(x, cells = Seurat::Cells(x)[which(Seurat::Cells(x) %in% cells)])
+      inds <- which(Seurat::Cells(x) %in% cells)
+      if (length(inds) == 0) {
+        return(NULL)
+      }
+      return(subset(x, cells = Seurat::Cells(x)[which(Seurat::Cells(x) %in% cells)]))
     })
+  }
+  print(paste0("No cells found for: ", paste(names(SO.list)[which(sapply(SO.list, is.null))], collapse = ", ")))
+  SO.list <- SO.list[which(!sapply(SO.list, is.null))]
+  if (length(SO.list) == 0) {
+    stop("No Seurat objects left after filtering for cells.")
   }
 
   if (downsample < 1) {
