@@ -112,10 +112,12 @@ prep_SO <- function(SO_unprocessed,
       return(subset(x, cells = Seurat::Cells(x)[which(Seurat::Cells(x) %in% cells)]))
     })
   }
-  print(paste0("No cells found for: ", paste(names(SO.list)[which(sapply(SO.list, is.null))], collapse = ", ")))
-  SO.list <- SO.list[which(!sapply(SO.list, is.null))]
-  if (length(SO.list) == 0) {
-    stop("No Seurat objects left after filtering for cells.")
+  if (any(sapply(SO.list, is.null))) {
+    print(paste0("No cells found for: ", paste(names(SO.list)[which(sapply(SO.list, is.null))], collapse = ", ")))
+    SO.list <- SO.list[which(!sapply(SO.list, is.null))]
+    if (length(SO.list) == 0) {
+      stop("No Seurat objects left after filtering for cells.")
+    }
   }
 
   if (downsample < 1) {
@@ -123,15 +125,18 @@ prep_SO <- function(SO_unprocessed,
   } else if (downsample > 1) {
     SO.list <- lapply(SO.list, function (x) subset(x, cells = sample(Seurat::Cells(x), downsample, replace = FALSE)))
   }
-
+  Seurat::Cells(SO.list[[2]])
   # remove samples with insufficient number of cells
   rm.nm <- names(SO.list[which(sapply(SO.list, function(x){length(Seurat::Cells(x)) < min_cells}))])
   if (length(rm.nm) > 0) {
     SO.list <- SO.list[which(!names(SO.list) %in% rm.nm)]
-    print(paste0("samples removed: ", paste(rm.nm, collapse = ",")))
+    print(paste0("samples removed due to min.cells: ", paste(rm.nm, collapse = ",")))
   }
 
-  print(paste0("Samples included (", length(samples), "): ", paste(samples, collapse=", ")))
+  print(paste0("Samples included (", length(SO.list), "): ", paste(names(SO.list), collapse=", ")))
+  if (length(SO.list) == 1) {
+    batch_corr <- "none"
+  }
 
   # cases:
   if (length(SO.list) == 1) {
@@ -139,7 +144,7 @@ prep_SO <- function(SO_unprocessed,
     if (normalization == "SCT") {
       SO <- Seurat::NormalizeData(SO, verbose = F)
       SO <- Seurat::ScaleData(SO)
-      SO <- Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress)
+      SO <- Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = F)
     } else if (normalization == "LogNormalize") {
       SO <- Seurat::NormalizeData(SO, verbose = F)
       SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = F)
@@ -155,7 +160,7 @@ prep_SO <- function(SO_unprocessed,
         print("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")
       }
       if (normalization == "SCT") {
-        SO <- Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed)
+        SO <- Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = F)
       } else if (normalization == "LogNormalize") {
         SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = F), selection.method = "vst", nfeatures = nhvf, verbose = F), vars.to.regress = vars.to.regress)
       }
@@ -197,12 +202,12 @@ prep_SO <- function(SO_unprocessed,
   }
 
   red <- switch(batch_corr, harmony = "harmony", integration = "pca", regression = "pca", none = "pca")
-  if (grepl("umap", reductions, ignore.case = T)) {
+  if (any(grepl("umap", reductions, ignore.case = T))) {
     dots <- mydots[which(grepl("^RunUMAP__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^RunUMAP__", "", names(dots), ignore.case = T)
     SO <- do.call(Seurat::RunUMAP, args = c(list(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T), dots))
   }
-  if (grepl("tsne", reductions, ignore.case = T)) {
+  if (any(grepl("tsne", reductions, ignore.case = T))) {
     dots <- mydots[which(grepl("^RunTSNE__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^RunTSNE__", "", names(dots), ignore.case = T)
     SO <- do.call(Seurat::RunTSNE, args = c(list(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0), dots))
