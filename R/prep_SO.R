@@ -130,7 +130,7 @@ prep_SO <- function(SO_unprocessed,
   } else if (downsample > 1) {
     SO.list <- lapply(SO.list, function (x) subset(x, cells = sample(Seurat::Cells(x), downsample, replace = FALSE)))
   }
-  Seurat::Cells(SO.list[[2]])
+
   # remove samples with insufficient number of cells
   rm.nm <- names(SO.list[which(sapply(SO.list, function(x){length(Seurat::Cells(x)) < min_cells}))])
   if (length(rm.nm) > 0) {
@@ -169,7 +169,7 @@ prep_SO <- function(SO_unprocessed,
       } else if (normalization == "LogNormalize") {
         SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = F), selection.method = "vst", nfeatures = nhvf, verbose = F), vars.to.regress = vars.to.regress)
       }
-      SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T)
+      SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
     }
     if (batch_corr == "harmony") {
       dots <- mydots[which(grepl("^RunHarmony__", names(mydots), ignore.case = T))]
@@ -195,13 +195,13 @@ prep_SO <- function(SO_unprocessed,
       Seurat::DefaultAssay(SO) <- "integrated"
 
       if (normalization == "SCT") {
-        SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T)
+        SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
         SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
       }
       if (normalization == "LogNormalize") {
         SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
         SO <- Seurat::ScaleData(SO)
-        SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T)
+        SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
       }
     }
   }
