@@ -14,7 +14,7 @@ prep_SO(
   cluster_resolutions = 0.8,
   reductions = c("tsne", "umap"),
   nhvf = 800,
-  npcs = 40,
+  npcs = 20,
   nintdims = 30,
   normalization = c("SCT", "LogNormalize"),
   batch_corr = c("harmony", "integration", "regression", "none"),
@@ -70,10 +70,11 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
-Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData}
+Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
+prefix respective arguments by the function to pass it to, e.g. RunHarmony__theta or RunTSNE__theta}
 }
 \value{
-
+Seurat Object, as R object and saved to disk as rds file
 }
 \description{
 Prepare a somewhat standardized Seurat Object for further analyses
