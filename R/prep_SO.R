@@ -88,8 +88,8 @@ prep_SO <- function(SO_unprocessed,
     stop("SO_unprocessed has no names.")
   }
 
-  if (batch_corr == "harmony" && !grepl("unHarmony__group.by.vars", names(mydots))) {
-    stop(paste0("Please provide one or more group.by.vars for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
+  if (batch_corr == "harmony" && !grepl("RunHarmony__group.by.vars", names(mydots))) {
+    stop(paste0("Please provide one or more group.by.vars (RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
   }
 
   if (downsample > 1 && downsample < min_cells) {
