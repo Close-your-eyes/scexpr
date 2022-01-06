@@ -108,7 +108,7 @@ feature_plot <- function(SO,
                          col.excluded.cells = "#ededed",
                          col.non.expresser = "#cfcfcf",
                          col.pal.rev = F,
-                         theme = NULL, #theme_bw(),
+                         theme = NULL, #theme_bw(), #### 2021 01 05 change that
                          plot.axis.labels = F,
                          plot.panel.grid = F,
                          title.font.size = 14,
@@ -136,7 +136,7 @@ feature_plot <- function(SO,
   if (!class(features) %in% c("factor", "character")) {stop("Please provide a character vector for features.")}
   if (!is.null(ncol.combine) && !is.null(nrow.combine)) {stop("Please only select one, ncol.combine or nrow.combine.")}
   if (length(dims) != 2 | class(dims) != "numeric") {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
-  assay <- match.arg(assay, c("SCT", "RNA"))
+  assay <- match.arg(assay, c("RNA", "SCT"))
   if (!is.list(SO)) {SO <- list(SO)}
   if (is.null(names(SO))) {names(SO) <- as.character(seq_along(SO))}
   if (length(features) == 1) {combine <- F}
@@ -161,13 +161,13 @@ feature_plot <- function(SO,
     return(x)
   })
 
-  if (!is.null(split.by) && length(check.features(SO, split.by, rownames = F)) == 0) {stop("split.by not found in all objects.")}
-  if (!is.null(shape.by) && length(check.features(SO, shape.by, rownames = F)) == 0) {stop("shape.by not found in all objects.")}
+  if (!is.null(split.by) && length(.check.features(SO, split.by, rownames = F)) == 0) {stop("split.by not found in all objects.")}
+  if (!is.null(shape.by) && length(.check.features(SO, shape.by, rownames = F)) == 0) {stop("shape.by not found in all objects.")}
 
   # removing features which could not be found
-  features <- check.features(SO, unique(features))
-  if (!is.null(cutoff.feature) && length(check.features(SO, cutoff.feature)) == 0) {stop("cutoff.feature not found in every SO.")}
-  if (!is.null(exclusion.feature) && length(check.features(SO, exclusion.feature)) == 0) {stop("exclusion.feature not found in every SO.")}
+  features <- .check.features(SO, unique(features))
+  if (!is.null(cutoff.feature) && length(.check.features(SO, cutoff.feature)) == 0) {stop("cutoff.feature not found in every SO.")}
+  if (!is.null(exclusion.feature) && length(.check.features(SO, exclusion.feature)) == 0) {stop("exclusion.feature not found in every SO.")}
 
   if (length(cutoff.feature) != length(cutoff.expression) && length(cutoff.expression) != 1) {stop("Unequal lengths of cutoff.feature and cutoff.expression.")}
   if (length(cutoff.expression) == 1) {cutoff.expression <- rep(cutoff.expression, length(cutoff.feature))}
@@ -358,7 +358,7 @@ feature_plot <- function(SO,
         data.frame(split.by = b, SO.split = c, freq.expr.by.split.by.SO = freqs[1], freq.expr.by.split = freqs[2], freq.expr.by.SO = freqs[3], freq.expr = freqs[4], xmin = xrng[1], xmax = xrng[2], ymin = yrng[1], ymax = yrng[2])
       }))
 
-      aliases.list <- check.aliases(x, feature.aliases, data)
+      aliases.list <- .check.aliases(x, feature.aliases, data)
       x <- aliases.list[[1]]
       data <- aliases.list[[2]]
 
@@ -384,7 +384,7 @@ feature_plot <- function(SO,
         label = "freq.expr"
       }
       if (plot.freq.of.expr.annotation) {
-        plot <- plot + geom_text_repel(data = freqs, size = annotation.font.size, aes(label = !!sym(label), x = xmin + abs(xmin - xmax) * annotation.position[1], y = ymin + abs(ymin - ymax) * annotation.position[2]))
+        plot <- plot + ggrepel::geom_text_repel(data = freqs, size = annotation.font.size, aes(label = !!sym(label), x = xmin + abs(xmin - xmax) * annotation.position[1], y = ymin + abs(ymin - ymax) * annotation.position[2]))
       }
 
       plot.colourbar <- !binary.expr
@@ -406,7 +406,7 @@ feature_plot <- function(SO,
       freqs <- NULL
 
       # feature alias
-      aliases.list <- check.aliases(x, feature.aliases, data)
+      aliases.list <- .check.aliases(x, feature.aliases, data)
       x <- aliases.list[[1]]
       data <- aliases.list[[2]]
 
@@ -625,11 +625,84 @@ feature_plot <- function(SO,
   return(plots)
 }
 
-check.aliases <- function(x, feature.aliases, data) {
+.check.aliases <- function(x, feature.aliases, data) {
   if (!is.null(feature.aliases) && x %in% names(feature.aliases)) {
     print(paste0(x, " changed to ", as.character(feature.aliases[which(names(feature.aliases) == x)])))
     names(data)[1] <- as.character(feature.aliases[which(names(feature.aliases) == x)])
     x <- names(data)[1]
   }
   return(list(x, data))
+}
+
+
+.check.features <- function(SO, features, rownames = T, meta.data = T) {
+  hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
+    if (ignore.case) {
+      sapply(features, function(x) {
+        max(sapply(SO, function(y) {
+          if (rownames & !meta.data) {
+            length(which(tolower(x) == tolower(rownames(y))))
+          } else if (!rownames & meta.data) {
+            length(which(tolower(x) == tolower(names(y@meta.data))))
+          } else if (rownames & meta.data) {
+            length(which(tolower(x) == c(tolower(rownames(y)), tolower(names(y@meta.data)))))
+          }
+        }))
+      })
+    } else {
+      sapply(features, function(x) {
+        max(sapply(SO, function(y) {
+          if (rownames & !meta.data) {
+            length(which(x == rownames(y)))
+          } else if (!rownames & meta.data) {
+            length(which(x == names(y@meta.data)))
+          } else if (rownames & meta.data) {
+            length(which(x == c(rownames(y), names(y@meta.data))))
+          }
+        }))
+      })
+    }
+
+  }
+  feat.check <- function(SO, features, rownames, meta.data, ignore.case) {
+    unlist(lapply(features, function(x) {
+      Reduce(intersect, lapply(SO, function(y) {
+        if (rownames & !meta.data) {
+          search <- rownames(y)
+        } else if (!rownames & meta.data) {
+          search <- names(y@meta.data)
+        } else if (rownames & meta.data) {
+          search <- c(names(y@meta.data), rownames(y))
+        }
+        grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
+      }))
+    }))
+  }
+
+  if (is.null(features)) {return(NULL)}
+  if (!is.vector(features)) {stop("Features must be a vector of strings.")}
+  if (!rownames && !meta.data) {stop("Dont be stupid, rownnames = F and meta.data = F ?!")}
+  if (!is.list(SO)) {SO <- list(SO)}
+  features <- unique(features)
+
+  features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
+  if (length(features.out) == 0) {stop("No features has not been found in every SO. No features left to plot.")}
+  hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
+  if (any(hits > 1)) {
+    print(paste0(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered."))
+    features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
+    if (length(features.out) == 0) {stop("No features has not been found in every SO. No features left to plot.")}
+    hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
+    if (any(hits > 1)) {
+      stop(paste0(paste(names(hits)[which(hits > 1)], collapse = ","), " still found more than once in at least one SO when not ignoring case. Please fix this (check rownames and meta.data)."))
+    } else {
+      ignore.case <- F
+    }
+  } else {
+    ignore.case <- T
+  }
+
+  if (length(features.out) < length(features)) {print(paste0("Features not found in every SO: ", paste(setdiff(features, features.out), collapse = ",")))}
+  if (length(features.out) > length(features)) {stop("More features after check.features than before?!")}
+  return(features.out)
 }
