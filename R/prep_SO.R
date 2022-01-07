@@ -153,18 +153,19 @@ prep_SO <- function(SO_unprocessed,
   if (length(SO.list) == 1) {
     SO <- SO.list[[1]]
     if (normalization == "SCT") {
-      SO <- Seurat::NormalizeData(SO, verbose = F)
-      SO <- Seurat::ScaleData(SO)
-      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = F))
+      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = F, assay = "RNA"))
+      SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
+      SO <- Seurat::ScaleData(SO, assay = "RNA")
     } else if (normalization == "LogNormalize") {
-      SO <- Seurat::NormalizeData(SO, verbose = F)
-      SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = F)
-      SO <- Seurat::ScaleData(SO)
+      SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
+      SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = F, assay = "RNA")
+      SO <- Seurat::ScaleData(SO, assay = "RNA")
     }
     SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
   }
 
   if (length(SO.list) > 1) {
+    ## 3 cases
     if (batch_corr %in% c("regression", "none", "harmony")) {
       SO <- merge(x = SO.list[[1]], y = SO.list[2:length(SO.list)], merge.data = TRUE)
       if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
@@ -173,15 +174,20 @@ prep_SO <- function(SO_unprocessed,
       }
       if (normalization == "SCT") {
         SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = F))
+        SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
+        SO <- Seurat::ScaleData(SO, assay = "RNA")
       } else if (normalization == "LogNormalize") {
         SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = F), selection.method = "vst", nfeatures = nhvf, verbose = F), vars.to.regress = vars.to.regress)
       }
       SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
     }
+
     if (batch_corr == "harmony") {
       dots <- mydots[which(grepl("^RunHarmony__", names(mydots), ignore.case = T))]
       names(dots) <- gsub("^RunHarmony__", "", names(dots), ignore.case = T)
       SO <- do.call(harmony::RunHarmony, args = c(list(object = SO, assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), reference_values = ref_sample), dots))
+      SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
+      SO <- Seurat::ScaleData(SO, assay = "RNA")
     }
 
     if (batch_corr == "integration") {
@@ -213,6 +219,7 @@ prep_SO <- function(SO_unprocessed,
         SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
       }
     }
+
   }
 
   ### do.call on large SeuratObject became super slow, not praticable!
