@@ -37,7 +37,7 @@
 #' \dontrun{
 #' }
 prep_SO <- function(SO_unprocessed,
-                    samples,
+                    samples = NULL,
                     cells = NULL,
                     min_cells = 50,
                     downsample = 1,
@@ -103,7 +103,7 @@ prep_SO <- function(SO_unprocessed,
     downsample <- min_cells
   }
 
-  if (missing(samples)) {
+  if (is.null(samples)) {
     samples <- names(SO.list)
   } else {
     if (any(!samples %in% names(SO.list))) {
@@ -161,6 +161,7 @@ prep_SO <- function(SO_unprocessed,
       SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = F)
       SO <- Seurat::ScaleData(SO)
     }
+    SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
   }
 
   if (length(SO.list) > 1) {
