@@ -84,11 +84,17 @@ prep_SO <- function(SO_unprocessed,
          make it a list of length 1.")
   }
 
+  if (class(SO.list) == "Seurat") {
+    # if only one Seurat object is provided
+    SO.list <- list(SO.list)
+    names(SO.list) <- "sample"
+  }
+
   if (is.null(names(SO.list))) {
     stop("SO_unprocessed has no names.")
   }
 
-  if (batch_corr == "harmony" && !any(grepl("RunHarmony__group.by.vars", names(mydots)))) {
+  if (length(SO.list) > 1 && batch_corr == "harmony" && !any(grepl("RunHarmony__group.by.vars", names(mydots)))) {
     stop(paste0("Please provide one or more group.by.vars from meta.data (with prefix: RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
   }
 
