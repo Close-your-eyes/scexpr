@@ -222,8 +222,10 @@ prep_SO <- function(SO_unprocessed,
 
   }
 
-  ### do.call on large SeuratObject became super slow, not praticable!
+  ### do.call on large SeuratObject became super slow, not practicable!
 
+  # DietSeurat here? Somehow SOs become very large if NormalizeData and ScaleData have been calculated on the RNA assay. - Test that.
+  # if DietSeurat is conducted after DimReduction, Information on the DimReduction may be lost?!
 
   red <- switch(batch_corr, harmony = "harmony", integration = "pca", regression = "pca", none = "pca")
   if (any(grepl("umap", reductions, ignore.case = T))) {
