@@ -250,10 +250,10 @@ prep_SO <- function(SO_unprocessed,
   SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, ...)
   #SO <- do.call(Seurat::FindClusters, args = c(list(object = SO, resolution = cluster_resolutions), dots))
 
+  # SO <- Seurat::DietSeurat(SO, scale.data = T, assays = names(SO@assays), dimreducs = names(SO@reductions))
   dir.create(save_path, showWarnings = F, recursive = T)
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
-  save_path <- file.path(save_path, paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_"))
-  saveRDS(SO, compress = T, file = save_path)
+  saveRDS(SO, compress = T, file = file.path(save_path, paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")))
   print(paste0("SO saved to: ", save_path))
 
   return(SO)
