@@ -37,6 +37,10 @@ col_pal <- function(name = "custom",
 
   if (any(grepl(name, rownames(RColorBrewer::brewer.pal.info), ignore.case = T))) {
     name <- grep(name, rownames(RColorBrewer::brewer.pal.info), ignore.case = T, value = T)
+    if (name == "spectral") {
+      # needed so often, counter-intuitive be default
+      reverse <- !reverse
+    }
     if (is.null(nbrew) || nbrew > RColorBrewer::brewer.pal.info[name, "maxcolors"]) {
       nbrew <- RColorBrewer::brewer.pal.info[name, "maxcolors"]
     }
