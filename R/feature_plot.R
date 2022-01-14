@@ -327,21 +327,33 @@ feature_plot <- function(SO,
     }
 
     # theme_get()[["text"]][["family"]]
-    plot <- plot + guides(shape = if (hide.shape.legend) {"none"} else {guide_legend(override.aes = list(size = legend.shape.size))},
-                          colour = if (plot.colourbar) {
-                            ggplot2::guide_colourbar(barwidth = legend.barwidth,
-                                            barheight = legend.barheight,
-                                            label.theme = element_text(size = legend.text.size, family = font.family),
-                                            title.theme = element_text(size = legend.title.text.size, family = font.family),
-                                            title = switch(plot.legend.title, legend.title, NULL))
-                          } else {
-                            ggplot2::guide_legend(override.aes = list(size = legend.col.size),
-                                         nrow = legend.nrow,
-                                         ncol = legend.ncol,
-                                         label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                         title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
-                                         title = switch(plot.legend.title, legend.title, NULL))
-                          })
+    plot <-
+      plot +
+      guides(
+        shape = if (hide.shape.legend) {
+          "none"
+        } else {
+          ggplot2::guide_legend(override.aes = list(size = legend.shape.size),
+                                nrow = legend.nrow,
+                                ncol = legend.ncol,
+                                label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
+                                title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                title = switch(plot.legend.title, legend.title, NULL))
+        },
+        colour = if (plot.colourbar) {
+          ggplot2::guide_colourbar(barwidth = legend.barwidth,
+                                   barheight = legend.barheight,
+                                   label.theme = element_text(size = legend.text.size, family = font.family),
+                                   title.theme = element_text(size = legend.title.text.size, family = font.family),
+                                   title = switch(plot.legend.title, legend.title, NULL))
+        } else {
+          ggplot2::guide_legend(override.aes = list(size = legend.col.size),
+                                nrow = legend.nrow,
+                                ncol = legend.ncol,
+                                label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
+                                title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                title = switch(plot.legend.title, legend.title, NULL))
+        })
 
     plot <-
       plot +
