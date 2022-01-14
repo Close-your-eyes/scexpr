@@ -162,13 +162,14 @@ feature_plot <- function(SO,
     SO.split <- NULL
   }
 
-  # neccessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
-  shape.by <- tryCatch(sym(shape.by), error = function (e) NULL)
-
 
   plots <- lapply(features, function(x) {
 
     data <- .get.data(SO = SO, assay = assay, cells = cells, split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order, binary.expr = binary.expr)
+
+    # neccessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
+    # make it after .get.data
+    shape.by <- tryCatch(sym(shape.by), error = function (e) NULL)
 
     # generate legend labels
     if (is.numeric(data[,1])) {
@@ -680,6 +681,9 @@ feature_plot <- function(SO,
       data[,"split.by"] <- y@meta.data[,split.by]
     }
     if (!is.null(shape.by)) {
+      if (!is.character(shape.by)) {
+        shape.by <- as.character(shape.by)
+      }
       data[,shape.by] <- as.factor(as.character(y@meta.data[,shape.by]))
     }
     return(data)
