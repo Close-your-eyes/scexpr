@@ -53,13 +53,13 @@
 #' @param plot.legend.title
 #' @param plot.title
 #' @param order.discrete
-#' @param annotation.position
-#' @param annotation.font.size
+#' @param freq.position
+#' @param freq.font.size
 #' @param plot.cutoff.feature.inset
 #' @param inset.position
 #' @param inset.size
 #' @param strip.font.size
-#' @param plot.strip.selection
+#' @param strip.selection
 #' @param ...
 #'
 #' @return
@@ -127,15 +127,15 @@ feature_plot <- function(SO,
                          plot.title = T,
 
                          order.discrete = NULL,
-                         annotation.position = c(-Inf, Inf),
-                         annotation.font.size = 4,
+                         freq.position = c(-Inf, Inf),
+                         freq.font.size = 4,
 
                          plot.cutoff.feature.inset = F,
                          inset.position = c(0.75,0.1),
                          inset.size = c(0.15,0.15),
 
                          strip.font.size = 14,
-                         plot.strip.selection = NA,
+                         strip.selection = NA,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -232,7 +232,7 @@ feature_plot <- function(SO,
         label = "freq.expr"
       }
       if (plot.freq) {
-        plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = annotation.font.size, ggplot2::aes(label = !!sym(label), x = xmin + abs(xmin - xmax) * annotation.position[1], y = ymin + abs(ymin - ymax) * annotation.position[2]))
+        plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = freq.font.size, ggplot2::aes(label = !!sym(label), x = xmin + abs(xmin - xmax) * freq.position[1], y = ymin + abs(ymin - ymax) * freq.position[2]))
       }
 
       plot.colourbar <- !binary.expr
@@ -389,9 +389,9 @@ feature_plot <- function(SO,
 
 
 
-  if (!all(is.na(plot.strip.selection))) {
+  if (!all(is.na(strip.selection))) {
     for (i in 1:length(plots)) {
-      if (!i %in% plot.strip.selection) {
+      if (!i %in% strip.selection) {
         plots[[i]] <- plots[[i]] + theme(strip.text.x = element_blank(), strip.background = element_blank())
       }
     }
