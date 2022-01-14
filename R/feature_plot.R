@@ -48,8 +48,8 @@
 #' @param theme
 #' @param plot.axis.labels
 #' @param plot.panel.grid
-#' @param plot.freq.of.expr.title
-#' @param plot.freq.of.expr.annotation
+#' @param plot.freq.title
+#' @param plot.freq
 #' @param plot.legend.title
 #' @param plot.title
 #' @param order.discrete
@@ -121,8 +121,8 @@ feature_plot <- function(SO,
                          plot.axis.labels = F,
                          plot.panel.grid = F,
 
-                         plot.freq.of.expr.title = T,
-                         plot.freq.of.expr.annotation = T,
+                         plot.freq.title = T,
+                         plot.freq = T,
                          plot.legend.title = F,
                          plot.title = T,
 
@@ -231,7 +231,7 @@ feature_plot <- function(SO,
       } else {
         label = "freq.expr"
       }
-      if (plot.freq.of.expr.annotation) {
+      if (plot.freq) {
         plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = annotation.font.size, ggplot2::aes(label = !!sym(label), x = xmin + abs(xmin - xmax) * annotation.position[1], y = ymin + abs(ymin - ymax) * annotation.position[2]))
       }
 
@@ -294,7 +294,7 @@ feature_plot <- function(SO,
     }
 
     if (plot.title && is.null(title)) {
-      title <- .get.title(exclusion.feature = exclusion.feature, cutoff.feature = cutoff.feature, cutoff.expression = cutoff.expression, freqs = freqs, make.italic = make.italic, plot.freq.of.expr.title = plot.freq.of.expr.title, feature = x)
+      title <- .get.title(exclusion.feature = exclusion.feature, cutoff.feature = cutoff.feature, cutoff.expression = cutoff.expression, freqs = freqs, make.italic = make.italic, plot.freq.title = plot.freq.title, feature = x)
     }
 
     ##### theme and legend #####
@@ -774,7 +774,7 @@ feature_plot <- function(SO,
                        cutoff.expression,
                        freqs,
                        make.italic,
-                       plot.freq.of.expr.title,
+                       plot.freq.title,
                        feature) {
   if (!is.null(exclusion.feature)) {
     exclusion.feature <- paste(exclusion.feature, collapse = "&")
@@ -789,7 +789,7 @@ feature_plot <- function(SO,
   args <- list(x = feature, f = levels(as.factor(freqs$freq.expr)), y = cutoff.feature, z = cutoff.expression, q = exclusion.feature)
   title <-
     if (!is.null(cutoff.feature) && !is.null(exclusion.feature)) {
-      if (plot.freq.of.expr.title && !is.null(freqs)) {
+      if (plot.freq.title && !is.null(freqs)) {
         if (make.italic) {
           substitute(paste(italic(x), " in ", italic(y), ">", z, " & ", italic(q), " = 0", " (", f, ")", sep = ""), args)
         } else {
@@ -803,7 +803,7 @@ feature_plot <- function(SO,
         }
       }
     } else if (!is.null(cutoff.feature)) {
-      if (plot.freq.of.expr.title && !is.null(freqs)) {
+      if (plot.freq.title && !is.null(freqs)) {
         if (make.italic) {
           substitute(paste(italic(x), " in ", italic(y), ">", z, " (", f, ")", sep = ""), args)
         } else {
@@ -817,7 +817,7 @@ feature_plot <- function(SO,
         }
       }
     } else if (!is.null(exclusion.feature)) {
-      if (plot.freq.of.expr.title && !is.null(freqs)) {
+      if (plot.freq.title && !is.null(freqs)) {
         if (make.italic) {
           substitute(paste(italic(x), " in ", italic(q), " = 0", " (", f, ")", sep = ""), args)
         } else {
@@ -831,7 +831,7 @@ feature_plot <- function(SO,
         }
       }
     } else {
-      if (plot.freq.of.expr.title && !is.null(freqs)) {
+      if (plot.freq.title && !is.null(freqs)) {
         if (make.italic) {
           substitute(paste(italic(x), " (", f, ")", sep = ""), args)
         } else {
