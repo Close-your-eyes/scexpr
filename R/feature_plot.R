@@ -27,7 +27,7 @@
 #' @param cutoff.expression
 #' @param exclusion.feature
 #' @param binary.expr
-#' @param colour.expressers
+#' @param col.expresser
 #' @param legend.position
 #' @param legend.title.text.size
 #' @param legend.text.size
@@ -87,16 +87,13 @@ feature_plot <- function(SO,
                          nrow.inner = NULL,
                          ncol.inner = NULL,
                          feature.aliases = NULL,
+                         binary.expr = F,
 
                          title = NULL,
                          title.font.size = 14,
-
                          cutoff.feature = NULL,
                          cutoff.expression = 0,
                          exclusion.feature = NULL,
-
-                         binary.expr = F,
-                         colour.expressers = "tomato2",
 
                          legend.position = "right",
                          legend.title.text.size = 14,
@@ -115,6 +112,7 @@ feature_plot <- function(SO,
                          col.pal.d = "custom",
                          col.excluded.cells = "grey95",
                          col.non.expresser = "grey85",
+                         col.expresser = "tomato2",
                          col.pal.rev = F,
 
                          theme = NULL,
@@ -141,7 +139,7 @@ feature_plot <- function(SO,
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
+
   if (missing(features) || missing(SO)) {stop("Seurat object list or feature vector is missing.")}
   if (!class(features) %in% c("factor", "character")) {stop("Please provide a character vector for features.")}
   if (length(features) == 1) {combine <- F}
@@ -151,10 +149,14 @@ feature_plot <- function(SO,
   if (length(dims) != 2 || class(dims) != "numeric") {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
 
 
+  # duplicative with check in .check.SO
+  #avail_assays <- Reduce(intersect, lapply(SO, function(x) Seurat::Assays(x)))
+  assay <- match.arg(assay, c("RNA", "SCT"))
+
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by,shape.by = shape.by)
   reduction <- .check.reduction(SO = SO, reduction = reduction)
   features <- .check.features(SO = SO, features = unique(features))
-  cells <- .check.and.get.cells(SO = SO,assay = assay,cells = cells,make.cells.unique = make.cells.unique,cutoff.feature = cutoff.feature,cutoff.expression = cutoff.expression,exclusion.feature = exclusion.feature,downsample = downsample)
+  cells <- .check.and.get.cells(SO = SO,assay = assay,cells = cells,make.cells.unique = make.cells.unique,cutoff.feature = cutoff.feature,cutoff.expression = cutoff.expression,exclusion.feature = exclusion.feature,downsample = downsample, make.cells.unique.warning = 1)
 
   if (length(SO) > 1) {
     SO.split <- "SO.split"
@@ -422,12 +424,16 @@ feature_plot <- function(SO,
                       assay,
                       split.by,
                       shape.by) {
-
   if (!is.list(SO)) {
     SO <- list(SO)
   }
   if (is.null(names(SO))) {
+    print("List of SO has no names. Naming them by numbers.")
     names(SO) <- as.character(seq_along(SO))
+  }
+
+  if (!any(unlist(lapply(SO, class)) == "Seurat")) {
+    stop("All SO have to Seurat objects (class == Seurat).")
   }
 
   if (!is.null(split.by) && length(.check.features(SO, split.by, rownames = F)) == 0) {
@@ -438,7 +444,7 @@ feature_plot <- function(SO,
   }
 
   SO <- lapply(SO, function(x) {
-    if (!assay %in% Assays(x)) {
+    if (!assay %in% Seurat::Assays(x)) {
       stop("Assay not found in every SO.")
     }
     DefaultAssay(x) <- assay
@@ -481,7 +487,8 @@ feature_plot <- function(SO,
                                   cutoff.expression,
                                   exclusion.feature,
                                   assay,
-                                  downsample) {
+                                  downsample,
+                                  make.cells.unique.warning = 1) {
 
   if (!is.null(cutoff.feature) && length(.check.features(SO, cutoff.feature)) == 0) {
     stop("cutoff.feature not found in every SO.")
@@ -507,7 +514,13 @@ feature_plot <- function(SO,
   }
   # check if cell names are unique across SOs
   all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
-  if (length(SO) > 1 && !all(!duplicated(all.cells)) && !make.cells.unique) {stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_. Where i the index of the SO in the list. Consider this renaming of cells when selecting cells for plotting.")}
+  if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
+    if (make.cells.unique.warning == 1) {
+      stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_. Where i the index of the SO in the list. Consider this renaming of cells when selecting cells for plotting.")
+    } else {
+      stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells.")
+    }
+  }
   if (length(SO) > 1 && !all(!duplicated(all.cells)) && make.cells.unique) {
     names.temp <- names(SO)
     SO <- lapply(seq_along(SO), function(x) Seurat::RenameCells(SO[[x]], add.cell.id = paste0("SO_", x)))

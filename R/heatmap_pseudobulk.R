@@ -62,7 +62,7 @@ heatmap_pseudobulk <- function(SO,
 
   if (missing(features)) {
     ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
-    ## nevertheless, in order to select marker genes by logFC or other statistics the presto output may be useful
+    ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
     wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
     topn.metric <- match.arg(topn.metric, c("logFC", "auc", "padj"))
 
