@@ -1,3 +1,46 @@
+#' Title
+#'
+#' @param SO
+#' @param assay
+#' @param volcano.data
+#' @param negative.group.cells
+#' @param positive.group.cells
+#' @param negative.group.name
+#' @param positive.group.name
+#' @param x.axis.symmetric
+#' @param x.axis.extension
+#' @param y.axis.pseudo.log
+#' @param pseudo.log.sigma
+#' @param inf.fc.shift
+#' @param pt.size
+#' @param pt.alpha
+#' @param font.size
+#' @param pval.tick
+#' @param min.pct
+#' @param max.iter
+#' @param max.overlaps
+#' @param label.neg.pos.sep
+#' @param label.col
+#' @param label.face
+#' @param font.family
+#' @param label.size
+#' @param labels.topn
+#' @param label.features
+#' @param topn.metric
+#' @param nudge.x
+#' @param nudge.y
+#' @param p.plot
+#' @param p.adjust
+#' @param p.cut
+#' @param p.signif
+#' @param fc.cut
+#' @param features.exclude
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 volcano_plot <- function(SO,
                          assay = "RNA",
                          volcano.data = NULL,
@@ -5,7 +48,7 @@ volcano_plot <- function(SO,
                          positive.group.cells,
                          negative.group.name = "negative.group",
                          positive.group.name = "positive.group",
-                         plot.symmetric = T,
+                         x.axis.symmetric = T,
                          x.axis.extension = 0,
                          y.axis.pseudo.log = F,
                          pseudo.log.sigma = 1,
@@ -17,12 +60,12 @@ volcano_plot <- function(SO,
                          min.pct = 0.1,
                          max.iter = 10000,
                          max.overlaps = 50,
-                         pos.neg.label.separate = T,
+                         label.neg.pos.sep = T,
                          label.col = "black",
                          label.face = "bold",
                          font.family = "Courier",
                          label.size = 4,
-                         lables.topn = 30,
+                         labels.topn = 30,
                          label.features = NULL,
                          topn.metric = "p.value",
                          nudge.x = 0,
@@ -33,8 +76,12 @@ volcano_plot <- function(SO,
                          p.signif = 0.001,
                          fc.cut = NA,
                          features.exclude = NULL,
+                         save.path.interactive = NULL,
                          ...) {
 
+  if (missing(negative.group.cells) || missing(positive.group.cells)) {
+    stop("positive.group.cells and negative.group.cells are required.")
+  }
   assay <- match.arg(assay, c("RNA", "SCT"))
   p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
@@ -132,7 +179,7 @@ volcano_plot <- function(SO,
 
   vp <- .plot_vp(vd = vd,
                  p.plot = p.plot,
-                 plot.symmetric = plot.symmetric,
+                 x.axis.symmetric = x.axis.symmetric,
                  y.axis.pseudo.log = y.axis.pseudo.log,
                  pseudo.log.sigma = pseudo.log.sigma,
                  pt.size = pt.size,
@@ -153,13 +200,13 @@ volcano_plot <- function(SO,
                   vd = vd,
                   p.plot = p.plot,
                   label.features = label.features,
-                  lables.topn = lables.topn,
+                  labels.topn = labels.topn,
                   label.size = label.size,
                   features.exclude = features.exclude,
                   nudge.x = nudge.x,
                   nudge.y = nudge.y,
                   max.iter = max.iter,
-                  pos.neg.label.separate = pos.neg.label.separate,
+                  label.neg.pos.sep = label.neg.pos.sep,
                   label.col = label.col,
                   label.face = label.face,
                   font.family = font.family,
@@ -170,20 +217,16 @@ volcano_plot <- function(SO,
 
   interactive.data = list(non.aggr.data = assay_data, data = vd, negative.group.cells = negative.group.cells, positive.group.cells = positive.group.cells, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
 
+  if (!is.null(save.path.interactive)) {
+    dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
+    file.copy(system.file("extdata", "app.R", package = "scexpr"))
+    saveRDS(stats::setNames(list(stats::setNames(list(interactive.data), "1")), "1"), file = file.path(save.path.interactive, "data.rds"))
+  }
+
   return(list(plot = vp,
               data = vd,
               feat.plots = feat_plots,
               interactive.data = interactive.data))
-
-  '  if (!missing(path.interactive.volcano.folder) && file.exists(file.path(dirname(wd), "shiny_apps", "single_cell_volcano", "app.R"))) {
-    dir.create(path.interactive.volcano.folder, showWarnings = F, recursive = T)
-    saveRDS(interactive.plot.data, file.path(path.interactive.volcano.folder, "data.rds"))
-    file.copy(file.path(dirname(wd), "shiny_apps", "single_cell_volcano", "app.R"), file.path(path.interactive.volcano.folder, "app.R"), overwrite = T)
-    print(paste0("Interactive volcano folder saved to ", path.interactive.volcano.folder))
-  } else {
-    print("For interactive volcano: Save interactive.plot.data as data.rds and make a folder with the app.R file from the scRNAseq base folder.")
-  }'
-
 }
 
 
@@ -228,7 +271,7 @@ volcano_plot <- function(SO,
 
 .plot_vp <- function (vd,
                       p.plot = "adj.p.val",
-                      plot.symmetric = T,
+                      x.axis.symmetric = T,
                       y.axis.pseudo.log = F,
                       pseudo.log.sigma = 1,
                       pt.size = 1,
@@ -289,7 +332,7 @@ volcano_plot <- function(SO,
     vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(sym(p.plot_label))))
   }
 
-  if (plot.symmetric) {
+  if (x.axis.symmetric) {
     vp <- vp + ggplot2::xlim(-round(max(abs(vd$log2.fc))) - 0.5 - x.axis.extension, round(max(abs(vd$log2.fc))) + 0.5 + x.axis.extension)
   } else {
     vp <- vp + ggplot2::xlim(round(min(vd$log2.fc)) - 0.5 - x.axis.extension, round(max(vd$log2.fc)) + 0.5 + x.axis.extension)
@@ -325,12 +368,12 @@ volcano_plot <- function(SO,
                       p.plot = "adj.p.val",
                       label.features = NULL,
                       topn.metric = "p.value",
-                      lables.topn = 30,
+                      labels.topn = 30,
                       label.size = 4,
                       nudge.x = 0,
                       nudge.y = 0,
                       max.iter = 10000,
-                      pos.neg.label.separate = T,
+                      label.neg.pos.sep = T,
                       label.col = "black",
                       label.face = "bold",
                       font.family = "Courier",
@@ -344,24 +387,24 @@ volcano_plot <- function(SO,
 
   if (is.null(label.features)) {
     if (topn.metric == "p.value") {
-      f_lab <- vd %>% dplyr::top_n(-lables.topn, !!sym(p.plot))
+      f_lab <- vd %>% dplyr::top_n(-labels.topn, !!sym(p.plot))
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
     } else if (topn.metric == "both") {
-      f_lab.p.val <- vd %>% dplyr::top_n(-lables.topn, !!sym(p.plot))
-      f_lab.logfc <- bind_rows(vd %>% dplyr::top_n(lables.topn/2, log2.fc), vd %>% dplyr::top_n(-(lables.topn/2), log2.fc))
+      f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!sym(p.plot))
+      f_lab.logfc <- bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) %>% dplyr::distinct()
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
     } else {
-      f_lab <- dplyr::bind_rows(vd %>% dplyr::top_n(lables.topn/2, log2.fc), vd %>% dplyr::top_n(-(lables.topn/2), log2.fc))
+      f_lab <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
     }
     vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), colour = "tomato2")
 
 
-    if (pos.neg.label.separate) {
+    if (label.neg.pos.sep) {
       vp <- vp +
         ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% f_lab.pos), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
         ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% f_lab.neg), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
@@ -376,7 +419,7 @@ volcano_plot <- function(SO,
         label.features <- vd[which(as.numeric(vd[,p]) < p.signif), "Feature"]
       } else {
         vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
-        if (pos.neg.label.separate) {
+        if (label.neg.pos.sep) {
           vp <- vp +
             ggplot2::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
             ggplot2::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
@@ -386,7 +429,7 @@ volcano_plot <- function(SO,
       }
     } else {
       vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
-      if (pos.neg.label.separate) {
+      if (label.neg.pos.sep) {
         vp <- vp +
           ggplot2::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
           ggplot2::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
