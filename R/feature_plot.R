@@ -117,7 +117,7 @@ feature_plot <- function(SO,
                          col.expresser = "tomato2",
                          col.pal.rev = F,
 
-                         theme = NULL,
+                         theme = theme_bw(),
                          plot.axis.labels = F,
                          plot.panel.grid = F,
 
@@ -137,8 +137,8 @@ feature_plot <- function(SO,
                          strip.font.size = 14,
                          strip.selection = NA,
 
-                         plot.labels = F,
-                         label.size = 3,
+                         plot.labels = NULL,
+                         label.size = 12,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -152,6 +152,9 @@ feature_plot <- function(SO,
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
   if (length(dims) != 2 || class(dims) != "numeric") {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
+  if (!is.null(plot.labels)) {
+    plot.labels <- match.arg(plot.labels, c("text", "label"))
+  }
 
 
   # duplicative with check in .check.SO
@@ -282,16 +285,20 @@ feature_plot <- function(SO,
         }
       }
 
-      if (plot.labels) {
+      if (!is.null(plot.labels)) {
         if (is.numeric(data[,1])) {
           print(paste0("Labels not plotted as ", x, " is numeric."))
         } else {
-          label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = x, avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]), avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+          label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z, avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]), avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
           names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
-          plot <- plot + ggplot2::geom_text(data = label_df, aes(label = label), size = label.size, family = font.family)
+          if (plot.labels == "text") {
+            plot <- plot + ggplot2::geom_text(data = label_df, aes(label = label), size = label.size, family = font.family,) #...
+          }
+          if (plot.labels == "label") {
+            plot <- plot + ggplot2::geom_label(data = label_df, aes(label = label), size = label.size, family = font.family) #...
+          }
         }
       }
-
 
       plot.colourbar <- is.numeric(data[,1])
       make.italic <- F
@@ -443,7 +450,7 @@ feature_plot <- function(SO,
   if (!is.list(SO)) {
     SO <- list(SO)
   }
-  if (is.null(names(SO))) {
+  if (is.null(names(SO)) && length(SO) > 1) {
     print("List of SO has no names. Naming them by numbers.")
     names(SO) <- as.character(seq_along(SO))
   }
@@ -934,7 +941,20 @@ feature_plot <- function(SO,
   return(kk)
 }
 
-.prep.contour.cells <- function() {
+.prep.contour.cells <- function(SO, reduction, x) {
+   #multiple SO - how to?
+
+  x<-"all"
+  attr(x, "levels") <- 0.9
+  attr(x, "linetype") <- "dashed"
+
+
+
+  if (length(x) == 1 && x == "all") {
+    y <- Seurat::Embeddings(SO, reduction = names(reduction))
+    attributes(y) <- c(attributes(y), attributes(x))
+  }
+  data <- cbind(Seurat::FetchData(SO_urine, "SCT_snn_res.0.4"), Seurat::Embeddings(SO_urine, reduction = "tsne"))
 
 }
 
