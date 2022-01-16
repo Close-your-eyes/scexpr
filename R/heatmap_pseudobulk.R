@@ -137,7 +137,7 @@ heatmap_pseudobulk <- function(SO,
 
   heatmap.plot <-
     ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = scaledAvgExpr)) +
-    ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colours = col_pal(scale.name = "RdBu", n.brewer.colors = 9), breaks = c(scale.min, scale.mid, scale.max)) +
+    ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colours = col_pal(scale.name = "RdBu", nbrew = 9), breaks = c(scale.min, scale.mid, scale.max)) +
     ggplot2::xlab("Cluster") +
     ggplot2::theme_classic() +
     ggplot2::ggtitle(title) +
