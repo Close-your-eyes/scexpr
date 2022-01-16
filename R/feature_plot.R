@@ -117,7 +117,7 @@ feature_plot <- function(SO,
                          col.expresser = "tomato2",
                          col.pal.rev = F,
 
-                         theme = theme_bw(),
+                         theme = ggplot2::theme_bw(),
                          plot.axis.labels = F,
                          plot.panel.grid = F,
 
@@ -326,8 +326,8 @@ feature_plot <- function(SO,
 
     # modify different element of the plot
     plot <- plot + theme
-    if (!plot.panel.grid) {plot <- plot + theme(panel.grid = ggplot2::element_blank())}
-    if (!plot.axis.labels) {plot <- plot + theme(axis.ticks = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank())}
+    if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
+    if (!plot.axis.labels) {plot <- plot + ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank())}
 
 
     # legend options
@@ -337,7 +337,7 @@ feature_plot <- function(SO,
       legend.title <- substitute(paste(x), list(x = x))
     }
     if (length(legend.position) == 1) {
-      plot <- plot + theme(legend.position = legend.position)
+      plot <- plot + ggplot2::theme(legend.position = legend.position)
       if (legend.position %in% c("top", "bottom")) {
         temp <- legend.barheight
         legend.barheight <- legend.barwidth
@@ -347,7 +347,7 @@ feature_plot <- function(SO,
       if (length(SO) > 1 || !is.null(split.by)) {
         print("You may set the legend.position to left, right, bottom or top to indicate it is valid for every facet.")
       }
-      plot <- plot + theme(legend.justification = c(legend.position[1], legend.position[2]), legend.position = c(legend.position[1], legend.position[2]))
+      plot <- plot + ggplot2::theme(legend.justification = c(legend.position[1], legend.position[2]), legend.position = c(legend.position[1], legend.position[2]))
     }
 
     # theme_get()[["text"]][["family"]]
@@ -429,7 +429,7 @@ feature_plot <- function(SO,
   if (!all(is.na(strip.selection))) {
     for (i in 1:length(plots)) {
       if (!i %in% strip.selection) {
-        plots[[i]] <- plots[[i]] + theme(strip.text.x = ggplot2::element_blank(), strip.background = ggplot2::element_blank())
+        plots[[i]] <- plots[[i]] + ggplot2::theme(strip.text.x = ggplot2::element_blank(), strip.background = ggplot2::element_blank())
       }
     }
   }
