@@ -156,7 +156,6 @@ feature_plot <- function(SO,
     plot.labels <- match.arg(plot.labels, c("text", "label"))
   }
 
-
   # duplicative with check in .check.SO
   #avail_assays <- Reduce(intersect, lapply(SO, function(x) Seurat::Assays(x)))
   assay <- match.arg(assay, c("RNA", "SCT"))
@@ -452,6 +451,10 @@ feature_plot <- function(SO,
   }
   if (is.null(names(SO)) && length(SO) > 1) {
     print("List of SO has no names. Naming them by numbers.")
+    names(SO) <- as.character(seq_along(SO))
+  }
+
+  if (is.null(names(SO))) {
     names(SO) <- as.character(seq_along(SO))
   }
 
