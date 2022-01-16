@@ -61,6 +61,8 @@
 #' @param strip.font.size
 #' @param strip.selection
 #' @param ...
+#' @param plot.labels
+#' @param label.size
 #'
 #' @return
 #' @export
@@ -134,6 +136,9 @@ feature_plot <- function(SO,
 
                          strip.font.size = 14,
                          strip.selection = NA,
+
+                         plot.labels = F,
+                         label.size = 3,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -154,7 +159,7 @@ feature_plot <- function(SO,
   assay <- match.arg(assay, c("RNA", "SCT"))
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by,shape.by = shape.by)
-  reduction <- .check.reduction(SO = SO, reduction = reduction)
+  reduction <- .check.reduction(SO = SO, reduction = reduction, dims = dims)
   features <- .check.features(SO = SO, features = unique(features))
   cells <- .check.and.get.cells(SO = SO,assay = assay,cells = cells,make.cells.unique = make.cells.unique,cutoff.feature = cutoff.feature,cutoff.expression = cutoff.expression,exclusion.feature = exclusion.feature,downsample = downsample, make.cells.unique.warning = 1)
 
@@ -206,7 +211,7 @@ feature_plot <- function(SO,
     }
 
     plot <-
-      ggplot2::ggplot(data, ggplot2::aes(x = !!sym(paste0(reduction, "_", dims[1])), y = !!sym(paste0(reduction, "_", dims[2])))) +
+      ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(paste0(reduction, "_", dims[1])), y = !!rlang::sym(paste0(reduction, "_", dims[2])))) +
       ggplot2::geom_point(ggplot2::aes(shape = !!shape.by), size = pt.size, colour = col.excluded.cells, data = data[which(rownames(data) %in% names(cells[which(cells == 0)])),])
 
     # different procedure for gene feature or meta.data feature
@@ -224,7 +229,7 @@ feature_plot <- function(SO,
         # non-expressers
         plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, colour = col.non.expresser)
         # expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(colour = !!sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(colour = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
       }
 
       if (length(SO) > 1) {
@@ -235,7 +240,7 @@ feature_plot <- function(SO,
         label = "freq.expr"
       }
       if (plot.freq) {
-        plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = freq.font.size, ggplot2::aes(label = !!sym(label), x = xmin + abs(xmin - xmax) * freq.position[1], y = ymin + abs(ymin - ymax) * freq.position[2]))
+        plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = freq.font.size, ggplot2::aes(label = !!rlang::sym(label), x = xmin + abs(xmin - xmax) * freq.position[1], y = ymin + abs(ymin - ymax) * freq.position[2]))
       }
 
       plot.colourbar <- !binary.expr
@@ -251,7 +256,7 @@ feature_plot <- function(SO,
 
       if (is.null(order.discrete)) {
         # plot non-excluded cells, sample to make it random
-        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),][sample(nrow(data[which(rownames(data) %in% names(cells[which(cells == 1)])),])), ], ggplot2::aes(colour = !!sym(x), shape = !!shape.by), size = pt.size)
+        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),][sample(nrow(data[which(rownames(data) %in% names(cells[which(cells == 1)])),])), ], ggplot2::aes(colour = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
       } else {
         if (length(unique(order.discrete)) != length(order.discrete)) {
           order.discrete <- unique(order.discrete)
@@ -273,9 +278,20 @@ feature_plot <- function(SO,
           }
         }
         for (i in seq_along(order.discrete)) {
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == order.discrete[i])),], ggplot2::aes(colour = !!sym(x), shape = !!shape.by), size = pt.size[i])
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == order.discrete[i])),], ggplot2::aes(colour = !!rlang::sym(x), shape = !!shape.by), size = pt.size[i])
         }
       }
+
+      if (plot.labels) {
+        if (is.numeric(data[,1])) {
+          print(paste0("Labels not plotted as ", x, " is numeric."))
+        } else {
+          label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = x, avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]), avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+          names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
+          plot <- plot + ggplot2::geom_text(data = label_df, aes(label = label), size = label.size, family = font.family)
+        }
+      }
+
 
       plot.colourbar <- is.numeric(data[,1])
       make.italic <- F
@@ -304,8 +320,8 @@ feature_plot <- function(SO,
 
     # modify different element of the plot
     plot <- plot + theme
-    if (!plot.panel.grid) {plot <- plot + theme(panel.grid = element_blank())}
-    if (!plot.axis.labels) {plot <- plot + theme(axis.ticks = element_blank(), axis.text = element_blank(), axis.title = element_blank())}
+    if (!plot.panel.grid) {plot <- plot + theme(panel.grid = ggplot2::element_blank())}
+    if (!plot.axis.labels) {plot <- plot + theme(axis.ticks = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank())}
 
 
     # legend options
@@ -331,7 +347,7 @@ feature_plot <- function(SO,
     # theme_get()[["text"]][["family"]]
     plot <-
       plot +
-      guides(
+      ggplot2::guides(
         shape = if (hide.shape.legend) {
           "none"
         } else {
@@ -345,8 +361,8 @@ feature_plot <- function(SO,
         colour = if (plot.colourbar) {
           ggplot2::guide_colourbar(barwidth = legend.barwidth,
                                    barheight = legend.barheight,
-                                   label.theme = element_text(size = legend.text.size, family = font.family),
-                                   title.theme = element_text(size = legend.title.text.size, family = font.family),
+                                   label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
+                                   title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
                                    title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
@@ -368,7 +384,7 @@ feature_plot <- function(SO,
 
 
     # define facets and plot freq.of.expr annotation
-    wrap_by <- function(...) {ggplot2::facet_wrap(vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = "free", nrow = nrow.inner, ncol = ncol.inner)}
+    wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = "free", nrow = nrow.inner, ncol = ncol.inner)}
     if (is.null(SO.split) && !is.null(split.by)) {
       plot <- plot + wrap_by(split.by)
     } else if (!is.null(SO.split) && is.null(split.by)) {
@@ -391,11 +407,11 @@ feature_plot <- function(SO,
       } else {
         cutoff.expression.plot <- cutoff.expression
       }
-      inset <- ggplot2::ggplot(inset.data, ggplot2::aes(!!sym(cutoff.feature))) +
+      inset <- ggplot2::ggplot(inset.data, ggplot2::aes(!!rlang::sym(cutoff.feature))) +
         ggplot2::geom_density(adjust = 1) +
         ggplot2::geom_vline(xintercept = cutoff.expression.plot, color = "red") +
         ggplot2::theme(panel.grid = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank(), strip.text.x = ggplot2::element_text(size = 9, face = "italic", family = font.family), plot.margin = ggplot2::unit(c(0,0,0,0), "cm"), plot.background = ggplot2::element_rect(fill = "transparent")) +
-        ggplot2::facet_wrap(vars(!!cutoff.feature))
+        ggplot2::facet_wrap(ggplot2::vars(!!cutoff.feature))
       plot <- cowplot::ggdraw() + cowplot::draw_plot(plot) + cowplot::draw_plot(inset, x = inset.position[1], y = inset.position[2], width = inset.size[1], height = inset.size[2])
     }
     return (plot)
@@ -407,7 +423,7 @@ feature_plot <- function(SO,
   if (!all(is.na(strip.selection))) {
     for (i in 1:length(plots)) {
       if (!i %in% strip.selection) {
-        plots[[i]] <- plots[[i]] + theme(strip.text.x = element_blank(), strip.background = element_blank())
+        plots[[i]] <- plots[[i]] + theme(strip.text.x = ggplot2::element_blank(), strip.background = ggplot2::element_blank())
       }
     }
   }
@@ -447,14 +463,15 @@ feature_plot <- function(SO,
     if (!assay %in% Seurat::Assays(x)) {
       stop("Assay not found in every SO.")
     }
-    DefaultAssay(x) <- assay
+    Seurat::DefaultAssay(x) <- assay
     return(x)
   })
   return(SO)
 }
 
 .check.reduction <- function(SO,
-                             reduction) {
+                             reduction,
+                             dims) {
   # check if reduction is in all objects
   if (!all(unlist(lapply(SO, function(x) any(grepl(reduction, names(x@reductions))))))) {
     reduction <- base::Reduce(base::intersect, lapply(SO, function(x) names(x@reductions)))
@@ -472,10 +489,14 @@ feature_plot <- function(SO,
   }
 
   # correct reduction.name with respect to case
-  rr <- gsub("_[0-9]", "", grep(reduction, colnames(SO_urine@reductions[["tsne"]]@cell.embeddings), ignore.case = T, value = T)[1])
+  rr <- gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[["tsne"]]@cell.embeddings), ignore.case = T, value = T)[1])
 
   reduction <- stats::setNames(rr, nm = reduction)
-  ## check reduction format in SOs (e.g. tsne_1)
+
+  ## check reduction format in SOs (e.g. tSNE_1)
+  if (any(!unlist(lapply(SO, function(x) all(colnames(x@reductions[["tsne"]]@cell.embeddings) %in% paste0(reduction, "_", dims)))))) {
+    stop("Not all cell.embedding columns could be matched the pattern 'reduction_dims[1]', reduction_dims[2].")
+  }
 
   return(reduction)
 }
@@ -545,7 +566,7 @@ feature_plot <- function(SO,
   }
 
   # create a vector of cells which identifies how to plot them; 0 indicates exclusion
-  cells.plot <- setNames(rep(1, length(all.cells)), all.cells)
+  cells.plot <- stats::setNames(rep(1, length(all.cells)), all.cells)
   ## cells excluded by arbitrary selection
   cells.plot[!names(cells.plot) %in% cells] <- 0
   ## cells excluded by
@@ -728,10 +749,10 @@ feature_plot <- function(SO,
   if (is.numeric(data[,1])) {
     if (all(data[,1] > 0, na.rm = T)) {
       # expression is always greater than 0 and non-expresser are excluded
-      data[,1][which(data[,1] > 0)] <- scales::squish(data[,1][which(data[,1] > 0)], range = c(quantile(data[,1][which(data[,1] > 0)], min.q.cutoff, na.rm = T), quantile(data[,1][which(data[,1] > 0)], max.q.cutoff, na.rm = T)))
+      data[,1][which(data[,1] > 0)] <- scales::squish(data[,1][which(data[,1] > 0)], range = c(stats::quantile(data[,1][which(data[,1] > 0)], min.q.cutoff, na.rm = T), stats::quantile(data[,1][which(data[,1] > 0)], max.q.cutoff, na.rm = T)))
     } else {
       # e.g. for module scores below 0
-      data[,1] <- scales::squish(data[,1], range = c(quantile(data[,1], min.q.cutoff, na.rm = T), quantile(data[,1], max.q.cutoff, na.rm = T)))
+      data[,1] <- scales::squish(data[,1], range = c(stats::quantile(data[,1], min.q.cutoff, na.rm = T), stats::quantile(data[,1], max.q.cutoff, na.rm = T)))
     }
   }
 
@@ -875,6 +896,46 @@ feature_plot <- function(SO,
       }
     }
   return(title)
+}
+
+.get.contour.level <- function(kk, x,y,prob) {
+  dx <- diff(kk$x[1:2])
+  dy <- diff(kk$y[1:2])
+  sz <- sort(kk$z)
+  c1 <- cumsum(sz) * dx * dy
+  stats::approx(c1, sz, xout = 1 - prob)$y
+}
+
+.get.contours <- function(x, cells = NULL, levels = 0.9) {
+
+  ## x only with x any y columm (dim reduction dims)
+  # handle levels attribute differently
+
+  ## handle special cells arguments before passing here in a separate function??
+  # cells = all (outlining all cells)
+  # cells = clusters (outlining each cluster individually)
+  # cells = quick selection of clusters
+  # cells = list of cell vectors with attr like color, linetype size, level
+
+  # return a list of contours with levels as attr to pass to geom_contour
+  # also pass on all attr from cells vector for plotting
+
+  # optionally subset here
+  if (!is.null(cells)) {
+    x <- x[cells,]
+  }
+
+  kk <- MASS::kde2d(x[,1], x[,2])
+  dimnames(kk$z) <- list(kk$x, kk$y)
+  kk <- reshape2::melt(kk$z)
+  names(kk) <- c(names(x)[1], names(x)[2], "value")
+  attributes(kk) <- attributes(x)
+  attr(kk, "levels") <- sapply(levels, function(z) .get.contour.level(kk = kk, x = x[,1], y = x[,2], prob = z))
+  return(kk)
+}
+
+.prep.contour.cells <- function() {
+
 }
 
 ceiling_any = function(x, accuracy, f = ceiling){f(x/ accuracy) * accuracy}

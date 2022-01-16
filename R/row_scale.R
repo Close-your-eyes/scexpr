@@ -20,7 +20,6 @@ row_scale = function(x,
                     cols = NULL,
                     drop.na.rows = T) {
 
-  library(matrixStats)
   if (!is.null(rows) && !is.null(cols)) {
     x <- x[rows, cols, drop = FALSE]
   } else if (!is.null(rows)) {
@@ -29,7 +28,7 @@ row_scale = function(x,
     x <- x[, cols, drop = FALSE]
   }
 
-  rm = rowMeans(x, na.rm = TRUE)
+  rm = Matrix::rowMeans(x, na.rm = TRUE)
   if (scale) {
     csd = matrixStats::rowSds(x, center = rm)
   } else {
@@ -41,7 +40,7 @@ row_scale = function(x,
   x = (x - rm) / csd
 
   if (drop.na.rows) {
-    x <- x[rowSums(is.na(x))<ncol(x),]
+    x <- x[Matrix::rowSums(is.na(x))<ncol(x),]
   }
 
   if (add_attr) {

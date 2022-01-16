@@ -6,8 +6,8 @@
 \usage{
 prep_SO(
   SO_unprocessed,
-  samples,
-  cells,
+  samples = NULL,
+  cells = NULL,
   min_cells = 50,
   downsample = 1,
   export_prefix = NULL,
@@ -71,7 +71,7 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
-prefix respective arguments by the function to pass it to, e.g. RunHarmony__theta or RunTSNE__theta}
+prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file

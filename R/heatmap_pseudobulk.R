@@ -1,3 +1,39 @@
+#' Title
+#'
+#' @param SO
+#' @param assay
+#' @param meta.col
+#' @param meta.col.levels
+#' @param meta.col.levels.select
+#' @param features
+#' @param feature.labels
+#' @param topn.features
+#' @param topn.metric
+#' @param min.pct
+#' @param max.padj
+#' @param title
+#' @param title.font.size
+#' @param y.font.size
+#' @param legend.position
+#' @param legend.direction
+#' @param tile.borders
+#' @param dotplot
+#' @param plot.feature.breaks
+#' @param plot.secondary.axis.with.full.genenames
+#' @param legend.title.text.size
+#' @param legend.barheight
+#' @param legend.barwidth
+#' @param legend.text.size
+#' @param legend.title
+#' @param legend.title.position
+#' @param feature.labels.nudge_x
+#' @param feature.labels.axis.width
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 heatmap_pseudobulk <- function(SO,
                                assay = c("RNA", "SCT"),
                                meta.col,
@@ -75,11 +111,11 @@ heatmap_pseudobulk <- function(SO,
       dplyr::filter(padj <= max.padj) %>%
       dplyr::mutate(group = factor(group, levels = meta.col.levels)) %>%
       dplyr::group_by(group) %>%
-      dplyr::slice_max(order_by = !!sym(topn.metric), n = topn.features) %>%
+      dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
       dplyr::arrange(group, avgExpr) %>%
       dplyr::pull(feature)
   } else {
-    features <- sapply(features, function(x) {grep(x, rownames(GetAssayData(SO, assay = assay, slot = "data")), ignore.case = T, value = T)})
+    features <- sapply(features, function(x) {grep(x, rownames(Seurat::GetAssayData(SO, assay = assay, slot = "data")), ignore.case = T, value = T)})
   }
 
   htp <-
@@ -100,45 +136,45 @@ heatmap_pseudobulk <- function(SO,
   scale.mid <- as.numeric(format(round(0, 1), nsmall = 1))
 
   heatmap.plot <-
-    ggplot(htp, aes(x = cluster, y = Feature, fill = scaledAvgExpr)) +
-    scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colours = colour.scale.function(scale.name = "RdBu", n.brewer.colors = 9), breaks = c(scale.min, scale.mid, scale.max)) +
-    xlab("Cluster") +
-    theme_classic() +
-    ggtitle(title) +
-    theme(title = element_text(size = title.font.size, family = "Courier"), axis.title = element_blank(), axis.text.x = element_text(family = "Courier"), axis.text.y = element_text(size = y.font.size, face = "italic", family = "Courier"), legend.position = legend.position, legend.direction = legend.direction) +
-    guides(fill = guide_colourbar(barwidth = legend.barwidth, barheight = legend.barheight, label.theme = element_text(size = legend.text.size, family = "Courier"), title.theme = element_text(size = legend.title.text.size, family = "Courier"), title.position = legend.title.position, title = legend.title, draw.ulim = FALSE, draw.llim = FALSE))
+    ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = scaledAvgExpr)) +
+    ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colours = col_pal(scale.name = "RdBu", n.brewer.colors = 9), breaks = c(scale.min, scale.mid, scale.max)) +
+    ggplot2::xlab("Cluster") +
+    ggplot2::theme_classic() +
+    ggplot2::ggtitle(title) +
+    ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = "Courier"), axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_text(family = "Courier"), axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = "Courier"), legend.position = legend.position, legend.direction = legend.direction) +
+    ggplot2::guides(fill = ggplot2::guide_colourbar(barwidth = legend.barwidth, barheight = legend.barheight, label.theme = ggplot2::element_text(size = legend.text.size, family = "Courier"), title.theme = ggplot2::element_text(size = legend.title.text.size, family = "Courier"), title.position = legend.title.position, title = legend.title, draw.ulim = FALSE, draw.llim = FALSE))
 
   if (dotplot) {
     # shape legend not working yet
-    heatmap.plot <- heatmap.plot + geom_point(aes(size = pct_in), shape = 21) + guides(shape = guide_legend(override.aes = list(label.theme = element_text(size = legend.text.size, family = "Courier"), title.theme = element_text(size = legend.title.text.size, family = "Courier"))))
+    heatmap.plot <- heatmap.plot + ggplot2::geom_point(aes(size = pct_in), shape = 21) + ggplot2::guides(shape = ggplot2::guide_legend(override.aes = list(label.theme = ggplot2::element_text(size = legend.text.size, family = "Courier"), title.theme = ggplot2::element_text(size = legend.title.text.size, family = "Courier"))))
   } else {
     if (tile.borders) {
-      heatmap.plot <- heatmap.plot + geom_tile(colour = "black")
+      heatmap.plot <- heatmap.plot + ggplot2::geom_tile(colour = "black")
     } else {
-      heatmap.plot <- heatmap.plot + geom_tile()
+      heatmap.plot <- heatmap.plot + ggplot2::geom_tile()
     }
   }
 
   if (plot.feature.breaks & !missing(feature.labels)) {
     axis.df <- data.frame(y = 1:length(levels(htp$Feature)), Feature = levels(htp$Feature))
-    axis <- ggplot(axis.df, aes(x = 0, y = y, label = Feature)) +
+    axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = Feature)) +
       ggrepel::geom_text_repel(fontface = "italic", family = "Courier", data = axis.df[which(axis.df$Feature %in% feature.labels),], aes(label = Feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
-      scale_x_continuous(limits = c(-0.1, 0), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
-      scale_y_continuous(limits = c(0, length(levels(htp$Feature)) + 0.5), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
-      theme_void()
-    heatmap.plot <- heatmap.plot + theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) + theme(plot.margin = margin(0, 0, 0, 0, "pt"))
+      ggplot2::scale_x_continuous(limits = c(-0.1, 0), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
+      ggplot2::scale_y_continuous(limits = c(0, length(levels(htp$Feature)) + 0.5), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
+      ggplot2::theme_void()
+    heatmap.plot <- heatmap.plot + ggplot2::theme(axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank()) + ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "pt"))
     heatmap.plot <- cowplot::plot_grid(axis, heatmap.plot, align = "h", axis = "tb", nrow = 1, rel_widths = c(feature.labels.axis.width,1))
   }
 
   if (plot.secondary.axis.with.full.genenames) {
     out <- convert_gene_identifier(unique(htp$Feature), species = "Hs")
     axis.df <- data.frame(y = 1:length(levels(htp$Feature)), Feature = levels(htp$Feature)) %>% dplyr::left_join(out, by = c("Feature" = "SYMBOL"))
-    axis <- ggplot(axis.df, aes(x = 0, y = y, label = GENENAME)) +
-      geom_text(hjust = 0) +
-      scale_x_continuous(limits = c(0, 2), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
-      scale_y_continuous(limits = c(0.4, length(levels(htp$Feature)) + 0.4), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
-      theme(panel.background = element_blank(), plot.margin = margin(0, 0, 0, 0, "pt"), axis.title = element_blank(), axis.text = element_blank(), axis.ticks = element_blank())
-    heatmap.plot <- cowplot::plot_grid(heatmap.plot + theme(plot.margin = margin(0, 0, 0, 0, "pt")), axis, align = "h", axis = "tb", nrow = 1, rel_widths = c(0.6,0.4))
+    axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = GENENAME)) +
+      ggplot2::geom_text(hjust = 0) +
+      ggplot2::scale_x_continuous(limits = c(0, 2), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
+      ggplot2::scale_y_continuous(limits = c(0.4, length(levels(htp$Feature)) + 0.4), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
+      ggplot2::theme(panel.background = ggplot2::element_blank(), plot.margin = ggplot2::margin(0, 0, 0, 0, "pt"), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
+    heatmap.plot <- cowplot::plot_grid(heatmap.plot + ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "pt")), axis, align = "h", axis = "tb", nrow = 1, rel_widths = c(0.6,0.4))
   }
 
 
@@ -147,7 +183,7 @@ heatmap_pseudobulk <- function(SO,
   }
 
   if (!plot.feature.breaks) {
-    heatmap.plot <- heatmap.plot + theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
+    heatmap.plot <- heatmap.plot + ggplot2::theme(axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank())
   }
 
   return(list(plot = heatmap.plot, data = htp))

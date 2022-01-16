@@ -1,5 +1,7 @@
-library(shiny)
-library(tidyverse)
+#library(shiny)
+#library(tidyverse)
+
+### add save button
 
 data <- readRDS(file.path(dirname(rstudioapi::getActiveDocumentContext()$path), "data.rds"))
 
@@ -47,7 +49,7 @@ server <- function(input, output, session) {
     shiny::updateSelectInput(session, "cc", choices = cluster.names, selected = cluster.names[1])
   })
 
-  ds <- reactiveValues()
+  ds <- shiny::reactiveValues()
   shiny::observeEvent({
     input$min.pct
     input$clustering
@@ -56,7 +58,7 @@ server <- function(input, output, session) {
                      data[[input$clustering]][[input$cc]][["data"]][intersect(which(data[[input$clustering]][[input$cc]][["data"]][,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(data[[input$clustering]][[input$cc]][["data"]][,"log2.fc"] > 0)),])
     })
 
-  feats <- reactiveValues()
+  feats <- shiny::reactiveValues()
 
   shiny::observeEvent({
     input$plot_brush
@@ -89,24 +91,24 @@ server <- function(input, output, session) {
   output$volcano_plot = shiny::renderPlot({
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
-    plot <- .plot_vp(vd = ds$ds,
-                     p.plot = input$pval,
-                     pt.size = input$pt.size2,
-                     pt.alpha = 0.8,
-                     font.size = input$font.size,
-                     pval.tick = input$pval.tick,
-                     features.exclude = data[[input$clustering]][[input$cc]][["features.exclude"]],
-                     fc.cut = input$log2.fc.cut,
-                     p.cut = input$p.cut,
-                     ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
-                     pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]],
-                     y.axis.pseudo.log = input$pseudo.log,
-                     pseudo.log.sigma = input$pseudo.log.sigma)
+    plot <- scexpr:::.plot_vp(vd = ds$ds,
+                              p.plot = input$pval,
+                              pt.size = input$pt.size2,
+                              pt.alpha = 0.8,
+                              font.size = input$font.size,
+                              pval.tick = input$pval.tick,
+                              features.exclude = data[[input$clustering]][[input$cc]][["features.exclude"]],
+                              fc.cut = input$log2.fc.cut,
+                              p.cut = input$p.cut,
+                              ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
+                              pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]],
+                              y.axis.pseudo.log = input$pseudo.log,
+                              pseudo.log.sigma = input$pseudo.log.sigma)
 
 
-    plot <- plot + geom_point(color = "black", data = ds$ds[f,,drop=F])
+    plot <- plot + ggplot2::geom_point(color = "black", data = ds$ds[f,,drop=F])
     if (length(f) <= input$max.volcano.label) {
-      plot <- plot + geom_text_repel(color = "red", max.overlaps = 500, size = input$label.size, data = ds$ds[f,,drop=F])
+      plot <- plot + ggrepel::geom_text_repel(color = "red", max.overlaps = 500, size = input$label.size, data = ds$ds[f,,drop=F])
     }
     return(plot)
   })
@@ -115,24 +117,22 @@ server <- function(input, output, session) {
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
-      return(.expr_jitter(d = data[[input$clustering]][[input$cc]][["non.aggr.data"]],
-                          feat = f,
-                          pt.size = input$pt.size,
-                          geom2 = input$geom2,
-                          font.size = input$font.size,
-                          geom1 = input$geom1,
-                          filter.non.expr = input$filter,
-                          plot.expr.freq = input$freq.expr,
-                          label.size = input$label.size,
-                          ngc = data[[input$clustering]][[input$cc]][["negative.group.cells"]],
-                          pgc = data[[input$clustering]][[input$cc]][["positive.group.cells"]],
-                          ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
-                          pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]]))
+      return(scexpr:::.expr_jitter(d = data[[input$clustering]][[input$cc]][["non.aggr.data"]],
+                                   feat = f,
+                                   pt.size = input$pt.size,
+                                   geom2 = input$geom2,
+                                   font.size = input$font.size,
+                                   geom1 = input$geom1,
+                                   filter.non.expr = input$filter,
+                                   plot.expr.freq = input$freq.expr,
+                                   label.size = input$label.size,
+                                   ngc = data[[input$clustering]][[input$cc]][["negative.group.cells"]],
+                                   pgc = data[[input$clustering]][[input$cc]][["positive.group.cells"]],
+                                   ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
+                                   pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]]))
     }
   })
 }
 
 shiny::shinyApp(ui = ui, server = server)
-
-
 

@@ -18,5 +18,12 @@ convert_gene_identifier(
 
 }
 \description{
-Title
+Convert gene identifiers from ident_in to ident_out while taking care
+of known duplicates and providing aliases.
+}
+\details{
+keytypes(org.Hs.eg.db) or colums(org.Hs.eg.db) are: ACCNUM ALIAS ENSEMBL
+ENSEMBLPROT ENSEMBLTRANS ENTREZID ENZYME EVIDENCE EVIDENCEALL
+GENENAME GENETYPE GO GOALL IPI MAP OMIM ONTOLOGY ONTOLOGYALL
+PATH PFAM PMID PROSITE REFSEQ SYMBOL UCSCKG UNIPROT
 }
