@@ -13,12 +13,12 @@
 #'
 #' @examples
 row_scale = function(x,
-                    center = TRUE,
-                    scale = TRUE,
-                    add_attr = TRUE,
-                    rows = NULL,
-                    cols = NULL,
-                    drop.na.rows = T) {
+                     center = TRUE,
+                     scale = TRUE,
+                     add_attr = TRUE,
+                     rows = NULL,
+                     cols = NULL,
+                     drop.na.rows = T) {
 
   if (!is.null(rows) && !is.null(cols)) {
     x <- x[rows, cols, drop = FALSE]
@@ -40,7 +40,7 @@ row_scale = function(x,
   x = (x - rm) / csd
 
   if (drop.na.rows) {
-    x <- x[Matrix::rowSums(is.na(x))<ncol(x),]
+    x <- x[which(Matrix::rowSums(is.na(x))<ncol(x)),,drop=F]
   }
 
   if (add_attr) {

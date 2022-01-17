@@ -19,7 +19,7 @@
 #' @param tile.borders
 #' @param dotplot
 #' @param plot.feature.breaks
-#' @param plot.secondary.axis.with.full.genenames
+#' @param plot.sec.axis
 #' @param legend.title.text.size
 #' @param legend.barheight
 #' @param legend.barwidth
@@ -30,16 +30,19 @@
 #' @param feature.labels.axis.width
 #' @param ...
 #'
+#' @importFrom magrittr %>%
+#'
 #' @return
 #' @export
 #'
 #' @examples
 heatmap_pseudobulk <- function(SO,
                                assay = c("RNA", "SCT"),
-                               meta.col,
-                               meta.col.levels,
-                               meta.col.levels.select,
+                               meta.col = NULL,
+                               meta.col.levels = NULL,
+                               meta.col.levels.select = NULL,
                                features = NULL,
+                               normalization = "scale",
                                feature.labels,
                                topn.features = 10e5,
                                topn.metric = c("logFC", "auc", "padj"),
@@ -47,6 +50,7 @@ heatmap_pseudobulk <- function(SO,
                                max.padj = 0.05,
                                title = NULL,
                                title.font.size = 14,
+                               font.family = font.family,
 
                                y.font.size = 10,
                                legend.position = "right",
@@ -54,7 +58,7 @@ heatmap_pseudobulk <- function(SO,
                                tile.borders = T,
                                dotplot = F,
                                plot.feature.breaks = T,
-                               plot.secondary.axis.with.full.genenames = F,
+                               plot.sec.axis = F,
 
                                legend.title.text.size = 10,
                                legend.barheight = 8,
@@ -70,7 +74,14 @@ heatmap_pseudobulk <- function(SO,
     devtools::install_github("immunogenomics/presto")
   }
   assay <- match.arg(assay, c("RNA", "SCT"))
-  meta.col <- match.arg(meta.col, names(SO@meta.data))
+
+  if (is.null(meta.col)) {
+    SO@meta.data$idents <- Seurat::Idents(SO)
+    meta.col <- "idents"
+  } else {
+    meta.col <- match.arg(meta.col, names(SO@meta.data))
+  }
+
   legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
   if (legend.direction == "horizontal") {
     temp <- legend.barwidth
@@ -78,7 +89,7 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-  if (missing(meta.col.levels)) {
+  if (!is.null(meta.col.levels)) {
     meta.col.levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
     if (suppressWarnings(!NA %in% as.numeric(meta.col.levels))) {
       meta.col.levels <- as.character(sort(as.numeric(unique(meta.col.levels))))
@@ -92,7 +103,7 @@ heatmap_pseudobulk <- function(SO,
     SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% meta.col.levels),,drop=F]))
   }
 
-  if (missing(meta.col.levels.select)) {
+  if (!is.null(meta.col.levels.select)) {
     meta.col.levels.select <- meta.col.levels
   }
 
@@ -115,17 +126,27 @@ heatmap_pseudobulk <- function(SO,
       dplyr::arrange(group, avgExpr) %>%
       dplyr::pull(feature)
   } else {
-    features <- sapply(features, function(x) {grep(x, rownames(Seurat::GetAssayData(SO, assay = assay, slot = "data")), ignore.case = T, value = T)})
+    features <- .check.features(SO = SO, features = unique(features), meta.data = F)
+    #features <- sapply(features, function(x) grep(x, rownames(Seurat::GetAssayData(SO, assay = assay, slot = "data")), ignore.case = T, value = T))
+  }
+
+  raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
+  if (length(normalization) == 1 && class(normalization) == "character" && normalization == "scale") {
+    tab <- row_scale(raw_tab, add_attr = F)
+  } else if (length(normalization) == 2 && class(normalization) == "numeric") {
+    tab <- scale_min_max(raw_tab, min = min(normalization), max = max(normalization), margin = 1)
+  } else {
+    stop("normalization has to be 'scale' or a numeric vector of length 2 indication min and max values for scaling.")
   }
 
   htp <-
-    as.data.frame(Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]]) %>%
+    as.data.frame(tab) %>%
     tibble::rownames_to_column("Feature") %>%
     dplyr::filter(Feature %in% features) %>%
     tidyr::pivot_longer(cols = -Feature, names_to = "cluster", values_to = "avgExpr") %>%
-    dplyr::group_by(Feature) %>%
-    dplyr::mutate(scaledAvgExpr = scale(avgExpr)) %>%
-    dplyr::ungroup() %>%
+    #dplyr::group_by(Feature) %>%
+    #dplyr::mutate(scaledAvgExpr = scale(avgExpr)) %>%
+    #dplyr::ungroup() %>%
     dplyr::filter(cluster %in% meta.col.levels.select) %>%
     dplyr::left_join(wil_auc[,c(which(names(wil_auc) %in% c("feature", "group", "pct_in")))], by = c("Feature" = "feature", "cluster" = "group")) %>%
     dplyr::mutate(cluster = factor(cluster, levels = meta.col.levels)) %>%
@@ -141,12 +162,12 @@ heatmap_pseudobulk <- function(SO,
     ggplot2::xlab("Cluster") +
     ggplot2::theme_classic() +
     ggplot2::ggtitle(title) +
-    ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = "Courier"), axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_text(family = "Courier"), axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = "Courier"), legend.position = legend.position, legend.direction = legend.direction) +
-    ggplot2::guides(fill = ggplot2::guide_colourbar(barwidth = legend.barwidth, barheight = legend.barheight, label.theme = ggplot2::element_text(size = legend.text.size, family = "Courier"), title.theme = ggplot2::element_text(size = legend.title.text.size, family = "Courier"), title.position = legend.title.position, title = legend.title, draw.ulim = FALSE, draw.llim = FALSE))
+    ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family), axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_text(family = font.family), axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family), legend.position = legend.position, legend.direction = legend.direction) +
+    ggplot2::guides(fill = ggplot2::guide_colourbar(barwidth = legend.barwidth, barheight = legend.barheight, label.theme = ggplot2::element_text(size = legend.text.size, family = font.family), title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family), title.position = legend.title.position, title = legend.title, draw.ulim = FALSE, draw.llim = FALSE))
 
   if (dotplot) {
     # shape legend not working yet
-    heatmap.plot <- heatmap.plot + ggplot2::geom_point(aes(size = pct_in), shape = 21) + ggplot2::guides(shape = ggplot2::guide_legend(override.aes = list(label.theme = ggplot2::element_text(size = legend.text.size, family = "Courier"), title.theme = ggplot2::element_text(size = legend.title.text.size, family = "Courier"))))
+    heatmap.plot <- heatmap.plot + ggplot2::geom_point(aes(size = pct_in), shape = 21) + ggplot2::guides(shape = ggplot2::guide_legend(override.aes = list(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family), title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family))))
   } else {
     if (tile.borders) {
       heatmap.plot <- heatmap.plot + ggplot2::geom_tile(colour = "black")
@@ -158,7 +179,7 @@ heatmap_pseudobulk <- function(SO,
   if (plot.feature.breaks & !missing(feature.labels)) {
     axis.df <- data.frame(y = 1:length(levels(htp$Feature)), Feature = levels(htp$Feature))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = Feature)) +
-      ggrepel::geom_text_repel(fontface = "italic", family = "Courier", data = axis.df[which(axis.df$Feature %in% feature.labels),], aes(label = Feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
+      ggrepel::geom_text_repel(fontface = "italic", family = font.family, data = axis.df[which(axis.df$Feature %in% feature.labels),], aes(label = Feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
       ggplot2::scale_x_continuous(limits = c(-0.1, 0), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::scale_y_continuous(limits = c(0, length(levels(htp$Feature)) + 0.5), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme_void()
@@ -166,7 +187,7 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- cowplot::plot_grid(axis, heatmap.plot, align = "h", axis = "tb", nrow = 1, rel_widths = c(feature.labels.axis.width,1))
   }
 
-  if (plot.secondary.axis.with.full.genenames) {
+  if (plot.sec.axis) {
     out <- convert_gene_identifier(unique(htp$Feature), species = "Hs")
     axis.df <- data.frame(y = 1:length(levels(htp$Feature)), Feature = levels(htp$Feature)) %>% dplyr::left_join(out, by = c("Feature" = "SYMBOL"))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = GENENAME)) +

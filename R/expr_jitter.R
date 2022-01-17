@@ -32,6 +32,10 @@
                           ngn,
                           pgn) {
 
+  #geom <- match.arg(geom, c("jitter", "point"))
+  #my_geom <- switch(geom, jitter = geom_jitter, point = geom_point)
+  #my_geom(...)
+
   dd <-
     rbind(as.data.frame(d[feat,ngc,drop=F]) %>%
             tibble::rownames_to_column("Feature") %>%
