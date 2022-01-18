@@ -42,15 +42,15 @@ heatmap_pseudobulk <- function(SO,
                                meta.col.levels = NULL,
                                meta.col.levels.select = NULL,
                                features = NULL,
-                               normalization = "scale",
+                               normalization = c(-1,1), # scale
                                feature.labels,
-                               topn.features = 10e5,
+                               topn.features = 10,
                                topn.metric = c("logFC", "auc", "padj"),
                                min.pct = 0.1,
                                max.padj = 0.05,
                                title = NULL,
                                title.font.size = 14,
-                               font.family = font.family,
+                               font.family = "Courier",
 
                                y.font.size = 10,
                                legend.position = "right",
@@ -64,16 +64,32 @@ heatmap_pseudobulk <- function(SO,
                                legend.barheight = 8,
                                legend.barwidth = 1,
                                legend.text.size = 10,
-                               legend.title = "z-score of avg expr",
+                               legend.title = NULL,
                                legend.title.position = "top",
+                               legend.labels = c("min", "", "max"),
                                feature.labels.nudge_x = -0.1,
                                feature.labels.axis.width = 0.2,
                                ...) {
 
-  if (!requireNamespace("presto", quietly = T)){
+  if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }
   assay <- match.arg(assay, c("RNA", "SCT"))
+
+
+  if (class(normalization) == "numeric") {
+    if (length(normalization) != 2) {
+      stop("Please set normalization to 'scale' or a numeric vector of length 2 (e.g. c(-1,1)).")
+    }
+    if (length(legend.labels) > 3) {
+      stop("legend.labels can have max length of 3 only")
+    }
+    if (length(legend.labels) == 2) {
+      legend.labels <- c(legend.labels[1], "", legend.labels[2])
+    }
+  } else {
+    normalization <- match.arg(normalization, choices = c("scale"))
+  }
 
   if (is.null(meta.col)) {
     SO@meta.data$idents <- Seurat::Idents(SO)
@@ -89,9 +105,10 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-  if (!is.null(meta.col.levels)) {
+
+  if (is.null(meta.col.levels)) {
     meta.col.levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
-    if (suppressWarnings(!NA %in% as.numeric(meta.col.levels))) {
+    if (suppressWarnings(!any(is.na(as.numeric(meta.col.levels))))) {
       meta.col.levels <- as.character(sort(as.numeric(unique(meta.col.levels))))
     }
   } else {
@@ -103,7 +120,7 @@ heatmap_pseudobulk <- function(SO,
     SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% meta.col.levels),,drop=F]))
   }
 
-  if (!is.null(meta.col.levels.select)) {
+  if (is.null(meta.col.levels.select)) {
     meta.col.levels.select <- meta.col.levels
   }
 
@@ -131,22 +148,17 @@ heatmap_pseudobulk <- function(SO,
   }
 
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
-  if (length(normalization) == 1 && class(normalization) == "character" && normalization == "scale") {
+  if (normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
-  } else if (length(normalization) == 2 && class(normalization) == "numeric") {
+  } else if (class(normalization) == "numeric") {
     tab <- scale_min_max(raw_tab, min = min(normalization), max = max(normalization), margin = 1)
-  } else {
-    stop("normalization has to be 'scale' or a numeric vector of length 2 indication min and max values for scaling.")
   }
 
   htp <-
     as.data.frame(tab) %>%
     tibble::rownames_to_column("Feature") %>%
     dplyr::filter(Feature %in% features) %>%
-    tidyr::pivot_longer(cols = -Feature, names_to = "cluster", values_to = "avgExpr") %>%
-    #dplyr::group_by(Feature) %>%
-    #dplyr::mutate(scaledAvgExpr = scale(avgExpr)) %>%
-    #dplyr::ungroup() %>%
+    tidyr::pivot_longer(cols = -Feature, names_to = "cluster", values_to = "scaledAvgExpr") %>%
     dplyr::filter(cluster %in% meta.col.levels.select) %>%
     dplyr::left_join(wil_auc[,c(which(names(wil_auc) %in% c("feature", "group", "pct_in")))], by = c("Feature" = "feature", "cluster" = "group")) %>%
     dplyr::mutate(cluster = factor(cluster, levels = meta.col.levels)) %>%
@@ -154,11 +166,17 @@ heatmap_pseudobulk <- function(SO,
 
   scale.max <- as.numeric(format(floor_any(max(htp$scaledAvgExpr), 0.1), nsmall = 1))
   scale.min <- as.numeric(format(ceiling_any(min(htp$scaledAvgExpr), 0.1), nsmall = 1))
-  scale.mid <- as.numeric(format(round(0, 1), nsmall = 1))
+  scale.mid <- as.numeric(format(round(scale.min + ((scale.max - scale.min) / 2), 1), nsmall = 1))
+
+  if (class(normalization) == "numeric") {
+    labels <- c("min", "int", "max")
+  } else {
+    labels <- c(scale.min, scale.mid, scale.max)
+  }
 
   heatmap.plot <-
     ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = scaledAvgExpr)) +
-    ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colours = col_pal(name = "RdBu", nbrew = 9), breaks = c(scale.min, scale.mid, scale.max)) +
+    ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colours = col_pal(name = "RdBu", nbrew = 9, reverse = T), breaks = c(scale.min, scale.mid, scale.max), labels = labels) +
     ggplot2::xlab("Cluster") +
     ggplot2::theme_classic() +
     ggplot2::ggtitle(title) +
