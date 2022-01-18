@@ -1,3 +1,14 @@
+#' Title
+#'
+#' @param x
+#' @param min
+#' @param max
+#' @param margin
+#'
+#' @return
+#' @export
+#'
+#' @examples
 scale_min_max <- function (x, min = 0, max = 1, margin = 2) {
   if (is.matrix(x) || is.data.frame(x)) {
     if (is.data.frame(x)) {

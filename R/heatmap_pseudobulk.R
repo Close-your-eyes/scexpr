@@ -3,34 +3,36 @@
 #' @param SO
 #' @param assay
 #' @param meta.col
-#' @param levels
-#' @param levels.select
+#' @param levels.calc which levels in meta.col to include in calculation; all levels if NULL; also defines order on x-axis
+#' @param levels.plot which levels in meta.col (and subset of levels.calc) to include in platting; set to levels.calc if NULL; also defines order on x-axis
 #' @param features
-#' @param feature.labels
+#' @param normalization
 #' @param topn.features
 #' @param topn.metric
 #' @param min.pct
 #' @param max.padj
 #' @param title
 #' @param title.font.size
+#' @param font.family
 #' @param y.font.size
-#' @param legend.position
-#' @param legend.direction
 #' @param tile.borders
 #' @param dotplot
 #' @param plot.feature.breaks
 #' @param plot.sec.axis
-#' @param legend.title.text.size
+#' @param legend.position
+#' @param legend.direction
 #' @param legend.barheight
 #' @param legend.barwidth
 #' @param legend.text.size
-#' @param legend.title
+#' @param legend.title.text.size
+#' @param legend.title.fill
+#' @param legend.title.size
 #' @param legend.title.position
+#' @param legend.labels
+#' @param feature.labels
 #' @param feature.labels.nudge_x
 #' @param feature.labels.axis.width
 #' @param ...
-#'
-#' @importFrom magrittr %>%
 #'
 #' @return
 #' @export
@@ -39,8 +41,8 @@
 heatmap_pseudobulk <- function(SO,
                                assay = c("RNA", "SCT"),
                                meta.col = NULL,
-                               levels = NULL,
-                               levels.select = NULL,
+                               levels.calc = NULL,
+                               levels.plot = NULL,
                                features = NULL,
                                normalization = c(-1,1), # scale
                                topn.features = 10,
@@ -72,14 +74,11 @@ heatmap_pseudobulk <- function(SO,
                                feature.labels.axis.width = 0.2,
                                ...) {
 
-  ## fix and claritfy levels and levels.select
-
   # ... arguments to ggrepel, like nudge_y
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }
   assay <- match.arg(assay, c("RNA", "SCT"))
-
 
   if (class(normalization) == "numeric") {
     if (length(normalization) != 2) {
@@ -109,23 +108,34 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-
-  if (is.null(levels)) {
-    levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
-    if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
-      levels <- as.character(sort(as.numeric(unique(levels))))
+  if (is.null(levels.calc)) {
+    levels.calc <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
+    if (suppressWarnings(!any(is.na(as.numeric(levels.calc))))) {
+      levels.calc <- as.character(sort(as.numeric(unique(levels.calc))))
     }
   } else {
-    levels <- as.character(unique(levels[which(levels %in% unique(SO@meta.data[,meta.col,drop=T]))]))
+    if (any(!levels.calc %in% unique(SO@meta.data[,meta.col,drop=T]))) {
+      print(paste0("levels.calc not found in meta.col: ", paste(levels.calc[which(!levels.calc %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
+    }
+    levels.calc <- as.character(unique(levels.calc[which(levels.calc %in% unique(SO@meta.data[,meta.col,drop=T]))]))
   }
 
-  # subset by levels
-  if (length(levels) < length(unique(SO@meta.data[,meta.col,drop=T]))) {
-    SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels),,drop=F]))
+  if (is.null(levels.plot)) {
+    levels.plot <- levels.calc
+  } else {
+    if (any(!levels.plot %in% unique(SO@meta.data[,meta.col,drop=T]))) {
+      print(paste0("levels.plot not found in meta.col: ", paste(levels.plot[which(!levels.plot %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
+    }
+    levels.plot <- as.character(unique(levels.plot[which(levels.plot %in% unique(SO@meta.data[,meta.col,drop=T]))]))
+    if (any(!levels.plot %in% levels.calc)) {
+      print("levels.plot has more levels than levels.calc. levels.plot is reduced to levels.calc.")
+      levels.plot <- levels.plot[which(levels.plot %in% levels.calc)]
+    }
   }
 
-  if (is.null(levels.select)) {
-    levels.select <- levels
+  # subset levels for calculation
+  if (length(levels.calc) < length(unique(SO@meta.data[,meta.col,drop=T]))) {
+    SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels.calc),,drop=F]))
   }
 
   if (missing(features)) {
@@ -141,7 +151,7 @@ heatmap_pseudobulk <- function(SO,
       dplyr::ungroup() %>%
       dplyr::filter(pct_in >= min.pct) %>%
       dplyr::filter(padj <= max.padj) %>%
-      dplyr::mutate(group = factor(group, levels = levels)) %>%
+      dplyr::mutate(group = factor(group, levels = levels.calc)) %>%
       dplyr::group_by(group) %>%
       dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
       dplyr::arrange(group, avgExpr) %>%
@@ -163,9 +173,9 @@ heatmap_pseudobulk <- function(SO,
     tibble::rownames_to_column("Feature") %>%
     dplyr::filter(Feature %in% features) %>%
     tidyr::pivot_longer(cols = -Feature, names_to = "cluster", values_to = "norm_avgexpr") %>%
-    dplyr::filter(cluster %in% levels.select) %>%
+    dplyr::filter(cluster %in% levels.plot) %>%
     dplyr::left_join(wil_auc[,c(which(names(wil_auc) %in% c("feature", "group", "pct_in")))], by = c("Feature" = "feature", "cluster" = "group")) %>%
-    dplyr::mutate(cluster = factor(cluster, levels = levels)) %>%
+    dplyr::mutate(cluster = factor(cluster, levels = levels.plot)) %>%
     dplyr::mutate(Feature = factor(Feature, levels = features))
 
   scale.max <- as.numeric(format(floor_any(max(htp$norm_avgexpr), 0.1), nsmall = 1))
