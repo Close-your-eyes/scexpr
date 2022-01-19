@@ -74,7 +74,7 @@ heatmap_pseudobulk <- function(SO,
                                feature.labels.axis.width = 0.2,
                                ...) {
 
-  # ... arguments to ggrepel, like nudge_y
+  # ... arguments to ggrepel, like nudge_y and scexpr::convert_gene_identifier
 
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
