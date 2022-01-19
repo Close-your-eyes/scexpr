@@ -476,6 +476,13 @@ feature_plot <- function(SO,
     Seurat::DefaultAssay(x) <- assay
     return(x)
   })
+
+  ## check if data has been scaled (compare to counts)
+  check <- unlist(lapply(SO, function(x) identical(Seurat::GetAssayData(x, assay = assay, slot = "data"), Seurat::GetAssayData(x, assay = assay, slot = "counts"))))
+  if (any(check)) {
+    warning("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize before using volcano_plot.")
+  }
+
   return(SO)
 }
 

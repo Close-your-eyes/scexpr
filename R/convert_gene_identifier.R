@@ -65,9 +65,10 @@ convert_gene_identifier <- function (idents,
   idents$ALIAS <- suppressWarnings(limma::alias2SymbolTable(alias = idents$SYMBOL, species = species))
 
   for (i in ident_out) {
+    # use ALIAS to find ident_out
     rows <- intersect(which(is.na(idents[,i])), which(!is.na(idents[,"ALIAS"])))
     if (length(rows) > 0) {
-      idents[rows, i] <- suppressMessages(AnnotationDbi::select(my.db, keys = as.character(idents[rows, "ALIAS"]), keytype = "SYMBOL", column = i)[,i])
+      idents[rows, i] <- dplyr::distinct(suppressMessages(AnnotationDbi::select(my.db, keys = as.character(idents[rows, "ALIAS"]), keytype = "SYMBOL", column = i)[,i]))
     }
   }
 
@@ -79,7 +80,7 @@ convert_gene_identifier <- function (idents,
     #names <- dplyr::distinct(suppressMessages(AnnotationDbi::select(my.db, keys = idents[which(is.na(idents[,"GENENAME"])),"ALIAS"], keytype = "SYMBOL", column = "GENENAME")))
     #for (i in which(is.na(idents[,"GENENAME"]))) {idents[i,"GENENAME"] <- names[which(names$SYMBOL == idents[i,"ALIAS"]),"GENENAME"]}
 
-    names <- dplyr::distinct(suppressMessages(AnnotationDbi::select(my.db, keys = idents[,"ENTREZID"], keytype = "ENTREZID", column = "GENENAME")))
+    names <- dplyr::distinct(suppressMessages(AnnotationDbi::select(my.db, keys = idents[,idents[,ident_out[1]]], keytype = ident_out[1], column = "GENENAME")))
     idents <- suppressMessages(dplyr::left_join(idents, names))
     idents <- dplyr::distinct(idents, !!sym(ident_in), .keep_all = T)
     if (nrow(idents) != start_len) {

@@ -127,13 +127,6 @@ volcano_plot <- function(SO,
                              order.discrete = c("other", negative.group.name, positive.group.name),
                              ...)
 
-
-  ## check if data has been scaled (compare to counts)
-  check <- unlist(lapply(SO, function(x) identical(Seurat::GetAssayData(x, assay = assay, slot = "data"), Seurat::GetAssayData(x, assay = assay, slot = "counts"))))
-  if (any(check)) {
-    stop("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize before using volcano_plot.")
-  }
-
   # get Assay data (check features first)
   assay_data <- lapply(SO, function(x) as.matrix(Seurat::GetAssayData(x, assay = assay, slot = "data"))[,intersect(colnames(Seurat::GetAssayData(x, assay = assay, slot = "data")), c(negative.group.cells, positive.group.cells))])
 
