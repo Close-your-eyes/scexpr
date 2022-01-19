@@ -34,6 +34,8 @@
 #' @param feature.labels.axis.width
 #' @param ...
 #'
+#' @importFrom magrittr %>%
+#'
 #' @return
 #' @export
 #'

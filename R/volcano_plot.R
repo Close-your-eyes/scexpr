@@ -37,6 +37,8 @@
 #' @param features.exclude
 #' @param ...
 #'
+#' @importFrom magrittr %>%
+#'
 #' @return
 #' @export
 #'
@@ -77,6 +79,7 @@ volcano_plot <- function(SO,
                          fc.cut = NA,
                          features.exclude = NULL,
                          save.path.interactive = NULL,
+                         run.gsea = F,
                          ...) {
 
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
@@ -207,6 +210,16 @@ volcano_plot <- function(SO,
                   p.signif = p.signif)
 
 
+  ## to fgsea_on_msigdbr
+  if (run.gsea) {
+    # run on positive and negative DEG - which ones? additional arguments?
+    '  vd.signif <- vd[which(vd$adj.p.val <= gsea.p.cutoff),]
+  vd.signif <- vd.signif[order(vd.signif$log2.fc),]
+  gene.ranks <- setNames(vd.signif[,"log2.fc",drop=T],vd.signif[,"Feature",drop=T])
+'
+  } else {
+    gsea <- NULL
+  }
 
   interactive.data = list(non.aggr.data = assay_data, data = vd, negative.group.cells = negative.group.cells, positive.group.cells = positive.group.cells, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
 
@@ -219,6 +232,7 @@ volcano_plot <- function(SO,
   return(list(plot = vp,
               data = vd,
               feat.plots = feat_plots,
+              gsea = gsea,
               interactive.data = interactive.data))
 }
 
@@ -290,7 +304,7 @@ volcano_plot <- function(SO,
   vd <- rbind(vd[intersect(which(vd[,paste0("pct.", ngn)] >= min.pct), which(vd[,"log2.fc"] < 0)),],
               vd[intersect(which(vd[,paste0("pct.", pgn)] >= min.pct), which(vd[,"log2.fc"] > 0)),])
 
-  vp <- ggplot2::ggplot(vd, ggplot2::aes(x = log2.fc, y = round(scales::oob_squish_infinite(-log10(!!sym(p.plot)), range = c(0,300)), 2), label = Feature)) +
+  vp <- ggplot2::ggplot(vd, ggplot2::aes(x = log2.fc, y = round(scales::oob_squish_infinite(-log10(!!rlang::sym(p.plot)), range = c(0,300)), 2), label = Feature)) +
     ggplot2::geom_point(color = "#999999", alpha = pt.alpha, size = pt.size) +
     ggplot2::geom_point(data = vd[which(vd$infinite.FC),], color = "cornflowerblue", size = pt.size) +
     ggplot2::theme_bw(base_size = font.size, base_family = font.family) +
@@ -320,9 +334,9 @@ volcano_plot <- function(SO,
   }
 
   if (is.null(ngn) && is.null(pgn)) {
-    vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(sym(p.plot_label))))
+    vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(p.plot_label))))
   } else {
-    vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(sym(p.plot_label))))
+    vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(p.plot_label))))
   }
 
   if (x.axis.symmetric) {
@@ -337,7 +351,7 @@ volcano_plot <- function(SO,
     vd.cut <-
       vd %>%
       dplyr::filter(abs(log2.fc) >= fc.cut) %>%
-      dplyr::filter(!!sym(p.plot) <= p.cut)
+      dplyr::filter(!!rlang::sym(p.plot) <= p.cut)
 
     vd.cut.sum <-
       vd.cut %>%
@@ -380,11 +394,11 @@ volcano_plot <- function(SO,
 
   if (is.null(label.features)) {
     if (topn.metric == "p.value") {
-      f_lab <- vd %>% dplyr::top_n(-labels.topn, !!sym(p.plot))
+      f_lab <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
     } else if (topn.metric == "both") {
-      f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!sym(p.plot))
+      f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
       f_lab.logfc <- bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) %>% dplyr::distinct()
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
