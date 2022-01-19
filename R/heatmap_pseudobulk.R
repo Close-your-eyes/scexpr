@@ -75,6 +75,7 @@ heatmap_pseudobulk <- function(SO,
                                ...) {
 
   # ... arguments to ggrepel, like nudge_y
+
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }
@@ -229,10 +230,11 @@ heatmap_pseudobulk <- function(SO,
   }
 
   if (plot.sec.axis) {
-    out <- convert_gene_identifier(unique(htp$Feature), species = "Hs")
+    out <- convert_gene_identifier(idents = levels(htp$Feature), ident_in = "SYMBOL", ident_out = "GENENAME", ...)
+    #out <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, keys = levels(htp$Feature), keytype = "SYMBOL", column = i, multiVals = "first")
     axis.df <- data.frame(y = 1:length(levels(htp$Feature)), Feature = levels(htp$Feature)) %>% dplyr::left_join(out, by = c("Feature" = "SYMBOL"))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = GENENAME)) +
-      ggplot2::geom_text(hjust = 0) +
+      ggplot2::geom_text(hjust = 0, family = font.family) +
       ggplot2::scale_x_continuous(limits = c(0, 2), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::scale_y_continuous(limits = c(0.4, length(levels(htp$Feature)) + 0.4), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme(panel.background = ggplot2::element_blank(), plot.margin = ggplot2::margin(0, 0, 0, 0, "pt"), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
