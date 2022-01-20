@@ -443,12 +443,15 @@ feature_plot <- function(SO,
 
 
 .check.SO <- function(SO,
-                      assay,
-                      split.by,
-                      shape.by) {
+                      assay = c("RNA", "SCT"),
+                      split.by = NULL,
+                      shape.by = NULL) {
   if (!is.list(SO)) {
     SO <- list(SO)
   }
+
+  assay <- match.arg(assay, c("RNA", "SCT"))
+
   if (is.null(names(SO)) && length(SO) > 1) {
     print("List of SO has no names. Naming them by numbers.")
     names(SO) <- as.character(seq_along(SO))
@@ -519,13 +522,13 @@ feature_plot <- function(SO,
 }
 
 .check.and.get.cells <- function (SO,
-                                  make.cells.unique,
-                                  cells,
-                                  cutoff.feature,
-                                  cutoff.expression,
-                                  exclusion.feature,
-                                  assay,
-                                  downsample,
+                                  assay = c("RNA", "SCT"),
+                                  make.cells.unique = F,
+                                  cells = NULL,
+                                  cutoff.feature = NULL,
+                                  cutoff.expression = NULL,
+                                  exclusion.feature  = NULL,
+                                  downsample = 1,
                                   make.cells.unique.warning = 1) {
 
   if (!is.null(cutoff.feature) && length(.check.features(SO, cutoff.feature)) == 0) {
@@ -541,6 +544,8 @@ feature_plot <- function(SO,
   if (length(cutoff.feature) != length(cutoff.expression) && length(cutoff.expression) == 1) {
     cutoff.expression <- rep(cutoff.expression, length(cutoff.feature))
   }
+
+  assay <- match.arg(assay, c("RNA", "SCT"))
 
   if (downsample == 0) {
     stop("downsample cannot be 0.")
@@ -637,7 +642,10 @@ feature_plot <- function(SO,
 }
 
 
-.check.features <- function(SO, features, rownames = T, meta.data = T) {
+.check.features <- function(SO,
+                            features,
+                            rownames = T,
+                            meta.data = T) {
   hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
     if (ignore.case) {
       sapply(features, function(x) {
