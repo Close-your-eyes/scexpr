@@ -4,6 +4,9 @@ fgsea_on_msigdbr <- function(gene.ranks,
                              min.padj = 0.001, # which plots to generate
                              ...) {
 
+  if (length(gene.ranks) == 0) {
+    return(NULL)
+  }
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
   }
