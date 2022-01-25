@@ -509,12 +509,12 @@ feature_plot <- function(SO,
   }
 
   # correct reduction.name with respect to case
-  rr <- gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[["tsne"]]@cell.embeddings), ignore.case = T, value = T)[1])
+  rr <- gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[[reduction]]@cell.embeddings), ignore.case = T, value = T)[1])
 
   reduction <- stats::setNames(rr, nm = reduction)
 
   ## check reduction format in SOs (e.g. tSNE_1)
-  if (any(!unlist(lapply(SO, function(x) all(colnames(x@reductions[["tsne"]]@cell.embeddings) %in% paste0(reduction, "_", dims)))))) {
+  if (any(!unlist(lapply(SO, function(x) all(colnames(x@reductions[[reduction]]@cell.embeddings) %in% paste0(reduction, "_", dims)))))) {
     stop("Not all cell.embedding columns could be matched the pattern 'reduction_dims[1]', reduction_dims[2].")
   }
 
