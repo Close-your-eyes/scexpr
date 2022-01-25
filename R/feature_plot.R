@@ -176,12 +176,6 @@ feature_plot <- function(SO,
     SO.split <- NULL
   }
 
-  if (mc.cores > 1) {
-    lapply.fun <- parallel::mclapply
-  } else {
-    lapply.fun <- lapply
-  }
-
 
   plots <- future.apply::future_lapply(features, function(x) {
 
