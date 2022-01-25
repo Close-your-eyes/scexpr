@@ -14,12 +14,14 @@ feature_correlation <- function(SO,
   ref_mat <- ref_mat[Matrix::rowSums(ref_mat > 0)/ncol(ref_mat) >= min_pct, ]
 
 
-  corr_obj <- psych::corr.test(t(as.matrix(Seurat::GetAssayData(SO, assay = assay)[features,])), t(ref_mat), ci = F) #...
+  corr_obj <- psych::corr.test(t(as.matrix(Seurat::GetAssayData(SO, assay = assay)[features,names(cells[which(cells == 1)])])), t(ref_mat), ci = F) #...
   corr_df <- merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"), reshape2::melt(t(corr_obj[["p"]]), value.name = "p"))
+
+
   corr_df$m.log10.p <- -log10(corr_df$p)
   names(corr_df)[1:2] <- c("ref_feature", "features")
 
-  xx <- reshape2::melt(t(corr_obj[["r"]]), value.name = "r")
+## add pcts?!
 
   ggplot(corr_df, aes(x = r, y = m.log10.p)) +
     geom_point() +
