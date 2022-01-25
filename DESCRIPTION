@@ -28,6 +28,7 @@ Imports:
     matrixTests,
     methods,
     msigdbr,
+    psych,
     RColorBrewer,
     reshape2,
     scales,

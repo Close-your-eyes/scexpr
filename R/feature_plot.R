@@ -178,7 +178,7 @@ feature_plot <- function(SO,
     SO.split <- NULL
   }
 
-#future.apply::future_
+  #future.apply::future_
   plots <- lapply(features, function(x) {
 
     data <- .get.data(SO = SO, assay = assay, cells = cells, split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order, binary.expr = binary.expr)
@@ -452,9 +452,16 @@ feature_plot <- function(SO,
 .check.SO <- function(SO,
                       assay = c("RNA", "SCT"),
                       split.by = NULL,
-                      shape.by = NULL) {
+                      shape.by = NULL,
+                      max.length = NULL) {
   if (!is.list(SO)) {
     SO <- list(SO)
+  }
+
+  if (!is.null(max.length)) {
+    if (length(SO) > max.length) {
+      stop("Please provide only one SO.")
+    }
   }
 
   assay <- match.arg(assay, c("RNA", "SCT"))
@@ -493,7 +500,12 @@ feature_plot <- function(SO,
     warning("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize before using volcano_plot.")
   }
 
-  return(SO)
+
+  if (!is.null(max.length) && max.length == 1) {
+    return(SO[[1]])
+  } else {
+    return(SO)
+  }
 }
 
 .check.reduction <- function(SO,
@@ -517,7 +529,7 @@ feature_plot <- function(SO,
 
   # correct reduction.name with respect to case
   rr <- gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[[reduction]]@cell.embeddings), ignore.case = T, value = T)[1])
-#SO[[1]]@reductions[["tsne"]]@key
+  #SO[[1]]@reductions[["tsne"]]@key
   reduction <- stats::setNames(rr, nm = reduction)
 
   ## check reduction format in SOs (e.g. tSNE_1)
@@ -537,6 +549,10 @@ feature_plot <- function(SO,
                                   exclusion.feature  = NULL,
                                   downsample = 1,
                                   make.cells.unique.warning = 1) {
+
+  if (!is.list(SO)) {
+    SO <- list(SO)
+  }
 
   if (!is.null(cutoff.feature) && length(.check.features(SO, cutoff.feature)) == 0) {
     stop("cutoff.feature not found in every SO.")
@@ -699,7 +715,9 @@ feature_plot <- function(SO,
   if (is.null(features)) {return(NULL)}
   if (!is.vector(features)) {stop("Features must be a vector of strings.")}
   if (!rownames && !meta.data) {stop("Dont be stupid, rownnames = F and meta.data = F ?!")}
-  if (!is.list(SO)) {SO <- list(SO)}
+  if (!is.list(SO)) {
+    SO <- list(SO)
+  }
   features <- unique(features)
 
   features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
@@ -974,7 +992,7 @@ feature_plot <- function(SO,
 }
 
 .prep.contour.cells <- function(SO, reduction, x) {
-   #multiple SO - how to?
+  #multiple SO - how to?
 
   x<-"all"
   attr(x, "levels") <- 0.9
