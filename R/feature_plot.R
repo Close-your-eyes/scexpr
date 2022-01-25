@@ -176,8 +176,8 @@ feature_plot <- function(SO,
     SO.split <- NULL
   }
 
-
-  plots <- future.apply::future_lapply(features, function(x) {
+#future.apply::future_
+  plots <- lapply(features, function(x) {
 
     data <- .get.data(SO = SO, assay = assay, cells = cells, split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order, binary.expr = binary.expr)
 
