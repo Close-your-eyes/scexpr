@@ -159,6 +159,11 @@ feature_plot <- function(SO,
   # duplicative with check in .check.SO
   #avail_assays <- Reduce(intersect, lapply(SO, function(x) Seurat::Assays(x)))
   assay <- match.arg(assay, c("RNA", "SCT"))
+  if (max.q.cutoff > 1) {
+    print("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
+    max.q.cutoff <- max.q.cutoff/100
+    min.q.cutoff <- min.q.cutoff/100
+  }
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by,shape.by = shape.by)
   reduction <- .check.reduction(SO = SO, reduction = reduction, dims = dims)
@@ -171,8 +176,14 @@ feature_plot <- function(SO,
     SO.split <- NULL
   }
 
+  if (mc.cores > 1) {
+    lapply.fun <- parallel::mclapply
+  } else {
+    lapply.fun <- lapply
+  }
 
-  plots <- lapply(features, function(x) {
+
+  plots <- future.apply::future_lapply(features, function(x) {
 
     data <- .get.data(SO = SO, assay = assay, cells = cells, split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order, binary.expr = binary.expr)
 
@@ -718,16 +729,23 @@ feature_plot <- function(SO,
 }
 
 .get.data <- function(SO,
-                      assay,
-                      cells,
-                      split.by,
-                      shape.by,
-                      reduction,
                       feature,
-                      max.q.cutoff,
-                      min.q.cutoff,
-                      binary.expr,
-                      order) {
+                      assay = c("RNA", "SCT"),
+                      cells = NULL,
+                      split.by = NULL,
+                      shape.by = NULL,
+                      reduction = "tsne",
+                      min.q.cutoff = 0,
+                      max.q.cutoff = 1,
+                      binary.expr = F,
+                      order = T) {
+
+  assay <- match.arg(assay, c("RNA", "SCT"))
+  if (max.q.cutoff > 1) {
+    print("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
+    max.q.cutoff <- max.q.cutoff/100
+    min.q.cutoff <- min.q.cutoff/100
+  }
 
   data <- do.call(rbind, lapply(unname(SO), function(y) {
 

@@ -17,6 +17,8 @@ Imports:
     dplyr,
     DT,
     fgsea,
+    future,
+    future.apply,
     ggplot2,
     ggrepel,
     harmony,
