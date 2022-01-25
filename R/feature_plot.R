@@ -139,6 +139,8 @@ feature_plot <- function(SO,
 
                          plot.labels = NULL,
                          label.size = 12,
+
+                         scattermore = NULL,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -187,7 +189,7 @@ feature_plot <- function(SO,
 
     # generate legend labels
     if (is.numeric(data[,1])) {
-      if (all(data[,1] == 0)) {
+      if (all(data[which(rownames(data) %in% names(cells[which(cells == 1)])),1] == 0)) {
         scale.max <- 0
         scale.min <- 0
         scale.mid <- 0
