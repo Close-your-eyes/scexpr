@@ -669,6 +669,8 @@ feature_plot <- function(SO,
                             features,
                             rownames = T,
                             meta.data = T) {
+
+  ## Speed up!
   hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
     if (ignore.case) {
       sapply(features, function(x) {
