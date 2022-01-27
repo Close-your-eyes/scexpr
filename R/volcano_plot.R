@@ -137,10 +137,19 @@ volcano_plot <- function(SO,
     return(x)
   })
 
+
+   ## fix: consider multiple SOs, what if other is not in every SO? this will cause problem in feature plot
+'  if ("other" %in% SO@meta.data[,colname,drop=T]) {
+    order.discrete <- c("other", negative.group.name, positive.group.name)
+    if (!"order.discrete" %in% names(dots)) {
+      dots <- c(order.discrete, dots)
+    }
+  }'
+
+
   feat_plots <- do.call(feature_plot, args = c(list(SO = SO,
                                                     assay = assay,
-                                                    features = colname,
-                                                    order.discrete = c("other", negative.group.name, positive.group.name)),
+                                                    features = colname),
                                                dots[which(names(dots) %in% names(formals(feature_plot)))]))
 
   # get Assay data (check features first)
@@ -366,7 +375,8 @@ volcano_plot <- function(SO,
                    stats::setNames(list(round(apm, 2)), pgn),
                    stats::setNames(list(round(apply(an, 1, function(x) sum(x != 0))/ncol(an), 2)), paste0("pct.", ngn)),
                    stats::setNames(list(round(apply(ap, 1, function(x) sum(x != 0))/ncol(ap), 2)), paste0("pct.", pgn)),
-                   infinite.FC = ifelse(is.infinite(log2(apm / anm)), TRUE, FALSE))
+                   infinite.FC = ifelse(is.infinite(log2(apm / anm)), TRUE, FALSE),
+                   check.names = F)
 
   vd$log2.fc <- scales::oob_squish_infinite(vd$log2.fc, range = c(min(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) - inf.fc.shift,
                                                                   max(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) + inf.fc.shift))

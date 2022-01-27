@@ -271,6 +271,8 @@ feature_plot <- function(SO,
           order.discrete <- unique(order.discrete)
           print(paste0("order.discrete is made unique: ", paste(order.discrete, collapse = ", ")))
         }
+
+        ## make nicer - catch error discrepancies and print warning only
         if (length(order.discrete) != length(col.pal)) {
           stop("col.pal and order.discrete are of different lengths.")
         }

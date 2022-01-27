@@ -1,7 +1,8 @@
 #library(shiny)
 #library(tidyverse)
 
-### add save button
+### save button: does not plot labels!
+### infinite p-vals cannot be selected for labeling.
 
 data <- readRDS(file.path(dirname(rstudioapi::getActiveDocumentContext()$path), "data.rds"))
 
@@ -27,7 +28,7 @@ ui <- shiny::fluidPage(
     shiny::column(2,shiny::selectInput(inputId = "cc", label = "Clusters", choices = names(data[[1]]), selected = names(data[[1]])[1])),
     shiny::column(2,shiny::numericInput(inputId = "plot.width", label = "plot.width", value = 12, min = 1, max = 50)),
     shiny::column(2,shiny::numericInput(inputId = "plot.height", label = "plot.height", value = 8, min = 1, max = 50)),
-    shiny::column(2,actionButton(inputId = "save", label = "save.plot"))
+    shiny::column(2,shiny::actionButton(inputId = "save", label = "save.plot"))
   ),
   shiny::plotOutput("volcano_plot", brush = "plot_brush"),
   shiny::fluidRow(
@@ -94,7 +95,7 @@ server <- function(input, output, session) {
   output$volcano_plot = shiny::renderPlot({
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
-    plot <<- scexpr:::.plot_vp(vd = ds$ds,
+    plot <- scexpr:::.plot_vp(vd = ds$ds,
                                p.plot = input$pval,
                                pt.size = input$pt.size2,
                                pt.alpha = 0.8,
@@ -108,6 +109,7 @@ server <- function(input, output, session) {
                                y.axis.pseudo.log = input$pseudo.log,
                                pseudo.log.sigma = input$pseudo.log.sigma)
 
+    saveplot <<- plot
 
     plot <- plot + ggplot2::geom_point(color = "black", data = ds$ds[f,,drop=F])
     if (length(f) <= input$max.volcano.label) {
@@ -137,7 +139,7 @@ server <- function(input, output, session) {
   })
 
   shiny::observeEvent(input$save, {
-    ggplot2::ggsave(plot = plot, filename = paste0(format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d.%H%M%S"), "_plot.png"), path = dirname(rstudioapi::getActiveDocumentContext()$path), dpi = 300, width = input$plot.width, height = input$plot.height)
+    ggplot2::ggsave(plot = saveplot, filename = paste0(format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d.%H%M%S"), "_plot.png"), path = dirname(rstudioapi::getActiveDocumentContext()$path), dpi = 300, width = input$plot.width, height = input$plot.height)
   })
 
 }
