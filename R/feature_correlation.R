@@ -35,6 +35,9 @@ feature_correlation <- function(SO,
   corr_df <- corr_df %>% dplyr::left_join(stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
   corr_df <- corr_df %>% dplyr::left_join(stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$feature))), c("feature_pct", "feature")), by = "feature")
 
+  return(corr_df)
+
+
 '  ggplot(corr_df, aes(x = r, y = minus.log10.p.adj)) +
     geom_point() +
     theme_bw() +
