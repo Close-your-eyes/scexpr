@@ -138,15 +138,6 @@ volcano_plot <- function(SO,
   })
 
 
-   ## fix: consider multiple SOs, what if other is not in every SO? this will cause problem in feature plot
-'  if ("other" %in% SO@meta.data[,colname,drop=T]) {
-    order.discrete <- c("other", negative.group.name, positive.group.name)
-    if (!"order.discrete" %in% names(dots)) {
-      dots <- c(order.discrete, dots)
-    }
-  }'
-
-
   feat_plots <- do.call(feature_plot, args = c(list(SO = SO,
                                                     assay = assay,
                                                     features = colname),

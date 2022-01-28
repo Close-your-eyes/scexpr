@@ -221,7 +221,7 @@ feature_plot <- function(SO,
 
     plot <-
       ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(paste0(reduction, "_", dims[1])), y = !!rlang::sym(paste0(reduction, "_", dims[2])))) +
-      ggplot2::geom_point(ggplot2::aes(shape = !!shape.by), size = pt.size, colour = col.excluded.cells, data = data[which(rownames(data) %in% names(cells[which(cells == 0)])),])
+      ggplot2::geom_point(ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.excluded.cells, data = data[which(rownames(data) %in% names(cells[which(cells == 0)])),])
 
     # different procedure for gene feature or meta.data feature
     if (all(unlist(lapply(unname(SO), function(y) x %in% rownames(Seurat::GetAssayData(y, slot = "data", assay = assay)))))) {
@@ -233,12 +233,12 @@ feature_plot <- function(SO,
 
       # plot expressers and non-expressers
       if (binary.expr) {
-        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),], ggplot2::aes(shape = !!shape.by, colour = binary.expr), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
+        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),], ggplot2::aes(shape = !!shape.by, color = binary.expr), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
       } else {
         # non-expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, colour = col.non.expresser)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
         # expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(colour = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
       }
 
       if (length(SO) > 1) {
@@ -252,7 +252,7 @@ feature_plot <- function(SO,
         plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = freq.font.size, ggplot2::aes(label = !!rlang::sym(label), x = xmin + abs(xmin - xmax) * freq.position[1], y = ymin + abs(ymin - ymax) * freq.position[2]))
       }
 
-      plot.colourbar <- !binary.expr
+      plot.colorbar <- !binary.expr
       make.italic <- T
 
     } else if (all(unlist(lapply(unname(SO), function(y) x %in% names(y@meta.data))))) {
@@ -265,22 +265,26 @@ feature_plot <- function(SO,
 
       if (is.null(order.discrete)) {
         # plot non-excluded cells, sample to make it random
-        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),][sample(nrow(data[which(rownames(data) %in% names(cells[which(cells == 1)])),])), ], ggplot2::aes(colour = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
+        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),][sample(nrow(data[which(rownames(data) %in% names(cells[which(cells == 1)])),])), ], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
       } else {
         if (length(unique(order.discrete)) != length(order.discrete)) {
           order.discrete <- unique(order.discrete)
           print(paste0("order.discrete is made unique: ", paste(order.discrete, collapse = ", ")))
         }
 
+'        if (length(order.discrete) != nlevels(as.factor(data[,1]))) {
+          stop(paste0("length(order.discrete) and number of factor levels are different. Please provide every factor level in order.discrete: ", paste(levels(as.factor(data[,1])), collapse = ", ")))
+        }
+
+
         ## make nicer - catch error discrepancies and print warning only
         if (length(order.discrete) != length(col.pal)) {
           stop("col.pal and order.discrete are of different lengths.")
         }
-        if (length(order.discrete) != nlevels(as.factor(data[,1]))) {
-          stop(paste0("length(order.discrete) and number of factor levels are different. Please provide every factor level in order.discrete: ", paste(levels(as.factor(data[,1])), collapse = ", ")))
-        }
+
         names(col.pal) <- order.discrete
 
+        '
         if (length(pt.size) == 1) {
           pt.size <- rep(pt.size, length(order.discrete))
         } else {
@@ -288,9 +292,12 @@ feature_plot <- function(SO,
             stop("length(pt.size) has to be 1 or equal to length(order.discrete).")
           }
         }
+        # plot all from order.discrete
         for (i in seq_along(order.discrete)) {
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == order.discrete[i])),], ggplot2::aes(colour = !!rlang::sym(x), shape = !!shape.by), size = pt.size[i])
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == order.discrete[i])),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size[i])
         }
+        # plot those missing in order.discrete (randomly)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(!data[,x] %in% order.discrete)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size[i])
       }
 
       if (!is.null(plot.labels)) {
@@ -308,7 +315,7 @@ feature_plot <- function(SO,
         }
       }
 
-      plot.colourbar <- is.numeric(data[,1])
+      plot.colorbar <- is.numeric(data[,1])
       make.italic <- F
     }
 
@@ -317,10 +324,10 @@ feature_plot <- function(SO,
         if (min.q.cutoff > 0) {min.lab <- paste0(scale.min, " (q", round(min.q.cutoff*100, 0), ")")} else {min.lab <- scale.min}
         if (max.q.cutoff < 1) {max.lab <- paste0(scale.max, " (q", round(max.q.cutoff*100, 0), ")")} else {max.lab <- scale.max}
         if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
-          plot <- plot + ggplot2::scale_color_gradientn(colours = col.pal, limits = c(scale.min, scale.max), breaks = c(scale.min, scale.mid, scale.max), labels = c(min.lab,  scale.mid, max.lab))
+          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal, limits = c(scale.min, scale.max), breaks = c(scale.min, scale.mid, scale.max), labels = c(min.lab,  scale.mid, max.lab))
         } else {
           # if no expressers are found: breaks and labels would be of different lengths
-          plot <- plot + ggplot2::scale_color_gradientn(colours = col.pal, limits = c(scale.min, scale.max), breaks = c(scale.min, scale.mid, scale.max))
+          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal, limits = c(scale.min, scale.max), breaks = c(scale.min, scale.mid, scale.max))
         }
       } else {
         plot <- plot + ggplot2::scale_color_manual(values = col.pal)
@@ -373,8 +380,8 @@ feature_plot <- function(SO,
                                 title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
                                 title = switch(plot.legend.title, legend.title, NULL))
         },
-        colour = if (plot.colourbar) {
-          ggplot2::guide_colourbar(barwidth = legend.barwidth,
+        color = if (plot.colorbar) {
+          ggplot2::guide_colorbar(barwidth = legend.barwidth,
                                    barheight = legend.barheight,
                                    label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
                                    title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
