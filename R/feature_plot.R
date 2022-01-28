@@ -109,7 +109,7 @@ feature_plot <- function(SO,
                          legend.col.size = 3,
                          hide.shape.legend = F,
 
-                         font.family = "Courier",
+                         font.family = "sans",
                          col.pal.c = "spectral",
                          col.pal.d = "custom",
                          col.excluded.cells = "grey95",
@@ -237,8 +237,12 @@ feature_plot <- function(SO,
       } else {
         # non-expressers
         plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
+        #plot <- plot + scattermore::geom_scattermore(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], pointsize = pt.size*1.1*10, color = col.non.expresser, alpha = 1)
+
         # expressers
         plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
+        #plot <- plot + scattermore::geom_scattermore(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x)), pointsize = pt.size*pt.size.expr.factor*1.1*10)
+
       }
 
       if (length(SO) > 1) {
@@ -282,26 +286,6 @@ feature_plot <- function(SO,
           print(paste0("order.discrete reduced to existing levels: ", paste(gsub("\\$$", "", (gsub("^\\^", "", order.discrete))), collapse = ", ")))
         }
 
-'        if (length(order.discrete) != nlevels(as.factor(data[,1]))) {
-          stop(paste0("length(order.discrete) and number of factor levels are different. Please provide every factor level in order.discrete: ", paste(levels(as.factor(data[,1])), collapse = ", ")))
-        }
-
-
-        ## make nicer - catch error discrepancies and print warning only
-        if (length(order.discrete) != length(col.pal)) {
-          stop("col.pal and order.discrete are of different lengths.")
-        }
-
-        names(col.pal) <- order.discrete
-
-        '
-'        if (length(pt.size) == 1) {
-          pt.size <- rep(pt.size, length(order.discrete))
-        } else {
-          if (length(pt.size) != length(order.discrete)) {
-            stop("length(pt.size) has to be 1 or equal to length(order.discrete).")
-          }
-        }'
         # optionally: pt.size as names of order.discrete
         for (i in order.discrete[which(grepl("^\\^", order.discrete))]) {
           i <- gsub("^\\^", "", i)
@@ -540,34 +524,22 @@ feature_plot <- function(SO,
 .check.reduction <- function(SO,
                              reduction,
                              dims) {
-  # check if reduction is in all objects
-  if (!all(unlist(lapply(SO, function(x) any(grepl(reduction, names(x@reductions))))))) {
-    reduction <- base::Reduce(base::intersect, lapply(SO, function(x) names(x@reductions)))
-    if (length(reduction) == 0) {
-      stop("No common reduction found in SOs.")
-    }
-    if (length(reduction) > 1 && "tsne" %in% reduction) {
-      reduction <- "tsne"
-    } else if (length(reduction) > 1 && "umap" %in% reduction) {
-      reduction <- "umap"
-    } else {
-      reduction <- sample(reduction, 1)
-    }
-    print(paste0("reduction changed to a common one in all SOs: ", reduction))
+
+  common_red <- Reduce(intersect, lapply(SO, function(x) names(x@reductions)))
+  if (length(common_red) == 0) {
+    stop("No common reduction found in SOs.")
+  }
+  red <- grep(reduction, common_red, ignore.case = T, value = T)
+  if (length(red) == 0) {
+    print("reduction not found in SOs., Changing to an arbitrary common one in SOs.")
+    red <- sample(common_red, 1)
+  } else if (length(red) > 1) {
+    red <- common_red[which.min(adist(reduction, common_red, ignore.case = T))]
   }
 
-  # correct reduction.name with respect to case
-  key <- SO[[1]]@reductions[[reduction]]@key
-  #gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[[reduction]]@cell.embeddings), ignore.case = T, value = T)[1])
-
-  reduction <- stats::setNames(gsub("_$", "", key), nm = reduction)
-
-  ## check reduction format in SOs (e.g. tSNE_1)
-  if (any(!unlist(lapply(SO, function(x) all(paste0(reduction, "_", dims) %in% colnames(x@reductions[[names(reduction)]]@cell.embeddings)))))) {
-    stop("Not all cell.embedding columns could be matched the pattern 'reduction_dims[1]', reduction_dims[2].")
-  }
-
-  return(reduction)
+  key <- SO[[1]]@reductions[[red]]@key
+  red <- stats::setNames(gsub("_$", "", key), nm = red)
+  return(red)
 }
 
 .check.and.get.cells <- function (SO,
