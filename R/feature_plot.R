@@ -557,12 +557,13 @@ feature_plot <- function(SO,
   }
 
   # correct reduction.name with respect to case
-  rr <- gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[[reduction]]@cell.embeddings), ignore.case = T, value = T)[1])
-  #SO[[1]]@reductions[["tsne"]]@key
-  reduction <- stats::setNames(rr, nm = reduction)
+  key <- SO[[1]]@reductions[[reduction]]@key
+  #gsub("_[0-9]", "", grep(reduction, colnames(SO[[1]]@reductions[[reduction]]@cell.embeddings), ignore.case = T, value = T)[1])
+
+  reduction <- stats::setNames(gsub("_$", "", key), nm = reduction)
 
   ## check reduction format in SOs (e.g. tSNE_1)
-  if (any(!unlist(lapply(SO, function(x) all(colnames(x@reductions[[names(reduction)]]@cell.embeddings) %in% paste0(reduction, "_", dims)))))) {
+  if (any(!unlist(lapply(SO, function(x) all(paste0(reduction, "_", dims) %in% colnames(x@reductions[[names(reduction)]]@cell.embeddings)))))) {
     stop("Not all cell.embedding columns could be matched the pattern 'reduction_dims[1]', reduction_dims[2].")
   }
 
@@ -806,7 +807,7 @@ feature_plot <- function(SO,
       stop("Feature found in meta.data and rownames of SO.")
     }
 
-    data <- cbind(data, Seurat::Embeddings(y, reduction = names(y@reductions)[grepl(reduction, names(y@reductions), ignore.case = T)]))
+    data <- cbind(data, Seurat::Embeddings(y, reduction = reduction)) #names(y@reductions)[grepl(reduction, names(y@reductions), ignore.case = T)]
     data <- data[which(rownames(data) %in% names(cells)),]
 
     if (is.null(split.by)) {

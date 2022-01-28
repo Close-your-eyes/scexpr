@@ -29,6 +29,8 @@
 #' Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 #' Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
 #' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta
+#' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
+#' @param celltype_label label
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -43,7 +45,7 @@ prep_SO <- function(SO_unprocessed,
                     downsample = 1,
                     export_prefix = NULL,
                     cluster_resolutions = 0.8,
-                    reductions = c("tsne", "umap"),
+                    reductions = c("tsne", "umap", "som", "gtqsom"),
                     nhvf = 800,
                     npcs = 20,
                     nintdims = 30,
@@ -54,6 +56,8 @@ prep_SO <- function(SO_unprocessed,
                     vars.to.regress = NULL,
                     seeed = 42,
                     save_path = NULL,
+                    celltype_refs = NULL, # list of celldex::objects
+                    celltype_label = "label.main",
                     ...) {
 
   mydots <- list(...)
@@ -64,7 +68,35 @@ prep_SO <- function(SO_unprocessed,
   } else if (!is.character(save_path)) {
     stop("save_path has to be a character; a path to a folder where to save Seurat objects to.")
   }
-  reductions <- match.arg(reductions, c("tsne", "umap"), T)
+
+  if (!is.null(celltype_refs)) {
+    if (!is.list(celltype_refs)) {
+      stop("celltype_refs should be a named list of reference data sets from celldex or similar.")
+    }
+    if (is.null(names(celltype_refs))) {
+      stop("Provide names for celltype_refs.")
+    }
+    if (any(duplicated(names(celltype_refs)))) {
+      stop("names for celltype_refs must be unique.")
+    }
+    if (length(celltype_label) == 1) {
+      celltype_label <- rep(celltype_label, length(celltype_refs))
+    }
+    if (length(celltype_label) != length(celltype_refs)) {
+      stop("celltype_label and celltype_refs must have the same lengths.")
+    }
+    for (i in seq_along(celltype_refs)) {
+      if (!celltype_label[i] %in% names(celltype_refs[[i]]@colData@listData)) {
+        stop(paste0(celltype_label[i], " not found in ", names(celltype_refs)[i], "."))
+      }
+    }
+
+    if (!requireNamespace("SingleR", quietly = T)) {
+      BiocManager::install("SingleR")
+    }
+  }
+
+  reductions <- match.arg(reductions, c("tsne", "umap", "som", "gtqsom"), several.ok = T)
   normalization <- match.arg(normalization, c("SCT", "LogNormalize"))
   batch_corr <- match.arg(batch_corr, c("harmony", "integration", "regression", "none"))
 
@@ -94,10 +126,6 @@ prep_SO <- function(SO_unprocessed,
     stop("SO_unprocessed has no names.")
   }
 
-  if (length(SO.list) > 1 && batch_corr == "harmony" && !any(grepl("RunHarmony__group.by.vars", names(mydots)))) {
-    stop(paste0("Please provide one or more group.by.vars from meta.data (with prefix: RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
-  }
-
   if (downsample > 1 && downsample < min_cells) {
     print("downsample set to min_cells.")
     downsample <- min_cells
@@ -113,6 +141,11 @@ prep_SO <- function(SO_unprocessed,
   }
   samples <- names(SO.list)[which(grepl(paste(samples, collapse = "|"), names(SO.list)))]
   SO.list <- SO.list[which(names(SO.list) %in% samples)]
+
+
+  if (length(SO.list) > 1 && batch_corr == "harmony" && !any(grepl("RunHarmony__group.by.vars", names(mydots)))) {
+    stop(paste0("Please provide one or more group.by.vars from meta.data (with prefix: RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
+  }
 
   if (!is.null(cells)) {
     SO.list <- lapply(SO.list, function (x) {
@@ -145,6 +178,7 @@ prep_SO <- function(SO_unprocessed,
   }
 
   print(paste0("Samples included (", length(SO.list), "): ", paste(names(SO.list), collapse=", ")))
+
   if (length(SO.list) == 1) {
     batch_corr <- "none"
   }
@@ -238,6 +272,29 @@ prep_SO <- function(SO_unprocessed,
     #SO <- do.call(Seurat::RunTSNE, args = c(list(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0), dots))
   }
 
+  if (any(grepl("som", reductions, ignore.case = T))) {
+    dots <- mydots[which(grepl("^SOM__", names(mydots), ignore.case = T))]
+    names(dots) <- gsub("^SOM__", "", names(dots), ignore.case = T)
+    map <- do.call(EmbedSOM::SOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings), dots))
+
+    dots <- mydots[which(grepl("^EmbedSOM__", names(mydots), ignore.case = T))]
+    names(dots) <- gsub("^EmbedSOM__", "", names(dots), ignore.case = T)
+    ES <- do.call(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map), dots))
+
+    SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = mydots[which(grepl("^SOM__|^EmbedSOM__", names(mydots), ignore.case = T))])
+  }
+
+  if (any(grepl("gtqsom", reductions, ignore.case = T))) {
+    dots <- mydots[which(grepl("^GQTSOM__", names(mydots), ignore.case = T))]
+    names(dots) <- gsub("^GQTSOM__", "", names(dots), ignore.case = T)
+    map <- do.call(EmbedSOM::GQTSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings), dots))
+
+    dots <- mydots[which(grepl("^EmbedSOM__", names(mydots), ignore.case = T))]
+    names(dots) <- gsub("^EmbedSOM__", "", names(dots), ignore.case = T)
+    ES <- do.call(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map), dots))
+
+    SO[["GTQSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GTQSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = mydots[which(grepl("^GQTSOM__|^EmbedSOM__", names(mydots), ignore.case = T))])
+  }
 
 '  dots <- mydots[which(grepl("^FindNeighbors__", names(mydots), ignore.case = T))]
   names(dots) <- gsub("^FindNeighbors__", "", names(dots), ignore.case = T)'
@@ -248,6 +305,15 @@ prep_SO <- function(SO_unprocessed,
   names(dots) <- gsub("^FindClusters__", "", names(dots), ignore.case = T)'
   SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, ...)
   #SO <- do.call(Seurat::FindClusters, args = c(list(object = SO, resolution = cluster_resolutions), dots))
+
+  if (!is.null(celltype_refs)) {
+    for (i in seq_along(celltype_refs)) {
+      celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"), ref = celltype_refs[[i]], labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]])
+      SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
+      Seurat::Misc(SO, paste0(names(celltype_refs)[i], "_object")) <- celltypes
+    }
+  }
+
 
   # SO <- Seurat::DietSeurat(SO, scale.data = T, assays = names(SO@assays), dimreducs = names(SO@reductions))
   dir.create(save_path, showWarnings = F, recursive = T)
