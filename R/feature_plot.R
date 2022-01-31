@@ -26,7 +26,7 @@
 #' @param cutoff.feature
 #' @param cutoff.expression
 #' @param exclusion.feature
-#' @param binary.expr
+#' @param binary
 #' @param col.expresser
 #' @param legend.position
 #' @param legend.title.text.size
@@ -89,7 +89,7 @@ feature_plot <- function(SO,
                          nrow.inner = NULL,
                          ncol.inner = NULL,
                          feature.aliases = NULL,
-                         binary.expr = F,
+                         binary = F,
 
                          title = NULL,
                          title.font.size = 14,
@@ -140,7 +140,7 @@ feature_plot <- function(SO,
                          plot.labels = NULL,
                          label.size = 12,
 
-                         scattermore = NULL,
+                         speed = F,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -158,8 +158,6 @@ feature_plot <- function(SO,
     plot.labels <- match.arg(plot.labels, c("text", "label"))
   }
 
-  # duplicative with check in .check.SO
-  #avail_assays <- Reduce(intersect, lapply(SO, function(x) Seurat::Assays(x)))
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
     print("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
@@ -178,24 +176,23 @@ feature_plot <- function(SO,
     SO.split <- NULL
   }
 
-  #future.apply::future_
   plots <- lapply(features, function(x) {
 
-    data <- .get.data(SO = SO, assay = assay, cells = cells, split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order, binary.expr = binary.expr)
-
+    data <- .get.data(SO = SO, assay = assay, cells = names(cells), split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order)
     # neccessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
     # make it after .get.data
     shape.by <- tryCatch(sym(shape.by), error = function (e) NULL)
 
     # generate legend labels
+    # shorten the cell selection
     if (is.numeric(data[,1])) {
-      if (all(data[which(rownames(data) %in% names(cells[which(cells == 1)])),1] == 0)) {
+      if (all(data[which(rownames(data) %in% names(which(cells == 1))),1] == 0)) {
         scale.max <- 0
         scale.min <- 0
         scale.mid <- 0
       } else {
-        scale.max <- max(data[which(rownames(data) %in% names(cells[which(cells == 1)])),1])
-        scale.min <- min(data[intersect(which(data[,1] != 0), which(rownames(data) %in% names(cells[which(cells == 1)]))),1]) # != 0 for module scores
+        scale.max <- max(data[which(rownames(data) %in% names(which(cells == 1))),1])
+        scale.min <- min(data[intersect(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1)))),1]) # != 0 for module scores
         scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
         scale.max <- as.numeric(format(ceiling_any(scale.max, 0.1), nsmall = 1))
@@ -219,12 +216,56 @@ feature_plot <- function(SO,
       }
     }
 
+    if (speed) {
+      if (nlevels(as.factor(data$SO.split)) > 1 && nlevels(as.factor(data$split.by)) > 1) {
+        subtitle <- "both"
+      } else if (nlevels(as.factor(data$SO.split)) > 1) {
+        subtitle <- "SO"
+      } else if (nlevels(as.factor(data$split.by)) > 1) {
+        subtitle <- "split"
+      } else {
+        subtitle <- "none"
+      }
+      plot <- lapply(levels(as.factor(data$SO.split)), function(y) {
+        lapply(levels(as.factor(data$split.by)), function(z) {
+          data <- data[intersect(which(data$SO.split == y), which(data$split.by == z)),]
+          if (nrow(data) > 0) {
+            plot <- ggplot() +  #no real data to plot
+              suppressWarnings(scattermore::geom_scattermost(data[names(which(cells == 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
+                                                             col = col.excluded.cells,
+                                                             pointsize = pt.size*2)) +
+              suppressWarnings(scattermore::geom_scattermost(data[intersect(which(cells == 1), which(data[,1] == 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
+                                                             col = col.non.expresser,
+                                                             pointsize = pt.size*2)) +
+              scattermore::geom_scattermost(data[intersect(which(cells == 1), which(data[,1] > 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
+                                            col = col_pal("spectral")[1+99*(data[intersect(which(cells == 1), which(data[,1] > 0)),1]-min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]))/(max(data[intersect(which(cells == 1), which(data[,1] > 0)),1])-min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]))],
+                                            pointsize = pt.size*2) +
+              labs(subtitle = switch(subtitle, "both" = paste0(y, "  ", z),"SO" = y,"split" = z,"none" = ""), title = x)
+
+            #geom_point(data=data.frame(x=double(0)), aes(x,x,color=x)) +
+            #scale_color_gradientn(limits = c(min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]), max(data[intersect(which(cells == 1), which(data[,1] > 0)),1])), colors = col_pal("spectral"), name=x) +
+            plot <- plot + theme
+            if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
+            if (!plot.axis.labels) {plot <- plot + ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank())}
+            return(plot)
+          } else {
+            return(NULL)
+          }
+        })
+      })
+      plot <- purrr::flatten(plot)
+      plot <- plot[!sapply(plot, is.null)]
+      plot <- cowplot::plot_grid(plotlist = plot, ncol = ncol.combine, nrow = nrow.combine, align = "hv", axis = "tblr")
+      return(plot)
+    }
+
+    # excluded cells
     plot <-
       ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(paste0(reduction, "_", dims[1])), y = !!rlang::sym(paste0(reduction, "_", dims[2])))) +
-      ggplot2::geom_point(ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.excluded.cells, data = data[which(rownames(data) %in% names(cells[which(cells == 0)])),])
+      ggplot2::geom_point(data = data[names(which(cells == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.excluded.cells)
 
     # different procedure for gene feature or meta.data feature
-    if (all(unlist(lapply(unname(SO), function(y) x %in% rownames(Seurat::GetAssayData(y, slot = "data", assay = assay)))))) {
+    if (x %in% rownames(SO[[1]])) {
 
       freqs <- .get.freqs(data = data, cells = cells, reduction = reduction, dims = dims, split.by = split.by, SO.split = SO.split)
       aliases.list <- .check.aliases(x, feature.aliases, data)
@@ -232,17 +273,17 @@ feature_plot <- function(SO,
       data <- aliases.list[[2]]
 
       # plot expressers and non-expressers
-      if (binary.expr) {
-        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),], ggplot2::aes(shape = !!shape.by, color = binary.expr), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
+      if (binary) {
+        if (any(data[,1] < 0)) {
+          print(paste0("binary (+/-) may not be meaningful as there are negative expression values for ", feature, "."))
+        }
+        data[,1] <- ifelse(data[,1] > 0, "+", "-")
+        plot <- plot + ggplot2::geom_point(data = data[which(cells == 1),], ggplot2::aes(shape = !!shape.by, color = !!rlang::sym(x)), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
       } else {
         # non-expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
-        #plot <- plot + scattermore::geom_scattermore(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] == 0)),], pointsize = pt.size*1.1*10, color = col.non.expresser, alpha = 1)
-
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(cells == 1), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
         # expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
-        #plot <- plot + scattermore::geom_scattermore(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x)), pointsize = pt.size*pt.size.expr.factor*1.1*10)
-
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(cells == 1), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
       }
 
       if (length(SO) > 1) {
@@ -256,11 +297,10 @@ feature_plot <- function(SO,
         plot <- plot + ggrepel::geom_text_repel(data = freqs, family = font.family, size = freq.font.size, ggplot2::aes(label = !!rlang::sym(label), x = xmin + abs(xmin - xmax) * freq.position[1], y = ymin + abs(ymin - ymax) * freq.position[2]))
       }
 
-      plot.colorbar <- !binary.expr
+      plot.colorbar <- !binary
       make.italic <- T
 
-    } else if (all(unlist(lapply(unname(SO), function(y) x %in% names(y@meta.data))))) {
-
+    } else {
 
       freqs <- NULL
       aliases.list <- .check.aliases(x, feature.aliases, data)
@@ -272,8 +312,8 @@ feature_plot <- function(SO,
 
       if (is.null(order.discrete)) {
         # plot non-excluded cells, sample to make it random
-        plot <- plot + ggplot2::geom_point(data = data[which(rownames(data) %in% names(cells[which(cells == 1)])),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
-        # [sample(nrow(data[which(rownames(data) %in% names(cells[which(cells == 1)])),])), ]
+        plot <- plot + ggplot2::geom_point(data = data[names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
+
       } else {
 
         if (length(unique(order.discrete)) != length(order.discrete)) {
@@ -289,17 +329,17 @@ feature_plot <- function(SO,
         # optionally: pt.size as names of order.discrete
         for (i in order.discrete[which(grepl("^\\^", order.discrete))]) {
           i <- gsub("^\\^", "", i)
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
         }
 
         for (i in order.discrete[intersect(which(!grepl("^\\^", order.discrete)), which(!grepl("\\$$", order.discrete)))]) {
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
         }
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(!data[,x] %in% gsub("\\$$", "", (gsub("^\\^", "", order.discrete))))),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(!data[,x] %in% gsub("\\$$", "", (gsub("^\\^", "", order.discrete))))),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
 
         for (i in order.discrete[which(grepl("\\$$", order.discrete))]) {
           i <- gsub("\\$$", "", i)
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(cells[which(cells == 1)])), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
         }
 
       }
@@ -323,7 +363,7 @@ feature_plot <- function(SO,
       make.italic <- F
     }
 
-    if (!binary.expr) {
+    if (!binary) {
       if (is.numeric(data[,1])) {
         if (min.q.cutoff > 0) {min.lab <- paste0(scale.min, " (q", round(min.q.cutoff*100, 0), ")")} else {min.lab <- scale.min}
         if (max.q.cutoff < 1) {max.lab <- paste0(scale.max, " (q", round(max.q.cutoff*100, 0), ")")} else {max.lab <- scale.max}
@@ -410,6 +450,7 @@ feature_plot <- function(SO,
 
 
     # define facets and plot freq.of.expr annotation
+
     wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = "free", nrow = nrow.inner, ncol = ncol.inner)}
     if (is.null(SO.split) && !is.null(split.by)) {
       plot <- plot + wrap_by(split.by)
@@ -418,7 +459,6 @@ feature_plot <- function(SO,
     } else if (!is.null(SO.split) && !is.null(split.by)) {
       plot <- plot + wrap_by(SO.split, split.by)
     }
-
 
     # plot cutoff feature inset plot (https://stackoverflow.com/questions/5219671/it-is-possible-to-create-inset-graphs)
     if (!is.null(cutoff.feature) && plot.cutoff.feature.inset) {
@@ -510,9 +550,8 @@ feature_plot <- function(SO,
   ## check if data has been scaled (compare to counts)
   check <- unlist(lapply(SO, function(x) identical(Seurat::GetAssayData(x, assay = assay, slot = "data"), Seurat::GetAssayData(x, assay = assay, slot = "counts"))))
   if (any(check)) {
-    warning("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize before using volcano_plot.")
+    warning("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize.")
   }
-
 
   if (!is.null(max.length) && max.length == 1) {
     return(SO[[1]])
@@ -672,66 +711,21 @@ feature_plot <- function(SO,
                             rownames = T,
                             meta.data = T) {
 
-  ## Speed up!
-  hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
-    if (ignore.case) {
-      sapply(features, function(x) {
-        max(sapply(SO, function(y) {
-          if (rownames & !meta.data) {
-            length(which(tolower(x) == tolower(rownames(y))))
-          } else if (!rownames & meta.data) {
-            length(which(tolower(x) == tolower(names(y@meta.data))))
-          } else if (rownames & meta.data) {
-            length(which(tolower(x) == c(tolower(rownames(y)), tolower(names(y@meta.data)))))
-          }
-        }))
-      })
-    } else {
-      sapply(features, function(x) {
-        max(sapply(SO, function(y) {
-          if (rownames & !meta.data) {
-            length(which(x == rownames(y)))
-          } else if (!rownames & meta.data) {
-            length(which(x == names(y@meta.data)))
-          } else if (rownames & meta.data) {
-            length(which(x == c(rownames(y), names(y@meta.data))))
-          }
-        }))
-      })
-    }
-
-  }
-  feat.check <- function(SO, features, rownames, meta.data, ignore.case) {
-    unlist(lapply(features, function(x) {
-      Reduce(intersect, lapply(SO, function(y) {
-        if (rownames & !meta.data) {
-          search <- rownames(y)
-        } else if (!rownames & meta.data) {
-          search <- names(y@meta.data)
-        } else if (rownames & meta.data) {
-          search <- c(names(y@meta.data), rownames(y))
-        }
-        grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
-      }))
-    }))
-  }
-
   if (is.null(features)) {return(NULL)}
-  if (!is.vector(features)) {stop("Features must be a vector of strings.")}
-  if (!rownames && !meta.data) {stop("Dont be stupid, rownnames = F and meta.data = F ?!")}
+  if (!rownames && !meta.data) {return((NULL))}
   if (!is.list(SO)) {
     SO <- list(SO)
   }
   features <- unique(features)
 
-  features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
+  features.out <- .feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
   if (length(features.out) == 0) {stop("Non of the provided features has not been found in every SO. No features left to plot.")}
-  hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
+  hits <- .hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
   if (any(hits > 1)) {
     print(paste0(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered."))
-    features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
+    features.out <- .feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
     if (length(features.out) == 0) {stop("Non of the provided features has not been found in every SO. No features left to plot.")}
-    hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
+    hits <- .hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
     if (any(hits > 1)) {
       stop(paste0(paste(names(hits)[which(hits > 1)], collapse = ","), " still found more than once in at least one SO when not ignoring case. Please fix this (check rownames and meta.data)."))
     } else {
@@ -746,16 +740,60 @@ feature_plot <- function(SO,
   return(features.out)
 }
 
+.hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
+  if (ignore.case) {
+    sapply(features, function(x) {
+      max(sapply(SO, function(y) {
+        if (rownames & !meta.data) {
+          length(which(tolower(x) == tolower(rownames(y))))
+        } else if (!rownames & meta.data) {
+          length(which(tolower(x) == tolower(names(y@meta.data))))
+        } else if (rownames & meta.data) {
+          length(which(tolower(x) == c(tolower(rownames(y)), tolower(names(y@meta.data)))))
+        }
+      }))
+    })
+  } else {
+    sapply(features, function(x) {
+      max(sapply(SO, function(y) {
+        if (rownames & !meta.data) {
+          length(which(x == rownames(y)))
+        } else if (!rownames & meta.data) {
+          length(which(x == names(y@meta.data)))
+        } else if (rownames & meta.data) {
+          length(which(x == c(rownames(y), names(y@meta.data))))
+        }
+      }))
+    })
+  }
+
+}
+.feat.check <- function(SO, features, rownames, meta.data, ignore.case) {
+  unlist(lapply(features, function(x) {
+    Reduce(intersect, lapply(SO, function(y) {
+      if (rownames & !meta.data) {
+        search <- rownames(y)
+      } else if (!rownames & meta.data) {
+        search <- names(y@meta.data)
+      } else if (rownames & meta.data) {
+        search <- c(names(y@meta.data), rownames(y))
+      }
+      grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
+    }))
+  }))
+}
+
 .get.data <- function(SO,
                       feature,
                       assay = c("RNA", "SCT"),
+                      slot = "data",
                       cells = NULL,
                       split.by = NULL,
                       shape.by = NULL,
                       reduction = "tsne",
+                      meta.col = NULL,
                       min.q.cutoff = 0,
                       max.q.cutoff = 1,
-                      binary.expr = F,
                       order = T) {
 
   assay <- match.arg(assay, c("RNA", "SCT"))
@@ -765,22 +803,25 @@ feature_plot <- function(SO,
     min.q.cutoff <- min.q.cutoff/100
   }
 
-  data <- do.call(rbind, lapply(unname(SO), function(y) {
+  data <- do.call(rbind, lapply(names(SO), function(y) {
 
-    if (feature %in% rownames(Seurat::GetAssayData(y, slot = "data", assay = assay)) && !feature %in% names(y@meta.data)) {
+    if (feature %in% rownames(SO[[y]]) && !feature %in% names(SO[[y]]@meta.data)) {
 
-      data <- data.frame(t(as.matrix(Seurat::GetAssayData(y, slot = "data", assay = assay)[feature,,drop = F])), check.names = F)
+      data <- data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], slot = slot, assay = assay)[feature,,drop = F])), check.names = F)
 
-    } else if (!feature %in% rownames(Seurat::GetAssayData(y, slot = "data", assay = assay)) && feature %in% names(y@meta.data)) {
+    } else if (!feature %in% rownames(SO[[y]]) && feature %in% names(SO[[y]]@meta.data)) {
 
-      data <- data.frame(y@meta.data[,feature,drop=F], stringsAsFactors = F, check.names = F)
+      data <- data.frame(SO[[y]]@meta.data[,feature,drop=F], stringsAsFactors = F, check.names = F)
 
     } else {
       stop("Feature found in meta.data and rownames of SO.")
     }
-
-    data <- cbind(data, Seurat::Embeddings(y, reduction = reduction)) #names(y@reductions)[grepl(reduction, names(y@reductions), ignore.case = T)]
-    data <- data[which(rownames(data) %in% names(cells)),]
+    if (!is.null(reduction)) {
+      data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[grepl(reduction, names(SO[[y]]@reductions), ignore.case = T)]))
+    }
+    if (!is.null(meta.col)) {
+      data <- cbind(data, SO@meta.data[,meta.col])
+    }
 
     if (is.null(split.by)) {
       data[,"split.by"] <- "1"
@@ -788,37 +829,29 @@ feature_plot <- function(SO,
       data[,"split.by"] <- y@meta.data[,split.by]
     }
     if (!is.null(shape.by)) {
-      if (!is.character(shape.by)) {
-        shape.by <- as.character(shape.by)
-      }
-      data[,shape.by] <- as.factor(as.character(y@meta.data[,shape.by]))
+      data[,shape.by] <- as.factor(as.character(SO[[y]]@meta.data[,as.character(shape.by)]))
     }
+
+    data[,"SO.split"] <- y
     return(data)
   }))
+  data <- data[cells,]
 
-  if (is.numeric(data[,1])) {
-    if (all(data[,1] == 0)) {
-      print(paste0("No expressers found for ", feature, "."))
-    }
-    data$binary.expr <- ifelse(data[,1] > 0, "+", "-")
-    if (binary.expr & any(data[,1] < 0)) {
-      print(paste0("binary.expr (+/-) may not be meaningful as there are negative expression values for ", feature, "."))
-    }
+  if (is.numeric(data[,1]) && all(data[,1] == 0)) {
+    print(paste0("No expressers found for ", feature, "."))
   }
 
   # use squishing to dampen extreme values - this will produce actually wrong limits on the legend
-  if (is.numeric(data[,1])) {
-    if (all(data[,1] > 0, na.rm = T)) {
+  if (is.numeric(data[,1]) && (min.q.cutoff > 0 || max.q.cutoff < 1)) {
+    if (all(data[,1] > 0)) {
       # expression is always greater than 0 and non-expresser are excluded
-      data[,1][which(data[,1] > 0)] <- scales::squish(data[,1][which(data[,1] > 0)], range = c(stats::quantile(data[,1][which(data[,1] > 0)], min.q.cutoff, na.rm = T), stats::quantile(data[,1][which(data[,1] > 0)], max.q.cutoff, na.rm = T)))
+      data[,1][which(data[,1] > 0)] <- scales::squish(data[,1][which(data[,1] > 0)], range = c(stats::quantile(data[,1][which(data[,1] > 0)], min.q.cutoff), stats::quantile(data[,1][which(data[,1] > 0)], max.q.cutoff)))
     } else {
       # e.g. for module scores below 0
-      data[,1] <- scales::squish(data[,1], range = c(stats::quantile(data[,1], min.q.cutoff, na.rm = T), stats::quantile(data[,1], max.q.cutoff, na.rm = T)))
+      data[,1] <- scales::squish(data[,1], range = c(stats::quantile(data[,1], min.q.cutoff), stats::quantile(data[,1], max.q.cutoff)))
     }
   }
 
-  names <- sapply(SO, function(y) {length(which(colnames(Seurat::GetAssayData(y, slot = "data", assay = assay)) %in% names(cells)))})
-  data[,"SO.split"] <- rep(names(names), names)
 
   if (order) {
     data <- data[order(data[,1]),]
