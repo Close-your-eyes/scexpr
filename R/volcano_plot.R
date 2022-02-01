@@ -110,13 +110,12 @@ volcano_plot <- function(SO,
   ## check cells
   if (any(duplicated(negative.group.cells))) {
     print("Duplicates found in negative.group.cells")
-    negative.group.cells <- unique(negative.group.cells)
   }
+  ngc <- unique(negative.group.cells)
   if (any(duplicated(positive.group.cells))) {
     print("Duplicates found in positive.group.cells")
-    positive.group.cells <- unique(positive.group.cells)
   }
-
+  pgc <- unique(positive.group.cells)
   if (length(intersect(negative.group.cells, positive.group.cells)) > 0) {
     stop("Equal cell names in negative.group.cells and positive.group.cells. Please fix this.")
   }
@@ -127,48 +126,38 @@ volcano_plot <- function(SO,
   }
 
 
-  # make meta data column in SOs to identify negative.group.cells and positive.group.cells
+  # make meta data column in SOs to identify ngc and pgc
   colname <- paste0("cellident_", format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d%H%M%S"))
   SO <- lapply(SO, function(x) {
-    x@meta.data[,colname] <- ifelse(!rownames(x@meta.data) %in% c(positive.group.cells, negative.group.cells),
+    x@meta.data[,colname] <- ifelse(!rownames(x@meta.data) %in% c(pgc, ngc),
                                     "other",
-                                    ifelse(rownames(x@meta.data) %in% positive.group.cells,
+                                    ifelse(rownames(x@meta.data) %in% pgc,
                                            positive.group.name,
                                            negative.group.name))
     return(x)
   })
-
-  # get Assay data (check features first)
-  assay_data <- lapply(SO, function(x) as.matrix(Seurat::GetAssayData(x, assay = assay, slot = "data"))[,intersect(colnames(Seurat::GetAssayData(x, assay = assay)), c(negative.group.cells, positive.group.cells))])
-
-  all_features <- lapply(assay_data, rownames)
-  n_features <- sapply(assay_data, nrow)
-  if (length(unique(n_features)) != 1) {
-    print("Different number of features detected in SOs.")
+  # call here as SO is overwritten below
+  if (!interactive.only) {
+    feat_plots <- do.call(feature_plot, args = c(list(SO = SO, assay = assay, features = colname), dots[which(names(dots) %in% names(formals(feature_plot)))]))
   }
 
-  intersect_features <- Reduce(intersect, all_features)
-  if (length(unique(c(n_features, length(intersect_features)))) != 1) {
+  # get Assay data, overwrite SO to save memory
+  SO <- lapply(SO, function(x) Seurat::GetAssayData(x, assay = assay, slot = "data")[,intersect(colnames(Seurat::GetAssayData(x, assay = assay)), c(ngc, pgc))])
+
+  intersect_features <- Reduce(intersect, lapply(SO, rownames))
+  if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
     print("Different features across SOs detected. Will only carry on with common ones.")
-    assay_data <- lapply(assay_data, function(x) x[intersect_features,])
+    SO <- lapply(SO, function(x) x[intersect_features,])
   }
-  assay_data <- do.call(cbind, assay_data)
-
-  #get Assay data
-  an <- assay_data[, negative.group.cells]
-  ap <- assay_data[, positive.group.cells]
-
+  SO <- do.call(cbind, SO)
   # exclude features which are below min.pct.set in both populations
-  # # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
-  neg.pct <- which(Matrix::rowSums(an != 0)/ncol(an) > min.pct)
-  pos.pct <- which(Matrix::rowSums(ap != 0)/ncol(ap) > min.pct)
-  an <- expm1(an[unique(c(neg.pct, pos.pct)),])
-  ap <- expm1(ap[unique(c(neg.pct, pos.pct)),])
-
-
+  SO <- SO[unique(c(which(Matrix::rowSums(SO[, ngc] != 0)/length(ngc) > min.pct),
+                    which(Matrix::rowSums(SO[, pgc] != 0)/length(pgc) > min.pct))), ]
+  # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   if (is.null(volcano.data)) {
-    vd <- .calc_vd(an = an,
-                   ap = ap,
+    vd <- .calc_vd(assay_data = expm1(SO),
+                   ngc = ngc,
+                   pgc = pgc,
                    pgn = positive.group.name,
                    ngn = negative.group.name,
                    inf.fc.shift = inf.fc.shift,
@@ -314,54 +303,50 @@ volcano_plot <- function(SO,
     }
   }
 
-  interactive.data = list(non.aggr.data = assay_data[vd$Feature,c(negative.group.cells, positive.group.cells)], data = vd, negative.group.cells = negative.group.cells, positive.group.cells = positive.group.cells, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
-  if (interactive.only) {
-    return(interactive.data)
-  }
-
+  interactive.data = list(non.aggr.data = SO[vd$Feature,c(ngc, pgc)], data = vd, negative.group.cells = ngc, positive.group.cells = pgc, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
     file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path.interactive, "app.R"))
     saveRDS(stats::setNames(list(stats::setNames(list(interactive.data), "1")), "1"), file = file.path(save.path.interactive, "data.rds"))
   }
+  if (interactive.only) {
+    return(interactive.data)
+  }
   return(list(plot = vp,
               data = vd,
-              feat.plots = do.call(feature_plot, args = c(list(SO = SO, assay = assay, features = colname), dots[which(names(dots) %in% names(formals(feature_plot)))])),
+              feat.plots = feat_plots,
               gsea = gsea,
               interactive.data = interactive.data))
 }
 
 
 
-.calc_vd <- function(an,
-                     ap,
+.calc_vd <- function(assay_data,
+                     ngc,
+                     pgc,
                      pgn = "positive",
                      ngn = "negative",
                      n.feat.for.p.adj = NULL,
                      inf.fc.shift = 2,
                      p.adjust = "bonferroni") {
 
-
-  if (nrow(an) != nrow(ap)) {
-    stop("an and ap need to have the same number of rows!")
-  }
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
 
-  p <- matrixTests::row_wilcoxon_twosample(as.matrix(an), as.matrix(ap))$pvalue
-  apm <- apply(ap, 1, mean)
-  anm <- apply(an, 1, mean)
+  p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
+  apm <- apply(assay_data[, pgc], 1, mean)
+  anm <- apply(assay_data[, ngc], 1, mean)
   if (is.null(n.feat.for.p.adj)) {
     n.feat.for.p.adj <- nrow(an)
   }
 
-  vd <- data.frame(Feature = rownames(an),
+  vd <- data.frame(Feature = rownames(assay_data),
                    log2.fc = log2(apm / anm),
                    p.val = p,
                    adj.p.val = as.numeric(formatC(stats::p.adjust(p, method = p.adjust, n = n.feat.for.p.adj), format = "e", digits = 2)),
                    stats::setNames(list(round(anm, 2)), ngn),
                    stats::setNames(list(round(apm, 2)), pgn),
-                   stats::setNames(list(round(apply(an, 1, function(x) sum(x != 0))/ncol(an), 2)), paste0("pct.", ngn)),
-                   stats::setNames(list(round(apply(ap, 1, function(x) sum(x != 0))/ncol(ap), 2)), paste0("pct.", pgn)),
+                   stats::setNames(list(round(apply(assay_data[, ngc], 1, function(x) sum(x != 0))/ncol(assay_data[, ngc]), 2)), paste0("pct.", ngn)),
+                   stats::setNames(list(round(apply(assay_data[, pgc], 1, function(x) sum(x != 0))/ncol(assay_data[, pgc]), 2)), paste0("pct.", pgn)),
                    infinite.FC = ifelse(is.infinite(log2(apm / anm)), TRUE, FALSE),
                    check.names = F)
 
