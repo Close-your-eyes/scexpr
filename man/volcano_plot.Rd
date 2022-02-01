@@ -41,6 +41,8 @@ volcano_plot(
   fc.cut = NA,
   features.exclude = NULL,
   save.path.interactive = NULL,
+  gsea.param = NULL,
+  interactive.only = F,
   ...
 )
 }

@@ -63,6 +63,7 @@
 #' @param ...
 #' @param plot.labels
 #' @param label.size
+#' @param speed
 #'
 #' @return
 #' @export
@@ -146,7 +147,6 @@ feature_plot <- function(SO,
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
 
-
   if (missing(features) || missing(SO)) {stop("Seurat object list or feature vector is missing.")}
   if (!class(features) %in% c("factor", "character")) {stop("Please provide a character vector for features.")}
   if (length(features) == 1) {combine <- F}
@@ -181,7 +181,7 @@ feature_plot <- function(SO,
     data <- .get.data(SO = SO, assay = assay, cells = names(cells), split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order)
     # neccessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
     # make it after .get.data
-    shape.by <- tryCatch(sym(shape.by), error = function (e) NULL)
+    shape.by <- tryCatch(rlang::sym(shape.by), error = function (e) NULL)
 
     # generate legend labels
     # shorten the cell selection
@@ -217,6 +217,9 @@ feature_plot <- function(SO,
     }
 
     if (speed) {
+      if (!requireNamespace("scattermore", quietly = T)) {
+        devtools::install_github('exaexa/scattermore')
+      }
       if (nlevels(as.factor(data$SO.split)) > 1 && nlevels(as.factor(data$split.by)) > 1) {
         subtitle <- "both"
       } else if (nlevels(as.factor(data$SO.split)) > 1) {
@@ -230,7 +233,7 @@ feature_plot <- function(SO,
         lapply(levels(as.factor(data$split.by)), function(z) {
           data <- data[intersect(which(data$SO.split == y), which(data$split.by == z)),]
           if (nrow(data) > 0) {
-            plot <- ggplot() +  #no real data to plot
+            plot <- ggplot2::ggplot() +  #no real data to plot
               suppressWarnings(scattermore::geom_scattermost(data[names(which(cells == 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
                                                              col = col.excluded.cells,
                                                              pointsize = pt.size*2)) +
@@ -240,7 +243,7 @@ feature_plot <- function(SO,
               scattermore::geom_scattermost(data[intersect(which(cells == 1), which(data[,1] > 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
                                             col = col_pal("spectral")[1+99*(data[intersect(which(cells == 1), which(data[,1] > 0)),1]-min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]))/(max(data[intersect(which(cells == 1), which(data[,1] > 0)),1])-min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]))],
                                             pointsize = pt.size*2) +
-              labs(subtitle = switch(subtitle, "both" = paste0(y, "  ", z),"SO" = y,"split" = z,"none" = ""), title = x)
+              ggplot2::labs(subtitle = switch(subtitle, "both" = paste0(y, "  ", z),"SO" = y,"split" = z,"none" = ""), title = x)
 
             #geom_point(data=data.frame(x=double(0)), aes(x,x,color=x)) +
             #scale_color_gradientn(limits = c(min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]), max(data[intersect(which(cells == 1), which(data[,1] > 0)),1])), colors = col_pal("spectral"), name=x) +
@@ -562,8 +565,11 @@ feature_plot <- function(SO,
 
 .check.reduction <- function(SO,
                              reduction,
-                             dims) {
+                             dims = c(1,2)) {
 
+  if (!is.list(SO)) {
+    SO <- list(SO)
+  }
   common_red <- Reduce(intersect, lapply(SO, function(x) names(x@reductions)))
   if (length(common_red) == 0) {
     stop("No common reduction found in SOs.")
@@ -573,7 +579,7 @@ feature_plot <- function(SO,
     print("reduction not found in SOs., Changing to an arbitrary common one in SOs.")
     red <- sample(common_red, 1)
   } else if (length(red) > 1) {
-    red <- common_red[which.min(adist(reduction, common_red, ignore.case = T))]
+    red <- common_red[which.min(utils::adist(reduction, common_red, ignore.case = T))]
   }
 
   key <- SO[[1]]@reductions[[red]]@key
@@ -929,7 +935,7 @@ feature_plot <- function(SO,
   if (length(cutoff.expression) > 1) {
     cutoff.expression <- paste(cutoff.expression, collapse = "&")
   }
-
+# italic bold==
   args <- list(x = feature, f = levels(as.factor(freqs$freq.expr)), y = cutoff.feature, z = cutoff.expression, q = exclusion.feature)
   title <-
     if (!is.null(cutoff.feature) && !is.null(exclusion.feature)) {

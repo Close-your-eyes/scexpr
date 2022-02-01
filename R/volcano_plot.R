@@ -80,6 +80,7 @@ volcano_plot <- function(SO,
                          features.exclude = NULL,
                          save.path.interactive = NULL,
                          gsea.param = NULL,
+                         interactive.only = F,
                          ...) {
 
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
@@ -137,14 +138,8 @@ volcano_plot <- function(SO,
     return(x)
   })
 
-
-  feat_plots <- do.call(feature_plot, args = c(list(SO = SO,
-                                                    assay = assay,
-                                                    features = colname),
-                                               dots[which(names(dots) %in% names(formals(feature_plot)))]))
-
   # get Assay data (check features first)
-  assay_data <- lapply(SO, function(x) as.matrix(Seurat::GetAssayData(x, assay = assay, slot = "data"))[,intersect(colnames(Seurat::GetAssayData(x, assay = assay, slot = "data")), c(negative.group.cells, positive.group.cells))])
+  assay_data <- lapply(SO, function(x) as.matrix(Seurat::GetAssayData(x, assay = assay, slot = "data"))[,intersect(colnames(Seurat::GetAssayData(x, assay = assay)), c(negative.group.cells, positive.group.cells))])
 
   all_features <- lapply(assay_data, rownames)
   n_features <- sapply(assay_data, nrow)
@@ -170,8 +165,6 @@ volcano_plot <- function(SO,
   an <- expm1(an[unique(c(neg.pct, pos.pct)),])
   ap <- expm1(ap[unique(c(neg.pct, pos.pct)),])
 
-  # for non.aggr.data in interactive volcano
-  assay_data <- assay_data[,c(negative.group.cells, positive.group.cells)]
 
   if (is.null(volcano.data)) {
     vd <- .calc_vd(an = an,
@@ -185,152 +178,155 @@ volcano_plot <- function(SO,
     vd <- volcano.data
   }
 
-
-  vp <- .plot_vp(vd = vd,
-                 p.plot = p.plot,
-                 x.axis.symmetric = x.axis.symmetric,
-                 y.axis.pseudo.log = y.axis.pseudo.log,
-                 pseudo.log.sigma = pseudo.log.sigma,
-                 pt.size = pt.size,
-                 pt.alpha = pt.alpha,
-                 font.size = font.size,
-                 font.family = font.family,
-                 ngn = negative.group.name,
-                 pgn = positive.group.name,
-                 x.axis.extension = x.axis.extension,
-                 pval.tick = pval.tick,
-                 features.exclude = features.exclude,
-                 min.pct = min.pct,
-                 p.cut = p.cut,
-                 fc.cut = fc.cut)
-
-
-  vp <- .label_vp(vp = vp,
-                  vd = vd,
-                  p.plot = p.plot,
-                  label.features = label.features,
-                  labels.topn = labels.topn,
-                  label.size = label.size,
-                  features.exclude = features.exclude,
-                  nudge.x = nudge.x,
-                  nudge.y = nudge.y,
-                  max.iter = max.iter,
-                  label.neg.pos.sep = label.neg.pos.sep,
-                  label.col = label.col,
-                  label.face = label.face,
-                  font.family = font.family,
-                  max.overlaps = max.overlaps,
-                  p.signif = p.signif)
+  if (!interactive.only) {
+    vp <- .plot_vp(vd = vd,
+                   p.plot = p.plot,
+                   x.axis.symmetric = x.axis.symmetric,
+                   y.axis.pseudo.log = y.axis.pseudo.log,
+                   pseudo.log.sigma = pseudo.log.sigma,
+                   pt.size = pt.size,
+                   pt.alpha = pt.alpha,
+                   font.size = font.size,
+                   font.family = font.family,
+                   ngn = negative.group.name,
+                   pgn = positive.group.name,
+                   x.axis.extension = x.axis.extension,
+                   pval.tick = pval.tick,
+                   features.exclude = features.exclude,
+                   min.pct = min.pct,
+                   p.cut = p.cut,
+                   fc.cut = fc.cut)
 
 
-  ## to fgsea_on_msigdbr
-  if (!is.null(gsea.param)) {
-    # run on positive and negative DEG - which ones? additional arguments?
-    # 1 log2.fc
-    # 2 adj.p.val
-    # 1 negative
-    # 2 positive
+    vp <- .label_vp(vp = vp,
+                    vd = vd,
+                    p.plot = p.plot,
+                    label.features = label.features,
+                    labels.topn = labels.topn,
+                    label.size = label.size,
+                    features.exclude = features.exclude,
+                    nudge.x = nudge.x,
+                    nudge.y = nudge.y,
+                    max.iter = max.iter,
+                    label.neg.pos.sep = label.neg.pos.sep,
+                    label.col = label.col,
+                    label.face = label.face,
+                    font.family = font.family,
+                    max.overlaps = max.overlaps,
+                    p.signif = p.signif)
 
-    ### negative/positive volcano not working yet
 
-    vd.gsea1 <- vd[intersect(which(vd$log2.fc <= gsea.param[[1]][1]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][1])),]
-    vd.gsea2 <- vd[intersect(which(vd$log2.fc >= gsea.param[[1]][2]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][2])),]
-    ranks.1 <- sort(setNames(vd.gsea1[,"log2.fc",drop=T],vd.gsea1[,"Feature",drop=T]))
-    ranks.2 <- sort(setNames(vd.gsea2[,"log2.fc",drop=T],vd.gsea2[,"Feature",drop=T]))
+    ## to fgsea_on_msigdbr
+    if (!is.null(gsea.param)) {
+      # run on positive and negative DEG - which ones? additional arguments?
+      # 1 log2.fc
+      # 2 adj.p.val
+      # 1 negative
+      # 2 positive
 
-    if (!"maxSize" %in% names(dots)) {
-      arg_add <- list(gene.ranks = ranks.1, maxSize = 500)
+      ### negative/positive volcano not working yet
+
+      vd.gsea1 <- vd[intersect(which(vd$log2.fc <= gsea.param[[1]][1]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][1])),]
+      vd.gsea2 <- vd[intersect(which(vd$log2.fc >= gsea.param[[1]][2]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][2])),]
+      ranks.1 <- sort(stats::setNames(vd.gsea1[,"log2.fc",drop=T],vd.gsea1[,"Feature",drop=T]))
+      ranks.2 <- sort(stats::setNames(vd.gsea2[,"log2.fc",drop=T],vd.gsea2[,"Feature",drop=T]))
+
+      if (!"maxSize" %in% names(dots)) {
+        arg_add <- list(gene.ranks = ranks.1, maxSize = 500)
+      } else {
+        arg_add <- list(gene.ranks = ranks.1)
+      }
+      g1 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
+      if (!"maxSize" %in% names(dots)) {
+        arg_add <- list(gene.ranks = ranks.2, maxSize = 500)
+      } else {
+        arg_add <- list(gene.ranks = ranks.2)
+      }
+      g2 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
+      vp_gsea.1 <- .plot_vp(vd = vd,
+                            p.plot = p.plot,
+                            x.axis.symmetric = x.axis.symmetric,
+                            y.axis.pseudo.log = y.axis.pseudo.log,
+                            pseudo.log.sigma = pseudo.log.sigma,
+                            pt.size = pt.size,
+                            pt.alpha = pt.alpha,
+                            font.size = font.size,
+                            font.family = font.family,
+                            ngn = negative.group.name,
+                            pgn = positive.group.name,
+                            x.axis.extension = x.axis.extension,
+                            pval.tick = pval.tick,
+                            features.exclude = features.exclude,
+                            min.pct = min.pct,
+                            p.cut = gsea.param[[2]][1],
+                            fc.cut = gsea.param[[1]][1])
+      vp_gsea.1 <- .label_vp(vp = vp_gsea.1,
+                             vd = vd,
+                             p.plot = p.plot,
+                             label.features = names(ranks.1),
+                             label.size = label.size,
+                             features.exclude = features.exclude,
+                             label.neg.pos.sep = label.neg.pos.sep,
+                             nudge.x = nudge.x,
+                             nudge.y = nudge.y,
+                             max.iter = max.iter,
+                             label.col = label.col,
+                             label.face = label.face,
+                             font.family = font.family,
+                             max.overlaps = max.overlaps,
+                             color.only = T)
+      vp_gsea.2 <- .plot_vp(vd = vd,
+                            p.plot = p.plot,
+                            x.axis.symmetric = x.axis.symmetric,
+                            y.axis.pseudo.log = y.axis.pseudo.log,
+                            pseudo.log.sigma = pseudo.log.sigma,
+                            pt.size = pt.size,
+                            pt.alpha = pt.alpha,
+                            font.size = font.size,
+                            font.family = font.family,
+                            ngn = negative.group.name,
+                            pgn = positive.group.name,
+                            x.axis.extension = x.axis.extension,
+                            pval.tick = pval.tick,
+                            features.exclude = features.exclude,
+                            min.pct = min.pct,
+                            p.cut = gsea.param[[2]][2],
+                            fc.cut = gsea.param[[1]][2])
+      vp_gsea.2 <- .label_vp(vp = vp_gsea.2,
+                             vd = vd,
+                             p.plot = p.plot,
+                             label.features = names(ranks.2),
+                             label.size = label.size,
+                             features.exclude = features.exclude,
+                             label.neg.pos.sep = label.neg.pos.sep,
+                             nudge.x = nudge.x,
+                             nudge.y = nudge.y,
+                             max.iter = max.iter,
+                             label.col = label.col,
+                             label.face = label.face,
+                             font.family = font.family,
+                             max.overlaps = max.overlaps,
+                             color.only = T)
+
+      gsea <- list(negative.gsea = g1, positive.gsea = g2, negative.volcano = vp_gsea.1, positive.volcano = vp_gsea.2)
     } else {
-      arg_add <- list(gene.ranks = ranks.1)
+      gsea <- NULL
     }
-    g1 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
-    if (!"maxSize" %in% names(dots)) {
-      arg_add <- list(gene.ranks = ranks.2, maxSize = 500)
-    } else {
-      arg_add <- list(gene.ranks = ranks.2)
-    }
-    g2 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
-    vp_gsea.1 <- .plot_vp(vd = vd,
-                          p.plot = p.plot,
-                          x.axis.symmetric = x.axis.symmetric,
-                          y.axis.pseudo.log = y.axis.pseudo.log,
-                          pseudo.log.sigma = pseudo.log.sigma,
-                          pt.size = pt.size,
-                          pt.alpha = pt.alpha,
-                          font.size = font.size,
-                          font.family = font.family,
-                          ngn = negative.group.name,
-                          pgn = positive.group.name,
-                          x.axis.extension = x.axis.extension,
-                          pval.tick = pval.tick,
-                          features.exclude = features.exclude,
-                          min.pct = min.pct,
-                          p.cut = gsea.param[[2]][1],
-                          fc.cut = gsea.param[[1]][1])
-    vp_gsea.1 <- .label_vp(vp = vp_gsea.1,
-                           vd = vd,
-                           p.plot = p.plot,
-                           label.features = names(ranks.1),
-                           label.size = label.size,
-                           features.exclude = features.exclude,
-                           label.neg.pos.sep = label.neg.pos.sep,
-                           nudge.x = nudge.x,
-                           nudge.y = nudge.y,
-                           max.iter = max.iter,
-                           label.col = label.col,
-                           label.face = label.face,
-                           font.family = font.family,
-                           max.overlaps = max.overlaps,
-                           color.only = T)
-    vp_gsea.2 <- .plot_vp(vd = vd,
-                          p.plot = p.plot,
-                          x.axis.symmetric = x.axis.symmetric,
-                          y.axis.pseudo.log = y.axis.pseudo.log,
-                          pseudo.log.sigma = pseudo.log.sigma,
-                          pt.size = pt.size,
-                          pt.alpha = pt.alpha,
-                          font.size = font.size,
-                          font.family = font.family,
-                          ngn = negative.group.name,
-                          pgn = positive.group.name,
-                          x.axis.extension = x.axis.extension,
-                          pval.tick = pval.tick,
-                          features.exclude = features.exclude,
-                          min.pct = min.pct,
-                          p.cut = gsea.param[[2]][2],
-                          fc.cut = gsea.param[[1]][2])
-    vp_gsea.2 <- .label_vp(vp = vp_gsea.2,
-                           vd = vd,
-                           p.plot = p.plot,
-                           label.features = names(ranks.2),
-                           label.size = label.size,
-                           features.exclude = features.exclude,
-                           label.neg.pos.sep = label.neg.pos.sep,
-                           nudge.x = nudge.x,
-                           nudge.y = nudge.y,
-                           max.iter = max.iter,
-                           label.col = label.col,
-                           label.face = label.face,
-                           font.family = font.family,
-                           max.overlaps = max.overlaps,
-                           color.only = T)
-
-    gsea <- list(negative.gsea = g1, positive.gsea = g2, negative.volcano = vp_gsea.1, positive.volcano = vp_gsea.2)
-  } else {
-    gsea <- NULL
   }
 
-  interactive.data = list(non.aggr.data = assay_data, data = vd, negative.group.cells = negative.group.cells, positive.group.cells = positive.group.cells, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
+  interactive.data = list(non.aggr.data = assay_data[vd$Feature,c(negative.group.cells, positive.group.cells)], data = vd, negative.group.cells = negative.group.cells, positive.group.cells = positive.group.cells, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
+  if (interactive.only) {
+    return(interactive.data)
+  }
 
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
     file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path.interactive, "app.R"))
     saveRDS(stats::setNames(list(stats::setNames(list(interactive.data), "1")), "1"), file = file.path(save.path.interactive, "data.rds"))
   }
-
   return(list(plot = vp,
               data = vd,
-              feat.plots = feat_plots,
+              feat.plots = do.call(feature_plot, args = c(list(SO = SO, assay = assay, features = colname), dots[which(names(dots) %in% names(formals(feature_plot)))])),
               gsea = gsea,
               interactive.data = interactive.data))
 }

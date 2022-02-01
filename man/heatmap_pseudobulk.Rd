@@ -7,36 +7,44 @@
 heatmap_pseudobulk(
   SO,
   assay = c("RNA", "SCT"),
-  meta.col,
-  meta.col.levels,
-  meta.col.levels.select,
+  meta.col = NULL,
+  levels.calc = NULL,
+  levels.plot = NULL,
   features = NULL,
-  feature.labels,
-  topn.features = 1e+06,
+  normalization = c(-1, 1),
+  topn.features = 10,
   topn.metric = c("logFC", "auc", "padj"),
   min.pct = 0.1,
   max.padj = 0.05,
   title = NULL,
   title.font.size = 14,
+  font.family = "Courier",
   y.font.size = 10,
-  legend.position = "right",
-  legend.direction = "vertical",
   tile.borders = T,
   dotplot = F,
   plot.feature.breaks = T,
-  plot.secondary.axis.with.full.genenames = F,
-  legend.title.text.size = 10,
+  plot.sec.axis = F,
+  legend.position = "right",
+  legend.direction = "vertical",
   legend.barheight = 8,
   legend.barwidth = 1,
   legend.text.size = 10,
-  legend.title = "z-score of avg expr",
+  legend.title.text.size = 10,
+  legend.title.fill = NULL,
+  legend.title.size = NULL,
   legend.title.position = "top",
+  legend.labels = c("min", "", "max"),
+  feature.labels = NULL,
   feature.labels.nudge_x = -0.1,
   feature.labels.axis.width = 0.2,
   ...
 )
 }
 \arguments{
+\item{levels.calc}{which levels in meta.col to include in calculation; all levels if NULL; also defines order on x-axis}
+
+\item{levels.plot}{which levels in meta.col (and subset of levels.calc) to include in platting; set to levels.calc if NULL; also defines order on x-axis}
+
 \item{...}{}
 }
 \value{

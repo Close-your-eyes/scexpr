@@ -5,14 +5,15 @@
 \title{Title}
 \usage{
 convert_gene_identifier(
-  gene_idents,
+  idents,
   ident_in = "SYMBOL",
-  ident_out = "ENTREZID",
-  species = c("Hs", "Mm")
+  ident_out = c("ENTREZID", "ALIAS", "GENENAME"),
+  species = c("Hs", "Mm"),
+  return = "df"
 )
 }
 \arguments{
-\item{species}{}
+\item{return}{}
 }
 \value{
 

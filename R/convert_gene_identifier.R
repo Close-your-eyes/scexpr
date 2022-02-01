@@ -73,7 +73,7 @@ convert_gene_identifier <- function (idents,
   if (any(duplicated(idents[,ident_in]))) {
     print(paste0("Duplicate return by ident_out for: ", paste(idents[,ident_in][which(duplicated(idents[,ident_in]))], collapse = ", ")))
     print("Made distinct with dplyr::distinct")
-    idents <- dplyr::distinct(idents, !!sym(ident_in), .keep_all = T)
+    idents <- dplyr::distinct(idents, !!rlang::sym(ident_in), .keep_all = T)
   }
 
   if ("SYMBOL" %in% names(idents)) {
@@ -95,7 +95,7 @@ convert_gene_identifier <- function (idents,
     return(idents)
   }
   if (return == "vector") {
-    idents <- dplyr::distinct(idents, !!sym(ident_in), .keep_all = T)
+    idents <- dplyr::distinct(idents, !!rlang::sym(ident_in), .keep_all = T)
     idents <- idents[,ident_out]
     if (length(idents) != start_len) {
       print("input length and output length are not identical.")

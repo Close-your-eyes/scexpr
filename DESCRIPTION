@@ -11,10 +11,13 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Imports: 
     BiocManager,
+    clustree,
     colorRamps,
     cowplot,
+    clustree,
     devtools,
     dplyr,
+    purrr,
     DT,
     fgsea,
     future,
@@ -40,7 +43,8 @@ Imports:
     viridis,
     viridisLite,
     wesanderson,
-    xml2
+    xml2,
+    rlang
 Suggests: 
     presto,
     limma,
@@ -48,4 +52,7 @@ Suggests:
     Biostrings,
     Rsamtools,
     org.Hs.eg.db,
-    org.Mm.eg.db
+    org.Mm.eg.db,
+    EmbedSOM,
+    SingleR,
+    scattermore

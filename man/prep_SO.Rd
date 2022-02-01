@@ -12,7 +12,7 @@ prep_SO(
   downsample = 1,
   export_prefix = NULL,
   cluster_resolutions = 0.8,
-  reductions = c("tsne", "umap"),
+  reductions = c("tsne", "umap", "som", "gtqsom"),
   nhvf = 800,
   npcs = 20,
   nintdims = 30,
@@ -23,6 +23,8 @@ prep_SO(
   vars.to.regress = NULL,
   seeed = 42,
   save_path = NULL,
+  celltype_refs = NULL,
+  celltype_label = "label.main",
   ...
 )
 }
@@ -67,6 +69,10 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 \item{seeed}{seed passed to several methods}
 
 \item{save_path}{folder to save the resulting Seurat object as rds-file to}
+
+\item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())}
+
+\item{celltype_label}{label}
 
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,

@@ -22,6 +22,12 @@ col_pal <- function(name = "custom",
                     nbrew = NULL,
                     reverse = F) {
 
+  if (!requireNamespace("viridisLite", quietly = T)) {
+    install.packages("viridisLite")
+  }
+  if (!requireNamespace("colorRamps", quietly = T)) {
+    install.packages("colorRamps")
+  }
 
   scl <- NULL
   library(viridisLite)
@@ -64,6 +70,10 @@ col_pal <- function(name = "custom",
                     "#ff5252","#ff793f","#d1ccc0","#ffb142","#ffda79",
                     "#b33939","#cd6133","#84817a","#cc8e35","#ccae62")[1:n])
     scl <- scl[which(!is.na(scl))]
+  }
+
+  if (length(scl) < n) {
+    scl <- scales::hue_pal()(n)
   }
 
   if (is.null(scl)) {

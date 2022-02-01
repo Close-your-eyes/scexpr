@@ -26,7 +26,7 @@ feature_plot(
   nrow.inner = NULL,
   ncol.inner = NULL,
   feature.aliases = NULL,
-  binary.expr = F,
+  binary = F,
   title = NULL,
   title.font.size = 14,
   cutoff.feature = NULL,
@@ -43,14 +43,14 @@ feature_plot(
   legend.shape.size = 3,
   legend.col.size = 3,
   hide.shape.legend = F,
-  font.family = "Courier",
+  font.family = "sans",
   col.pal.c = "spectral",
   col.pal.d = "custom",
   col.excluded.cells = "grey95",
   col.non.expresser = "grey85",
   col.expresser = "tomato2",
   col.pal.rev = F,
-  theme = NULL,
+  theme = ggplot2::theme_bw(),
   plot.axis.labels = F,
   plot.panel.grid = F,
   plot.freq.title = T,
@@ -65,11 +65,14 @@ feature_plot(
   inset.size = c(0.15, 0.15),
   strip.font.size = 14,
   strip.selection = NA,
+  plot.labels = NULL,
+  label.size = 12,
+  speed = F,
   ...
 )
 }
 \arguments{
-\item{...}{}
+\item{speed}{}
 }
 \value{
 
