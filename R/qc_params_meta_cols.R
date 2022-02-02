@@ -21,7 +21,7 @@ qc_params_meta_cols <- function (SO,
   if (missing(meta.cols)) {
     stop("Please provide meta.cols.")
   }
-  SO <- .check.SO(SO = SO, max.length = 1)
+  SO <- .check.SO(SO = SO, length = 1)
   cells <- do.call(.check.and.get.cells, args = c(list(SO = SO), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
   meta.cols <- .check.features(SO = SO, features = unique(meta.cols), rownames = F)
   qc.cols <- .check.features(SO = SO, features = unique(qc.cols), rownames = F)

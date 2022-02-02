@@ -25,7 +25,7 @@ clustering_volcanos <- function(SO,
     stop("Please provide meta.cols from SO@meta.data.")
   }
 
-  SO <- .check.SO(SO, max.length = 1)
+  SO <- .check.SO(SO, length = 1)
   reduction <- .check.reduction(SO, reduction = reduction)
   meta.cols  <- .check.features(SO, features = meta.cols, rownames = F)
   lapply_fun <- match.fun(lapply_fun)

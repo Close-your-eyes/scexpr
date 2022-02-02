@@ -84,7 +84,7 @@ heatmap_pseudobulk <- function(SO,
   assay <- match.arg(assay, c("RNA", "SCT"))
 
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, max.length = 1)
+  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   if (class(normalization) == "numeric") {
     if (length(normalization) != 2) {
       stop("Please set normalization to 'scale' or a numeric vector of length 2 (e.g. c(-1,1)).")

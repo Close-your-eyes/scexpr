@@ -509,21 +509,21 @@ feature_plot <- function(SO,
                       assay = c("RNA", "SCT"),
                       split.by = NULL,
                       shape.by = NULL,
-                      max.length = NULL) {
+                      length = NULL) {
   if (!is.list(SO)) {
     SO <- list(SO)
   }
 
-  if (!is.null(max.length)) {
-    if (length(SO) > max.length) {
-      stop("Please provide only one SO.")
+  if (!is.null(length)) {
+    if (length(SO) > length) {
+      stop("Please provide exactly ", length, " SO.")
     }
   }
 
   assay <- match.arg(assay, c("RNA", "SCT"))
 
   if (is.null(names(SO)) && length(SO) > 1) {
-    print("List of SO has no names. Naming them by numbers.")
+    print("List of SO has no names. Naming them numerically in order as provided.")
     names(SO) <- as.character(seq_along(SO))
   }
 
@@ -556,7 +556,7 @@ feature_plot <- function(SO,
     warning("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize.")
   }
 
-  if (!is.null(max.length) && max.length == 1) {
+  if (!is.null(length) && length = 1) {
     return(SO[[1]])
   } else {
     return(SO)

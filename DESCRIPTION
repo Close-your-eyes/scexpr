@@ -19,9 +19,6 @@ Imports:
     dplyr,
     purrr,
     DT,
-    fgsea,
-    future,
-    future.apply,
     ggplot2,
     ggrepel,
     harmony,
@@ -48,6 +45,7 @@ Imports:
 Suggests: 
     presto,
     limma,
+    fgsea,
     AnnotationDbi,
     Biostrings,
     Rsamtools,
