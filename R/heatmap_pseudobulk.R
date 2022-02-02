@@ -113,17 +113,7 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-  if (is.null(levels.calc)) {
-    levels.calc <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
-    if (suppressWarnings(!any(is.na(as.numeric(levels.calc))))) {
-      levels.calc <- as.character(sort(as.numeric(unique(levels.calc))))
-    }
-  } else {
-    if (any(!levels.calc %in% unique(SO@meta.data[,meta.col,drop=T]))) {
-      print(paste0("levels.calc not found in meta.col: ", paste(levels.calc[which(!levels.calc %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
-    }
-    levels.calc <- as.character(unique(levels.calc[which(levels.calc %in% unique(SO@meta.data[,meta.col,drop=T]))]))
-  }
+  levels.calc <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.calc, append_by_missing = F)
 
   if (is.null(levels.plot)) {
     levels.plot <- levels.calc
@@ -250,3 +240,20 @@ heatmap_pseudobulk <- function(SO,
   return(list(plot = heatmap.plot, data = htp))
 }
 
+.check.levels <- function(SO, meta.col, levels = NULL, append_by_missing = F) {
+  if (is.null(levels) || is.na(levels)) {
+    levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
+    if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
+      levels <- as.character(sort(as.numeric(unique(levels))))
+    }
+  } else {
+    if (any(!levels %in% unique(SO@meta.data[,meta.col,drop=T]))) {
+      print(paste0("levels not found in meta.col: ", paste(levels[which(!levels %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
+    }
+    levels <- as.character(unique(levels[which(levels %in% unique(SO@meta.data[,meta.col,drop=T]))]))
+  }
+  if (append_by_missing) {
+    levels <- c(levels, as.character(unique(SO@meta.data[,meta.col,drop=T])[which(!as.character(unique(SO@meta.data[,meta.col,drop=T])) %in% levels)]))
+  }
+  return(levels)
+}

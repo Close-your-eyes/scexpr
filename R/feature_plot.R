@@ -556,7 +556,7 @@ feature_plot <- function(SO,
     warning("data slot in at least one SO does not seem to contain normalized data since it is equal to the counts slot. You may want to normalize.")
   }
 
-  if (!is.null(length) && length = 1) {
+  if (!is.null(length) && length == 1) {
     return(SO[[1]])
   } else {
     return(SO)

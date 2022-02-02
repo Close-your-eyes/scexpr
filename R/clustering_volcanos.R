@@ -20,7 +20,8 @@ clustering_volcanos <- function(SO,
                                 lapply_fun = lapply,
                                 ...) {
 
-  library(clustree) # library is required!! https://github.com/lazappi/clustree/issues/14
+  requireNamespace("clustree") # library is required!! https://github.com/lazappi/clustree/issues/14
+
   if (missing(meta.cols)) {
     stop("Please provide meta.cols from SO@meta.data.")
   }

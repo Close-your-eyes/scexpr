@@ -1,10 +1,27 @@
+#' Title
+#'
+#' @param SO
+#' @param assay
+#' @param meta.cols
+#' @param levels
+#' @param complement.levels
+#' @param features
+#' @param avg.expr
+#' @param method
+#' @param corr.in.percent
+#' @param decimal.places
+#'
+#' @return
+#' @export
+#'
+#' @examples
 cluster_correlation_matrix <- function (SO,
                                         assay = c("RNA", "SCT"),
                                         meta.cols,
-                                        axis.label.orders,
-                                        features.to.use = "intersecting.var.features",
+                                        levels = NULL, # NA possible
+                                        complement.levels = F,
+                                        features = NULL, # all, pca
                                         avg.expr,
-                                        legend.position = "none",
                                         method = c("pearson", "kendall", "spearman"),
                                         corr.in.percent = FALSE,
                                         decimal.places = 2) {
@@ -16,6 +33,31 @@ cluster_correlation_matrix <- function (SO,
       stop("meta.cols has to be of length 2.")
     }
   }
+  if (!missing(avg.expr)) {
+    if (!is.list(avg.expr)) {
+      stop("avg.expr has to be a list of matrices.")
+    }
+    if (length(avg.expr) != 2) {
+      stop("avg.expr has to be of length 2.")
+    }
+  }
+
+  if (!is.null(levels)) {
+    if (!is.list(levels)) {
+      stop("levels has to be a list.")
+    }
+    if (length(levels) != 2) {
+      stop("levels has to be of length 2.")
+    }
+    levels <- sapply(seq_along(SO), function(x) {
+      .check.levels(SO[[x]], meta.cols[x], levels = levels[[x]], append_by_missing = complement.levels)
+    })
+
+  } else {
+    levels <- sapply(seq_along(SO), function(x) {
+      .check.levels(SO[[x]], meta.cols[x], levels = levels, append_by_missing = F)
+    })
+  }
 
   SO <- .check.SO(SO, assay = assay, length = 2)
   assay <- match.arg(assay, c("RNA", "SCT"))
@@ -23,56 +65,26 @@ cluster_correlation_matrix <- function (SO,
   meta.cols[1] <- .check.features(SO[[1]], features = meta.cols[1], rownames = F)
   meta.cols[2] <- .check.features(SO[[2]], features = meta.cols[2], rownames = F)
 
-
-
-  if (!missing(avg.expr) && !is.list(avg.expr)) {
-    stop("avg.expr has to be a list.")
-  }
-
-  if (!missing(axis.label.orders) && !is.list(axis.label.orders)) {
-    stop("axis.label.orders has to be a list.")
-  }
-
-  if (missing(axis.label.orders)) {
-    axis.label.orders <- list(sort(unique(SO.list[[1]]@meta.data[,resolutions[1]])), sort(unique(SO.list[[2]]@meta.data[,resolutions[2]])))
-  }
-
-
-  if (length(features.to.use) > 1) {
-    features.to.use <- unique(features.to.use)
-    features.to.use <- features.to.use[which(features.to.use %in% Reduce(intersect, lapply(SO.list, function(x) rownames(x))))]
-    if (length(features.to.use) < 3) {
-      stop("Less than 3 genes left after filtering to use for correlation analysis: ", paste(features.to.use, collapse = ", "), " Please provide more.")
-    }
+  if (is.null(features)) {
+    print("Using all intersecting features. Provide features = 'all' to avoid this message.")
+    features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
+  } else if (features == "all") {
+    features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
+  } else if (features == "pca") {
+    features <- Reduce(intersect, lapply(SO, function(x) rownames(x@reductions[["pca"]]@feature.loadings)))
   } else {
-    if (features.to.use == "intersecting.var.features") {
-      #VariableFeatures(SO) equals rownames(SO@reductions[["pca"]]@feature.loadings)
-      features.to.use <- Reduce(intersect, lapply(SO.list, function(x) VariableFeatures(x)))
-    } else if (features.to.use == "intersecting.features") {
-      features.to.use <- Reduce(intersect, lapply(SO.list, function(x) rownames(GetAssayData(x, assay = assay))))
-    } else if (features.to.use == "var.features") {
-      features.to.use <- unique(unlist(lapply(SO.list, function(x) VariableFeatures(x))))
-    }
+    features <- .check.features(SO, features, meta.data = F)
   }
 
   if (missing(avg.expr)) {
-    avg.expr <- lapply(SO.list, function (x) {Seurat::AverageExpression(x, assays = assay)[[assay]]})
-    #Seurat changes column name if all cells are within one group only
-    avg.expr <- lapply(seq_along(avg.expr), function(x) {
-      if (ncol(avg.expr[[x]]) == 1) {
-        colnames(avg.expr[[x]]) <- axis.label.orders[[x]]
-      }
-      return(avg.expr[[x]][features.to.use,which(colnames(avg.expr[[x]]) %in% axis.label.orders[[x]]), drop = F])
-    })
+    avg.expr <- lapply(seq_along(SO), function (x) Seurat::AverageExpression(SO[[x]], assays = assay, features = features, group.by = meta.cols[[x]], slot = "data", verbose = F)[[assay]])
   } else {
-    avg.expr <- lapply(avg.expr, function (x) {x[features.to.use,,drop=F]})
+    avg.expr <- lapply(avg.expr, function (x) x[features,,drop=F])
   }
 
-  if (missing(axis.label.orders)) {
-    axis.label.orders <- list(colnames(avg.expr[[1]]), colnames(avg.expr[[2]]))
-  }
+  cm <- stats::cor(avg.expr[[1]][,levels[[1]],drop=F], avg.expr[[2]][,levels[[2]],drop=F], method = method)
 
-  if (correlation == "pearson") {
+  '  if (correlation == "pearson") {
     # conduct linear model in case of pearson
     # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
 
@@ -84,8 +96,7 @@ cluster_correlation_matrix <- function (SO,
       return(lms)
     })
     names(lms) <- colnames(avg.expr[[1]])
-    '    lmss <<- lms
-    avg.exprs <<- avg.expr'
+
 
     cm <- sapply(lms, function(x) {
       z <- sapply(x, function(y) {
@@ -100,45 +111,33 @@ cluster_correlation_matrix <- function (SO,
     cm <- cm[which(!rownames(cm) == ""),,drop = F]
     cm <- t(cm)
 
-    '    test <- lms[[1]][[1]]
-    res <- stack(test[["residuals"]]) %>% dplyr::rename("res" = values) %>%
-    fit <- stack(test[["fitted.values"]]) %>% dplyr::rename("fit" = values)
-    res.corr <- stack(test[["residuals"]]/test[["fitted.values"]]) %>% dplyr::rename("res.corr" = values)
-    df <-
-      res %>%
-      dplyr::left_join(fit) %>%
-      dplyr::left_join(res.corr)'
 
   } else {
-    cm <- cor(avg.expr[[1]], avg.expr[[2]], method = correlation)
-  }
 
-  '  rr <- data.frame(x = scale(avg.expr[[2]][,1]), y = scale(avg.expr[[1]][,1]))
-  ggplot(rr , aes(x,y)) +
-    geom_point() +
-    geom_smooth(method = "lm")
-  '
+  }
+'
 
   cm.melt <- reshape2::melt(cm)
-  cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = axis.label.orders[[1]])
-  cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = axis.label.orders[[2]])
+  cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
+  cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
 
-  cm.plot <- ggplot(cm.melt, aes(x = Var1, y = Var2, fill = value)) +
-    geom_tile(colour = "black") +
-    scale_fill_gradient2(high = "#BC3F2B", low = "#4C6CA6", mid = "#edf9ff", midpoint = mean(cm.melt$value)) +
-    xlab(names(SO.list)[1]) +
-    ylab(names(SO.list)[2]) +
-    theme_classic() +
-    theme(text = element_text(size=24), plot.title = element_text(size=16), axis.text.y = element_text(face = "bold"), axis.text.x = element_text(face = "bold"), legend.position = legend.position)
+  pp <- c(col_pal("RdBu", n = 11, reverse = T)[2:5], rep(col_pal("RdBu", n = 11, reverse = T)[6], 6), col_pal("RdBu", n = 11, reverse = T)[7:10])
+
+  cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
+    ggplot2::geom_tile(colour = "black") +
+    #ggplot2::scale_fill_gradient2(high = "#BC3F2B", low = "#4C6CA6", mid = "#edf9ff", midpoint = median(cm.melt$value)) +
+    ggplot2::scale_fill_gradientn(colors = pp) +
+    ggplot2::labs(x = paste0(names(SO)[1], " ", meta.cols[1]), y = paste0(names(SO)[2], " ", meta.cols[2])) +
+    ggplot2::theme_classic()
 
   if (corr.in.percent) {
-    cm.plot <- cm.plot + geom_text(size = 8, aes(label = paste0(round(value*100, 0), " %")))
+    cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = paste0(round(value*100, 0), " %")))
   } else {
-    cm.plot <- cm.plot + geom_text(size = 8, aes(label = format(round(value, decimal.places), nsmall = decimal.places)))
+    cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = format(round(value, decimal.places), nsmall = decimal.places)))
   }
 
   # dot plot of genes
-  avg.expr <- lapply(avg.expr, function(x) reshape2::melt(as.matrix(x)))
+  '  avg.expr <- lapply(avg.expr, function(x) reshape2::melt(as.matrix(x)))
   names(avg.expr[[1]]) <- c("Gene.symbol", "cluster.x", "avg.expr.x")
   names(avg.expr[[2]]) <- c("Gene.symbol", "cluster.y", "avg.expr.y")
 
@@ -150,7 +149,7 @@ cluster_correlation_matrix <- function (SO,
     theme(axis.title = element_blank(), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
     scale_x_log10() +
     scale_y_log10() +
-    facet_grid(rows = vars(cluster.x), cols = vars(cluster.y), scales = "free")
+    facet_grid(rows = vars(cluster.x), cols = vars(cluster.y), scales = "free")'
 
-  return(list(cm.plot = cm.plot, dot.plot.matrix = dot.plot.matrix, dot.plot.matrix.df = dot.plot.matrix.df, cm.melt = cm.melt, avg.expr = avg.expr))
+  return(list(cm.plot = cm.plot, cm.melt = cm.melt, avg.expr = avg.expr))
 }
