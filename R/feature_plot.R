@@ -179,7 +179,7 @@ feature_plot <- function(SO,
   plots <- lapply(features, function(x) {
 
     data <- .get.data(SO = SO, assay = assay, cells = names(cells), split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order)
-    # neccessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
+    # necessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
     # make it after .get.data
     shape.by <- tryCatch(rlang::sym(shape.by), error = function (e) NULL)
 
@@ -354,10 +354,10 @@ feature_plot <- function(SO,
           label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z, avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]), avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
           names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
           if (plot.labels == "text") {
-            plot <- plot + ggplot2::geom_text(data = label_df, aes(label = label), size = label.size, family = font.family,) #...
+            plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family,) #...
           }
           if (plot.labels == "label") {
-            plot <- plot + ggplot2::geom_label(data = label_df, aes(label = label), size = label.size, family = font.family) #...
+            plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
           }
         }
       }
@@ -625,8 +625,15 @@ feature_plot <- function(SO,
     print("Duplicates found in cells.")
     cells <- unique(cells)
   }
+
   # check if cell names are unique across SOs
   all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
+
+  if (length(SO) > 1 && any(duplicated(all.cells)) && is.null(cells)) {
+    # when cells is not provided it does not matter
+    make.cells.unique <- T
+  }
+
   if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
     if (make.cells.unique.warning == 1) {
       stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_. Where i the index of the SO in the list. Consider this renaming of cells when selecting cells for plotting.")
@@ -634,13 +641,16 @@ feature_plot <- function(SO,
       stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells.")
     }
   }
-  if (length(SO) > 1 && !all(!duplicated(all.cells)) && make.cells.unique) {
+
+  if (length(SO) > 1 && any(duplicated(all.cells)) && make.cells.unique) {
     names.temp <- names(SO)
     SO <- lapply(seq_along(SO), function(x) Seurat::RenameCells(SO[[x]], add.cell.id = paste0("SO_", x)))
     names(SO) <- names.temp
     all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
-    print("Cells have been predixed with 'SO_i_' .")
+    #print("Cells have been predixed with 'SO_i_' .")
+    assign("SO", SO, envir = parent.frame()) # assigns in parent environment (https://stackoverflow.com/questions/10904124/global-and-local-variables-in-r?rq=1)
   }
+
   if (is.null(cells)) {
     cells <- all.cells
   } else {
@@ -698,6 +708,7 @@ feature_plot <- function(SO,
   if (downsample != 1) {
     cells.plot <- cells.plot[sample(seq_along(cells.plot), size = downsample)]
   }
+
   return(cells.plot)
 }
 
@@ -841,6 +852,7 @@ feature_plot <- function(SO,
     data[,"SO.split"] <- y
     return(data)
   }))
+
   data <- data[cells,]
 
   if (is.numeric(data[,1]) && all(data[,1] == 0)) {
@@ -1047,7 +1059,7 @@ feature_plot <- function(SO,
     y <- Seurat::Embeddings(SO, reduction = names(reduction))
     attributes(y) <- c(attributes(y), attributes(x))
   }
-  data <- cbind(Seurat::FetchData(SO_urine, "SCT_snn_res.0.4"), Seurat::Embeddings(SO_urine, reduction = "tsne"))
+  data <- cbind(Seurat::FetchData(SO, "SCT_snn_res.0.4"), Seurat::Embeddings(SO, reduction = "tsne"))
 
 }
 

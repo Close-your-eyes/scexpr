@@ -438,7 +438,8 @@ volcano_plot <- function(SO,
       vd.cut %>%
       dplyr::mutate(sign = ifelse(log2.fc > 0, "plus", "minus")) %>%
       dplyr::group_by(sign) %>%
-      dplyr::summarise(n.genes = n()) %>%
+      dplyr::summarise(n.genes = dplyr::n()) %>%
+      dplyr::ungroup() %>%
       dplyr::mutate(xpos = ifelse(sign == "plus", fc.cut + 0.75*(max(abs(vd.cut$log2.fc))-fc.cut), -(fc.cut + 0.75*(max(abs(vd.cut$log2.fc))-fc.cut)))) %>%
       dplyr::mutate(ypos = -log10(p.cut)*2)
 
@@ -481,7 +482,7 @@ volcano_plot <- function(SO,
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
     } else if (topn.metric == "both") {
       f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
-      f_lab.logfc <- bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
+      f_lab.logfc <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) %>% dplyr::distinct()
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
@@ -505,7 +506,7 @@ volcano_plot <- function(SO,
   } else {
     if (length(label.features) == 1) {
       if (label.features == "significant") {
-        label.features <- vd[which(as.numeric(vd[,p]) < p.signif), "Feature"]
+        label.features <- vd[which(as.numeric(vd[,p.plot]) < p.signif), "Feature"]
       } else {
         vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
         if (!color.only) {

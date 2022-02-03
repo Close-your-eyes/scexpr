@@ -50,34 +50,47 @@ Region type (E = exonic, N = intronic, I = intergenic) (RE)
 \examples{
 \dontrun{
 # genomic range over part of chromosome 6 (or whole)
-chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 29000000, end = 35000000)) # IRanges::IRanges(start = 1, end = 536870912))
+chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
+ranges = IRanges::IRanges(start = 29000000, end = 35000000))
+# ranges = IRanges::IRanges(start = 1, end = 536870912))
 
-# alternatively multiple regions of HLA-A exons; these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
-hlaa <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
-ranges = IRanges::IRanges(
-start = c(29910247, 29910534, 29911045, 29911899, 29912277, 29912836, 29913011, 29913228),
-end = c(29910403, 29910803, 29911320, 29912174, 29912393, 29912868, 29913058, 29913661)))
+# alternatively multiple regions of HLA-A exons
+# these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
+hlaa <- GenomicRanges::GRanges(
+  seqnames = "6", strand = "+",
+  ranges = IRanges::IRanges(
+    start = c(29910247, 29910534, 29911045, 29911899, 29912277, 29912836, 29913011, 29913228),
+    end = c(29910403, 29910803, 29911320, 29912174, 29912393, 29912868, 29913058, 29913661)
+  )
+)
 
-reads_raw_6 <- scexpr::reads_from_bam(file_path = "my_bam_path",
-genomic_ranges = chr6,
-lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores())
+reads_raw_6 <- scexpr::reads_from_bam(
+  file_path = "my_bam_path",
+  genomic_ranges = chr6,
+  lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores()
+)
 
 # passing multiple regions may return reads twice or multiple times
 # if these reads overlap two or more of the regions (see ?scanBam and ?ScanBamParam)
-reads_raw_hlaa <- scexpr::reads_from_bam(file_path = "my_bam_path",
-genomic_ranges = hlaa,
-lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
-add_flags = list(exon = c(1:8), gene = rep("A", 8)))
+reads_raw_hlaa <- scexpr::reads_from_bam(
+  file_path = "my_bam_path",
+  genomic_ranges = hlaa,
+  lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
+  add_flags = list(exon = c(1:8), gene = rep("A", 8))
+)
 
 # filter and process reads
-reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27),]
-reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3),]
-# filter duplicate reads; if additional flags like exons have been passed these columns will prevent dplyr::distinct from filtering
+reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27), ]
+reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3), ]
+# filter duplicate reads
+# if additional flags like exons have been passed
+# these columns will prevent dplyr::distinct from filtering
 reads_raw_6 <- dplyr::distinct(reads_raw_6, start, seq, .keep_all = T)
 # only reads with
-reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""), function(x) !x \%in\% c("C", "G", "T", "A"), simplify = F), any)),] # how to with Biostrings?
-# readNames were found to be not unique in any case (same name for reads with different start and different seq)
+reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""),
+function(x) !x \%in\% c("C", "G", "T", "A"), simplify = F), any)), ] # how to with Biostrings?
+# readNames were found to be not unique in any case
+# (same name for reads with different start and different seq)
 reads_raw_6$readName <- make.unique(reads_raw_6$readName)
-
 }
 }

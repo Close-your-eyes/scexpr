@@ -92,10 +92,10 @@ hla_typing <- function(hla_ref,
     dplyr::filter(combined.rank == min(combined.rank)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct(allele.1.2, .keep_all = T) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(!!sym(hla_allele_colName), !!sym(p_group_colName), !!sym(g_group_colName)), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("p_group.1" = p_group_colName, "g_group.1" = g_group_colName) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(!!sym(hla_allele_colName), !!sym(p_group_colName), !!sym(g_group_colName)), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("p_group.2" = p_group_colName, "g_group.2" = g_group_colName) %>%
-    dplyr::left_join(top_single_res_df %>% dplyr::select(!!sym(hla_allele_colName), n_Hit), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.1" = n_Hit) %>%
-    dplyr::left_join(top_single_res_df %>% dplyr::select(!!sym(hla_allele_colName), n_Hit), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.2" = n_Hit) %>%
+    dplyr::left_join(hla_ref %>% dplyr::select(!!rlang::sym(hla_allele_colName), !!rlang::sym(p_group_colName), !!rlang::sym(g_group_colName)), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("p_group.1" = p_group_colName, "g_group.1" = g_group_colName) %>%
+    dplyr::left_join(hla_ref %>% dplyr::select(!!rlang::sym(hla_allele_colName), !!rlang::sym(p_group_colName), !!rlang::sym(g_group_colName)), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("p_group.2" = p_group_colName, "g_group.2" = g_group_colName) %>%
+    dplyr::left_join(top_single_res_df %>% dplyr::select(!!rlang::sym(hla_allele_colName), n_Hit), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.1" = n_Hit) %>%
+    dplyr::left_join(top_single_res_df %>% dplyr::select(!!rlang::sym(hla_allele_colName), n_Hit), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.2" = n_Hit) %>%
     dplyr::mutate(n_Hit = n_Hit) %>%
     dplyr::mutate(n_noHit = n_noHit) %>%
     dplyr::mutate(explained.reads.diff = abs(explained_reads_allele.1 - explained_reads_allele.2)) %>%
@@ -120,7 +120,7 @@ hla_typing <- function(hla_ref,
     dplyr::mutate(plot.color = as.factor(ifelse(row.number.rank %% 2 != 0, 1, 2)))
 
 
-  single.plot <- ggplot2::ggplot(top_single_res_df, ggplot2::aes(x = reorder_within(!!sym(hla_allele_colName), n_Hit, allele_group), y = n_Hit)) +
+  single.plot <- ggplot2::ggplot(top_single_res_df, ggplot2::aes(x = reorder_within(!!rlang::sym(hla_allele_colName), n_Hit, allele_group), y = n_Hit)) +
     ggplot2::geom_bar(stat = "identity") +
     ggplot2::xlab("allele") +
     ggplot2::ylab("n explained reads") +

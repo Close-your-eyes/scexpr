@@ -21,8 +21,8 @@
 .expr_jitter <- function (d,
                           feat,
                           pt.size,
-                          geom1 = "jitter",
-                          geom2 = "violin",
+                          geom1 = c("jitter", "point", "dotplot"),
+                          geom2 = c("none", "violin", "boxplot"),
                           font.size = 14,
                           filter.non.expr = F,
                           plot.expr.freq = F,
@@ -35,6 +35,9 @@
   #geom <- match.arg(geom, c("jitter", "point"))
   #my_geom <- switch(geom, jitter = geom_jitter, point = geom_point)
   #my_geom(...)
+
+  geom1 <- match.arg(geom1, c("jitter", "point", "dotplot"))
+  geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
 
   dd <-
     rbind(as.data.frame(d[feat,ngc,drop=F]) %>%
@@ -53,7 +56,8 @@
       dplyr::group_by(Feature) %>%
       dplyr::mutate(max.feat.expr = max(expr)) %>%
       dplyr::group_by(Feature, group, max.feat.expr) %>%
-      dplyr::summarise(pct.expr = sum(expr > 0)/n(), .groups = "drop")
+      dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop") %>%
+      dplyr::ungroup()
   }
 
   if (filter.non.expr) {
@@ -61,13 +65,13 @@
   }
 
   if (geom2 != "split violin") {
-    plot <- ggplot2::ggplot(dd, aes(x = group, y = expr))
+    plot <- ggplot2::ggplot(dd, ggplot2::aes(x = group, y = expr))
     if (geom1 == "jitter") {
       plot <- plot + ggplot2::geom_jitter(width = 0.2, size = pt.size, color = "tomato2")
     }
 
     if (geom1 == "point") {
-      plot <- plot +ggplot2:: geom_point(size = pt.size, color = "tomato2")
+      plot <- plot + ggplot2:: geom_point(size = pt.size, color = "tomato2")
     }
 
     if (geom1 == "dotplot") {
@@ -82,7 +86,8 @@
     }
 
     if (plot.expr.freq) {
-      plot <- plot + ggplot2::geom_text(data = stat, aes(label = round(pct.expr, 2), y = max.feat.expr + 0.4), size = label.size)
+      plot <- plot + ggplot2::geom_text(data = stat, ggplot2::aes(label = round(pct.expr, 2), y = max.feat.expr + 0.4), size = label.size)
+      #expand_limits
     }
 
     plot <-
@@ -91,7 +96,7 @@
       ggplot2::theme(axis.title = ggplot2::element_blank(), legend.position = "none", panel.grid = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), text = ggplot2::element_text(family = "Courier"))
 
   } else {
-    plot <- ggplot2::ggplot(dd, aes(x = 0, y = expr, fill = group)) +
+    plot <- ggplot2::ggplot(dd, ggplot2::aes(x = 0, y = expr, fill = group)) +
       .geom_split_violin() +
       ggplot2::theme_bw(base_size = font.size) +
       ggplot2::theme(axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "right", legend.title = ggplot2::element_blank(),  panel.grid = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), text = ggplot2::element_text(family = "Courier"))

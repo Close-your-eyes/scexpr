@@ -25,35 +25,48 @@
 #' @examples
 #' \dontrun{
 #' # genomic range over part of chromosome 6 (or whole)
-#' chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+", ranges = IRanges::IRanges(start = 29000000, end = 35000000)) # IRanges::IRanges(start = 1, end = 536870912))
+#' chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
+#' ranges = IRanges::IRanges(start = 29000000, end = 35000000))
+#' # ranges = IRanges::IRanges(start = 1, end = 536870912))
 #'
-#' # alternatively multiple regions of HLA-A exons; these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
-#' hlaa <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
-#' ranges = IRanges::IRanges(
-#' start = c(29910247, 29910534, 29911045, 29911899, 29912277, 29912836, 29913011, 29913228),
-#' end = c(29910403, 29910803, 29911320, 29912174, 29912393, 29912868, 29913058, 29913661)))
+#' # alternatively multiple regions of HLA-A exons
+#' # these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
+#' hlaa <- GenomicRanges::GRanges(
+#'   seqnames = "6", strand = "+",
+#'   ranges = IRanges::IRanges(
+#'     start = c(29910247, 29910534, 29911045, 29911899, 29912277, 29912836, 29913011, 29913228),
+#'     end = c(29910403, 29910803, 29911320, 29912174, 29912393, 29912868, 29913058, 29913661)
+#'   )
+#' )
 #'
-#' reads_raw_6 <- scexpr::reads_from_bam(file_path = "my_bam_path",
-#' genomic_ranges = chr6,
-#' lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores())
+#' reads_raw_6 <- scexpr::reads_from_bam(
+#'   file_path = "my_bam_path",
+#'   genomic_ranges = chr6,
+#'   lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores()
+#' )
 #'
 #' # passing multiple regions may return reads twice or multiple times
 #' # if these reads overlap two or more of the regions (see ?scanBam and ?ScanBamParam)
-#' reads_raw_hlaa <- scexpr::reads_from_bam(file_path = "my_bam_path",
-#' genomic_ranges = hlaa,
-#' lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
-#' add_flags = list(exon = c(1:8), gene = rep("A", 8)))
+#' reads_raw_hlaa <- scexpr::reads_from_bam(
+#'   file_path = "my_bam_path",
+#'   genomic_ranges = hlaa,
+#'   lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
+#'   add_flags = list(exon = c(1:8), gene = rep("A", 8))
+#' )
 #'
 #' # filter and process reads
-#' reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27),]
-#' reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3),]
-#' # filter duplicate reads; if additional flags like exons have been passed these columns will prevent dplyr::distinct from filtering
+#' reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27), ]
+#' reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3), ]
+#' # filter duplicate reads
+#' # if additional flags like exons have been passed
+#' # these columns will prevent dplyr::distinct from filtering
 #' reads_raw_6 <- dplyr::distinct(reads_raw_6, start, seq, .keep_all = T)
 #' # only reads with
-#' reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""), function(x) !x %in% c("C", "G", "T", "A"), simplify = F), any)),] # how to with Biostrings?
-#' # readNames were found to be not unique in any case (same name for reads with different start and different seq)
+#' reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""),
+#' function(x) !x %in% c("C", "G", "T", "A"), simplify = F), any)), ] # how to with Biostrings?
+#' # readNames were found to be not unique in any case
+#' # (same name for reads with different start and different seq)
 #' reads_raw_6$readName <- make.unique(reads_raw_6$readName)
-#'
 #' }
 reads_from_bam <- function(file_path,
                            genomic_ranges,
@@ -63,11 +76,10 @@ reads_from_bam <- function(file_path,
                            revcomp_minus_strand = T,
                            lapply_fun = lapply,
                            ...) {
-
-  if (!requireNamespace("Biostrings", quietly = T)){
+  if (!requireNamespace("Biostrings", quietly = T)) {
     BiocManager::install("Biostrings")
   }
-  if (!requireNamespace("Rsamtools", quietly = T)){
+  if (!requireNamespace("Rsamtools", quietly = T)) {
     BiocManager::install("Rsamtools")
   }
 
@@ -80,7 +92,7 @@ reads_from_bam <- function(file_path,
     }
   }
 
-  print ("Reading BAM file.")
+  print("Reading BAM file.")
   params <- Rsamtools::ScanBamParam(which = genomic_ranges, what = Rsamtools::scanBamWhat(), tag = add_tags, reverseComplement = revcomp_minus_strand) # ... #reverseComplement = FALSE --> all seqs refer to the (+)Strand, reads are (-)Strand are provided as rev.comp
   reads <- Rsamtools::scanBam(file_path, param = params)
 
@@ -95,22 +107,24 @@ reads_from_bam <- function(file_path,
 
   # start of a read always refers to the (+)Strand, so for reads on the (-)Strand start is actually the end, (see IGV browser, read details)
   reads <- dplyr::bind_rows(lapply(names(reads), function(x) {
-    temp <- data.frame(readName = reads[[x]][["qname"]],
-                       start = reads[[x]][["pos"]],
-                       length = reads[[x]][["qwidth"]],
-                       strand = reads[[x]][["strand"]],
-                       seq = reads[[x]][["seq"]],
-                       qual = reads[[x]][["qual"]],
-                       stringsAsFactors = FALSE)
+    temp <- data.frame(
+      readName = reads[[x]][["qname"]],
+      start = reads[[x]][["pos"]],
+      length = reads[[x]][["qwidth"]],
+      strand = reads[[x]][["strand"]],
+      seq = reads[[x]][["seq"]],
+      qual = reads[[x]][["qual"]],
+      stringsAsFactors = FALSE
+    )
 
     for (i in add_tags) {
-      temp[,i] <- reads[[x]][["tag"]][[i]]
+      temp[, i] <- reads[[x]][["tag"]][[i]]
     }
 
     if (!is.null(add_flags)) {
       for (k in seq_along(reads)) {
         for (p in seq_along(add_flags)) {
-          temp[,names(add_flags)[p]] <- add_flags[[p]][x]
+          temp[, names(add_flags)[p]] <- add_flags[[p]][x]
         }
       }
     }
@@ -127,4 +141,3 @@ reads_from_bam <- function(file_path,
 
   return(reads)
 }
-

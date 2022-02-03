@@ -22,18 +22,10 @@ col_pal <- function(name = "custom",
                     nbrew = NULL,
                     reverse = F) {
 
-  if (!requireNamespace("viridisLite", quietly = T)) {
-    install.packages("viridisLite")
-  }
-  if (!requireNamespace("colorRamps", quietly = T)) {
-    install.packages("colorRamps")
-  }
-
   scl <- NULL
-  requireNamespace("colorRamps")
-  requireNamespace("viridisLite")
-  if (any(grepl(name, c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)]), ignore.case = T))) {
-    colfun <- match.fun(grep(name, c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)]), ignore.case = T, value = T))
+
+  if (any(grepl(name, c(rev(ls(getNamespace("viridisLite")))[-c(1:2)], rev(ls(getNamespace("colorRamps")))[-c(2:3)]), ignore.case = T))) {
+    colfun <- match.fun(grep(name, c(rev(ls(getNamespace("viridisLite")))[-c(1:2)], rev(ls(getNamespace("colorRamps")))[-c(2:3)]), ignore.case = T, value = T))
     scl <- colfun(n)
   }
 
@@ -43,7 +35,7 @@ col_pal <- function(name = "custom",
 
   if (any(grepl(name, rownames(RColorBrewer::brewer.pal.info), ignore.case = T))) {
     name <- grep(name, rownames(RColorBrewer::brewer.pal.info), ignore.case = T, value = T)
-    if (name == "Spectral") {
+    if (grepl("^spectral$", name, ignore.case = T)) {
       # needed so often, counter-intuitive by default
       reverse <- !reverse
     }

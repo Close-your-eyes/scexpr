@@ -9,7 +9,7 @@ convert_gene_identifier(
   ident_in = "SYMBOL",
   ident_out = c("ENTREZID", "ALIAS", "GENENAME"),
   species = c("Hs", "Mm"),
-  return = "df"
+  return = c("data.frame", "vector")
 )
 }
 \arguments{

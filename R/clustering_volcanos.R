@@ -11,6 +11,8 @@
 #' @return
 #' @export
 #'
+#' @importFrom ggraph guide_edge_colourbar
+#'
 #' @examples
 clustering_volcanos <- function(SO,
                                 meta.cols,
@@ -19,8 +21,6 @@ clustering_volcanos <- function(SO,
                                 save.path = NULL,
                                 lapply_fun = lapply,
                                 ...) {
-
-  requireNamespace("clustree") # library is required!! https://github.com/lazappi/clustree/issues/14
 
   if (missing(meta.cols)) {
     stop("Please provide meta.cols from SO@meta.data.")

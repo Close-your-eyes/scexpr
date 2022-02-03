@@ -111,7 +111,7 @@ pct_feature <- function(SO,
                         cells = NULL,
                         assay = c("RNA", "SCT")) {
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, max.length = 1)
+  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells)
   cells <- names(cells[which(cells == 1)])
   #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first

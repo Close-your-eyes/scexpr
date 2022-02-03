@@ -191,7 +191,7 @@ heatmap_pseudobulk <- function(SO,
     ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family), axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_text(family = font.family), axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family), legend.position = legend.position, legend.direction = legend.direction)
 
   if (dotplot) {
-    heatmap.plot <- heatmap.plot + ggplot2::geom_point(aes(size = pct_in), shape = 21)
+    heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21)
   } else {
     if (tile.borders) {
       heatmap.plot <- heatmap.plot + ggplot2::geom_tile(colour = "black")
@@ -208,7 +208,7 @@ heatmap_pseudobulk <- function(SO,
   if (plot.feature.breaks & !is.null(feature.labels)) {
     axis.df <- data.frame(y = 1:length(levels(htp$Feature)), Feature = levels(htp$Feature))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = Feature)) +
-      ggrepel::geom_text_repel(fontface = "italic", family = font.family, data = axis.df[which(axis.df$Feature %in% feature.labels),], aes(label = Feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
+      ggrepel::geom_text_repel(fontface = "italic", family = font.family, data = axis.df[which(axis.df$Feature %in% feature.labels),], ggplot2::aes(label = Feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
       ggplot2::scale_x_continuous(limits = c(-0.1, 0), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::scale_y_continuous(limits = c(0, length(levels(htp$Feature)) + 0.5), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme_void()
