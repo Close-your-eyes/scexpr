@@ -92,7 +92,7 @@ filter_feature <- function(SO,
                            cells = NULL,
                            min_pct = 0.1) {
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, max.length = 1)
+  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells)
   cells <- names(cells[which(cells == 1)])
   assay <- match.arg(assay, c("RNA", "SCT"))
