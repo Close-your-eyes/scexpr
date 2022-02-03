@@ -22,7 +22,7 @@ convert_gene_identifier <- function (idents,
                                      ident_in = "SYMBOL",
                                      ident_out = c("ENTREZID", "ALIAS", "GENENAME"),
                                      species = c("Hs", "Mm"),
-                                     return = "df") {
+                                     return = c("data.frame", "vector")) {
 
   # https://medium.com/computational-biology/gene-id-mapping-using-r-14ff50eec9ba
 
@@ -38,10 +38,10 @@ convert_gene_identifier <- function (idents,
   }
 
   species <- match.arg(species, c("Hs", "Mm"))
-  return <- match.arg(return, c("df", "vector"))
+  return <- match.arg(return, c("data.frame", "vector"))
   if (return == "vector" && length(ident_out) > 1) {
-    print("ident_out has more than one entry, setting return to 'df'.")
-    return <- "df"
+    print("ident_out has more than one entry, setting return to 'data.frame'.")
+    return <- "data.frame"
   }
   if (species == "Hs") {
     if (!requireNamespace("org.Hs.eg.db", quietly = T)) {
@@ -91,7 +91,7 @@ convert_gene_identifier <- function (idents,
     print("input length and output length are not identical.")
   }
 
-  if (return == "df") {
+  if (return == "data.frame") {
     return(idents)
   }
   if (return == "vector") {

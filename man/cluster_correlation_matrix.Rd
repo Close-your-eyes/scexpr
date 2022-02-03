@@ -14,11 +14,11 @@ cluster_correlation_matrix(
   avg.expr,
   method = c("pearson", "kendall", "spearman"),
   corr.in.percent = FALSE,
-  decimal.places = 2
+  round.corr = 2
 )
 }
 \arguments{
-\item{decimal.places}{}
+\item{round.corr}{}
 }
 \value{
 

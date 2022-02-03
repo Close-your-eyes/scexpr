@@ -9,7 +9,7 @@
 #' @param avg.expr
 #' @param method
 #' @param corr.in.percent
-#' @param decimal.places
+#' @param round.corr
 #'
 #' @return
 #' @export
@@ -24,7 +24,7 @@ cluster_correlation_matrix <- function (SO,
                                         avg.expr,
                                         method = c("pearson", "kendall", "spearman"),
                                         corr.in.percent = FALSE,
-                                        decimal.places = 2) {
+                                        round.corr = 2) {
 
   if (missing(meta.cols)) {
     stop("Please provide meta.cols for the first and second SO.")
@@ -133,7 +133,7 @@ cluster_correlation_matrix <- function (SO,
   if (corr.in.percent) {
     cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = paste0(round(value*100, 0), " %")))
   } else {
-    cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = format(round(value, decimal.places), nsmall = decimal.places)))
+    cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = format(round(value, round.corr), nsmall = round.corr)))
   }
 
   # dot plot of genes
