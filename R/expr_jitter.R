@@ -38,13 +38,11 @@
 
   geom1 <- match.arg(geom1, c("jitter", "point", "dotplot"))
   geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
+  ccc <- stats::setNames(list(ngc, pgc), nm = c(ngn, pgn))
 
   dd <- do.call(rbind,
-                lapply(list(ngc, pgc),
-                       function(x) as.data.frame(stats::setNames(reshape2::melt(as.matrix(d[feat,x,drop=F]),
-                                                                                value.name = "expr")[,-2],
-                                                                 nm = c("Feature", "expr")))))
-  dd[,"group"] <- rep(c(ngn,pgn), c(length(ngc), length(pgc)))
+                lapply(names(ccc),
+                       function(x) data.frame(stats::setNames(reshape2::melt(as.matrix(d[feat,ccc[[x]],drop=F]),value.name = "expr")[,-2], nm = c("Feature", "expr")), group = x)))
 
   if (plot.expr.freq) {
     stat <-
@@ -52,8 +50,27 @@
       dplyr::group_by(Feature) %>%
       dplyr::mutate(max.feat.expr = max(expr)) %>%
       dplyr::group_by(Feature, group, max.feat.expr) %>%
-      dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop") %>%
-      dplyr::ungroup()
+      dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop")
+    '    stat1 <-
+      dd %>%
+      dplyr::group_by(Feature) %>%
+      dplyr::summarise(max.feat.expr = max(expr), .groups = "drop")
+
+    stat2 <- do.call(rbind,lapply(as.character(unique(dd$Feature)), function(x) {
+      do.call(rbind,lapply(unique(dd$group), function(y) {
+        print(x)
+        print(y)
+        print(sum(dd[intersect(which(dd$Feature == x), which(dd$group == y)),"expr"] > 0))
+        print(length(intersect(which(dd$Feature == x), which(dd$group == y))))
+        data.frame(Feature = x,
+                   group = y,
+                   pct.expr = sum(dd[intersect(which(dd$Feature == x), which(dd$group == y)),"expr"] > 0)/length(intersect(which(dd$Feature == x), which(dd$group == y)))
+        )
+      }))
+    }))
+
+    stat <- dplyr::left_join(stat2, stat1, by = "Feature")'
+
   }
 
   if (filter.non.expr) {
@@ -133,20 +150,3 @@
                  position = position, show.legend = show.legend, inherit.aes = inherit.aes,
                  params = list(trim = trim, scale = scale, draw_quantiles = draw_quantiles, na.rm = na.rm, ...))
 }
-
-
-'data <- readRDS("/Users/vonskopnik/Documents/scRNAseq/R_scRNAseq/2019_SLE_LN/data.rds")
-
-expr_jitter(d = data[["non.aggr.data"]],
-            feat = "CD38",
-            pt.size = 1,
-            geom2 = "violin",
-            font.size = 14,
-            geom1 = "jitter",
-            filter.non.expr = F,
-            plot.expr.freq = T,
-            label.size = 4,
-            ngc = data[["negative.group.cells"]],
-            pgc = data[["positive.group.cells"]],
-            ngn = data[["negative.group.name"]],
-            pgn = data[["positive.group.name"]])'
