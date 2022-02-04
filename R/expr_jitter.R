@@ -39,17 +39,6 @@
   geom1 <- match.arg(geom1, c("jitter", "point", "dotplot"))
   geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
 
-  ## test
-  '  dd <-
-    rbind(as.data.frame(d[feat,ngc,drop=F]) %>%
-            tibble::rownames_to_column("Feature") %>%
-            tidyr::pivot_longer(cols = -Feature, names_to = "ID", values_to = "expr") %>%
-            dplyr::mutate(group = ngn),
-          as.data.frame(d[feat,pgc,drop=F]) %>%
-            tibble::rownames_to_column("Feature") %>%
-            tidyr::pivot_longer(cols = dplyr::all_of(pgc), names_to = "ID", values_to = "expr") %>%
-            dplyr::mutate(group = pgn))'
-
   dd <- do.call(rbind,
                 lapply(list(ngc, pgc),
                        function(x) as.data.frame(stats::setNames(reshape2::melt(as.matrix(d[feat,x,drop=F]),

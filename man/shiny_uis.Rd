@@ -4,7 +4,7 @@
 \alias{shiny_uis}
 \title{Title}
 \usage{
-shiny_uis(name = c("volcano_sc"))
+shiny_uis(name = c("single_volcano_sc", "multi_clustering_volcano_sc"))
 }
 \arguments{
 \item{name}{}

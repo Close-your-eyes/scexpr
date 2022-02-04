@@ -1,55 +1,13 @@
-#library(shiny)
-#library(tidyverse)
+library(ggraph)
 
-# hide functions in package
-# fix split violin
 
 data <- readRDS(file.path(dirname(rstudioapi::getActiveDocumentContext()$path), "data.rds"))
-
-ui <- shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(2,shiny::selectInput(inputId = "pval", label = "p value:", choices = c("adj.p.val", "p.val"), selected = "adj.p.val")),
-    shiny::column(2,shiny::numericInput(inputId = "pval.tick", label = "pval tick", min = 1e-300, max = 0.99, value = 0.01)),
-    shiny::column(2,shiny::numericInput(inputId = "font.size", label = "font size", value = 20)),
-    shiny::column(2,shiny::numericInput(inputId = "pt.size2", label = "dot size", min = 0.01, max = 100, value = 2)),
-    shiny::column(2,shiny::numericInput(inputId = "label.size", label = "label sizes", min = 1, max = 100, value = 6)),
-    shiny::column(2,shiny::textInput(inputId = "feature.labels", label = "label genes", value = ""))
-  ),
-  shiny::fluidRow(
-    shiny::column(2,shiny::numericInput(inputId = "log2.fc.cut", label = "log2.fc cut", value = NA)),
-    shiny::column(2,shiny::numericInput(inputId = "p.cut", label = "p value cut", value = NA)),
-    shiny::column(2,shiny::numericInput(inputId = "max.volcano.label", label = "Max labels:", min = 0, max = 1000, value = 20)),
-    shiny::column(2,shiny::selectInput(inputId = "pseudo.log", label = "y axis pseudo log", choices = c(T, F), selected = F)),
-    shiny::column(2,shiny::numericInput(inputId = "pseudo.log.sigma", label = "y axis pseudo log", min = 0, max = 100, value = 1)),
-    shiny::column(2,shiny::numericInput(inputId = "min.pct", label = "min pct", min = 0, max = 1, value = 0))
-  ),
-  shiny::fluidRow(
-    shiny::column(2,shiny::selectInput(inputId = "clustering", label = "clustering", choices = names(data), selected = names(data)[1])),
-    shiny::column(2,shiny::selectInput(inputId = "cc", label = "Clusters", choices = names(data[[1]]), selected = names(data[[1]])[1])),
-    shiny::column(2,shiny::numericInput(inputId = "plot.width", label = "plot.width", value = 12, min = 1, max = 50)),
-    shiny::column(2,shiny::numericInput(inputId = "plot.height", label = "plot.height", value = 8, min = 1, max = 50)),
-    shiny::column(2,shiny::actionButton(inputId = "save", label = "save.plot"))
-  ),
-  shiny::plotOutput("volcano_plot", brush = "plot_brush"),
-  shiny::fluidRow(
-    shiny::column(10,shiny::plotOutput("jitter_plot")),
-    shiny::column(2,
-                  shiny::fluidRow(shiny::numericInput(inputId = "n.max", label = "Max plots:", min = 0, max = 48, value = 9)),
-                  shiny::fluidRow(shiny::selectInput(inputId = "geom1", label = "geom1", choices = c("jitter", "point"), selected = "jitter")),
-                  shiny::fluidRow(shiny::selectInput(inputId = "geom2", label = "geom2", choices = c("violin", "boxplot", "split violin", "none"), selected = "none")),
-                  shiny::fluidRow(shiny::numericInput(inputId = "pt.size", label = "dot size", min = 0.01, max = 100, value = 2)),
-                  shiny::fluidRow(shiny::selectInput(inputId = "freq.expr", label = "plot freq expr", choices = c(T, F), selected = F)),
-                  shiny::fluidRow(shiny::selectInput(inputId = "filter", label = "filter non expr", choices = c(T, F), selected = F)),
-    )
-  ),
-
-  DT::dataTableOutput("volcano_table")
-)
 
 server <- function(input, output, session) {
 
   shiny::observeEvent(input$clustering, {
-    cluster.names <- names(data[[input$clustering]][[input$cc]][[input$clustering]])
+    cluster.names <- names(data[[input$clustering]])
+    cluster.names <- cluster.names[which(cluster.names != "reduction_plot")]
     shiny::updateSelectInput(session, "cc", choices = cluster.names, selected = cluster.names[1])
   })
 
@@ -58,10 +16,10 @@ server <- function(input, output, session) {
     input$min.pct
     input$clustering
     input$cc}, {
-      ds$ds <- rbind(data[[input$clustering]][[input$cc]][["data"]][intersect(which(data[[input$clustering]][[input$cc]][["data"]][,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(data[[input$clustering]][[input$cc]][["data"]][,"log2.fc"] < 0)),],
-                     data[[input$clustering]][[input$cc]][["data"]][intersect(which(data[[input$clustering]][[input$cc]][["data"]][,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(data[[input$clustering]][[input$cc]][["data"]][,"log2.fc"] > 0)),])
-      # check above
-      ds$ds <- as.data.frame(ds$ds)
+      df <- as.data.frame(data[[input$clustering]][[input$cc]][["data"]])
+
+      ds$ds <- rbind(df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] < 0)),],
+                     df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] > 0)),])
       ds$ds$Feature <- rownames(ds$ds)
     })
 
@@ -85,7 +43,6 @@ server <- function(input, output, session) {
                                                which(tr.fun(ds$ds[,input$pval,drop=T]) <= input$plot_brush$ymax),
                                                which(ds$ds[,"log2.fc",drop=T] >= input$plot_brush$xmin),
                                                which(ds$ds[,"log2.fc",drop=T] <= input$plot_brush$xmax))), "Feature", drop = T]
-
     })
 
   shiny::observeEvent(input$feature.labels, {
@@ -94,6 +51,13 @@ server <- function(input, output, session) {
 
   output$volcano_table = DT::renderDataTable(dplyr::mutate(ds$ds[,c("Feature", "log2.fc", "p.val", "adj.p.val")], log2.fc = format(round(log2.fc,2), nsmall = 2), p.val = signif(p.val, 3), adj.p.val = signif(adj.p.val, 3)), server = T)
 
+  output$clustree_plot = shiny::renderPlot({
+    return(data[["clustree_plot"]])
+  })
+
+  output$reduction_plot = shiny::renderPlot({
+    return(data[[input$clustering]][["reduction_plot"]])
+  })
 
   output$volcano_plot = shiny::renderPlot({
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
@@ -110,7 +74,8 @@ server <- function(input, output, session) {
                               ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
                               pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]],
                               y.axis.pseudo.log = input$pseudo.log,
-                              pseudo.log.sigma = input$pseudo.log.sigma)
+                              pseudo.log.sigma = input$pseudo.log.sigma) +
+      ggplot2::labs(title = input$clustering)
 
     plot <- plot + ggplot2::geom_point(color = "black", data = ds$ds[f,,drop=F])
     if (length(f) <= input$max.volcano.label) {
@@ -124,7 +89,14 @@ server <- function(input, output, session) {
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
-      return(scexpr:::.expr_jitter(d = data[[input$clustering]][[input$cc]][["non.aggr.data"]],
+      if ("non.aggr.data" %in% names(data)) {
+        d <- data[["non.aggr.data"]]
+      } else if ("non.aggr.data" %in% names(data[[input$clustering]][[input$cc]])) {
+        d <- data[[input$clustering]][[input$cc]][["non.aggr.data"]]
+      } else {
+        stop("non.aggr.data not found.")
+      }
+      return(scexpr:::.expr_jitter(d = d,
                                    feat = f,
                                    pt.size = input$pt.size,
                                    geom2 = input$geom2,
@@ -146,5 +118,6 @@ server <- function(input, output, session) {
 
 }
 
-shiny::shinyApp(ui = ui, server = server)
+# shiny_uis("multi_clustering_volcano_sc)
+shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
 

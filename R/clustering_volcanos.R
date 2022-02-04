@@ -83,21 +83,26 @@ clustering_volcanos <- function(SO,
         pgn <- x[1,2]
       }
 
-      volcano_plot(SO,
+      vd <- volcano_plot(SO,
                    negative.group.cells = rownames(SO@meta.data[,y,drop=F][which(SO@meta.data[,y] == x[1,1]),,drop=F]),
                    positive.group.cells = pgc,
                    negative.group.name = x[1,1],
                    positive.group.name = pgn,
                    interactive.only = T)
+      vd[["negative.group"]] <- x[1,1]
+      vd[["positive.group"]] <- x[1,2]
+      return(vd)
     }, ...)
 
+    cell_idents <- stats::setNames(rownames(SO@meta.data), nm = as.character(SO@meta.data[,y]))
     all_feats <- unique(unlist(sapply(sapply(vd, "[", "non.aggr.data"), rownames)))
     #all_cells <- unique(unlist(sapply(sapply(vd, "[", "non.aggr.data"), colnames)))
-    vd <- sapply(vd, function(x) x[-which(names(x) == "non.aggr.data")], simplify = F)
+    vd <- sapply(vd, function(x) x[-which(names(x) %in% c("non.aggr.data", "negative.group.cells", "positive.group.cells"))], simplify = F)
 
     comb[which(comb$Var1 == comb$Var2),"Var2"] <- "all_other"
-    vd <- c(vd, list(scexpr::feature_plot(SO, features = y, reduction = reduction, plot.title = F)), list(all_feats = all_feats))
-    names(vd) <- c(apply(comb, 1, function(x) paste0(x[1], " vs ", paste(x[2]))), "reduction_plot", "all_feats")
+    vd <- c(vd, list(scexpr::feature_plot(SO, features = y, reduction = reduction, plot.title = F)), list(all_feats = all_feats, cell_idents = cell_idents))
+    names(vd) <- c(apply(comb, 1, function(x) paste0(x[1], " vs ", paste(x[2]))), "reduction_plot", "all_feats", "cell_idents")
+
     return(vd)
   })
 
@@ -107,7 +112,7 @@ clustering_volcanos <- function(SO,
 
   data_list <- c(data_list, list(clust), list(non.aggr.data))
   names(data_list) <- c(meta.cols, "clustree_plot", "non.aggr.data")
-  file.copy(from = system.file("extdata/clustering_volcanos", "app.R", package = "scexpr"), to = file.path(save.path, "app.R"))
+  file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path, "app.R"))
   saveRDS(data_list, file = file.path(save.path, "data.rds"))
   return(data_list)
 }

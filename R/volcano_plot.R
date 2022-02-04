@@ -304,12 +304,12 @@ volcano_plot <- function(SO,
   }
 
   # save disk memory
-  non.aggr.data <- SO[rownames(vd),c(ngc, pgc)]
-  ngc = which(colnames(non.aggr.data) %in% ngc)
-  pgc = which(colnames(non.aggr.data) %in% pgc)
-  colnames(non.aggr.data) <- NULL
+  #non.aggr.data <- SO[rownames(vd),c(ngc, pgc)]
+  #ngc = which(colnames(non.aggr.data) %in% ngc)
+  #pgc = which(colnames(non.aggr.data) %in% pgc)
+  #colnames(non.aggr.data) <- NULL
 
-  interactive.data = list(non.aggr.data = non.aggr.data,
+  interactive.data = list(non.aggr.data = SO[rownames(vd),c(ngc, pgc)],
                           data = vd,
                           negative.group.cells = ngc,
                           positive.group.cells = pgc,
