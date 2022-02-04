@@ -58,10 +58,10 @@ server <- function(input, output, session) {
     input$min.pct
     input$clustering
     input$cc}, {
-      ds$ds <- rbind(data[[input$clustering]][[input$cc]][["data"]][intersect(which(data[[input$clustering]][[input$cc]][["data"]][,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(data[[input$clustering]][[input$cc]][["data"]][,"log2.fc"] < 0)),],
-                     data[[input$clustering]][[input$cc]][["data"]][intersect(which(data[[input$clustering]][[input$cc]][["data"]][,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(data[[input$clustering]][[input$cc]][["data"]][,"log2.fc"] > 0)),])
-      # check above
-      ds$ds <- as.data.frame(ds$ds)
+      df <- as.data.frame(data[[input$clustering]][[input$cc]][["data"]])
+
+      ds$ds <- rbind(df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] < 0)),],
+                     df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] > 0)),])
       ds$ds$Feature <- rownames(ds$ds)
     })
 
@@ -85,7 +85,6 @@ server <- function(input, output, session) {
                                                which(tr.fun(ds$ds[,input$pval,drop=T]) <= input$plot_brush$ymax),
                                                which(ds$ds[,"log2.fc",drop=T] >= input$plot_brush$xmin),
                                                which(ds$ds[,"log2.fc",drop=T] <= input$plot_brush$xmax))), "Feature", drop = T]
-
     })
 
   shiny::observeEvent(input$feature.labels, {
@@ -98,7 +97,7 @@ server <- function(input, output, session) {
   output$volcano_plot = shiny::renderPlot({
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
-    plot <- scexpr:::.plot_vp(vd = ds$ds,
+    plot <- .plot_vp(vd = ds$ds,
                               p.plot = input$pval,
                               pt.size = input$pt.size2,
                               pt.alpha = 0.8,
@@ -124,7 +123,7 @@ server <- function(input, output, session) {
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
-      return(scexpr:::.expr_jitter(d = data[[input$clustering]][[input$cc]][["non.aggr.data"]],
+      return(.expr_jitter(d = data[[input$clustering]][[input$cc]][["non.aggr.data"]],
                                    feat = f,
                                    pt.size = input$pt.size,
                                    geom2 = input$geom2,

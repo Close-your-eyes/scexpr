@@ -303,7 +303,19 @@ volcano_plot <- function(SO,
     }
   }
 
-  interactive.data = list(non.aggr.data = SO[vd$Feature,c(ngc, pgc)], data = vd, negative.group.cells = ngc, positive.group.cells = pgc, negative.group.name = negative.group.name, positive.group.name = positive.group.name, features.exclude = features.exclude)
+  # save disk memory
+  non.aggr.data <- SO[rownames(vd),c(ngc, pgc)]
+  ngc = which(colnames(non.aggr.data) %in% ngc)
+  pgc = which(colnames(non.aggr.data) %in% pgc)
+  colnames(non.aggr.data) <- NULL
+
+  interactive.data = list(non.aggr.data = non.aggr.data,
+                          data = vd,
+                          negative.group.cells = ngc,
+                          positive.group.cells = pgc,
+                          negative.group.name = negative.group.name,
+                          positive.group.name = positive.group.name,
+                          features.exclude = features.exclude)
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
     file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path.interactive, "app.R"))
@@ -339,7 +351,7 @@ volcano_plot <- function(SO,
     n.feat.for.p.adj <- nrow(an)
   }
 
-  vd <- data.frame(Feature = rownames(assay_data),
+  vd <- data.frame(#Feature = rownames(assay_data),
                    log2.fc = log2(apm / anm),
                    p.val = p,
                    adj.p.val = as.numeric(formatC(stats::p.adjust(p, method = p.adjust, n = n.feat.for.p.adj), format = "e", digits = 2)),
@@ -347,12 +359,12 @@ volcano_plot <- function(SO,
                    stats::setNames(list(round(apm, 2)), pgn),
                    stats::setNames(list(round(apply(assay_data[, ngc], 1, function(x) sum(x != 0))/ncol(assay_data[, ngc]), 2)), paste0("pct.", ngn)),
                    stats::setNames(list(round(apply(assay_data[, pgc], 1, function(x) sum(x != 0))/ncol(assay_data[, pgc]), 2)), paste0("pct.", pgn)),
-                   infinite.FC = ifelse(is.infinite(log2(apm / anm)), TRUE, FALSE),
+                   infinite.FC = ifelse(is.infinite(log2(apm / anm)), 1, 0),
                    check.names = F)
 
   vd$log2.fc <- scales::oob_squish_infinite(vd$log2.fc, range = c(min(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) - inf.fc.shift,
                                                                   max(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) + inf.fc.shift))
-  return(vd)
+  return(as.matrix(vd))
 }
 
 
@@ -376,6 +388,8 @@ volcano_plot <- function(SO,
                       fc.cut = NA) {
 
   p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
+  vd <- as.data.frame(vd)
+  vd$Feature <- rownames(vd)
 
   if (!is.null(features.exclude)) {
     print(paste0("The following features are excluded from the volcano plot: ", paste(vd[which(grepl(paste(features.exclude, collapse = "|"), vd$Feature)),"Feature"], collapse = ",")))
@@ -387,7 +401,7 @@ volcano_plot <- function(SO,
 
   vp <- ggplot2::ggplot(vd, ggplot2::aes(x = log2.fc, y = round(scales::oob_squish_infinite(-log10(!!rlang::sym(p.plot)), range = c(0,300)), 2), label = Feature)) +
     ggplot2::geom_point(color = "#999999", alpha = pt.alpha, size = pt.size) +
-    ggplot2::geom_point(data = vd[which(vd$infinite.FC),], color = "cornflowerblue", size = pt.size) +
+    ggplot2::geom_point(data = vd[which(vd$infinite.FC == 1),], color = "cornflowerblue", size = pt.size) +
     ggplot2::theme_bw(base_size = font.size, base_family = font.family) +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
 
@@ -471,6 +485,8 @@ volcano_plot <- function(SO,
                       features.exclude = NULL,
                       color.only = F) {
 
+  vd <- as.data.frame(vd)
+  vd$Feature <- rownames(vd)
   if (!is.null(features.exclude)) {
     vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd$Feature)),]
   }
