@@ -154,6 +154,7 @@ volcano_plot <- function(SO,
   # filter meta.col
   SO@meta.data <- SO@meta.data[,c(colname, meta.cols),drop=F]
   Misc(SO, "volcano.group.col") <- colname
+  SO@meta.data[,colname] <- factor(SO@meta.data[,colname], levels = c(negative.group.name, positive.group.name))
 
   # get Assay data, overwrite SO to save memory
   # Diet Seurat
@@ -315,6 +316,8 @@ volcano_plot <- function(SO,
   # SO for interactive volcano
   Misc(SO, "volcano.data") <- vd
   Misc(SO, "features.exclude") <- features.exclude
+  Misc(SO, "ngn") <- negative.group.name
+  Misc(SO, "pgn") <- positive.group.name
 
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)

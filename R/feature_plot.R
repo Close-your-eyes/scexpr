@@ -147,8 +147,7 @@ feature_plot <- function(SO,
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
 
-  if (missing(features) || missing(SO)) {stop("Seurat object list or feature vector is missing.")}
-  if (!class(features) %in% c("factor", "character")) {stop("Please provide a character vector for features.")}
+  if (missing(SO)) {stop("Seurat object list or feature vector is missing.")}
   if (length(features) == 1) {combine <- F}
   if (combine && (!is.null(ncol.combine) && !is.null(nrow.combine))) {stop("Please only select one, ncol.combine or nrow.combine. Leave the other NULL.")}
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
@@ -846,7 +845,7 @@ feature_plot <- function(SO,
       data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[grepl(reduction, names(SO[[y]]@reductions), ignore.case = T)]))
     }
     if (!is.null(meta.col)) {
-      data <- cbind(data, SO@meta.data[,meta.col])
+      data <- cbind(data, SO[[y]]@meta.data[,meta.col,drop=F])
     }
 
     if (is.null(split.by)) {
@@ -862,7 +861,9 @@ feature_plot <- function(SO,
     return(data)
   }))
 
-  data <- data[cells,]
+  if (!is.null(cells)) {
+    data <- data[cells,]
+  }
 
   if (is.numeric(data[,1]) && all(data[,1] == 0)) {
     print(paste0("No expressers found for ", feature, "."))

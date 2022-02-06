@@ -20,6 +20,7 @@ Imports:
     DT,
     ggplot2,
     ggrepel,
+    ggraph,
     harmony,
     magrittr,
     MASS,
@@ -51,7 +52,6 @@ Suggests:
     Rsamtools,
     org.Hs.eg.db,
     org.Mm.eg.db,
-    ggraph,
     EmbedSOM,
     SingleR,
     scattermore

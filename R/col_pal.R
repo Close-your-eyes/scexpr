@@ -64,7 +64,7 @@ col_pal <- function(name = "custom",
     scl <- scl[which(!is.na(scl))]
   }
 
-  if (length(scl) < n) {
+  if (!missing(n) && length(scl) < n) {
     scl <- scales::hue_pal()(n)
   }
 
