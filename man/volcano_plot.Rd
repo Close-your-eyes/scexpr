@@ -12,6 +12,7 @@ volcano_plot(
   positive.group.cells,
   negative.group.name = "negative.group",
   positive.group.name = "positive.group",
+  meta.cols = NULL,
   x.axis.symmetric = T,
   x.axis.extension = 0,
   y.axis.pseudo.log = F,

@@ -53,6 +53,14 @@ feature_correlation <- function(SO,
   return(corr_df)
 
 
+  # lm dist or dist from corr-line (which goes through 0 by definition, so only has slope)
+  # only for pearson
+  # https://stackoverflow.com/questions/35194048/using-r-how-to-calculate-the-distance-from-one-point-to-a-line#35209406
+
+  # for spearman:
+  # get rank diff by observation
+  # https://www.simplilearn.com/tutorials/statistics-tutorial/spearmans-rank-correlation
+
 '  ggplot(corr_df, aes(x = r, y = minus.log10.p.adj)) +
     geom_point() +
     theme_bw() +

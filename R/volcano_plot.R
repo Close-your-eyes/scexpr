@@ -50,6 +50,7 @@ volcano_plot <- function(SO,
                          positive.group.cells,
                          negative.group.name = "negative.group",
                          positive.group.name = "positive.group",
+                         meta.cols = NULL,
                          x.axis.symmetric = T,
                          x.axis.extension = 0,
                          y.axis.pseudo.log = F,
@@ -97,6 +98,7 @@ volcano_plot <- function(SO,
       stop("each index of gsea.param should be a numeric vector of length 2 indicating the limits for negative and positive DEGs (log2.fc and p val (p.plot)).")
     }
   }
+
   assay <- match.arg(assay, c("RNA", "SCT"))
   p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
@@ -108,23 +110,11 @@ volcano_plot <- function(SO,
   # add option to label all features indicated with p.cut and fc.cut
 
   ## check cells
-  if (any(duplicated(negative.group.cells))) {
-    print("Duplicates found in negative.group.cells")
+  ngc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = negative.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
+  pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
+  if (length(intersect(ngc, pgc)) > 0) {
+    warning("Equal cell names in negative.group.cells and positive.group.cells found.")
   }
-  ngc <- unique(negative.group.cells)
-  if (any(duplicated(positive.group.cells))) {
-    print("Duplicates found in positive.group.cells")
-  }
-  pgc <- unique(positive.group.cells)
-  if (length(intersect(negative.group.cells, positive.group.cells)) > 0) {
-    stop("Equal cell names in negative.group.cells and positive.group.cells. Please fix this.")
-  }
-
-  all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
-  if (length(SO) > 1 && any(duplicated(all.cells))) {
-    stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells. Then pass SOs again.")
-  }
-
 
   # make meta data column in SOs to identify ngc and pgc
   colname <- paste0("cellident_", format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d%H%M%S"))
@@ -136,26 +126,45 @@ volcano_plot <- function(SO,
                                            negative.group.name))
     return(x)
   })
-  # call here as SO is overwritten below
+  # call here as DietSO happens below
   if (!interactive.only) {
-    feat_plots <- do.call(feature_plot, args = c(list(SO = SO, assay = assay, features = colname), dots[which(names(dots) %in% names(formals(feature_plot)))]))
+    feat_plots <- tryCatch({
+      do.call(feature_plot, args = c(list(SO = SO, assay = assay, features = colname), dots[which(names(dots) %in% names(formals(feature_plot)))]))
+    }, error = function(e) {
+      NULL
+    })
   }
-
-  # get Assay data, overwrite SO to save memory
-  SO <- lapply(SO, function(x) Seurat::GetAssayData(x, assay = assay, slot = "data")[,intersect(colnames(Seurat::GetAssayData(x, assay = assay)), c(ngc, pgc))])
 
   intersect_features <- Reduce(intersect, lapply(SO, rownames))
   if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
-    print("Different features across SOs detected. Will only carry on with common ones.")
-    SO <- lapply(SO, function(x) x[intersect_features,])
+    print("Different features across SOs detected. Will carry on with common ones only.")
   }
-  SO <- do.call(cbind, SO)
+
+  SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(x, features = intersect(rownames(x), intersect_features), cells = intersect(colnames(x), c(ngc, pgc))), assays = assay, counts=F))
+  if (length(SO) > 1) {
+    SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
+  } else {
+    SO <- SO[[1]]
+  }
+
   # exclude features which are below min.pct.set in both populations
-  SO <- SO[unique(c(which(Matrix::rowSums(SO[, ngc] != 0)/length(ngc) > min.pct),
-                    which(Matrix::rowSums(SO[, pgc] != 0)/length(pgc) > min.pct))), ]
+  SO <- Seurat::DietSeurat(SO, assays = assay, features = unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
+                                                                   names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct)))))
+
+  # filter meta.col
+  SO@meta.data <- SO@meta.data[,c(colname, meta.cols),drop=F]
+  Misc(SO, "volcano.group.col") <- colname
+
+  # get Assay data, overwrite SO to save memory
+  # Diet Seurat
+  # subset Seurat, keeping ngc, pgc and additional cols if needed, assing meta.data cols for pgn, ngn
+  #SO <- lapply(SO, function(x) Seurat::GetAssayData(x, assay = assay, slot = "data")[,intersect(colnames(Seurat::GetAssayData(x, assay = assay)), c(ngc, pgc))])
+  #SO <- lapply(SO, function(x) x[intersect_features,])
+  #SO <- do.call(cbind, SO)
+
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   if (is.null(volcano.data)) {
-    vd <- .calc_vd(assay_data = expm1(SO),
+    vd <- .calc_vd(assay_data = expm1(Seurat::GetAssayData(SO)),
                    ngc = ngc,
                    pgc = pgc,
                    pgn = positive.group.name,
@@ -303,23 +312,14 @@ volcano_plot <- function(SO,
     }
   }
 
-  # save disk memory
-  #non.aggr.data <- SO[rownames(vd),c(ngc, pgc)]
-  #ngc = which(colnames(non.aggr.data) %in% ngc)
-  #pgc = which(colnames(non.aggr.data) %in% pgc)
-  #colnames(non.aggr.data) <- NULL
+  # SO for interactive volcano
+  Misc(SO, "volcano.data") <- vd
+  Misc(SO, "features.exclude") <- features.exclude
 
-  interactive.data = list(non.aggr.data = SO[rownames(vd),c(ngc, pgc)],
-                          data = vd,
-                          negative.group.cells = ngc,
-                          positive.group.cells = pgc,
-                          negative.group.name = negative.group.name,
-                          positive.group.name = positive.group.name,
-                          features.exclude = features.exclude)
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
     file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path.interactive, "app.R"))
-    saveRDS(stats::setNames(list(stats::setNames(list(interactive.data), "1")), "1"), file = file.path(save.path.interactive, "data.rds"))
+    saveRDS(stats::setNames(list(stats::setNames(list(Seurat::DietSeurat(SO, assays = assay, features = rownames(vd))), "1")), "1"), file = file.path(save.path.interactive, "data.rds"))
   }
   if (interactive.only) {
     return(interactive.data)
@@ -328,7 +328,7 @@ volcano_plot <- function(SO,
               data = vd,
               feat.plots = feat_plots,
               gsea = gsea,
-              interactive.data = interactive.data))
+              interactive.data = Seurat::DietSeurat(SO, features = rownames(vd))))
 }
 
 
@@ -351,8 +351,8 @@ volcano_plot <- function(SO,
     n.feat.for.p.adj <- nrow(an)
   }
 
-  vd <- data.frame(#Feature = rownames(assay_data),
-                   log2.fc = log2(apm / anm),
+  # not as rownames?! but as column?! - no to enable matrix
+  vd <- data.frame(log2.fc = log2(apm / anm),
                    p.val = p,
                    adj.p.val = as.numeric(formatC(stats::p.adjust(p, method = p.adjust, n = n.feat.for.p.adj), format = "e", digits = 2)),
                    stats::setNames(list(round(anm, 2)), ngn),

@@ -201,7 +201,7 @@ prep_SO <- function(SO_unprocessed,
   if (length(SO.list) > 1) {
     ## 3 cases
     if (batch_corr %in% c("regression", "none", "harmony")) {
-      SO <- merge(x = SO.list[[1]], y = SO.list[2:length(SO.list)], merge.data = TRUE)
+      SO <- merge(x = SO.list[[1]], y = SO.list[2:length(SO.list)], merge.data = T)
       if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
         vars.to.regress <- NULL
         print("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")

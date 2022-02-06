@@ -595,7 +595,8 @@ feature_plot <- function(SO,
                                   cutoff.expression = NULL,
                                   exclusion.feature  = NULL,
                                   downsample = 1,
-                                  make.cells.unique.warning = 1) {
+                                  make.cells.unique.warning = 1,
+                                  return.included.cells.only = F) {
 
   if (!is.list(SO)) {
     SO <- list(SO)
@@ -647,7 +648,7 @@ feature_plot <- function(SO,
     SO <- lapply(seq_along(SO), function(x) Seurat::RenameCells(SO[[x]], add.cell.id = paste0("SO_", x)))
     names(SO) <- names.temp
     all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
-    #print("Cells have been predixed with 'SO_i_' .")
+    #print("Cells have been prefixed with 'SO_i_' .")
     assign("SO", SO, envir = parent.frame()) # assigns in parent environment (https://stackoverflow.com/questions/10904124/global-and-local-variables-in-r?rq=1)
   }
 
@@ -662,9 +663,12 @@ feature_plot <- function(SO,
       }
     }
     if (length(intersect(cells, all.cells)) < length(cells)) {
-      print("Not all cells found in SO(s).")
+      print("Not all cells found in SO(s). Reduced to those which exist.")
     }
     cells <- intersect(cells, all.cells)
+    if (length(cells) == 0) {
+      stop("None of cells found.")
+    }
   }
 
   # create a vector of cells which identifies how to plot them; 0 indicates exclusion
@@ -709,7 +713,12 @@ feature_plot <- function(SO,
     cells.plot <- cells.plot[sample(seq_along(cells.plot), size = downsample)]
   }
 
-  return(cells.plot)
+  if (return.included.cells.only) {
+    return(names(cells.plot[which(cells.plot == 1)]))
+  } else if (!return.included.cells.only) {
+    return(cells.plot)
+  }
+
 }
 
 

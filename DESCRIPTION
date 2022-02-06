@@ -51,6 +51,7 @@ Suggests:
     Rsamtools,
     org.Hs.eg.db,
     org.Mm.eg.db,
+    ggraph,
     EmbedSOM,
     SingleR,
     scattermore
