@@ -16,11 +16,11 @@ server <- function(input, output, session) {
     input$min.pct
     input$clustering
     input$cc}, {
-      df <- as.data.frame(data[[input$clustering]][[input$cc]][["data"]])
-
-      ds$ds <- rbind(df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] < 0)),],
-                     df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] > 0)),])
+      ds$ds <- as.data.frame(Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.data"]])
       ds$ds$Feature <- rownames(ds$ds)
+      #df <- as.data.frame(data[[input$clustering]][[input$cc]][["data"]])
+      #ds$ds <- rbind(df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] < 0)),],df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] > 0)),])
+      #ds$ds$Feature <- rownames(ds$ds)
     })
 
   feats <- shiny::reactiveValues()
@@ -30,15 +30,12 @@ server <- function(input, output, session) {
     input$pval
     input$pseudo.log
     input$pseudo.log.sigma}, {
-
-
       if (input$pseudo.log) {
         trafo <- scales::pseudo_log_trans(base = 10, sigma = input$pseudo.log.sigma)
         tr.fun <- function(x) {trafo$transform(round(scales::oob_squish_infinite(-log10(x), range = c(0,300)), 2))} # same as in .vp_plot
       } else {
         tr.fun <- function(x) {round(scales::oob_squish_infinite(-log10(x), range = c(0,300)), 2)} # same as in .vp_plot
       }
-
       feats$bf <- ds$ds[Reduce(intersect, list(which(tr.fun(ds$ds[,input$pval,drop=T]) >= input$plot_brush$ymin),
                                                which(tr.fun(ds$ds[,input$pval,drop=T]) <= input$plot_brush$ymax),
                                                which(ds$ds[,"log2.fc",drop=T] >= input$plot_brush$xmin),
@@ -60,23 +57,22 @@ server <- function(input, output, session) {
   })
 
   output$volcano_plot = shiny::renderPlot({
-    f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
-    f <- f[which(f %in% ds$ds$Feature)]
     plot <- scexpr:::.plot_vp(vd = ds$ds,
                               p.plot = input$pval,
                               pt.size = input$pt.size2,
-                              pt.alpha = 0.8,
                               font.size = input$font.size,
                               pval.tick = input$pval.tick,
-                              features.exclude = data[[input$clustering]][[input$cc]][["features.exclude"]],
                               fc.cut = input$log2.fc.cut,
                               p.cut = input$p.cut,
-                              ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
-                              pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]],
                               y.axis.pseudo.log = input$pseudo.log,
-                              pseudo.log.sigma = input$pseudo.log.sigma) +
+                              pseudo.log.sigma = input$pseudo.log.sigma,
+                              features.exclude = Seurat::Misc(data[[input$clustering]][[input$cc]])[["features.exclude"]],
+                              ngn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["ngn"]],
+                              pgn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["pgn"]]) +
       ggplot2::labs(title = input$clustering)
 
+    f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
+    f <- f[which(f %in% ds$ds$Feature)]
     plot <- plot + ggplot2::geom_point(color = "black", data = ds$ds[f,,drop=F])
     if (length(f) <= input$max.volcano.label) {
       plot <- plot + ggrepel::geom_text_repel(color = "red", max.overlaps = 500, size = input$label.size, data = ds$ds[f,,drop=F], fontface = "italic", family = "Courier")
@@ -89,6 +85,37 @@ server <- function(input, output, session) {
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
+
+      plots <- feature_plot_stat(SO = data[[input$clustering]][[input$cc]],
+                        pt.size = input$pt.size,
+                        geom2 = input$geom2,
+                        #font.size = input$font.size,
+                        geom1 = input$geom1,
+                        filter.non.expr = input$filter,
+                        plot.expr.freq = input$freq.expr,
+                        label.size = input$label.size,
+                        features = f,
+                        meta.col = Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.group.col"]],
+                        assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]]),
+                        strip.background = element_rect(fill = "white"),
+                        axis.title = element_blank(),
+                        axis.text.x = element_text(angle = 45, hjust = 1),
+                        strip.text = element_text(face = "italic"))
+
+'      plots <- Seurat::VlnPlot(object = data[[input$clustering]][[input$cc]],
+                              features = f,
+                              group.by = Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.group.col"]],
+                              assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]]),
+                              cols = col_pal("custom"),
+                              combine = F)
+      plots <- lapply(plots, function(x) x +ggplot2::theme_bw() +
+               ggplot2::theme(axis.title = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), panel.grid = ggplot2::element_blank(), legend.position = "none"))
+      return(cowplot::plot_grid(plotlist = plots))'
+      return(plots)
+    }
+
+
+    ' if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
       if ("non.aggr.data" %in% names(data)) {
         d <- data[["non.aggr.data"]]
       } else if ("non.aggr.data" %in% names(data[[input$clustering]][[input$cc]])) {
@@ -109,7 +136,8 @@ server <- function(input, output, session) {
                                    pgc = data[[input$clustering]][[input$cc]][["positive.group.cells"]],
                                    ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
                                    pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]]))
-    }
+    }'
+
   })
 
   shiny::observeEvent(input$save, {
@@ -119,5 +147,6 @@ server <- function(input, output, session) {
 }
 
 # shiny_uis("multi_clustering_volcano_sc)
+shiny::shinyApp(ui = scexpr::shiny_uis("single_volcano_sc"), server = server)
 shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
 
