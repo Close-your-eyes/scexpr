@@ -75,11 +75,23 @@ feature_plot_stat <- function(SO,
   geom1 <- match.arg(geom1, c("jitter", "point", "dotplot"))
   geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, length = 1) # only one SO currently
+  browser()
+  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by) # length = 1 only one SO currently
   features <- .check.features(SO = SO, features = unique(features), meta.data = F)
   if (length(meta.col) > 1) {
     stop("Please provide only one meta.col.")
   }
+  if (length(SO) > 1) {
+    if (!is.null(meta.col.levels)) {
+      if (!is.list(meta.col.levels) || length(meta.col.levels) != length(SO)) {
+        stop("meta.col.levels has to be list of same length as SO.")
+      }
+      if (is.null(names(meta.col.levels)) || length(intersect(names(meta.col.levels), names(SO))) < length(meta.col.levels)) {
+        stop("meta.col.levels has to have names which match names of SO.")
+      }
+    }
+  }
+
   meta.col <- .check.features(SO = SO, features = meta.col, rownames = F)
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
@@ -92,8 +104,8 @@ feature_plot_stat <- function(SO,
                                 make.cells.unique.warning = 1,
                                 return.included.cells.only = T)
 
-# get data with SO being no list does not work
-  data <- .get.data(stats::setNames(list(SO), "1"),
+  # get data with SO being no list does not work
+  data <- .get.data(SO, #stats::setNames(list(SO), "1")
                     feature = features,
                     assay = assay,
                     slot = "data",
@@ -102,12 +114,19 @@ feature_plot_stat <- function(SO,
                     reduction = NULL,
                     meta.col = meta.col)
 
-  meta.col.levels <- .check.levels(SO = SO,
-                                   meta.col = meta.col,
-                                   levels = meta.col.levels,
-                                   append_by_missing = F)
-
+  if (length(SO) > 1) {
+    if (is.null(meta.col.levels)) {
+      ### FIX!!
+      meta.col.levels <- stats::setNames(paste0(lapply(names(SO), function(x) unique(SO[[x]]@meta.data[,meta.col]) ), "__", x), nm = names(SO))
+    } else {
+      meta.col.levels <- lapply(names(meta.col.levels), function(x) paste0(.check.levels(SO = SO[[x]], meta.col = meta.col, levels = meta.col.levels[[x]], append_by_missing = F), "__", x))
+    }
+    data[,meta.col] <- paste0(data[,meta.col], "__", data[,"SO.split"])
+  } else {
+    meta.col.levels <- .check.levels(SO = SO, meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
+  }
   data <- data[which(data[,meta.col] %in% meta.col.levels),]
+
   # split.by requires testing - include in pivoting etc and geom_text
 
   data <- tidyr::pivot_longer(data, dplyr::all_of(features), names_to = "Feature", values_to = "expr")
