@@ -1,7 +1,7 @@
 #' Title
 #'
 #' @param SO
-#' @param meta.cols
+#' @param cluster.meta.cols
 #' @param reduction
 #' @param clustree.prefix
 #' @param save.path
@@ -16,20 +16,21 @@
 #' @examples
 clustering_volcanos <- function(SO,
                                 assay = c("RNA", "SCT"),
-                                meta.cols,
+                                cluster.meta.cols,
                                 reduction = "tSNE",
                                 clustree.prefix = NULL,
                                 save.path = NULL,
                                 lapply_fun = lapply,
                                 ...) {
+  # meta.cols - keeping additional columns
 
-  if (missing(meta.cols)) {
-    stop("Please provide meta.cols from SO@meta.data.")
+  if (missing(cluster.meta.cols)) {
+    stop("Please provide cluster.meta.cols from SO@meta.data.")
   }
 
   SO <- .check.SO(SO, length = 1)
   reduction <- .check.reduction(SO, reduction = reduction)
-  meta.cols  <- .check.features(SO, features = meta.cols, rownames = F)
+  cluster.meta.cols <- .check.features(SO, features = cluster.meta.cols, rownames = F)
   assay <- match.arg(assay, c("RNA", "SCT"))
   lapply_fun <- match.fun(lapply_fun)
 
@@ -39,24 +40,24 @@ clustering_volcanos <- function(SO,
   }
   dir.create(save.path, showWarnings = FALSE, recursive = TRUE)
 
-  if (is.null(clustree.prefix) && length(meta.cols) > 1) {
-    splits <- strsplit(meta.cols, "")
-    max_char <- min(nchar(meta.cols))
+  if (is.null(clustree.prefix) && length(cluster.meta.cols) > 1) {
+    splits <- strsplit(cluster.meta.cols, "")
+    max_char <- min(nchar(cluster.meta.cols))
     equal <- T
     i <- 0
     while (equal && i < max_char) {
       i <- i + 1
       equal <- nlevels(as.factor(sapply(splits, "[", i))) == 1 && all(suppressWarnings(is.na(as.numeric(sapply(splits, "[", i)))))
     }
-    clustree.prefix <- substr(meta.cols[1], 1, i-1)
+    clustree.prefix <- substr(cluster.meta.cols[1], 1, i-1)
     print(paste0("Tried to assume clustree.prefix: '", clustree.prefix, "'. Provide manually if wrong."))
-  } else if (is.null(clustree.prefix) && length(meta.cols) == 1) {
+  } else if (is.null(clustree.prefix) && length(cluster.meta.cols) == 1) {
     stop("clustree.prefix cannot be guessed with one meta.col only.")
   }
 
-  # remove not relevant meta.cols for clustree plot
-  SO@meta.data <- SO@meta.data[,c(intersect(which(grepl(clustree.prefix, names(SO@meta.data))), which(grepl(paste(meta.cols, collapse = "|"), names(SO@meta.data))))),drop=F]
-  if (length(meta.cols) > 1) {
+  # remove not relevant cluster.meta.cols for clustree plot
+  SO@meta.data <- SO@meta.data[,c(intersect(which(grepl(clustree.prefix, names(SO@meta.data))), which(grepl(paste(cluster.meta.cols, collapse = "|"), names(SO@meta.data))))),drop=F]
+  if (length(cluster.meta.cols) > 1) {
     clust <- clustree::clustree(SO,
                                 prefix = clustree.prefix,
                                 exprs = "data",
@@ -66,7 +67,7 @@ clustering_volcanos <- function(SO,
     clust <- NULL
   }
 
-  data_list <- lapply(meta.cols, function(y) {
+  data_list <- lapply(cluster.meta.cols, function(y) {
     comb <- expand.grid(unique(SO@meta.data[,y]),unique(SO@meta.data[,y]))
     comb <- dplyr::arrange(comb, Var1, Var2)
     comb <- comb[which(!duplicated(apply(comb, 1, function(x) paste(sort(c(x[1], x[2])), collapse = "")))),]
@@ -105,11 +106,11 @@ clustering_volcanos <- function(SO,
   })
 
   SO <- Seurat::DietSeurat(SO, assays = assay, counts = F, features = unique(unlist(sapply(data_list, "[", "all_feats"))))
-  SO@meta.data <- SO@meta.data[,meta.cols,drop=F]
+  SO@meta.data <- SO@meta.data[,cluster.meta.cols,drop=F]
   data_list <- sapply(data_list, function(x) x[-which(names(x) %in% c("all_feats"))], simplify = F)
 
   data_list <- c(data_list, list(clust), list(SO))
-  names(data_list) <- c(meta.cols, "clustree_plot", "Seurat_object")
+  names(data_list) <- c(cluster.meta.cols, "clustree_plot", "Seurat_object")
   file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path, "app.R"))
   saveRDS(data_list, file = file.path(save.path, "data.rds"))
   return(data_list)
