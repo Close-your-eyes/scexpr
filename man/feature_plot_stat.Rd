@@ -8,23 +8,24 @@ feature_plot_stat(
   SO,
   features,
   assay = c("RNA", "SCT"),
-  geom1 = c("jitter", "point", "dotplot"),
+  geom1 = c("jitter", "point"),
   geom2 = c("violin", "boxplot", "none"),
   jitterwidth = 0.2,
   label.size = 4,
   meta.col,
   meta.col.levels = NULL,
   plot.expr.freq = F,
+  expr.freq.hjust = 0.3,
   filter.non.expr = F,
   cells = NULL,
   downsample = 1,
+  legend.title = "SO.split",
   split.by = NULL,
-  pt.size = 1,
-  combine = T,
-  ncol.combine = NULL,
-  nrow.combine = NULL,
-  nrow.inner = NULL,
-  ncol.inner = NULL,
+  pt.size = 0.5,
+  col.pal = "custom",
+  col.pal.rev = F,
+  nrow = NULL,
+  ncol = NULL,
   feature.aliases = NULL,
   cutoff.feature = NULL,
   cutoff.expression = 0,
@@ -37,7 +38,7 @@ feature_plot_stat(
 )
 }
 \arguments{
-\item{...}{}
+\item{ncol}{}
 }
 \value{
 

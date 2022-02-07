@@ -15,11 +15,6 @@
 #' @param downsample
 #' @param split.by
 #' @param pt.size
-#' @param combine
-#' @param ncol.combine
-#' @param nrow.combine
-#' @param nrow.inner
-#' @param ncol.inner
 #' @param feature.aliases
 #' @param cutoff.feature
 #' @param cutoff.expression
@@ -29,6 +24,12 @@
 #' @param make.cells.unique
 #' @param theme
 #' @param ...
+#' @param expr.freq.hjust
+#' @param legend.title
+#' @param col.pal
+#' @param col.pal.rev
+#' @param nrow
+#' @param ncol
 #'
 #' @return
 #' @export
@@ -37,23 +38,24 @@
 feature_plot_stat <- function(SO,
                               features,
                               assay = c("RNA", "SCT"),
-                              geom1 = c("jitter", "point", "dotplot"),
+                              geom1 = c("jitter", "point"),
                               geom2 = c("violin", "boxplot", "none"),
                               jitterwidth = 0.2,
                               label.size = 4,
                               meta.col,
                               meta.col.levels = NULL,
                               plot.expr.freq = F,
+                              expr.freq.hjust = 0.3,
                               filter.non.expr = F,
                               cells = NULL,
                               downsample = 1,
+                              legend.title = "SO.split",
                               split.by = NULL,
-                              pt.size = 1,
-                              combine = T,
-                              ncol.combine = NULL,
-                              nrow.combine = NULL,
-                              nrow.inner = NULL,
-                              ncol.inner = NULL,
+                              pt.size = 0.5,
+                              col.pal = "custom",
+                              col.pal.rev = F,
+                              nrow = NULL,
+                              ncol = NULL,
                               feature.aliases = NULL,
                               cutoff.feature = NULL,
                               cutoff.expression = 0,
@@ -66,21 +68,21 @@ feature_plot_stat <- function(SO,
 
   if (missing(SO)) {stop("Seurat object list or feature vector is missing.")}
   if (missing(meta.col)) {stop("meta.col reauired.")}
-  if (length(features) == 1) {combine <- F}
-  if (combine && (!is.null(ncol.combine) && !is.null(nrow.combine))) {stop("Please only select one, ncol.combine or nrow.combine. Leave the other NULL.")}
-  if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
+  if (!is.null(ncol) && !is.null(nrow)) {stop("Please only select one, ncol or nrow Leave the other NULL.")}
   if (!is.null(split.by)) {warning("split.by requires testing.")}
 
   assay <- match.arg(assay, c("RNA", "SCT"))
-  geom1 <- match.arg(geom1, c("jitter", "point", "dotplot"))
+  geom1 <- match.arg(geom1, c("jitter", "point"))
   geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
 
-  browser()
+
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by) # length = 1 only one SO currently
   features <- .check.features(SO = SO, features = unique(features), meta.data = F)
   if (length(meta.col) > 1) {
     stop("Please provide only one meta.col.")
   }
+
+  ## procedure to allow subsetting by SOs
   if (length(SO) > 1) {
     if (!is.null(meta.col.levels)) {
       if (!is.list(meta.col.levels) || length(meta.col.levels) != length(SO)) {
@@ -89,6 +91,16 @@ feature_plot_stat <- function(SO,
       if (is.null(names(meta.col.levels)) || length(intersect(names(meta.col.levels), names(SO))) < length(meta.col.levels)) {
         stop("meta.col.levels has to have names which match names of SO.")
       }
+      meta.col.levels <- sapply(names(meta.col.levels), function(x) .check.levels(SO = SO[[x]], meta.col = meta.col, levels = meta.col.levels[[x]], append_by_missing = F))
+    } else {
+      meta.col.levels <- lapply(SO, function(x) unique(x@meta.data[,meta.col]))
+      meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(meta.col.levels[[x]], "__", x))
+    }
+  } else {
+    if (is.null(meta.col.levels)) {
+      meta.col.levels <- unique(SO[[1]]@meta.data[,meta.col])
+    } else {
+      meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
     }
   }
 
@@ -115,20 +127,14 @@ feature_plot_stat <- function(SO,
                     meta.col = meta.col)
 
   if (length(SO) > 1) {
-    if (is.null(meta.col.levels)) {
-      ### FIX!!
-      meta.col.levels <- stats::setNames(paste0(lapply(names(SO), function(x) unique(SO[[x]]@meta.data[,meta.col]) ), "__", x), nm = names(SO))
-    } else {
-      meta.col.levels <- lapply(names(meta.col.levels), function(x) paste0(.check.levels(SO = SO[[x]], meta.col = meta.col, levels = meta.col.levels[[x]], append_by_missing = F), "__", x))
-    }
     data[,meta.col] <- paste0(data[,meta.col], "__", data[,"SO.split"])
-  } else {
-    meta.col.levels <- .check.levels(SO = SO, meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
   }
-  data <- data[which(data[,meta.col] %in% meta.col.levels),]
+
+  data <- data[which(data[,meta.col] %in% unlist(meta.col.levels)),]
+  data[,meta.col] <- stringr::str_replace(data[,meta.col], paste0("__",data[,"SO.split"]), "")
+
 
   # split.by requires testing - include in pivoting etc and geom_text
-
   data <- tidyr::pivot_longer(data, dplyr::all_of(features), names_to = "Feature", values_to = "expr")
 
   if (plot.expr.freq) {
@@ -136,42 +142,51 @@ feature_plot_stat <- function(SO,
       data %>%
       dplyr::group_by(Feature) %>%
       dplyr::mutate(max.feat.expr = max(expr)) %>%
-      dplyr::group_by(dplyr::across(dplyr::all_of(c("Feature", meta.col, "max.feat.expr")))) %>%
+      dplyr::group_by(dplyr::across(dplyr::all_of(c("Feature", meta.col, "SO.split", "max.feat.expr")))) %>%
       dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop")
   }
+  names(data)[which(names(data) == "SO.split")] <- legend.title
+  names(stat)[which(names(stat) == "SO.split")] <- legend.title
 
   if (filter.non.expr) {
     data <- dplyr::filter(data, expr > 0)
   }
 
-  plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!sym(meta.col), y = expr))
-  if (geom1 == "jitter") {
-    plot <- plot + ggplot2::geom_jitter(width = jitterwidth, size = pt.size, color = "tomato2")
+  my_geom2 <- switch(geom2,
+                     "violin" = ggplot2::geom_violin,
+                     "boxplot" = ggplot2::geom_boxplot,
+                     "none" = NULL)
+
+  plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta.col), y = expr, color = !!rlang::sym(legend.title)))
+  if (!is.null(my_geom2)) {
+    plot <- plot + suppressWarnings(my_geom2(outlier.shape = NA, position = position_dodge(width = 0.75)))
   }
-  if (geom1 == "point") {
-    plot <- plot + ggplot2:: geom_point(size = pt.size, color = "tomato2")
+  ##ggforce::geom_sina()
+  if (geom1 == "jitter" && jitterwidth > 0) {
+    plot <- plot + ggplot2::geom_point(size = pt.size, position = position_jitterdodge(jitter.width = jitterwidth, dodge.width = 0.75))
+  } else if (geom1 == "point") {
+    plot <- plot + ggplot2::geom_point(size = pt.size, position = position_dodge(width = 0.75))
   }
-  if (geom1 == "dotplot") {
-    plot <- plot + ggplot2::geom_dotplot(binaxis = "y", binwidth = (max(dd$expr) - min(dd$expr))/40, stackdir = "center", fill = "tomato2", stackratio = 0.7)
-  }
-  if (geom2 == "violin") {
-    plot <- plot + ggplot2::geom_violin(alpha = 0.5)
-  }
-  if (geom2 == "boxplot") {
-    plot <- plot + ggplot2::geom_boxplot(alpha = 0.5, outlier.shape = NA)
-  }
+
+  #plot <- plot + ggplot2::geom_dotplot(binaxis = "y", binwidth = (max(data$expr) - min(data$expr))/40, stackdir = "center", fill = "black", stackratio = 0.7)
+
   if (plot.expr.freq) {
-    plot <- plot + ggplot2::geom_text(data = stat, ggplot2::aes(label = round(pct.expr, 2), y = max.feat.expr + 0.4), size = label.size, family = font.family)
+    plot <- plot + ggplot2::geom_text(data = stat, ggplot2::aes(label = round(pct.expr, 2), y = max.feat.expr + expr.freq.hjust), position = position_dodge(width = 0.75), size = label.size, family = font.family, show.legend = F)
     #expand_limits
   }
 
+  if (length(col.pal) == 1) {
+    col.pal <- col_pal(name = col.pal, reverse = col.pal.rev)
+  }
+
   plot <- plot + theme
+  if (length(SO) == 1) {
+    plot <- plot + theme(legend.position = "none")
+  }
   if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
   plot <- plot + ggplot2::theme(...)
-
-
-
-  plot <- plot + ggplot2::facet_wrap(ggplot2::vars(Feature), scales = "free_y")
+  plot <- plot + ggplot2::scale_color_manual(values = col.pal)
+  plot <- plot + ggplot2::facet_wrap(ggplot2::vars(Feature), scales = "free_y", nrow = nrow, ncol = ncol)
 
   return(plot)
 }
