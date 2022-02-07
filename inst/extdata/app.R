@@ -122,22 +122,22 @@ server <- function(input, output, session) {
         assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]])
       }
 
-      plots <- feature_plot_stat(SO = SO,
-                                 pt.size = input$pt.size,
-                                 geom2 = input$geom2,
-                                 cells = cells,
-                                 #font.size = input$font.size,
-                                 geom1 = input$geom1,
-                                 filter.non.expr = input$filter,
-                                 plot.expr.freq = input$freq.expr,
-                                 label.size = input$label.size,
-                                 features = f,
-                                 meta.col = meta.col,
-                                 assay = assay,
-                                 strip.background = element_rect(fill = "white"),
-                                 axis.title = element_blank(),
-                                 axis.text.x = element_text(angle = 45, hjust = 1),
-                                 strip.text = element_text(face = "italic"))
+      plots <- scexpr::feature_plot_stat(SO = SO,
+                                         pt.size = input$pt.size,
+                                         geom2 = input$geom2,
+                                         cells = cells,
+                                         #font.size = input$font.size,
+                                         geom1 = input$geom1,
+                                         filter.non.expr = input$filter,
+                                         plot.expr.freq = input$freq.expr,
+                                         label.size = input$label.size,
+                                         features = f,
+                                         meta.col = meta.col,
+                                         assay = assay,
+                                         strip.background = element_rect(fill = "white"),
+                                         axis.title = element_blank(),
+                                         axis.text.x = element_text(angle = 45, hjust = 1),
+                                         strip.text = element_text(face = "italic"))
       return(plots)
     }
   })

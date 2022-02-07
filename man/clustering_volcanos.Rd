@@ -6,6 +6,7 @@
 \usage{
 clustering_volcanos(
   SO,
+  assay = c("RNA", "SCT"),
   meta.cols,
   reduction = "tSNE",
   clustree.prefix = NULL,

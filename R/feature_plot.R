@@ -315,9 +315,7 @@ feature_plot <- function(SO,
       if (is.null(order.discrete)) {
         # plot non-excluded cells, sample to make it random
         plot <- plot + ggplot2::geom_point(data = data[names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
-
       } else {
-
         if (length(unique(order.discrete)) != length(order.discrete)) {
           order.discrete <- unique(order.discrete)
           print(paste0("order.discrete is made unique: ", paste(order.discrete, collapse = ", ")))
@@ -331,17 +329,17 @@ feature_plot <- function(SO,
         # optionally: pt.size as names of order.discrete
         for (i in order.discrete[which(grepl("^\\^", order.discrete))]) {
           i <- gsub("^\\^", "", i)
-          plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
         }
 
         for (i in order.discrete[intersect(which(!grepl("^\\^", order.discrete)), which(!grepl("\\$$", order.discrete)))]) {
-          plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
         }
-        plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(!data[,x] %in% gsub("\\$$", "", (gsub("^\\^", "", order.discrete))))),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(!data[,x] %in% gsub("\\$$", "", (gsub("^\\^", "", order.discrete))))),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
 
         for (i in order.discrete[which(grepl("\\$$", order.discrete))]) {
           i <- gsub("\\$$", "", i)
-          plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
         }
 
       }
