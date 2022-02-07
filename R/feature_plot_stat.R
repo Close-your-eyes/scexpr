@@ -82,6 +82,7 @@ feature_plot_stat <- function(SO,
     stop("Please provide only one meta.col.")
   }
 
+
   ## procedure to allow subsetting by SOs
   if (length(SO) > 1) {
     if (!is.null(meta.col.levels)) {
@@ -91,10 +92,10 @@ feature_plot_stat <- function(SO,
       if (is.null(names(meta.col.levels)) || length(intersect(names(meta.col.levels), names(SO))) < length(meta.col.levels)) {
         stop("meta.col.levels has to have names which match names of SO.")
       }
-      meta.col.levels <- sapply(names(meta.col.levels), function(x) .check.levels(SO = SO[[x]], meta.col = meta.col, levels = meta.col.levels[[x]], append_by_missing = F))
+      meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(.check.levels(SO = SO[[x]], meta.col = meta.col, levels = meta.col.levels[[x]], append_by_missing = F), "__", x), simplify = F)
     } else {
       meta.col.levels <- lapply(SO, function(x) unique(x@meta.data[,meta.col]))
-      meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(meta.col.levels[[x]], "__", x))
+      meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(meta.col.levels[[x]], "__", x), simplify = F)
     }
   } else {
     if (is.null(meta.col.levels)) {
@@ -125,6 +126,7 @@ feature_plot_stat <- function(SO,
                     split.by = split.by,
                     reduction = NULL,
                     meta.col = meta.col)
+
 
   if (length(SO) > 1) {
     data[,meta.col] <- paste0(data[,meta.col], "__", data[,"SO.split"])
@@ -190,3 +192,4 @@ feature_plot_stat <- function(SO,
 
   return(plot)
 }
+
