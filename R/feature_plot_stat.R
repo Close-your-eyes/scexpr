@@ -1,3 +1,39 @@
+#' Title
+#'
+#' @param SO
+#' @param features
+#' @param assay
+#' @param geom1
+#' @param geom2
+#' @param jitterwidth
+#' @param label.size
+#' @param meta.col
+#' @param meta.col.levels
+#' @param plot.expr.freq
+#' @param filter.non.expr
+#' @param cells
+#' @param downsample
+#' @param split.by
+#' @param pt.size
+#' @param combine
+#' @param ncol.combine
+#' @param nrow.combine
+#' @param nrow.inner
+#' @param ncol.inner
+#' @param feature.aliases
+#' @param cutoff.feature
+#' @param cutoff.expression
+#' @param exclusion.feature
+#' @param plot.panel.grid
+#' @param font.family
+#' @param make.cells.unique
+#' @param theme
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 feature_plot_stat <- function(SO,
                               features,
                               assay = c("RNA", "SCT"),
