@@ -313,6 +313,11 @@ volcano_plot <- function(SO,
     }
   }
 
+  if (interactive.only) {
+    #return(Seurat::DietSeurat(SO, features = rownames(vd)))
+    return(list(vd = vd, ngn = negative.group.name, pgn = positive.group.name)) #ngc = ngc, pgc = pgc
+  }
+
   # SO for interactive volcano
   Misc(SO, "volcano.data") <- vd
   Misc(SO, "features.exclude") <- features.exclude
@@ -324,9 +329,7 @@ volcano_plot <- function(SO,
     file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path.interactive, "app.R"))
     saveRDS(stats::setNames(list(stats::setNames(list(Seurat::DietSeurat(SO, assays = assay, features = rownames(vd))), "1")), "1"), file = file.path(save.path.interactive, "data.rds"))
   }
-  if (interactive.only) {
-    return(interactive.data)
-  }
+
   return(list(plot = vp,
               data = vd,
               feat.plots = feat_plots,

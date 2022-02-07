@@ -32,7 +32,7 @@ shiny_uis <- function(name = c("single_volcano_sc",
         shiny::column(2,shiny::numericInput(inputId = "min.pct", label = "min pct", min = 0, max = 1, value = 0))
       ),
       shiny::fluidRow(
-        shiny::column(2,shiny::selectInput(inputId = "clustering", label = "clustering", choices = names(data)[which(!names(data) %in% c("clustree_plot", "non.aggr.data"))], selected = names(data)[which(!names(data) %in% c("clustree_plot", "non.aggr.data"))][1])),
+        shiny::column(2,shiny::selectInput(inputId = "clustering", label = "clustering", choices = names(data)[which(!names(data) %in% c("clustree_plot", "Seurat_object"))], selected = names(data)[which(!names(data) %in% c("clustree_plot", "Seurat_object"))][1])),
         shiny::column(2,shiny::selectInput(inputId = "cc", label = "Clusters", choices = names(data[[1]])[which(names(data[[1]]) != "reduction_plot")], selected = names(data[[1]])[which(names(data[[1]]) != "reduction_plot")][1])),
         shiny::column(2,shiny::numericInput(inputId = "plot.width", label = "plot.width", value = 12, min = 1, max = 50)),
         shiny::column(2,shiny::numericInput(inputId = "plot.height", label = "plot.height", value = 8, min = 1, max = 50)),

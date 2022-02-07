@@ -16,11 +16,14 @@ server <- function(input, output, session) {
     input$min.pct
     input$clustering
     input$cc}, {
-      ds$ds <- as.data.frame(Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.data"]])
+      if ("Seurat_object" %in% names(data)) {
+        ds$ds <- as.data.frame(data[[input$clustering]][[input$cc]][["vd"]])
+      } else {
+        ds$ds <- as.data.frame(Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.data"]])
+      }
       ds$ds$Feature <- rownames(ds$ds)
-      #df <- as.data.frame(data[[input$clustering]][[input$cc]][["data"]])
+      # filter for min.pct
       #ds$ds <- rbind(df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["negative.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] < 0)),],df[intersect(which(df[,paste0("pct.", data[[input$clustering]][[input$cc]][["positive.group.name"]])] >= input$min.pct), which(df[,"log2.fc"] > 0)),])
-      #ds$ds$Feature <- rownames(ds$ds)
     })
 
   feats <- shiny::reactiveValues()
@@ -57,6 +60,15 @@ server <- function(input, output, session) {
   })
 
   output$volcano_plot = shiny::renderPlot({
+    if ("Seurat_object" %in% names(data)) {
+      ngn = data[[input$clustering]][[input$cc]][["ngn"]]
+      pgn = data[[input$clustering]][[input$cc]][["pgn"]]
+      features.exclude = NULL
+    } else {
+      ngn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["ngn"]]
+      pgn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["pgn"]]
+      features.exclude = Seurat::Misc(data[[input$clustering]][[input$cc]])[["features.exclude"]]
+    }
     plot <- scexpr:::.plot_vp(vd = ds$ds,
                               p.plot = input$pval,
                               pt.size = input$pt.size2,
@@ -66,9 +78,9 @@ server <- function(input, output, session) {
                               p.cut = input$p.cut,
                               y.axis.pseudo.log = input$pseudo.log,
                               pseudo.log.sigma = input$pseudo.log.sigma,
-                              features.exclude = Seurat::Misc(data[[input$clustering]][[input$cc]])[["features.exclude"]],
-                              ngn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["ngn"]],
-                              pgn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["pgn"]]) +
+                              features.exclude = features.exclude,
+                              ngn = ngn,
+                              pgn = pgn) +
       ggplot2::labs(title = input$clustering)
 
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
@@ -86,58 +98,48 @@ server <- function(input, output, session) {
     f <- f[which(f %in% ds$ds$Feature)]
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
 
-      plots <- feature_plot_stat(SO = data[[input$clustering]][[input$cc]],
-                        pt.size = input$pt.size,
-                        geom2 = input$geom2,
-                        #font.size = input$font.size,
-                        geom1 = input$geom1,
-                        filter.non.expr = input$filter,
-                        plot.expr.freq = input$freq.expr,
-                        label.size = input$label.size,
-                        features = f,
-                        meta.col = Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.group.col"]],
-                        assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]]),
-                        strip.background = element_rect(fill = "white"),
-                        axis.title = element_blank(),
-                        axis.text.x = element_text(angle = 45, hjust = 1),
-                        strip.text = element_text(face = "italic"))
+      if ("Seurat_object" %in% names(data)) {
+        SO <- data[["Seurat_object"]]
+        assay = Seurat::DefaultAssay(data[["Seurat_object"]])
+        if ("all_other" %in% c(data[[input$clustering]][[input$cc]]$ngn, data[[input$clustering]][[input$cc]]$pgn)) {
+          cells <- rownames(SO@meta.data)
+          if (data[[input$clustering]][[input$cc]]$ngn == "all_other") {
+            SO@meta.data[,meta.col] <- as.character(SO@meta.data[,meta.col])
+            SO@meta.data[,meta.col][which(SO@meta.data[,meta.col] != data[[input$clustering]][[input$cc]]$pgn)] <- "all_other"
+          }
+          if (data[[input$clustering]][[input$cc]]$pgn == "all_other") {
+            SO@meta.data[,meta.col] <- as.character(SO@meta.data[,meta.col])
+            SO@meta.data[which(SO@meta.data[,meta.col] != data[[input$clustering]][[input$cc]]$ngn),meta.col] <- "all_other"
+          }
+        } else {
+          cells <- rownames(SO@meta.data[which(SO@meta.data[,input$clustering] %in% c(data[[input$clustering]][[input$cc]]$ngn, data[[input$clustering]][[input$cc]]$pgn)),])
+        }
+        meta.col <- input$clustering
+      } else {
+        SO <- data[[input$clustering]][[input$cc]]
+        cells <- NULL
+        meta.col = Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.group.col"]]
+        assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]])
+      }
 
-'      plots <- Seurat::VlnPlot(object = data[[input$clustering]][[input$cc]],
-                              features = f,
-                              group.by = Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.group.col"]],
-                              assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]]),
-                              cols = col_pal("custom"),
-                              combine = F)
-      plots <- lapply(plots, function(x) x +ggplot2::theme_bw() +
-               ggplot2::theme(axis.title = ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), panel.grid = ggplot2::element_blank(), legend.position = "none"))
-      return(cowplot::plot_grid(plotlist = plots))'
+      plots <- feature_plot_stat(SO = SO,
+                                 pt.size = input$pt.size,
+                                 geom2 = input$geom2,
+                                 cells = cells,
+                                 #font.size = input$font.size,
+                                 geom1 = input$geom1,
+                                 filter.non.expr = input$filter,
+                                 plot.expr.freq = input$freq.expr,
+                                 label.size = input$label.size,
+                                 features = f,
+                                 meta.col = meta.col,
+                                 assay = assay,
+                                 strip.background = element_rect(fill = "white"),
+                                 axis.title = element_blank(),
+                                 axis.text.x = element_text(angle = 45, hjust = 1),
+                                 strip.text = element_text(face = "italic"))
       return(plots)
     }
-
-
-    ' if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
-      if ("non.aggr.data" %in% names(data)) {
-        d <- data[["non.aggr.data"]]
-      } else if ("non.aggr.data" %in% names(data[[input$clustering]][[input$cc]])) {
-        d <- data[[input$clustering]][[input$cc]][["non.aggr.data"]]
-      } else {
-        stop("non.aggr.data not found.")
-      }
-      return(scexpr:::.expr_jitter(d = d,
-                                   feat = f,
-                                   pt.size = input$pt.size,
-                                   geom2 = input$geom2,
-                                   font.size = input$font.size,
-                                   geom1 = input$geom1,
-                                   filter.non.expr = input$filter,
-                                   plot.expr.freq = input$freq.expr,
-                                   label.size = input$label.size,
-                                   ngc = data[[input$clustering]][[input$cc]][["negative.group.cells"]],
-                                   pgc = data[[input$clustering]][[input$cc]][["positive.group.cells"]],
-                                   ngn = data[[input$clustering]][[input$cc]][["negative.group.name"]],
-                                   pgn = data[[input$clustering]][[input$cc]][["positive.group.name"]]))
-    }'
-
   })
 
   shiny::observeEvent(input$save, {

@@ -15,6 +15,7 @@
 #'
 #' @examples
 clustering_volcanos <- function(SO,
+                                assay = c("RNA", "SCT"),
                                 meta.cols,
                                 reduction = "tSNE",
                                 clustree.prefix = NULL,
@@ -29,6 +30,7 @@ clustering_volcanos <- function(SO,
   SO <- .check.SO(SO, length = 1)
   reduction <- .check.reduction(SO, reduction = reduction)
   meta.cols  <- .check.features(SO, features = meta.cols, rownames = F)
+  assay <- match.arg(assay, c("RNA", "SCT"))
   lapply_fun <- match.fun(lapply_fun)
 
   if (is.null(save.path)) {
@@ -64,7 +66,6 @@ clustering_volcanos <- function(SO,
     clust <- NULL
   }
 
-
   data_list <- lapply(meta.cols, function(y) {
     comb <- expand.grid(unique(SO@meta.data[,y]),unique(SO@meta.data[,y]))
     comb <- dplyr::arrange(comb, Var1, Var2)
@@ -74,7 +75,6 @@ clustering_volcanos <- function(SO,
     comb$Var2 <- as.character(comb$Var2)
 
     vd <- lapply_fun(split(comb, 1:nrow(comb)), function(x) {
-
       if (x[1,1] == x[1,2]) {
         pgc <- rownames(SO@meta.data[,y,drop=F][which(SO@meta.data[,y] != x[1,2]),,drop=F])
         pgn <- "all_other"
@@ -82,36 +82,34 @@ clustering_volcanos <- function(SO,
         pgc <- rownames(SO@meta.data[,y,drop=F][which(SO@meta.data[,y] == x[1,2]),,drop=F])
         pgn <- x[1,2]
       }
-
       vd <- volcano_plot(SO,
-                   negative.group.cells = rownames(SO@meta.data[,y,drop=F][which(SO@meta.data[,y] == x[1,1]),,drop=F]),
-                   positive.group.cells = pgc,
-                   negative.group.name = x[1,1],
-                   positive.group.name = pgn,
-                   interactive.only = T)
-      vd[["negative.group"]] <- x[1,1]
-      vd[["positive.group"]] <- x[1,2]
+                         assay = assay,
+                         negative.group.cells = rownames(SO@meta.data[,y,drop=F][which(SO@meta.data[,y] == x[1,1]),,drop=F]),
+                         positive.group.cells = pgc,
+                         negative.group.name = x[1,1],
+                         positive.group.name = pgn,
+                         interactive.only = T)
       return(vd)
     }, ...)
 
-    cell_idents <- stats::setNames(rownames(SO@meta.data), nm = as.character(SO@meta.data[,y]))
-    all_feats <- unique(unlist(sapply(sapply(vd, "[", "non.aggr.data"), rownames)))
-    #all_cells <- unique(unlist(sapply(sapply(vd, "[", "non.aggr.data"), colnames)))
-    vd <- sapply(vd, function(x) x[-which(names(x) %in% c("non.aggr.data", "negative.group.cells", "positive.group.cells"))], simplify = F)
+
+
+    all_feats <- unique(unlist(sapply(sapply(vd, "[", "vd"), rownames)))
+    #cell_idents <- stats::setNames(rownames(SO@meta.data), nm = as.character(SO@meta.data[,y]))
+    #vd <- sapply(vd, function(x) x[-which(names(x) %in% c("non.aggr.data", "negative.group.cells", "positive.group.cells"))], simplify = F)
 
     comb[which(comb$Var1 == comb$Var2),"Var2"] <- "all_other"
     vd <- c(vd, list(scexpr::feature_plot(SO, features = y, reduction = reduction, plot.title = F)), list(all_feats = all_feats, cell_idents = cell_idents))
-    names(vd) <- c(apply(comb, 1, function(x) paste0(x[1], " vs ", paste(x[2]))), "reduction_plot", "all_feats", "cell_idents")
-
+    names(vd) <- c(apply(comb, 1, function(x) paste0(x[1], " vs ", paste(x[2]))), "reduction_plot", "all_feats")
     return(vd)
   })
 
+  SO <- Seurat::DietSeurat(SO, assays = assay, counts = F, features = unique(unlist(sapply(data_list, "[", "all_feats"))))
+  SO@meta.data <- SO@meta.data[,meta.cols,drop=F]
+  data_list <- sapply(data_list, function(x) x[-which(names(x) %in% c("all_feats"))], simplify = F)
 
-  non.aggr.data <- Seurat::GetAssayData(SO, slot = "data", assay = "RNA")[unique(unlist(sapply(data_list, "[", "all_feats"))), ] #unique(unlist(sapply(data_list, "[", "all_cells")))
-  data_list <- sapply(data_list, function(x) x[-which(names(x) %in% c("all_feats", "all_cells"))], simplify = F)
-
-  data_list <- c(data_list, list(clust), list(non.aggr.data))
-  names(data_list) <- c(meta.cols, "clustree_plot", "non.aggr.data")
+  data_list <- c(data_list, list(clust), list(SO))
+  names(data_list) <- c(meta.cols, "clustree_plot", "Seurat_object")
   file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path, "app.R"))
   saveRDS(data_list, file = file.path(save.path, "data.rds"))
   return(data_list)
