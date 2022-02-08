@@ -100,7 +100,7 @@ clustering_volcanos <- function(SO,
     #vd <- sapply(vd, function(x) x[-which(names(x) %in% c("non.aggr.data", "negative.group.cells", "positive.group.cells"))], simplify = F)
 
     comb[which(comb$Var1 == comb$Var2),"Var2"] <- "all_other"
-    vd <- c(vd, list(scexpr::feature_plot(SO, features = y, reduction = reduction, plot.title = F)), list(all_feats = all_feats, cell_idents = cell_idents))
+    vd <- c(vd, list(scexpr::feature_plot(SO, features = y, reduction = reduction, plot.title = F)), list(all_feats = all_feats))
     names(vd) <- c(apply(comb, 1, function(x) paste0(x[1], " vs ", paste(x[2]))), "reduction_plot", "all_feats")
     return(vd)
   })

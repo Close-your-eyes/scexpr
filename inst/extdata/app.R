@@ -2,8 +2,8 @@ library(ggraph)
 
 
 data <- readRDS(file.path(dirname(rstudioapi::getActiveDocumentContext()$path), "data.rds"))
-
-
+data <- out
+mgcv::ls.size(out[[1]][[1]])/1000
 server <- function(input, output, session) {
 
   shiny::observeEvent(input$clustering, {
@@ -101,10 +101,12 @@ server <- function(input, output, session) {
 
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
+
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
       if ("Seurat_object" %in% names(data)) {
         SO <- data[["Seurat_object"]]
         assay = Seurat::DefaultAssay(data[["Seurat_object"]])
+        meta.col <- input$clustering
         if ("all_other" %in% c(data[[input$clustering]][[input$cc]]$ngn, data[[input$clustering]][[input$cc]]$pgn)) {
           cells <- rownames(SO@meta.data)
           if (data[[input$clustering]][[input$cc]]$ngn == "all_other") {
@@ -118,7 +120,7 @@ server <- function(input, output, session) {
         } else {
           cells <- rownames(SO@meta.data[which(SO@meta.data[,input$clustering] %in% c(data[[input$clustering]][[input$cc]]$ngn, data[[input$clustering]][[input$cc]]$pgn)),])
         }
-        meta.col <- input$clustering
+
       } else {
         SO <- data[[input$clustering]][[input$cc]][["Seurat_object"]]
         cells <- NULL
@@ -140,8 +142,10 @@ server <- function(input, output, session) {
                                          assay = assay,
                                          strip.background = element_rect(fill = "white"),
                                          axis.title = element_blank(),
-                                         axis.text.x = element_text(angle = 45, hjust = 1),
-                                         strip.text = element_text(face = "italic"))
+                                         col.pal = "black",
+                                         text = ggplot2::element_text(size = 20), ## font.size
+                                         #axis.text.x = element_text(angle = 45, hjust = 1),
+                                         strip.text = ggplot2::element_text(face = "italic"))
       return(plots)
     }
   })
@@ -153,5 +157,5 @@ server <- function(input, output, session) {
 }
 
 #shiny::shinyApp(ui = scexpr::shiny_uis("single_volcano_sc"), server = server)
-#shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
+shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
 
