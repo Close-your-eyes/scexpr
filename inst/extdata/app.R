@@ -3,6 +3,7 @@ library(ggraph)
 
 data <- readRDS(file.path(dirname(rstudioapi::getActiveDocumentContext()$path), "data.rds"))
 
+
 server <- function(input, output, session) {
 
   shiny::observeEvent(input$clustering, {
@@ -19,7 +20,7 @@ server <- function(input, output, session) {
       if ("Seurat_object" %in% names(data)) {
         ds$ds <- as.data.frame(data[[input$clustering]][[input$cc]][["vd"]])
       } else {
-        ds$ds <- as.data.frame(Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.data"]])
+        ds$ds <- as.data.frame(Seurat::Misc(data[[input$clustering]][[input$cc]][["Seurat_object"]])[["volcano.data"]])
       }
       ds$ds$Feature <- rownames(ds$ds)
       # filter for min.pct
@@ -65,9 +66,9 @@ server <- function(input, output, session) {
       pgn = data[[input$clustering]][[input$cc]][["pgn"]]
       features.exclude = NULL
     } else {
-      ngn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["ngn"]]
-      pgn = Seurat::Misc(data[[input$clustering]][[input$cc]])[["pgn"]]
-      features.exclude = Seurat::Misc(data[[input$clustering]][[input$cc]])[["features.exclude"]]
+      ngn = Seurat::Misc(data[[input$clustering]][[input$cc]][["Seurat_object"]])[["ngn"]]
+      pgn = Seurat::Misc(data[[input$clustering]][[input$cc]][["Seurat_object"]])[["pgn"]]
+      features.exclude = Seurat::Misc(data[[input$clustering]][[input$cc]][["Seurat_object"]])[["features.exclude"]]
     }
     plot <- scexpr:::.plot_vp(vd = ds$ds,
                               p.plot = input$pval,
@@ -80,8 +81,11 @@ server <- function(input, output, session) {
                               pseudo.log.sigma = input$pseudo.log.sigma,
                               features.exclude = features.exclude,
                               ngn = ngn,
-                              pgn = pgn) +
-      ggplot2::labs(title = input$clustering)
+                              pgn = pgn)
+    if ("Seurat_object" %in% names(data)) {
+      plot <- plot + ggplot2::labs(title = input$clustering)
+    }
+
 
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
@@ -94,10 +98,10 @@ server <- function(input, output, session) {
   })
 
   output$jitter_plot <- shiny::renderPlot({
+
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
     if (!is.null(f) && length(f) <= input$n.max && length(f) > 0) {
-
       if ("Seurat_object" %in% names(data)) {
         SO <- data[["Seurat_object"]]
         assay = Seurat::DefaultAssay(data[["Seurat_object"]])
@@ -116,10 +120,10 @@ server <- function(input, output, session) {
         }
         meta.col <- input$clustering
       } else {
-        SO <- data[[input$clustering]][[input$cc]]
+        SO <- data[[input$clustering]][[input$cc]][["Seurat_object"]]
         cells <- NULL
-        meta.col = Seurat::Misc(data[[input$clustering]][[input$cc]])[["volcano.group.col"]]
-        assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]])
+        meta.col = Seurat::Misc(data[[input$clustering]][[input$cc]][["Seurat_object"]])[["volcano.group.col"]]
+        assay = Seurat::DefaultAssay(data[[input$clustering]][[input$cc]][["Seurat_object"]])
       }
 
       plots <- scexpr::feature_plot_stat(SO = SO,
@@ -148,7 +152,6 @@ server <- function(input, output, session) {
 
 }
 
-# shiny_uis("multi_clustering_volcano_sc)
-shiny::shinyApp(ui = scexpr::shiny_uis("single_volcano_sc"), server = server)
-shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
+#shiny::shinyApp(ui = scexpr::shiny_uis("single_volcano_sc"), server = server)
+#shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
 

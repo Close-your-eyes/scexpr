@@ -7,7 +7,7 @@
 clustering_volcanos(
   SO,
   assay = c("RNA", "SCT"),
-  meta.cols,
+  cluster.meta.cols,
   reduction = "tSNE",
   clustree.prefix = NULL,
   save.path = NULL,

@@ -202,13 +202,13 @@ feature_plot <- function(SO,
 
     # select color scale
     if (is.numeric(data[,1])) {
-      if (length(col.pal.c) == 1) {
+      if (length(col.pal.c) == 1 && !col.pal.c %in% grDevices::colors()) {
         col.pal <- col_pal(name = col.pal.c, reverse = col.pal.rev)
       } else {
         col.pal <- col.pal.c
       }
     } else {
-      if (length(col.pal.d) == 1) {
+      if (length(col.pal.d) == 1 && !col.pal.d %in% grDevices::colors()) {
         col.pal <- col_pal(name = col.pal.d, reverse = col.pal.rev, n = nlevels(as.factor(data[,1])))
       } else {
         col.pal <- col.pal.d

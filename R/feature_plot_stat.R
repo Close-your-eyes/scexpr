@@ -104,7 +104,6 @@ feature_plot_stat <- function(SO,
       meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
     }
   }
-
   meta.col <- .check.features(SO = SO, features = meta.col, rownames = F)
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
@@ -146,9 +145,10 @@ feature_plot_stat <- function(SO,
       dplyr::mutate(max.feat.expr = max(expr)) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("Feature", meta.col, "SO.split", "max.feat.expr")))) %>%
       dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop")
+    names(stat)[which(names(stat) == "SO.split")] <- legend.title
   }
   names(data)[which(names(data) == "SO.split")] <- legend.title
-  names(stat)[which(names(stat) == "SO.split")] <- legend.title
+
 
   if (filter.non.expr) {
     data <- dplyr::filter(data, expr > 0)
@@ -177,7 +177,7 @@ feature_plot_stat <- function(SO,
     #expand_limits
   }
 
-  if (length(col.pal) == 1) {
+  if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
     col.pal <- col_pal(name = col.pal, reverse = col.pal.rev)
   }
 
