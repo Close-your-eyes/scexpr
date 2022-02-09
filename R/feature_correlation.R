@@ -15,17 +15,23 @@
 #' @examples
 feature_correlation <- function(SO,
                                 assay = c("RNA", "SCT"),
+                                method = c("pearson", "spearman", "kendall"),
                                 features,
                                 cells = NULL,
                                 min_pct = 0.1,
                                 limit_p = 1e-303,
                                 lm_resid = F,
+                                bar_fill = c("correlation_sign", "ref_feature_pct"),
                                 ...) {
 
   if (missing(features)) {
     stop("Please provide features.")
   }
+
   assay <- match.arg(assay, c("RNA", "SCT"))
+  method <- match.arg(method, c("pearson", "spearman", "kendall"))
+  bar_fill <- match.arg(bar_fill, c("correlation_sign", "ref_feature_pct"))
+
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   features <- .check.features(SO = SO, features = unique(features), meta.data = F)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells)
@@ -34,8 +40,7 @@ feature_correlation <- function(SO,
   ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min_pct, cells = cells), cells, drop=F])
   mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[features, cells, drop=F])
 
-
-  corr_obj <- psych::corr.test(t(mat), t(ref_mat), ci = F) #...
+  corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
   corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"), reshape2::melt(t(corr_obj[["p"]]), value.name = "p")), reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
 
   if (is.numeric(limit_p)) {
@@ -47,11 +52,26 @@ feature_correlation <- function(SO,
   corr_df$minus.log10.p.adj <- -log10(corr_df$p.adj)
   names(corr_df)[1:2] <- c("ref_feature", "feature")
   ## add pcts
-  corr_df <- corr_df %>% dplyr::left_join(stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
-  corr_df <- corr_df %>% dplyr::left_join(stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$feature))), c("feature_pct", "feature")), by = "feature")
+  corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
+  corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$feature))), c("feature_pct", "feature")), by = "feature")
+  corr_df <- dplyr::mutate(corr_df, feature = as.character(feature), ref_feature = as.character(ref_feature))
+  corr_df_plot <- dplyr::filter(corr_df, feature != ref_feature)
+  corr_df_plot <- rbind(dplyr::slice_min(corr_df_plot, n = 10, order_by = r), dplyr::slice_max(corr_df_plot, n = 10, order_by = r))
+  corr_df_plot <- dplyr::mutate(corr_df_plot, correlation_sign = factor(ifelse(r > 0, "+", "-"), levels = c("+", "-")))
 
-  return(corr_df)
+  plot <- ggplot(corr_df_plot, aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
+    geom_bar(stat = "identity", color = "black") +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    facet_wrap(vars(feature))
 
+  if (bar_fill == "correlation_sign") {
+    plot <- plot + scale_fill_manual(values = c("forestgreen", "tomato2")) + labs(y = "Feature", x = paste0(method, " correlation"), fill = "direction")
+  } else if (bar_fill == "ref_feature_pct") {
+    plot <- plot + scale_fill_viridis_c() + labs(y = "Feature", x = paste0(method, " correlation"), fill = "pct")
+  }
+
+  return(list(plot = plot, df = corr_df))
 
   # lm dist or dist from corr-line (which goes through 0 by definition, so only has slope)
   # only for pearson
@@ -61,7 +81,7 @@ feature_correlation <- function(SO,
   # get rank diff by observation
   # https://www.simplilearn.com/tutorials/statistics-tutorial/spearmans-rank-correlation
 
-'  ggplot(corr_df, aes(x = r, y = minus.log10.p.adj)) +
+  '  ggplot(corr_df, aes(x = r, y = minus.log10.p.adj)) +
     geom_point() +
     theme_bw() +
     facet_wrap(vars(feature))'
@@ -70,7 +90,7 @@ feature_correlation <- function(SO,
 
   # many models
   # https://r4ds.had.co.nz/many-models.html
-'  mat2 <- reshape2::melt(mat)
+  '  mat2 <- reshape2::melt(mat)
   ref_mat2 <- reshape2::melt(ref_mat)
   groups <-
     corr_df %>%
@@ -78,7 +98,7 @@ feature_correlation <- function(SO,
     tidyr::nest()'
 
 
-'  df <- as.data.frame(cbind(t(mat[1,,drop=F]),t(ref_mat[which(rownames(ref_mat) == "B2M"),,drop=F])))
+  '  df <- as.data.frame(cbind(t(mat[1,,drop=F]),t(ref_mat[which(rownames(ref_mat) == "B2M"),,drop=F])))
   model <- lm(CD8B ~ B2M, data = df)
   broom::tidy(model)
   plot(df)
