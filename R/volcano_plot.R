@@ -327,7 +327,6 @@ volcano_plot <- function(SO,
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
     file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path.interactive, "app.R"))
-    browser()
     saveRDS(stats::setNames(list(stats::setNames(list(list(Seurat_object = Seurat::DietSeurat(SO, assays = assay, features = rownames(vd))), reduction_plot = feat_plots), c("1", "reduction_plot"))), "1"), file = file.path(save.path.interactive, "data.rds"))
   }
 

@@ -849,7 +849,7 @@ feature_plot <- function(SO,
     if (is.null(split.by)) {
       data[,"split.by"] <- "1"
     } else {
-      data[,"split.by"] <- y@meta.data[,split.by]
+      data[,"split.by"] <- SO[[y]]@meta.data[,split.by]
     }
     if (!is.null(shape.by)) {
       data[,shape.by] <- as.factor(as.character(SO[[y]]@meta.data[,as.character(shape.by)]))

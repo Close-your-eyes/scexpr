@@ -98,11 +98,7 @@ feature_plot_stat <- function(SO,
       meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(meta.col.levels[[x]], "__", x), simplify = F)
     }
   } else {
-    if (is.null(meta.col.levels)) {
-      meta.col.levels <- unique(SO[[1]]@meta.data[,meta.col])
-    } else {
-      meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
-    }
+    meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
   }
   meta.col <- .check.features(SO = SO, features = meta.col, rownames = F)
   cells <- .check.and.get.cells(SO = SO,
@@ -154,6 +150,8 @@ feature_plot_stat <- function(SO,
     data <- dplyr::filter(data, expr > 0)
   }
 
+  data <- as.data.frame(data)
+  data[,meta.col] <- factor(data[,meta.col], levels = meta.col.levels)
   my_geom2 <- switch(geom2,
                      "violin" = ggplot2::geom_violin,
                      "boxplot" = ggplot2::geom_boxplot,

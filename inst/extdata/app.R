@@ -1,9 +1,7 @@
 library(ggraph)
 
-
 data <- readRDS(file.path(dirname(rstudioapi::getActiveDocumentContext()$path), "data.rds"))
-data <- out
-mgcv::ls.size(out[[1]][[1]])/1000
+
 server <- function(input, output, session) {
 
   shiny::observeEvent(input$clustering, {
