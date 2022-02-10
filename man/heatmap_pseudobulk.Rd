@@ -18,7 +18,7 @@ heatmap_pseudobulk(
   max.padj = 0.05,
   title = NULL,
   title.font.size = 14,
-  font.family = "Courier",
+  font.family = "sans",
   y.font.size = 10,
   tile.borders = T,
   dotplot = F,

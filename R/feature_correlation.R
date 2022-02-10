@@ -22,12 +22,13 @@ feature_correlation <- function(SO,
                                 limit_p = 1e-303,
                                 lm_resid = F,
                                 bar_fill = c("correlation_sign", "ref_feature_pct"),
-                                ...) {
+                                theme = ggplot2::theme_bw(),
+                                ...) { # theme and psych::corr.test
 
   if (missing(features)) {
     stop("Please provide features.")
   }
-
+  dots <- list(...)
   assay <- match.arg(assay, c("RNA", "SCT"))
   method <- match.arg(method, c("pearson", "spearman", "kendall"))
   bar_fill <- match.arg(bar_fill, c("correlation_sign", "ref_feature_pct"))
@@ -40,7 +41,14 @@ feature_correlation <- function(SO,
   ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min_pct, cells = cells), cells, drop=F])
   mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[features, cells, drop=F])
 
-  corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
+  if (!"ci" %in% names(dots)) {
+    ci <- F
+  } else {
+    ci <- dots[["ci"]]
+    dots <- dots[-which(names(dots) == "ci")]
+  }
+  corr_obj <- do.call(psych::corr.test, args = c(list(x = t(mat), y = t(ref_mat), ci = ci, method = method), dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
+  #corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
   corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"), reshape2::melt(t(corr_obj[["p"]]), value.name = "p")), reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
 
   if (is.numeric(limit_p)) {
@@ -59,16 +67,24 @@ feature_correlation <- function(SO,
   corr_df_plot <- rbind(dplyr::slice_min(corr_df_plot, n = 10, order_by = r), dplyr::slice_max(corr_df_plot, n = 10, order_by = r))
   corr_df_plot <- dplyr::mutate(corr_df_plot, correlation_sign = factor(ifelse(r > 0, "+", "-"), levels = c("+", "-")))
 
-  plot <- ggplot(corr_df_plot, aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
-    geom_bar(stat = "identity", color = "black") +
-    theme_bw() +
-    theme(panel.grid = element_blank()) +
-    facet_wrap(vars(feature))
+
+  plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = stats::reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
+    ggplot2::geom_bar(stat = "identity", color = "black") +
+    theme +
+    do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))]) +
+    ggplot2::facet_wrap(ggplot2::vars(feature))
+
+  #https://stackoverflow.com/questions/27690729/greek-letters-symbols-and-line-breaks-inside-a-ggplot-legend-label
+  #https://stackoverflow.com/questions/5293715/how-to-use-greek-symbols-in-ggplot2
+  xlabel <- switch(method,
+                   "pearson" = "pearson r",
+                   "spearman" = paste0("spearman ", "\u03C1"),
+                   "kendall" = paste0("kendall ", "\u03C4 "))
 
   if (bar_fill == "correlation_sign") {
-    plot <- plot + scale_fill_manual(values = c("forestgreen", "tomato2")) + labs(y = "Feature", x = paste0(method, " correlation"), fill = "direction")
+    plot <- plot + ggplot2::scale_fill_manual(values = c("forestgreen", "tomato2")) + labs(y = "Feature", x = xlabel, fill = "direction")
   } else if (bar_fill == "ref_feature_pct") {
-    plot <- plot + scale_fill_viridis_c() + labs(y = "Feature", x = paste0(method, " correlation"), fill = "pct")
+    plot <- plot + ggplot2::scale_fill_viridis_c() + ggplot2::labs(y = "Feature", x = xlabel, fill = "pct")
   }
 
   return(list(plot = plot, df = corr_df))
@@ -121,8 +137,7 @@ filter_feature <- function(SO,
                            min_pct = 0.1) {
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells)
-  cells <- names(cells[which(cells == 1)])
+  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
   assay <- match.arg(assay, c("RNA", "SCT"))
 
   # filter non expressed features first
@@ -140,8 +155,7 @@ pct_feature <- function(SO,
                         assay = c("RNA", "SCT")) {
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells)
-  cells <- names(cells[which(cells == 1)])
+  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
   #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first
   assay <- match.arg(assay, c("RNA", "SCT"))
 

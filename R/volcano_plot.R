@@ -140,8 +140,9 @@ volcano_plot <- function(SO,
     print("Different features across SOs detected. Will carry on with common ones only.")
   }
 
-  SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(x, features = intersect(rownames(x), intersect_features), cells = intersect(colnames(x), c(ngc, pgc))), assays = assay, counts=F))
+  SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(x, features = intersect(rownames(x), intersect_features), cells = intersect(colnames(x), c(ngc, pgc))), assays = assay, counts = F))
   if (length(SO) > 1) {
+    # this restores the counts matrix
     SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
   } else {
     SO <- SO[[1]]
@@ -149,7 +150,7 @@ volcano_plot <- function(SO,
 
   # exclude features which are below min.pct.set in both populations
   SO <- Seurat::DietSeurat(SO, assays = assay, features = unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
-                                                                   names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct)))))
+                                                                   names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct)))), counts = F)
 
   # filter meta.col
   SO@meta.data <- SO@meta.data[,c(colname, meta.cols),drop=F]

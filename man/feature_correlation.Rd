@@ -7,11 +7,14 @@
 feature_correlation(
   SO,
   assay = c("RNA", "SCT"),
+  method = c("pearson", "spearman", "kendall"),
   features,
   cells = NULL,
   min_pct = 0.1,
   limit_p = 1e-303,
   lm_resid = F,
+  bar_fill = c("correlation_sign", "ref_feature_pct"),
+  theme = ggplot2::theme_bw(),
   ...
 )
 }
