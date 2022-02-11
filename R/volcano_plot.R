@@ -35,7 +35,7 @@
 #' @param p.signif
 #' @param fc.cut
 #' @param features.exclude
-#' @param ...
+#' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[2:3]), c("other", "name1", "name2")), order.discrete = "^other",plot.title = F,
 #'
 #' @importFrom magrittr %>%
 #'
@@ -137,7 +137,7 @@ volcano_plot <- function(SO,
 
   intersect_features <- Reduce(intersect, lapply(SO, rownames))
   if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
-    print("Different features across SOs detected. Will carry on with common ones only.")
+    warning("Different features across SOs detected. Will carry on with common ones only.")
   }
 
   SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(x, features = intersect(rownames(x), intersect_features), cells = intersect(colnames(x), c(ngc, pgc))), assays = assay, counts = F))

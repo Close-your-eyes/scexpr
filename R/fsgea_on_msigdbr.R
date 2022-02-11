@@ -1,3 +1,15 @@
+#' Title
+#'
+#' @param gene.ranks
+#' @param use.msigdbr
+#' @param gene.sets
+#' @param min.padj
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
 fgsea_on_msigdbr <- function(gene.ranks,
                              use.msigdbr = T,
                              gene.sets = NULL,
