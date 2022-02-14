@@ -351,6 +351,64 @@ volcano_plot <- function(SO,
 
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
 
+  # optional prep for metavolcanoR ...
+
+  '  x <- as.matrix(assay_data[, ngc])
+  y <- as.matrix(assay_data[, pgc])
+  res <- wilcox.test(x[1,], y[1,], conf.int = T)
+  out <- broom::tidy(res)
+  resres <- pbapply::pbmapply(wilcox.test, x = split(x, 1:nrow(x))[1:5], y = split(y, 1:nrow(y))[1:5], MoreArgs = list(conf.int = T), SIMPLIFY = F)
+  # lapply with broom
+  res2 <- do.call(rbind,lapply(resres, broom::tidy))
+  ## wilcox.test uses x-y as location parameter and hence conf.interval; but we want x/y (logFC) which is different. so, how to get a confidence interval
+  ## for logFC?
+  '
+
+  x <- as.matrix(assay_data[, ngc])
+  y <- as.matrix(assay_data[, pgc])
+
+  fold_change(x[1,], y[1,])
+
+  fold_change <- function(x, y, confidence.level=95, var.equal=F) {
+    fc.interval(length(x), mean(x), var(x), length(y), mean(y), var(y), confidence.level, var.equal)
+  }
+
+  fc.interval <- function(x.n, x.mu, x.var, y.n, y.mu, y.var, confidence.level=95, var.equal=F) {
+    mu <- x.mu / y.mu
+    if (var.equal) {
+      nu <- x.n + y.n - 2
+      se <- sqrt(((x.n-1)*x.var + (y.n-1)*y.var) / nu) * sqrt(1/x.n + 1/y.n)
+    }
+    else {
+      nu <- (x.var/x.n + y.var/y.n)^2 / (x.var^2/x.n^2/(x.n-1) + y.var^2/y.n^2/(y.n-1))
+      se <- sqrt(x.var/x.n + y.var/y.n)
+    }
+    t <- -qt((1-confidence.level/100)/2, df=nu)
+    if (mu >= 0) {
+      mu.lower <- max(0, mu - t*se)
+      mu.upper <- mu + t*se
+    }
+    else {
+      mu.lower <- min(0, mu + t*se)
+      mu.upper <- mu - t*se
+    }
+    data.frame(fc=mu, df=nu, lower=mu.lower, upper=mu.upper)
+  }
+  #install.packages("boot")
+  ## bootstrapping is with replacement!! - not applicable
+
+  # https://www.bmj.com/content/343/bmj.d2090
+  # https://github.com/satijalab/seurat/issues/5155
+
+browser()
+  fold_change(assay_data[1, pgc], assay_data[1, ngc])
+  out <- sapply(1:100, function(x) {
+    mean(sample(x = assay_data[1, pgc], size = length(assay_data[1, pgc])*0.5)) /
+      mean(sample(x = assay_data[1, ngc], size = length(assay_data[1, ngc])*0.5))
+  })
+  plot(out)
+  plot(assay_data[1, pgc])
+
   p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
   apm <- apply(assay_data[, pgc], 1, mean)
   anm <- apply(assay_data[, ngc], 1, mean)
