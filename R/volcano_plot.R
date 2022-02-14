@@ -374,7 +374,7 @@ volcano_plot <- function(SO,
   }
 
   fc.interval <- function(x.n, x.mu, x.var, y.n, y.mu, y.var, confidence.level=95, var.equal=F) {
-    mu <- x.mu / y.mu
+    mu <- x.mu - y.mu
     if (var.equal) {
       nu <- x.n + y.n - 2
       se <- sqrt(((x.n-1)*x.var + (y.n-1)*y.var) / nu) * sqrt(1/x.n + 1/y.n)
