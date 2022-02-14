@@ -335,7 +335,7 @@ volcano_plot <- function(SO,
               data = vd,
               feat.plots = feat_plots,
               gsea = gsea,
-              interactive.data = Seurat::DietSeurat(SO, features = rownames(vd))))
+              interactive.data = stats::setNames(list(stats::setNames(list(list(Seurat_object = Seurat::DietSeurat(SO, assays = assay, features = rownames(vd))), reduction_plot = feat_plots), c("1", "reduction_plot"))), "1")))
 }
 
 
