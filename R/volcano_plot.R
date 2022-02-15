@@ -349,6 +349,9 @@ volcano_plot <- function(SO,
                      inf.fc.shift = 2,
                      p.adjust = "bonferroni") {
 
+
+
+
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
   assay_data <- expm1(assay_data) + 1
   p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
@@ -357,6 +360,11 @@ volcano_plot <- function(SO,
   if (is.null(n.feat.for.p.adj)) {
     n.feat.for.p.adj <- nrow(an)
   }
+
+  ## do like this! .calc_fc needs vectorization though / working with matrices.
+  log2(.calc_fc(x = assay_data["GNLY", pgc], assay_data["GNLY", ngc], log2 = F))
+
+
 
   # not as rownames?! but as column?! - no to enable matrix
   vd <- data.frame(log2.fc = log2(apm) - log2(anm), #log2(apm / anm),
@@ -559,7 +567,7 @@ volcano_plot <- function(SO,
 }
 
 
-.calc_fc <- function(x, y, conf.level = 95, var.equal = F, log2 = T) {
+.calc_fc <- function(x, y, conf.level = 95, var.equal = F, log2 = F) {
   # modified from here:
   # from # https://gist.github.com/wulingyun/e555fef011f0b5da2694b622b56a2252
   # https://www.zippia.com/advice/how-to-calculate-confidence-interval-with-examples/
@@ -576,14 +584,20 @@ volcano_plot <- function(SO,
 
   # make this accept matrices and vectors
 
-  x.n = length(x)
   if (log2) {
-    x.mu <- log2(mean(x))
+    stop("do not use.")
+  }
+
+  x.n = length(x)
+  y.n = length(y)
+  if (log2) {
+'    x.mu <- log2(mean(x))
     x.var = var(log2(x))
     y.mu <- log2(mean(y))
     y.var = var(log2(y))
-    mu <- x.mu - y.mu
+    mu <- x.mu - y.mu'
   } else {
+    ## this procedure roughly produces confidence intervals as limma makes them
     x.mu <- mean(x)
     x.var = var(x)
     y.mu <- mean(y)
@@ -608,7 +622,7 @@ volcano_plot <- function(SO,
     mu.lower <- min(0, mu + t*se)
     mu.upper <- mu - t*se
   }
-  data.frame(fc=mu, df=nu, lower=mu.lower, upper=mu.upper)
+  return(data.frame(fc=mu, df=nu, lower=mu.lower, upper=mu.upper))
 
   ##########################################
   ##########################################
