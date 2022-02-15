@@ -369,11 +369,15 @@ volcano_plot <- function(SO,
 
   fold_change(x[1,], y[1,])
 
-  fold_change <- function(x, y, confidence.level=95, var.equal=F) {
+  # https://www.zippia.com/advice/how-to-calculate-confidence-interval-with-examples/
+  # https://gist.github.com/wulingyun/e555fef011f0b5da2694b622b56a2252
+  fold_change <- function(x, y, confidence.level=95, var.equal=F)
+  {
     fc.interval(length(x), mean(x), var(x), length(y), mean(y), var(y), confidence.level, var.equal)
   }
 
-  fc.interval <- function(x.n, x.mu, x.var, y.n, y.mu, y.var, confidence.level=95, var.equal=F) {
+  fc.interval <- function(x.n, x.mu, x.var, y.n, y.mu, y.var, confidence.level=95, var.equal=F)
+  {
     mu <- x.mu - y.mu
     if (var.equal) {
       nu <- x.n + y.n - 2
@@ -394,20 +398,7 @@ volcano_plot <- function(SO,
     }
     data.frame(fc=mu, df=nu, lower=mu.lower, upper=mu.upper)
   }
-  #install.packages("boot")
-  ## bootstrapping is with replacement!! - not applicable
 
-  # https://www.bmj.com/content/343/bmj.d2090
-  # https://github.com/satijalab/seurat/issues/5155
-
-browser()
-  fold_change(assay_data[1, pgc], assay_data[1, ngc])
-  out <- sapply(1:100, function(x) {
-    mean(sample(x = assay_data[1, pgc], size = length(assay_data[1, pgc])*0.5)) /
-      mean(sample(x = assay_data[1, ngc], size = length(assay_data[1, ngc])*0.5))
-  })
-  plot(out)
-  plot(assay_data[1, pgc])
 
   p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
   apm <- apply(assay_data[, pgc], 1, mean)
