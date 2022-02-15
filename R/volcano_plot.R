@@ -166,7 +166,7 @@ volcano_plot <- function(SO,
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   if (is.null(volcano.data)) {
-    vd <- .calc_vd(assay_data = expm1(Seurat::GetAssayData(SO)),
+    vd <- .calc_vd(assay_data = Seurat::GetAssayData(SO, slot = "data"),
                    ngc = ngc,
                    pgc = pgc,
                    pgn = positive.group.name,
@@ -349,9 +349,49 @@ volcano_plot <- function(SO,
                      inf.fc.shift = 2,
                      p.adjust = "bonferroni") {
 
-  p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
+  ##########################################
+  ##########################################
+  ##########################################
+  # log2fc issue:
 
-  # optional prep for metavolcanoR ...
+  #marker <- FindMarkers(SO_urine, ident.1 = 1, ident.2 = 2, assay = "RNA")
+  # log2fc = 5.22 for GNLY, reproduce:
+  #gnly <- GetAssayData(SO_urine, assay = "RNA")["GNLY",]
+  #gnly.1 <- gnly[WhichCells(SO_urine, idents = 1)]
+  #gnly.2 <- gnly[WhichCells(SO_urine, idents = 2)]
+
+  #log2(mean(expm1(gnly.1))+1) - log2(mean(expm1(gnly.2))+1)
+  # equal to, due to logarithm rules
+  #log2((mean(expm1(gnly.1))+1)/(mean(expm1(gnly.2))+1))
+  # https://www.rdocumentation.org/packages/Seurat/versions/3.1.1/topics/NormalizeData
+  #"LogNormalize: Feature counts for each cell are divided by the total counts for that cell and multiplied by the scale.factor. This is then natural-log transformed using log1p"
+  'mean.fxn <- mean.fxn %||% switch(
+  EXPR = slot,
+  "data" = function(x) {
+    return(log(x = rowMeans(x = expm1(x = x)) + pseudocount.use, base = base))
+  },
+  "scale.data" = rowMeans,
+  function(x) {
+    return(log(x = rowMeans(x = x) + pseudocount.use, base = base))
+  }
+)'
+  # https://github.com/satijalab/seurat/issues/4875
+  '
+data.1 <- mean.fxn(object[features, cells.1, drop = FALSE])
+data.2 <- mean.fxn(object[features, cells.2, drop = FALSE])
+fc <- (data.1 - data.2) ## minus here like in limma
+'
+  # disucssion:
+  # https://github.com/satijalab/seurat/issues/5542
+  # https://genome.cshlp.org/content/15/10/1388
+  ## limma is different though:
+  # https://support.bioconductor.org/p/82478/
+  # anyhow: log2[(mean(A_n)/mean(Ctrl_n)]
+
+  ##########################################
+  ##########################################
+  ##########################################
+
 
   '  x <- as.matrix(assay_data[, ngc])
   y <- as.matrix(assay_data[, pgc])
@@ -363,17 +403,28 @@ volcano_plot <- function(SO,
   ## wilcox.test uses x-y as location parameter and hence conf.interval; but we want x/y (logFC) which is different. so, how to get a confidence interval
   ## for logFC?
   '
+  p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
+  assay_data <- expm1(assay_data) + 1
+
 
   x <- as.matrix(assay_data[, ngc])
   y <- as.matrix(assay_data[, pgc])
+  wilcox.test(x[1,], y[1,], conf.int = T)
+  fold_change(log2(mean(x[1,])), log2(mean(y[1,])))
+  log2(mean(x[1,])) - log2(mean(y[1,]))
 
-  fold_change(x[1,], y[1,])
+  ## test for equal vars ...
 
   # https://www.zippia.com/advice/how-to-calculate-confidence-interval-with-examples/
   # https://gist.github.com/wulingyun/e555fef011f0b5da2694b622b56a2252
   fold_change <- function(x, y, confidence.level=95, var.equal=F)
   {
-    fc.interval(length(x), mean(x), var(x), length(y), mean(y), var(y), confidence.level, var.equal)
+    fc.interval(x.n = length(x),
+                x.mu = mean(x),
+                x.var = var(x),
+                y.n = length(y),
+                y.mu = mean(y),
+                var(y), confidence.level, var.equal)
   }
 
   fc.interval <- function(x.n, x.mu, x.var, y.n, y.mu, y.var, confidence.level=95, var.equal=F)
