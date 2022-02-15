@@ -362,7 +362,7 @@ volcano_plot <- function(SO,
   }
 
   ## do like this! .calc_fc needs vectorization though / working with matrices.
-  log2(.calc_fc(x = assay_data["GNLY", pgc], assay_data["GNLY", ngc], log2 = F))
+  #log2(.calc_fc(x = assay_data["GNLY", pgc], assay_data["GNLY", ngc]))
 
 
 
@@ -567,7 +567,7 @@ volcano_plot <- function(SO,
 }
 
 
-.calc_fc <- function(x, y, conf.level = 95, var.equal = F, log2 = F) {
+.calc_fc <- function(x, y, conf.level = 95, var.equal = F) {
   # modified from here:
   # from # https://gist.github.com/wulingyun/e555fef011f0b5da2694b622b56a2252
   # https://www.zippia.com/advice/how-to-calculate-confidence-interval-with-examples/
@@ -584,26 +584,14 @@ volcano_plot <- function(SO,
 
   # make this accept matrices and vectors
 
-  if (log2) {
-    stop("do not use.")
-  }
-
+  # apply log2 afterwards
   x.n = length(x)
   y.n = length(y)
-  if (log2) {
-'    x.mu <- log2(mean(x))
-    x.var = var(log2(x))
-    y.mu <- log2(mean(y))
-    y.var = var(log2(y))
-    mu <- x.mu - y.mu'
-  } else {
-    ## this procedure roughly produces confidence intervals as limma makes them
-    x.mu <- mean(x)
-    x.var = var(x)
-    y.mu <- mean(y)
-    y.var = var(y)
-    mu <- x.mu / y.mu
-  }
+  x.mu <- mean(x)
+  x.var = var(x)
+  y.mu <- mean(y)
+  y.var = var(y)
+  mu <- x.mu / y.mu
 
   if (var.equal) {
     nu <- x.n + y.n - 2
@@ -614,6 +602,7 @@ volcano_plot <- function(SO,
     se <- sqrt(x.var/x.n + y.var/y.n)
   }
   t <- -qt((1-conf.level/100)/2, df=nu)
+  # CI.L and CI.R are defined differently by limma - change order
   if (mu >= 0) {
     mu.lower <- max(0, mu - t*se)
     mu.upper <- mu + t*se
@@ -622,7 +611,7 @@ volcano_plot <- function(SO,
     mu.lower <- min(0, mu + t*se)
     mu.upper <- mu - t*se
   }
-  return(data.frame(fc=mu, df=nu, lower=mu.lower, upper=mu.upper))
+  return(data.frame(fc=mu, lower=mu.lower, upper=mu.upper)) #df=nu
 
   ##########################################
   ##########################################
