@@ -9,6 +9,8 @@ LogNormalize_reverse <- function(SO, colsSums = "RNA_count_colSums") {
   identical(out, GetAssayData(SO, slot = "counts", assay = "RNA"))
 
   ## make neat
+
+  ## assume lowest value per column to represent an original count = 1
 }
 
 
