@@ -314,8 +314,9 @@ prep_SO <- function(SO_unprocessed,
     }
   }
 
-
-  # SO <- Seurat::DietSeurat(SO, scale.data = T, assays = names(SO@assays), dimreducs = names(SO@reductions))
+  # remove counts as they can be recalculated with rev_lognorm
+  Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(GetAssayData(SO, slot = "counts", assay = "RNA")))
+  SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   dir.create(save_path, showWarnings = F, recursive = T)
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
   saveRDS(SO, compress = T, file = file.path(save_path, paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")))
