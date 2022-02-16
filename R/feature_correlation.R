@@ -12,6 +12,8 @@
 #' @return
 #' @export
 #'
+#' @importFrom magrittr %>%
+#'
 #' @examples
 feature_correlation <- function(SO,
                                 assay = c("RNA", "SCT"),
@@ -23,6 +25,9 @@ feature_correlation <- function(SO,
                                 lm_resid = F,
                                 bar_fill = c("correlation_sign", "ref_feature_pct"),
                                 theme = ggplot2::theme_bw(),
+                                group.by = NULL,
+                                min.group.size = 20,
+                                topn = c(10,10), # n for min and max
                                 ...) { # theme and psych::corr.test
 
   if (missing(features)) {
@@ -33,10 +38,14 @@ feature_correlation <- function(SO,
   method <- match.arg(method, c("pearson", "spearman", "kendall"))
   bar_fill <- match.arg(bar_fill, c("correlation_sign", "ref_feature_pct"))
 
+  if (length(topn) != 2 || !is.numeric(topn)) {
+    warning("topn should be a numeric vector of length 2, providing the numbers of lowest ranked features (index 1) and highest ranked features (index 2) with respect to correlation. Will be set to default c(10,10)")
+    topn <- c(10,10)
+  }
+
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   features <- .check.features(SO = SO, features = unique(features), meta.data = F)
-  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells)
-  cells <- names(cells[which(cells == 1)])
+  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
 
   ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min_pct, cells = cells), cells, drop=F])
   mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[features, cells, drop=F])
@@ -47,32 +56,71 @@ feature_correlation <- function(SO,
     ci <- dots[["ci"]]
     dots <- dots[-which(names(dots) == "ci")]
   }
-  corr_obj <- do.call(psych::corr.test, args = c(list(x = t(mat), y = t(ref_mat), ci = ci, method = method), dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
-  #corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
-  corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"), reshape2::melt(t(corr_obj[["p"]]), value.name = "p")), reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
 
-  if (is.numeric(limit_p)) {
-    corr_df$p.adj[which(corr_df$p.adj == 0)] <- limit_p
-    corr_df$p[which(corr_df$p == 0)] <- limit_p
+  ## do all the checking
+  if (!is.null(group.by)) {
+    groups <-
+      SO@meta.data[,group.by,drop=F] %>%
+      tibble::rownames_to_column("ID") %>%
+      dplyr::filter(ID %in% cells)
+    groups <- split(groups$ID, groups$prim_cell_atlas_labels)
+  } else {
+    groups <- stats::setNames(list(cells), "all")
   }
 
-  corr_df$minus.log10.p <- -log10(corr_df$p)
-  corr_df$minus.log10.p.adj <- -log10(corr_df$p.adj)
-  names(corr_df)[1:2] <- c("ref_feature", "feature")
-  ## add pcts
-  corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
-  corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$feature))), c("feature_pct", "feature")), by = "feature")
-  corr_df <- dplyr::mutate(corr_df, feature = as.character(feature), ref_feature = as.character(ref_feature))
-  corr_df_plot <- dplyr::filter(corr_df, feature != ref_feature)
-  corr_df_plot <- rbind(dplyr::slice_min(corr_df_plot, n = 10, order_by = r), dplyr::slice_max(corr_df_plot, n = 10, order_by = r))
-  corr_df_plot <- dplyr::mutate(corr_df_plot, correlation_sign = factor(ifelse(r > 0, "+", "-"), levels = c("+", "-")))
+  if (any(lengths(groups) < min.group.size)) {
+    print(paste0("These groups are not considered due to having less cells than min.group.size: ", paste(names(which(lengths(groups) < min.group.size)), collapse = ", ")))
+    groups <- groups[which(lengths(groups) >= min.group.size)]
+  }
+browser()
 
+  out <- lapply(names(groups), function(x) {
+    corr_obj <- do.call(psych::corr.test, args = c(list(x = t(mat[,groups[[x]],drop=F]), y = t(ref_mat[,groups[[x]],drop=F]), ci = ci, method = method), dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
+    #corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
+    corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"), reshape2::melt(t(corr_obj[["p"]]), value.name = "p")), reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
+
+    if (is.numeric(limit_p)) {
+      corr_df$p.adj[which(corr_df$p.adj == 0)] <- limit_p
+      corr_df$p[which(corr_df$p == 0)] <- limit_p
+    }
+
+    corr_df$minus.log10.p <- -log10(corr_df$p)
+    corr_df$minus.log10.p.adj <- -log10(corr_df$p.adj)
+    names(corr_df)[1:2] <- c("ref_feature", "feature")
+    ## add pcts
+    corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
+    corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$feature))), c("feature_pct", "feature")), by = "feature")
+    corr_df <- dplyr::mutate(corr_df, feature = as.character(feature), ref_feature = as.character(ref_feature))
+    corr_df[,"group"] <- x
+    corr_df_plot <- dplyr::filter(corr_df, feature != ref_feature)
+
+    corr_df_plot <- rbind(corr_df_plot %>%
+                            dplyr::group_by(feature) %>%
+                            dplyr::slice_min(n = topn[1], order_by = r) %>%
+                            dplyr::ungroup(),
+                          corr_df_plot %>%
+                            dplyr::group_by(feature) %>%
+                            dplyr::slice_max(n = topn[2], order_by = r) %>%
+                            dplyr::ungroup())
+    corr_df_plot <- dplyr::mutate(corr_df_plot, correlation_sign = factor(ifelse(r > 0, "+", "-"), levels = c("+", "-")))
+    corr_df_plot[,"group"] <- x
+    return(list(corr_df, corr_df_plot))
+  })
+  corr_df <- do.call(rbind, sapply(out, "[", 1))
+  corr_df_plot <- do.call(rbind, sapply(out, "[", 2))
+
+  if (is.null(group.by)) {
+    corr_df <- corr_df[,which(names(corr_df) != "group")]
+    corr_df_plot <- corr_df_plot[,which(names(corr_df_plot) != "group")]
+  }
+
+#reorder need fixing with groups etc. (use cowplot and lapply over feature and group, omit group if not present)
 
   plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = stats::reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
     ggplot2::geom_bar(stat = "identity", color = "black") +
     theme +
     do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))]) +
-    ggplot2::facet_wrap(ggplot2::vars(feature))
+    ggplot2::facet_wrap(ggplot2::vars(feature,group), scales = "free")
 
   #https://stackoverflow.com/questions/27690729/greek-letters-symbols-and-line-breaks-inside-a-ggplot-legend-label
   #https://stackoverflow.com/questions/5293715/how-to-use-greek-symbols-in-ggplot2
@@ -160,4 +208,9 @@ pct_feature <- function(SO,
   assay <- match.arg(assay, c("RNA", "SCT"))
 
   return(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[features,cells,drop=F] > 0)/length(cells))
+}
+
+.reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
+  new_x <- paste(x, within, sep = sep)
+  stats::reorder(new_x, by, FUN = fun)
 }

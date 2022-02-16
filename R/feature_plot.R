@@ -127,7 +127,7 @@ feature_plot <- function(SO,
                          plot.legend.title = F,
                          plot.title = T,
 
-                         order.discrete = NULL, # "^" as first element, "$" as last to indicate plotting first or last of respective factor levels, first plotted ones are buried
+                         order.discrete = NULL, # "^" as first element, "$" as last to indicate plotting first or last of respective factor levels, first plotted ones are buried ## or order.discrete = T to plot most in order of abundance
                          freq.position = c(-Inf, Inf),
                          freq.font.size = 4,
 
@@ -313,8 +313,19 @@ feature_plot <- function(SO,
       data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
 
       if (is.null(order.discrete)) {
-        # plot non-excluded cells, sample to make it random
         plot <- plot + ggplot2::geom_point(data = data[names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
+      } else if (is.logical(order.discrete) && order.discrete) {
+        temp_name <- make.names(as.character(Sys.time()))
+        data <-
+          data %>%
+          tibble::rownames_to_column(temp_name) %>%
+          dplyr::group_by(!!rlang::sym(x)) %>%
+          dplyr::mutate(count = n()) %>%
+          dplyr::ungroup() %>%
+          dplyr::arrange(-count) %>%
+          tibble::column_to_rownames(temp_name)
+        # use rownames %in% ... to preserve order
+        plot <- plot + ggplot2::geom_point(data = data[rownames(data) %in% names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
       } else {
         if (length(unique(order.discrete)) != length(order.discrete)) {
           order.discrete <- unique(order.discrete)
@@ -426,10 +437,10 @@ feature_plot <- function(SO,
         },
         color = if (plot.colorbar) {
           ggplot2::guide_colorbar(barwidth = legend.barwidth,
-                                   barheight = legend.barheight,
-                                   label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                   title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
-                                   title = switch(plot.legend.title, legend.title, NULL))
+                                  barheight = legend.barheight,
+                                  label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
+                                  title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                  title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
                                 nrow = legend.nrow,
@@ -840,7 +851,8 @@ feature_plot <- function(SO,
       stop("Feature found in meta.data and rownames of SO.")
     }
     if (!is.null(reduction)) {
-      data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[grepl(reduction, names(SO[[y]]@reductions), ignore.case = T)]))
+      data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[which.min(utils::adist(reduction, names(SO[[y]]@reductions), ignore.case = T))]))
+      #data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[grepl(reduction, names(SO[[y]]@reductions), ignore.case = T)]))
     }
     if (!is.null(meta.col)) {
       data <- cbind(data, SO[[y]]@meta.data[,meta.col,drop=F])
@@ -955,7 +967,7 @@ feature_plot <- function(SO,
   if (length(cutoff.expression) > 1) {
     cutoff.expression <- paste(cutoff.expression, collapse = "&")
   }
-# italic bold==
+  # italic bold==
   args <- list(x = feature, f = levels(as.factor(freqs$freq.expr)), y = cutoff.feature, z = cutoff.expression, q = exclusion.feature)
   title <-
     if (!is.null(cutoff.feature) && !is.null(exclusion.feature)) {

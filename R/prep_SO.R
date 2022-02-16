@@ -28,7 +28,9 @@
 #' @param ... additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 #' Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 #' Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
-#' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta
+#' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
+#' for EmbedSOM::SOM with "SOM__", for EmbedSOM::GQTSOM with "GQTSOM__" and for EmbedSOM::EmbedSOM
+#' with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
 #' @param celltype_label label
 #'
@@ -45,7 +47,7 @@ prep_SO <- function(SO_unprocessed,
                     downsample = 1,
                     export_prefix = NULL,
                     cluster_resolutions = 0.8,
-                    reductions = c("tsne", "umap", "som", "gtqsom"),
+                    reductions = c("umap", "som", "gqtsom", "tsne"),
                     nhvf = 800,
                     npcs = 20,
                     nintdims = 30,
@@ -96,7 +98,7 @@ prep_SO <- function(SO_unprocessed,
     }
   }
 
-  reductions <- match.arg(reductions, c("tsne", "umap", "som", "gtqsom"), several.ok = T)
+  reductions <- match.arg(tolower(reductions), c("tsne", "umap", "som", "gqtsom"), several.ok = T)
   normalization <- match.arg(normalization, c("SCT", "LogNormalize"))
   batch_corr <- match.arg(batch_corr, c("harmony", "integration", "regression", "none"))
 
@@ -284,7 +286,7 @@ prep_SO <- function(SO_unprocessed,
     SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = mydots[which(grepl("^SOM__|^EmbedSOM__", names(mydots), ignore.case = T))])
   }
 
-  if (any(grepl("gtqsom", reductions, ignore.case = T))) {
+  if (any(grepl("gqtsom", reductions, ignore.case = T))) {
     dots <- mydots[which(grepl("^GQTSOM__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^GQTSOM__", "", names(dots), ignore.case = T)
     map <- do.call(EmbedSOM::GQTSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings), dots))
@@ -293,7 +295,7 @@ prep_SO <- function(SO_unprocessed,
     names(dots) <- gsub("^EmbedSOM__", "", names(dots), ignore.case = T)
     ES <- do.call(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map), dots))
 
-    SO[["GTQSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GTQSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = mydots[which(grepl("^GQTSOM__|^EmbedSOM__", names(mydots), ignore.case = T))])
+    SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = mydots[which(grepl("^GQTSOM__|^EmbedSOM__", names(mydots), ignore.case = T))])
   }
 
 '  dots <- mydots[which(grepl("^FindNeighbors__", names(mydots), ignore.case = T))]
@@ -315,7 +317,7 @@ prep_SO <- function(SO_unprocessed,
   }
 
   # remove counts as they can be recalculated with rev_lognorm
-  Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(GetAssayData(SO, slot = "counts", assay = "RNA")))
+  Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA")))
   SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   dir.create(save_path, showWarnings = F, recursive = T)
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
