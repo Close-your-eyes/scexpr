@@ -353,20 +353,36 @@ volcano_plot <- function(SO,
 
 
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
-  assay_data <- expm1(assay_data) + 1
+  assay_data2 <- expm1(assay_data) + 1
   p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
-  apm <- Matrix::rowMeans(assay_data[, pgc])
-  anm <- Matrix::rowMeans(assay_data[, ngc])
+
+  x <- as.matrix(assay_data[, pgc])
+  y <- as.matrix(assay_data[, ngc])
+
+  #apm <- Matrix::rowMeans(assay_data[, pgc])
+  #anm <- Matrix::rowMeans(assay_data[, ngc])
+
   if (is.null(n.feat.for.p.adj)) {
-    n.feat.for.p.adj <- nrow(an)
+    n.feat.for.p.adj <- nrow(assay_data)
   }
 
+  #use limma!
+
+  browser()
   ## do like this! .calc_fc needs vectorization though / working with matrices.
   #log2(.calc_fc(x = assay_data["GNLY", pgc], assay_data["GNLY", ngc]))
 
+  fc_df <- .calc_fc(x = as.matrix(assay_data[, pgc]), as.matrix(assay_data[, ngc]))
+  df2<-log2(fc_df)
+  log2(fc_df["RPS27",])
+  #problem!
 
-
+  exp_mat <- assay_data[, c(ngc,pgc)]
+  fit <- limma::lmFit(exp_mat, design = model.matrix(~c(colnames(exp_mat) %in% pgc)))
+  fit <- limma::eBayes(fit)
+  dedf<-limma::topTable(fit, confint = T, number = nrow(assay_data))
   # not as rownames?! but as column?! - no to enable matrix
+
   vd <- data.frame(log2.fc = log2(apm) - log2(anm), #log2(apm / anm),
                    p.val = p,
                    adj.p.val = as.numeric(formatC(stats::p.adjust(p, method = p.adjust, n = n.feat.for.p.adj), format = "e", digits = 2)),
@@ -585,12 +601,27 @@ volcano_plot <- function(SO,
   # make this accept matrices and vectors
 
   # apply log2 afterwards
-  x.n = length(x)
+  '  x.n = length(x)
   y.n = length(y)
   x.mu <- mean(x)
   x.var = var(x)
   y.mu <- mean(y)
   y.var = var(y)
+  mu <- x.mu / y.mu'
+
+  if (!is.matrix(x)) {
+    x <- as.matrix(x)
+  }
+  if (!is.matrix(y)) {
+    y <- as.matrix(y)
+  }
+
+  x.n = nrow(x)
+  y.n = nrow(y)
+  x.mu <- matrixStats::rowMeans2(x)
+  x.var = matrixStats::rowVars(x)
+  y.mu <- matrixStats::rowMeans2(y)
+  y.var = matrixStats::rowVars(y)
   mu <- x.mu / y.mu
 
   if (var.equal) {
@@ -602,16 +633,18 @@ volcano_plot <- function(SO,
     se <- sqrt(x.var/x.n + y.var/y.n)
   }
   t <- -qt((1-conf.level/100)/2, df=nu)
-  # CI.L and CI.R are defined differently by limma - change order
-  if (mu >= 0) {
+  # CI.L and CI.R are defined differently by limma
+  '  if (mu >= 0) {
     mu.lower <- max(0, mu - t*se)
     mu.upper <- mu + t*se
   }
   else {
     mu.lower <- min(0, mu + t*se)
     mu.upper <- mu - t*se
-  }
-  return(data.frame(fc=mu, lower=mu.lower, upper=mu.upper)) #df=nu
+  }'
+  ret_mat <- cbind(fc = mu, CI.L = mu-t*se, CI.R = mu+t*se)
+  rownames(ret_mat) <- rownames(x)
+  return(ret_mat) #df=nu
 
   ##########################################
   ##########################################
