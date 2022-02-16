@@ -347,51 +347,36 @@ volcano_plot <- function(SO,
                      ngn = "negative",
                      n.feat.for.p.adj = NULL,
                      inf.fc.shift = 2,
-                     p.adjust = "bonferroni") {
+                     p.adjust = "bonferroni",
+                     use.limma = F) {
 
+  if (use.limma) {
+    # p.adjust ignored
+    limma::topTable(limma::eBayes(limma::lmFit(assay_data[, c(ngc,pgc)],design = model.matrix(~c(colnames(assay_data[, c(ngc,pgc)]) %in% pgc)))), number = nrow(assay_data), confint = T)
 
+  } else {
+    p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
+    assay_data <- expm1(assay_data) + 1
+    p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
+    apm <- Matrix::rowMeans(assay_data[, pgc])
+    anm <- Matrix::rowMeans(assay_data[, ngc])
 
+    if (is.null(n.feat.for.p.adj)) {
+      n.feat.for.p.adj <- nrow(assay_data)
+    }
 
-  p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
-  assay_data2 <- expm1(assay_data) + 1
-  p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
-
-  x <- as.matrix(assay_data[, pgc])
-  y <- as.matrix(assay_data[, ngc])
-
-  #apm <- Matrix::rowMeans(assay_data[, pgc])
-  #anm <- Matrix::rowMeans(assay_data[, ngc])
-
-  if (is.null(n.feat.for.p.adj)) {
-    n.feat.for.p.adj <- nrow(assay_data)
+    vd <- data.frame(log2.fc = log2(apm) - log2(anm), #log2(apm / anm),
+                     p.val = p,
+                     adj.p.val = as.numeric(formatC(stats::p.adjust(p, method = p.adjust, n = n.feat.for.p.adj), format = "e", digits = 2)),
+                     stats::setNames(list(round(log2(anm), 2)), ngn),
+                     stats::setNames(list(round(log2(apm), 2)), pgn),
+                     stats::setNames(list(round(apply(assay_data[, ngc]-1, 1, function(x) sum(x != 0))/ncol(assay_data[, ngc]), 2)), paste0("pct.", ngn)),
+                     stats::setNames(list(round(apply(assay_data[, pgc]-1, 1, function(x) sum(x != 0))/ncol(assay_data[, pgc]), 2)), paste0("pct.", pgn)),
+                     infinite.FC = ifelse(is.infinite(log2(apm) - log2(anm)), 1, 0),
+                     check.names = F)
   }
 
-  #use limma!
 
-  browser()
-  ## do like this! .calc_fc needs vectorization though / working with matrices.
-  #log2(.calc_fc(x = assay_data["GNLY", pgc], assay_data["GNLY", ngc]))
-
-  fc_df <- .calc_fc(x = as.matrix(assay_data[, pgc]), as.matrix(assay_data[, ngc]))
-  df2<-log2(fc_df)
-  log2(fc_df["RPS27",])
-  #problem!
-
-  exp_mat <- assay_data[, c(ngc,pgc)]
-  fit <- limma::lmFit(exp_mat, design = model.matrix(~c(colnames(exp_mat) %in% pgc)))
-  fit <- limma::eBayes(fit)
-  dedf<-limma::topTable(fit, confint = T, number = nrow(assay_data))
-  # not as rownames?! but as column?! - no to enable matrix
-
-  vd <- data.frame(log2.fc = log2(apm) - log2(anm), #log2(apm / anm),
-                   p.val = p,
-                   adj.p.val = as.numeric(formatC(stats::p.adjust(p, method = p.adjust, n = n.feat.for.p.adj), format = "e", digits = 2)),
-                   stats::setNames(list(round(log2(anm), 2)), ngn),
-                   stats::setNames(list(round(log2(apm), 2)), pgn),
-                   stats::setNames(list(round(apply(assay_data[, ngc]-1, 1, function(x) sum(x != 0))/ncol(assay_data[, ngc]), 2)), paste0("pct.", ngn)),
-                   stats::setNames(list(round(apply(assay_data[, pgc]-1, 1, function(x) sum(x != 0))/ncol(assay_data[, pgc]), 2)), paste0("pct.", pgn)),
-                   infinite.FC = ifelse(is.infinite(log2(apm) - log2(anm)), 1, 0),
-                   check.names = F)
 
   vd$log2.fc <- scales::oob_squish_infinite(vd$log2.fc, range = c(min(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) - inf.fc.shift,
                                                                   max(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) + inf.fc.shift))
