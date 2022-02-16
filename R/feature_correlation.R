@@ -72,7 +72,6 @@ feature_correlation <- function(SO,
     print(paste0("These groups are not considered due to having less cells than min.group.size: ", paste(names(which(lengths(groups) < min.group.size)), collapse = ", ")))
     groups <- groups[which(lengths(groups) >= min.group.size)]
   }
-browser()
 
   out <- lapply(names(groups), function(x) {
     corr_obj <- do.call(psych::corr.test, args = c(list(x = t(mat[,groups[[x]],drop=F]), y = t(ref_mat[,groups[[x]],drop=F]), ci = ci, method = method), dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
@@ -114,13 +113,19 @@ browser()
     corr_df_plot <- corr_df_plot[,which(names(corr_df_plot) != "group")]
   }
 
-#reorder need fixing with groups etc. (use cowplot and lapply over feature and group, omit group if not present)
+  #reorder need fixing with groups etc. (use cowplot and lapply over feature and group, omit group if not present)
 
   plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = stats::reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
     ggplot2::geom_bar(stat = "identity", color = "black") +
     theme +
-    do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))]) +
-    ggplot2::facet_wrap(ggplot2::vars(feature,group), scales = "free")
+    do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
+
+  wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), scales = "free")}
+  if (is.null(group.by)) {
+    plot <- plot + wrap_by(feature)
+  } else {
+    plot <- plot + wrap_by(feature, group)
+  }
 
   #https://stackoverflow.com/questions/27690729/greek-letters-symbols-and-line-breaks-inside-a-ggplot-legend-label
   #https://stackoverflow.com/questions/5293715/how-to-use-greek-symbols-in-ggplot2
@@ -207,7 +212,7 @@ pct_feature <- function(SO,
   #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first
   assay <- match.arg(assay, c("RNA", "SCT"))
 
-  return(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[features,cells,drop=F] > 0)/length(cells))
+  return(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[features, cells, drop=F] > 0)/length(cells))
 }
 
 .reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {

@@ -35,6 +35,11 @@
 #' @param p.signif
 #' @param fc.cut
 #' @param features.exclude
+#' @param meta.cols
+#' @param save.path.interactive
+#' @param gsea.param
+#' @param interactive.only
+#' @param use.limma limma for DE gene detection; intended to use subsequent MetaVolcanoR
 #' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[2:3]), c("other", "name1", "name2")), order.discrete = "^other",plot.title = F,
 #'
 #' @importFrom magrittr %>%
@@ -82,6 +87,7 @@ volcano_plot <- function(SO,
                          save.path.interactive = NULL,
                          gsea.param = NULL,
                          interactive.only = F,
+                         use.limma = F,
                          ...) {
 
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
@@ -173,7 +179,8 @@ volcano_plot <- function(SO,
                    ngn = negative.group.name,
                    inf.fc.shift = inf.fc.shift,
                    n.feat.for.p.adj = length(intersect_features),
-                   p.adjust = p.adjust)
+                   p.adjust = p.adjust,
+                   use.limma = use.limma)
   } else {
     vd <- volcano.data
   }
@@ -351,8 +358,24 @@ volcano_plot <- function(SO,
                      use.limma = F) {
 
   if (use.limma) {
-    # p.adjust ignored
-    limma::topTable(limma::eBayes(limma::lmFit(assay_data[, c(ngc,pgc)],design = model.matrix(~c(colnames(assay_data[, c(ngc,pgc)]) %in% pgc)))), number = nrow(assay_data), confint = T)
+    message("(i) limma: p.adjust ignored. (ii) caution: limma calculates log2.fc differently as Seurat, see here: https://support.bioconductor.org/p/82478/ ")
+    vd <- limma::topTable(limma::eBayes(limma::lmFit(assay_data[, c(ngc,pgc)],design = model.matrix(~c(colnames(assay_data[, c(ngc,pgc)]) %in% pgc)))), number = nrow(assay_data), confint = T)
+
+    assay_data <- expm1(assay_data) + 1
+    apm <- Matrix::rowMeans(assay_data[, pgc])
+    anm <- Matrix::rowMeans(assay_data[, ngc])
+
+    vd <- data.frame(log2.fc = vd$logFC,
+                     CI.L = vd$CI.L,
+                     CI.R = vd$CI.R,
+                     p.val = vd$P.Value,
+                     adj.p.val = as.numeric(formatC(vd$adj.P.Val, format = "e", digits = 2)),
+                     stats::setNames(list(round(log2(anm[rownames(vd)]), 2)), ngn),
+                     stats::setNames(list(round(log2(apm[rownames(vd)]), 2)), pgn),
+                     stats::setNames(list(round(apply(assay_data[, ngc]-1, 1, function(x) sum(x != 0))/ncol(assay_data[, ngc]), 2)[rownames(vd)]), paste0("pct.", ngn)),
+                     stats::setNames(list(round(apply(assay_data[, pgc]-1, 1, function(x) sum(x != 0))/ncol(assay_data[, pgc]), 2)[rownames(vd)]), paste0("pct.", pgn)),
+                     infinite.FC = ifelse(is.infinite(log2(apm) - log2(anm)), 1, 0)[rownames(vd)],
+                     check.names = F)
 
   } else {
     p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
