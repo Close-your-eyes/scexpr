@@ -167,7 +167,15 @@ feature_plot <- function(SO,
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by,shape.by = shape.by)
   reduction <- .check.reduction(SO = SO, reduction = reduction, dims = dims)
   features <- .check.features(SO = SO, features = unique(features))
-  cells <- .check.and.get.cells(SO = SO,assay = assay,cells = cells,make.cells.unique = make.cells.unique,cutoff.feature = cutoff.feature,cutoff.expression = cutoff.expression,exclusion.feature = exclusion.feature,downsample = downsample, make.cells.unique.warning = 1)
+  cells <- .check.and.get.cells(SO = SO,
+                                assay = assay,
+                                cells = cells,
+                                make.cells.unique = make.cells.unique,
+                                cutoff.feature = cutoff.feature,
+                                cutoff.expression = cutoff.expression,
+                                exclusion.feature = exclusion.feature,
+                                downsample = downsample,
+                                make.cells.unique.warning = 1)
 
   if (length(SO) > 1) {
     SO.split <- "SO.split"
@@ -685,33 +693,26 @@ feature_plot <- function(SO,
   cells.plot[!names(cells.plot) %in% cells] <- 0
   ## cells excluded by
   if (!is.null(cutoff.feature)) {
-    for (y in seq_along(SO)) {
-      for (z in seq_along(cutoff.feature)) {
-        cells.plot[intersect(which(!names(cells.plot) %in% names(which(Seurat::GetAssayData(SO[[y]], slot = "data", assay = assay)[cutoff.feature[z],] > cutoff.expression[z]))),
-                             which(names(cells.plot) %in% Seurat::Cells(SO[[y]])))] <- 0
-      }
-    }
+    compare_fun <- function(x,y) {x > y}
+    exclude.cells <- names(which(Matrix::colSums(sweep(Seurat::GetAssayData(x, slot = "data", assay = assay)[cutoff.feature,,drop=F], 1, cutoff.expression, compare_fun)) < length(cutoff.feature)))
+    cells.plot[which(names(cells.plot) %in% exclude.cells)] <- 0
   }
   if (length(cells.plot) == 0) {
     stop("No cells left after filtering for cutoff.feature.")
   }
   ## cells excluded due to expression of an unwanted gene
   if (!is.null(exclusion.feature)) {
-    for (y in seq_along(SO)) {
-      for (z in exclusion.feature) {
-        cells.plot[which(names(cells.plot) %in% names(which(Seurat::GetAssayData(SO[[y]], slot = "data", assay = assay)[z,] > 0)))] <- 0
-      }
-    }
+    exclude.cells <- unlist(lapply(SO, function(x) names(which(Matrix::colSums(Seurat::GetAssayData(x, slot = "data", assay = assay)[exclusion.feature,,drop=F]) > 0))))
+    cells.plot[which(names(cells.plot) %in% exclude.cells)] <- 0
   }
+
   if (length(cells.plot) == 0) {
     stop("No cells left after filtering for exclusion.feature")
   }
   # downsample - completely remove cells to speed up plotting which may alter the statistics though
   if (downsample < 1) {
     downsample <- downsample*length(cells.plot)
-  } else if (downsample == 1) {
-    downsample <- length(cells.plot)
-  } else {
+  } else if (downsample > 1) {
     downsample <- min(downsample, length(cells.plot))
   }
   if (downsample == 0) {

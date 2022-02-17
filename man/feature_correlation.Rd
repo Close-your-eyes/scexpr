@@ -15,6 +15,9 @@ feature_correlation(
   lm_resid = F,
   bar_fill = c("correlation_sign", "ref_feature_pct"),
   theme = ggplot2::theme_bw(),
+  group.by = NULL,
+  min.group.size = 20,
+  topn = c(10, 10),
   ...
 )
 }

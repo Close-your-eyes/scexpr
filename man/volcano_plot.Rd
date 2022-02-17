@@ -44,10 +44,13 @@ volcano_plot(
   save.path.interactive = NULL,
   gsea.param = NULL,
   interactive.only = F,
+  use.limma = F,
   ...
 )
 }
 \arguments{
+\item{use.limma}{limma for DE gene detection; intended to use subsequent MetaVolcanoR}
+
 \item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{2:3}), c("other", "name1", "name2")), order.discrete = "^other",plot.title = F,}
 }
 \value{

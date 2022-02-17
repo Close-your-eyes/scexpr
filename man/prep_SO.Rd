@@ -12,7 +12,7 @@ prep_SO(
   downsample = 1,
   export_prefix = NULL,
   cluster_resolutions = 0.8,
-  reductions = c("tsne", "umap", "som", "gtqsom"),
+  reductions = c("umap", "som", "gqtsom", "tsne"),
   nhvf = 800,
   npcs = 20,
   nintdims = 30,
@@ -77,7 +77,9 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
-prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta}
+prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
+for EmbedSOM::SOM with "SOM__", for EmbedSOM::GQTSOM with "GQTSOM__" and for EmbedSOM::EmbedSOM
+with "EmbedSOM__"}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file
