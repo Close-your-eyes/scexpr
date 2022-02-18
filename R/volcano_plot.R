@@ -187,7 +187,7 @@ volcano_plot <- function(SO,
 
   if (!interactive.only) {
     vp <- .plot_vp(vd = vd,
-                   p.plot = p.plot,
+                   y = p.plot,
                    x.axis.symmetric = x.axis.symmetric,
                    y.axis.pseudo.log = y.axis.pseudo.log,
                    pseudo.log.sigma = pseudo.log.sigma,
@@ -251,7 +251,7 @@ volcano_plot <- function(SO,
       }
       g2 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
       vp_gsea.1 <- .plot_vp(vd = vd,
-                            p.plot = p.plot,
+                            y = p.plot,
                             x.axis.symmetric = x.axis.symmetric,
                             y.axis.pseudo.log = y.axis.pseudo.log,
                             pseudo.log.sigma = pseudo.log.sigma,
@@ -283,7 +283,7 @@ volcano_plot <- function(SO,
                              max.overlaps = max.overlaps,
                              color.only = T)
       vp_gsea.2 <- .plot_vp(vd = vd,
-                            p.plot = p.plot,
+                            y = p.plot,
                             x.axis.symmetric = x.axis.symmetric,
                             y.axis.pseudo.log = y.axis.pseudo.log,
                             pseudo.log.sigma = pseudo.log.sigma,
@@ -409,7 +409,8 @@ volcano_plot <- function(SO,
 
 
 .plot_vp <- function (vd,
-                      p.plot = "adj.p.val",
+                      x = "log2.fc",
+                      y = "adj.p.val",
                       x.axis.symmetric = T,
                       y.axis.pseudo.log = F,
                       pseudo.log.sigma = 1,
@@ -426,7 +427,9 @@ volcano_plot <- function(SO,
                       p.cut = NA,
                       fc.cut = NA) {
 
-  p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
+  x <- match.arg(x, names(vd))
+  y <- match.arg(y, names(vd)) #c("adj.p.val", "p.val")
+
   vd <- as.data.frame(vd)
   vd$Feature <- rownames(vd)
 
@@ -435,16 +438,18 @@ volcano_plot <- function(SO,
     vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd$Feature)),]
   }
 
-  vd <- rbind(vd[intersect(which(vd[,paste0("pct.", ngn)] >= min.pct), which(vd[,"log2.fc"] < 0)),],
-              vd[intersect(which(vd[,paste0("pct.", pgn)] >= min.pct), which(vd[,"log2.fc"] > 0)),])
+  if (!is.null(ngn) && !is.null(pgn) && min.pct > 0) {
+    vd <- rbind(vd[intersect(which(vd[,paste0("pct.", ngn)] >= min.pct), which(vd[,x] < 0)),],
+                vd[intersect(which(vd[,paste0("pct.", pgn)] >= min.pct), which(vd[,x] > 0)),])
+  }
 
-  vp <- ggplot2::ggplot(vd, ggplot2::aes(x = log2.fc, y = round(scales::oob_squish_infinite(-log10(!!rlang::sym(p.plot)), range = c(0,300)), 2), label = Feature)) +
+  vp <- ggplot2::ggplot(vd, ggplot2::aes(x = !!rlang::sym(x), y = round(scales::oob_squish_infinite(-log10(!!rlang::sym(y)), range = c(0,300)), 2), label = Feature)) +
     ggplot2::geom_point(color = "#999999", alpha = pt.alpha, size = pt.size) +
     ggplot2::geom_point(data = vd[which(vd$infinite.FC == 1),], color = "cornflowerblue", size = pt.size) +
     ggplot2::theme_bw(base_size = font.size, base_family = font.family) +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
 
-  if (pval.tick > 0) {
+  if (!is.null(pval.tick) && pval.tick > 0) {
     gg.brk <- ggplot2::ggplot_build(vp)[["layout"]][["panel_params"]][[1]][["y"]][["breaks"]]
     ord <- order(c(gg.brk, -log10(pval.tick)))
     brk <- c(gg.brk, -log10(pval.tick))
@@ -453,11 +458,12 @@ volcano_plot <- function(SO,
   }
 
 
-  if (p.plot == "adj.p.val") {
-    p.plot_label <- "(adj p-val)"
-  }
-  if (p.plot == "p.val") {
-    p.plot_label <- "(p-val)"
+  if (y == "adj.p.val") {
+    y_label <- "(adj p-val)"
+  } else if (y == "p.val") {
+    y_label <- "(p-val)"
+  } else {
+    y_label <- "p"
   }
 
   if (y.axis.pseudo.log) {
@@ -468,15 +474,15 @@ volcano_plot <- function(SO,
   }
 
   if (is.null(ngn) && is.null(pgn)) {
-    vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(p.plot_label))))
+    vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(y_label))))
   } else {
-    vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(p.plot_label))))
+    vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
   }
 
   if (x.axis.symmetric) {
-    vp <- vp + ggplot2::xlim(-round(max(abs(vd$log2.fc))) - 0.5 - x.axis.extension, round(max(abs(vd$log2.fc))) + 0.5 + x.axis.extension)
+    vp <- vp + ggplot2::xlim(-round(max(abs(vd[,x]))) - 0.5 - x.axis.extension, round(max(abs(vd[,x]))) + 0.5 + x.axis.extension)
   } else {
-    vp <- vp + ggplot2::xlim(round(min(vd$log2.fc)) - 0.5 - x.axis.extension, round(max(vd$log2.fc)) + 0.5 + x.axis.extension)
+    vp <- vp + ggplot2::xlim(round(min(vd[,x])) - 0.5 - x.axis.extension, round(max(vd[,x])) + 0.5 + x.axis.extension)
   }
 
   if (!any(c(is.na(p.cut), is.na(fc.cut)))) {
@@ -484,16 +490,16 @@ volcano_plot <- function(SO,
 
     vd.cut <-
       vd %>%
-      dplyr::filter(abs(log2.fc) >= fc.cut) %>%
-      dplyr::filter(!!rlang::sym(p.plot) <= p.cut)
+      dplyr::filter(abs(!!rlang::sym(x)) >= fc.cut) %>%
+      dplyr::filter(!!rlang::sym(y) <= p.cut)
 
     vd.cut.sum <-
       vd.cut %>%
-      dplyr::mutate(sign = ifelse(log2.fc > 0, "plus", "minus")) %>%
+      dplyr::mutate(sign = ifelse(!!rlang::sym(x) > 0, "plus", "minus")) %>%
       dplyr::group_by(sign) %>%
       dplyr::summarise(n.genes = dplyr::n()) %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(xpos = ifelse(sign == "plus", fc.cut + 0.75*(max(abs(vd.cut$log2.fc))-fc.cut), -(fc.cut + 0.75*(max(abs(vd.cut$log2.fc))-fc.cut)))) %>%
+      dplyr::mutate(xpos = ifelse(sign == "plus", fc.cut + 0.75*(max(abs(vd.cut[,x]))-fc.cut), -(fc.cut + 0.75*(max(abs(vd.cut[,x]))-fc.cut)))) %>%
       dplyr::mutate(ypos = -log10(p.cut)*2)
 
     vp <-
