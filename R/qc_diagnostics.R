@@ -7,6 +7,8 @@
 #' @param resolutions
 #' @param ...
 #'
+#' On error in scDblFinder: Increase nhvf or try to change any other parameter
+#'
 #' @return
 #' @export
 #'
@@ -29,9 +31,10 @@ qc_diagnostic <- function(data.dir, nhvf = 500, npcs = 10, min_nCount_RNA = 300,
   if (any(matrixStats::colSums2(counts) < min_nCount_RNA)) {
     warning(paste0("Transcriptomes (cells) with less than ", min_nCount_RNA, " total transcripts found. These will be excluded from finding doublets. They will have NA as dbl_score."))
   }
+
   dbl_score <- setNames(scDblFinder::computeDoubletDensity(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
                                                            subset.row = Seurat::VariableFeatures(SO),
-                                                           dims = npcs),
+                                                           dims = npcs, ...),
                         nm = colnames(counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)]))
 
   SO <- Seurat::AddMetaData(SO, dbl_score, "dbl_score")
@@ -78,6 +81,6 @@ qc_diagnostic <- function(data.dir, nhvf = 500, npcs = 10, min_nCount_RNA = 300,
                               rel_heights = c(0.3,0.7),
                               align = "hv", axis = "tblr")
 
-  return(list(SO = SO, qc_p1 = qc_p1, qc_p2 = qc_p2))
+  return(list(SO = SO, qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3))
 
 }
