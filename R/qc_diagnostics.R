@@ -13,7 +13,7 @@
 #' @export
 #'
 #' @examples
-qc_diagnostic <- function(data.dir, nhvf = 500, npcs = 10, min_nCount_RNA = 300, resolutions = seq(0.6,0.9,0.1),  ...) {
+qc_diagnostic <- function(data.dir, nhvf = 500, npcs = 10, min_nCount_RNA = 300, resolutions = seq(0.4,0.9,0.1),  ...) {
   if (length(data.dir) > 1) {
     message("Advice: Better provide only one data.dir, e.g. one sample only.")
   }
