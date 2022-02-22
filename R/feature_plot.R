@@ -893,7 +893,8 @@ feature_plot <- function(SO,
 
 
   if (order) {
-    data <- data[order(data[,1]),]
+    # abs: in case negative values are contained in meta.col, any extreme away from 0 will be plotted on top
+    data <- data[order(abs(data[,1])),]
   }
 
   return(data)
