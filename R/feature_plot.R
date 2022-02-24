@@ -68,6 +68,8 @@
 #' @return
 #' @export
 #'
+#' @importFrom magrittr %>%
+#'
 #' @examples
 feature_plot <- function(SO,
                          features,

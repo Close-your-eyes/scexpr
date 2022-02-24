@@ -15,12 +15,14 @@
 #' @return
 #' @export
 #'
+#' @importFrom magrittr %>%
+#'
 #' @examples
 qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300, resolutions = seq(0.4,0.9,0.1), SoupX = F, SoupX.resolution = 0.6, ...) {
 
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
-  # decontX as alternative if raw_feature_bc_matrix is missing
+  # decontX as alternative if raw_feature_bc_matrix is missing (https://github.com/campbio/celda)
 
   # check data.dir
   if (class(data.dir) == "list") {
@@ -96,6 +98,15 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
       Seurat::FindNeighbors(dims = 1:npcs) %>%
       Seurat::FindClusters(algorithm = 1, resolution = resolutions)
 
+    sc <- SoupX::setDR(sc, SO_sx@reductions$umap@cell.embeddings)
+
+    sc_info_df <- data.frame(n_expr_uncorrected = Matrix::rowSums(sc$toc > 0),
+                             n_expr_corrected = Matrix::rowSums(out > 0)) %>%
+      dplyr::mutate(abs_diff = n_expr_uncorrected-n_expr_corrected) %>%
+      dplyr::mutate(rel_diff = abs_diff/n_expr_uncorrected) %>%
+      dplyr::filter(abs_diff > 0) %>%
+      tibble::rownames_to_column("Feature")
+
     message("Create a SoupX RNA assay as follows: SO[['SoupXRNA']] <- Seurat::CreateAssayObject(counts = soupx_matrix).")
     SOs <- list(SO, SO_sx)
     names(SOs) <- c("original", "SoupX")
@@ -166,8 +177,9 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
   if (length(results) == 1) {
     return(results[[1]])
   } else {
-    results <- c(results, list(sc))
-    names(results) <- c(names(SOs), "SoupX_results")
+    message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = scexpr::col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
+    results <- c(results, list(sc), list(sc_info_df))
+    names(results) <- c(names(SOs), "sc", "sc_info")
     return(results)
   }
 }
