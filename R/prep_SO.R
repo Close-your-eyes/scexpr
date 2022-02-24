@@ -29,8 +29,8 @@
 #' Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 #' Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
 #' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
-#' for EmbedSOM::SOM with "SOM__", for EmbedSOM::GQTSOM with "GQTSOM__" and for EmbedSOM::EmbedSOM
-#' with "EmbedSOM__"
+#' for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
+#' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
 #' @param celltype_label label
 #'
