@@ -1,9 +1,9 @@
 #' Color palettes
 #'
-#' Common function to get color palettes from different packages. Provided are palettes from viridisLite, colorRamps, wesanderson and RColorBrewer.
+#' Common function to get color palettes from different packages: viridisLite, colorRamps, wesanderson and RColorBrewer.
 #' Moreover three custom palettes: "custom", "dutch" and "spanish".
 #'
-#' See availalbe pallettes:
+#' See available palettes:
 #' c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)], rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish")
 #'
 #' @param name name of the palette
@@ -24,8 +24,13 @@ col_pal <- function(name = "custom",
 
   scl <- NULL
 
-  if (any(grepl(name, c(rev(ls(getNamespace("viridisLite")))[-c(1:2)], rev(ls(getNamespace("colorRamps")))[-c(2:3)]), ignore.case = T))) {
-    colfun <- match.fun(grep(name, c(rev(ls(getNamespace("viridisLite")))[-c(1:2)], rev(ls(getNamespace("colorRamps")))[-c(2:3)]), ignore.case = T, value = T))
+  if (any(grepl(name, c(ls(getNamespace("viridisLite")))))) {
+    scl <- viridis::viridis_pal(option = name)(n)
+  }
+
+  if (any(grepl(name, ls(getNamespace("colorRamps")), ignore.case = T))) {
+    library("colorRamps")
+    colfun <- match.fun(grep(name, ls(getNamespace("colorRamps")), ignore.case = T, value = T)[1])
     scl <- colfun(n)
   }
 
