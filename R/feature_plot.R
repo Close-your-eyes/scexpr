@@ -467,6 +467,7 @@ feature_plot <- function(SO,
                      strip.text.x = ggplot2::element_text(size = strip.font.size, family = font.family),
                      legend.background = ggplot2::element_blank(),
                      legend.key.size = ggplot2::unit(legend.key.size, "cm"),
+                     legend.key = ggplot2::element_blank(), ## keeps background of legend symbols transparent
                      ...)
 
 
@@ -896,7 +897,12 @@ feature_plot <- function(SO,
 
   if (order) {
     # abs: in case negative values are contained in meta.col, any extreme away from 0 will be plotted on top
-    data <- data[order(abs(data[,1])),]
+    if (is.numeric(data[,1])) {
+      data <- data[order(abs(data[,1])),]
+    } else {
+      data <- data[order(data[,1]),]
+    }
+
   }
 
   return(data)
