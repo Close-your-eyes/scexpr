@@ -71,8 +71,14 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
     stop("SoupX.resolution not found in resolutions.")
   }
 
+
+  filt_data <- Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T))
+  if (is.list(filt_data)) {
+    filt_data <- filt_data[["Gene Expression"]]
+  }
+
   SO <-
-    Seurat::CreateSeuratObject(counts = as.matrix(Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T)))) %>%
+    Seurat::CreateSeuratObject(counts = as.matrix(filt_data)) %>%
     Seurat::NormalizeData() %>%
     Seurat::FindVariableFeatures(nfeatures = nhvf) %>%
     Seurat::ScaleData() %>%
@@ -82,8 +88,12 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
     Seurat::FindClusters(algorithm = 1, resolution = resolutions)
 
   if (SoupX) {
-    sc <- SoupX::SoupChannel(tod = Seurat::Read10X(grep("raw_feature_bc_matrix", data.dir, value = T)),
-                             toc = Seurat::Read10X(grep("filtered_feature_bc_matrix", data.dir, value = T)))
+    raw_data <- Seurat::Read10X(data.dir = grep("raw_feature_bc_matrix", data.dir, value = T))
+    if (is.list(raw_data)) {
+      raw_data <- raw_data[["Gene Expression"]]
+    }
+    sc <- SoupX::SoupChannel(tod = raw_data,
+                             toc = filt_data)
     sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
     sc = SoupX::autoEstCont(sc)
     out = SoupX::adjustCounts(sc)
@@ -137,35 +147,38 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
     SO@meta.data$residuals_norm <- SO@meta.data$residuals/SO@meta.data$nCount_RNA_log/SO@meta.data$nFeature_RNA_log
 
     qc_p1 <- scexpr::feature_plot(SO, features = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals_norm", paste0("RNA_snn_res.", resolutions[length(resolutions)])),
-                                  reduction = "UMAP", legend.position = c(0,1), plot.labels = "text", label.size = 10)
+                                  reduction = "UMAP", legend.position = c(0,1), plot.labels = "text", label.size = 6)
 
     qc_p2 <- cowplot::plot_grid(scexpr::qc_params_meta_cols(SO,
                                                             qc.cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals_norm"),
-                                                            meta.cols = paste0("RNA_snn_res.", resolutions[length(resolutions)])),
+                                                            meta.cols = paste0("RNA_snn_res.", resolutions[length(resolutions)]),
+                                                            strip.text = element_text(size = 6), panel.grid.minor = ggplot2::element_blank()),
                                 ggplot2::ggplot(SO@meta.data, ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = !!rlang::sym(paste0("RNA_snn_res.", resolutions[length(resolutions)])))) +
                                   ggplot2::geom_point() +
                                   ggplot2::theme_bw() +
-                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank()) +
+                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
+                                                 legend.key = element_blank(), legend.key.size = ggplot2::unit(0.3, "cm")) +
                                   ggplot2::scale_color_manual(values = scexpr::col_pal()) +
                                   ggplot2::labs(color = ""),
                                 ggplot2::ggplot(dplyr::arrange(SO@meta.data, dbl_score_log), ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = dbl_score_log)) +
                                   ggplot2::geom_point() +
                                   ggplot2::theme_bw() +
-                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank()) +
+                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank()) +
                                   ggplot2::scale_color_gradientn(colors = scexpr::col_pal("spectral")),
                                 ggplot2::ggplot(dplyr::arrange(SO@meta.data, pct_mt_log), ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = pct_mt_log)) +
                                   ggplot2::geom_point() +
                                   ggplot2::theme_bw() +
-                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank()) +
+                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank()) +
                                   ggplot2::scale_color_gradientn(colors = scexpr::col_pal("spectral")),
                                 align = "hv", axis = "tblr")
 
     qc_p3 <- cowplot::plot_grid(scexpr::feature_plot(SO,
                                                      features = paste0("RNA_snn_res.", resolutions),
-                                                     reduction = "UMAP", legend.position = "none", plot.labels = "text", label.size = 10, nrow.combine = 1, plot.title = F),
+                                                     reduction = "UMAP", legend.position = "none", plot.labels = "text", label.size = 3, nrow.combine = 1, plot.title = F),
                                 scexpr::qc_params_meta_cols(SO,
                                                             qc.cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log"),
-                                                            meta.cols = paste0("RNA_snn_res.", resolutions)),
+                                                            meta.cols = paste0("RNA_snn_res.", resolutions),
+                                                            panel.grid.minor = ggplot2::element_blank()),
                                 nrow = 2,
                                 rel_heights = c(0.3,0.7),
                                 align = "hv", axis = "tblr")
