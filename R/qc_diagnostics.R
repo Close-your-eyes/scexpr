@@ -136,8 +136,6 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
     SO@meta.data$residuals <- stats::residuals(lm)
     SO@meta.data$residuals_norm <- SO@meta.data$residuals/SO@meta.data$nCount_RNA_log/SO@meta.data$nFeature_RNA_log
 
-
-    str(SO@meta.data)
     qc_p1 <- scexpr::feature_plot(SO, features = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals_norm", paste0("RNA_snn_res.", resolutions[length(resolutions)])),
                                   reduction = "UMAP", legend.position = c(0,1), plot.labels = "text", label.size = 10)
 
