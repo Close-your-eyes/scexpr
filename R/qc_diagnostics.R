@@ -183,7 +183,9 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
                                 rel_heights = c(0.3,0.7),
                                 align = "hv", axis = "tblr")
 
-    return(list(SO = SO, qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3))
+    #remove count slot to save memory
+    return(list(SO = Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
+                qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3))
   })
 
   if (length(results) == 1) {
