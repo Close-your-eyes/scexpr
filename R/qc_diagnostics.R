@@ -1,5 +1,7 @@
 #' Title
 #'
+#' On error in scDblFinder: Increase nhvf or try to change any other parameter
+#'
 #' @param data.dir list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix, or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
 #' if not named, then the name of the common parent folder is uses as name(s)
 #' @param nhvf
@@ -8,9 +10,9 @@
 #' @param resolutions
 #' @param SoupX logical whether to run SoupX. If T, raw_feature_bc_matrix is needed.
 #' @param SoupX.resolution
+#' @param cells select to include
+#' @param invert_cells invert cell selection, if TRUE cells are excluded
 #' @param ...
-#'
-#' On error in scDblFinder: Increase nhvf or try to change any other parameter
 #'
 #' @return
 #' @export
@@ -18,7 +20,16 @@
 #' @importFrom magrittr %>%
 #'
 #' @examples
-qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300, resolutions = seq(0.4,0.9,0.1), SoupX = F, SoupX.resolution = 0.6, ...) {
+qc_diagnostic <- function(data.dir,
+                          nhvf = 1000,
+                          npcs = 10,
+                          min_nCount_RNA = 300,
+                          resolutions = seq(0.4,0.9,0.1),
+                          SoupX = F,
+                          SoupX.resolution = 0.6,
+                          cells = NULL,
+                          invert_cells = F,
+                          ...) {
 
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
@@ -77,6 +88,28 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
     filt_data <- filt_data[["Gene Expression"]]
   }
 
+  if (!is.null(cells))) {
+    if (any(cells) %in% colnames(filt_data)) {
+      message(length(which((any(cells) %in% colnames(filt_data)))), " names from cells found in column names of data.")
+      cells_sub <- cells[which(cells %in% colnames(filt_data))]
+      if (invert_cells) {
+        filt_data <- filt_data[,which(!colnames(filt_data) %in% cells_sub)]
+      } else {
+        filt_data <- filt_data[,cells_sub]
+      }
+    } else {
+      message("Non of cells found in column names of data.")
+    }
+
+    cells_sub <- cells[which(cells %in% colnames(filt_data))]
+    if (invert_cells) {
+      filt_data <- filt_data[,which(!colnames(filt_data) %in% cells_sub)]
+    } else {
+      filt_data <- filt_data[,cells_sub]
+    }
+  }
+
+
   SO <-
     Seurat::CreateSeuratObject(counts = as.matrix(filt_data)) %>%
     Seurat::NormalizeData() %>%
@@ -88,6 +121,15 @@ qc_diagnostic <- function(data.dir, nhvf = 1000, npcs = 10, min_nCount_RNA = 300
     Seurat::FindClusters(algorithm = 1, resolution = resolutions)
 
   if (SoupX) {
+
+    if (!is.null(cells))) {
+      # read again to get the full picture, in case cells (e.g. low quality ones) were removed
+      filt_data <- Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T))
+      if (is.list(filt_data)) {
+        filt_data <- filt_data[["Gene Expression"]]
+      }
+    }
+
     raw_data <- Seurat::Read10X(data.dir = grep("raw_feature_bc_matrix", data.dir, value = T))
     if (is.list(raw_data)) {
       raw_data <- raw_data[["Gene Expression"]]
