@@ -161,7 +161,7 @@ feature_plot <- function(SO,
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
-    print("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
+    message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
     max.q.cutoff <- max.q.cutoff/100
     min.q.cutoff <- min.q.cutoff/100
   }
@@ -287,7 +287,7 @@ feature_plot <- function(SO,
       # plot expressers and non-expressers
       if (binary) {
         if (any(data[,1] < 0)) {
-          print(paste0("binary (+/-) may not be meaningful as there are negative expression values for ", feature, "."))
+          message("binary (+/-) may not be meaningful as there are negative expression values for ", feature, ".")
         }
         data[,1] <- ifelse(data[,1] > 0, "+", "-")
         plot <- plot + ggplot2::geom_point(data = data[which(cells == 1),], ggplot2::aes(shape = !!shape.by, color = !!rlang::sym(x)), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
@@ -339,12 +339,12 @@ feature_plot <- function(SO,
       } else {
         if (length(unique(order.discrete)) != length(order.discrete)) {
           order.discrete <- unique(order.discrete)
-          print(paste0("order.discrete is made unique: ", paste(order.discrete, collapse = ", ")))
+          message("order.discrete is made unique: ", paste(order.discrete, collapse = ", "))
         }
 
         if (any(!gsub("\\$$", "", (gsub("^\\^", "", order.discrete))) %in% levels(as.factor(data[,1])))) {
           order.discrete <- order.discrete[which(gsub("\\$$", "", (gsub("^\\^", "", order.discrete))) %in% levels(as.factor(data[,1])))]
-          print(paste0("order.discrete reduced to existing levels: ", paste(gsub("\\$$", "", (gsub("^\\^", "", order.discrete))), collapse = ", ")))
+          message("order.discrete reduced to existing levels: ", paste(gsub("\\$$", "", (gsub("^\\^", "", order.discrete))), collapse = ", "))
         }
 
         # optionally: pt.size as names of order.discrete
@@ -367,7 +367,7 @@ feature_plot <- function(SO,
 
       if (!is.null(plot.labels)) {
         if (is.numeric(data[,1])) {
-          print(paste0("Labels not plotted as ", x, " is numeric."))
+          message("Labels not plotted as ", x, " is numeric.")
         } else {
           label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z, avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]), avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
           names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
@@ -426,7 +426,7 @@ feature_plot <- function(SO,
       }
     } else {
       if (length(SO) > 1 || !is.null(split.by)) {
-        print("You may set the legend.position to left, right, bottom or top to indicate it is valid for every facet.")
+        message("You may set the legend.position to left, right, bottom or top to indicate it is valid for every facet.")
       }
       plot <- plot + ggplot2::theme(legend.justification = c(legend.position[1], legend.position[2]), legend.position = c(legend.position[1], legend.position[2]))
     }
@@ -485,7 +485,7 @@ feature_plot <- function(SO,
     # plot cutoff feature inset plot (https://stackoverflow.com/questions/5219671/it-is-possible-to-create-inset-graphs)
     if (!is.null(cutoff.feature) && plot.cutoff.feature.inset) {
       if (length(SO) > 1 || !is.null(split.by)) {
-        print("The inset plot does not appear on every facet.")
+        message("The inset plot does not appear on every facet.")
       }
       inset.data <- do.call(rbind, lapply(names(SO), function(y) {
         data.frame(cbind(as.matrix(t(Seurat::GetAssayData(SO[[y]], slot = "data", assay = assay)[cutoff.feature,,drop = F]))))
@@ -542,7 +542,7 @@ feature_plot <- function(SO,
   assay <- match.arg(assay, c("RNA", "SCT"))
 
   if (is.null(names(SO)) && length(SO) > 1) {
-    print("List of SO has no names. Naming them numerically in order as provided.")
+    message("List of SO has no names. Naming them numerically in order as provided.")
     names(SO) <- as.character(seq_along(SO))
   }
 
@@ -595,7 +595,7 @@ feature_plot <- function(SO,
   }
   red <- grep(reduction, common_red, ignore.case = T, value = T)
   if (length(red) == 0) {
-    print("reduction not found in SOs., Changing to an arbitrary common one in SOs.")
+    message("reduction not found in SOs., Changing to an arbitrary common one in SOs.")
     red <- sample(common_red, 1)
   } else if (length(red) > 1) {
     red <- common_red[which.min(utils::adist(reduction, common_red, ignore.case = T))]
@@ -642,7 +642,7 @@ feature_plot <- function(SO,
   }
 
   if (any(duplicated(cells))) {
-    print("Duplicates found in cells.")
+    message("Duplicates found in cells.")
     cells <- unique(cells)
   }
 
@@ -682,7 +682,7 @@ feature_plot <- function(SO,
       }
     }
     if (length(intersect(cells, all.cells)) < length(cells)) {
-      print("Not all cells found in SO(s). Reduced to those which exist.")
+      message("Not all cells found in SO(s). Reduced to those which exist.")
     }
     cells <- intersect(cells, all.cells)
     if (length(cells) == 0) {
@@ -736,7 +736,7 @@ feature_plot <- function(SO,
 
 .check.aliases <- function(x, feature.aliases, data) {
   if (!is.null(feature.aliases) && x %in% names(feature.aliases)) {
-    print(paste0(x, " changed to ", as.character(feature.aliases[which(names(feature.aliases) == x)])))
+    message(x, " changed to ", as.character(feature.aliases[which(names(feature.aliases) == x)]))
     names(data)[1] <- as.character(feature.aliases[which(names(feature.aliases) == x)])
     x <- names(data)[1]
   }
@@ -760,7 +760,7 @@ feature_plot <- function(SO,
   if (length(features.out) == 0) {stop("Non of the provided features has not been found in every SO. No features left to plot.")}
   hits <- .hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
   if (any(hits > 1)) {
-    print(paste0(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered."))
+    message(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered.")
     features.out <- .feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
     if (length(features.out) == 0) {stop("Non of the provided features has not been found in every SO. No features left to plot.")}
     hits <- .hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
@@ -773,7 +773,7 @@ feature_plot <- function(SO,
     ignore.case <- T
   }
 
-  if (length(features.out) < length(features)) {print(paste0("Features not found in every SO: ", paste(setdiff(features, features.out), collapse = ",")))}
+  if (length(features.out) < length(features)) {message("Features not found in every SO: ", paste(setdiff(features, features.out), collapse = ","))}
   if (length(features.out) > length(features)) {stop("More features after check.features than before?!")}
   return(features.out)
 }
@@ -836,7 +836,7 @@ feature_plot <- function(SO,
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
-    print("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
+    message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
     max.q.cutoff <- max.q.cutoff/100
     min.q.cutoff <- min.q.cutoff/100
   }
@@ -880,7 +880,7 @@ feature_plot <- function(SO,
   }
 
   if (is.numeric(data[,1]) && all(data[,1] == 0)) {
-    print(paste0("No expressers found for ", feature, "."))
+    message("No expressers found for ", feature, ".")
   }
 
   # use squishing to dampen extreme values - this will produce actually wrong limits on the legend
