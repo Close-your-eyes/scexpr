@@ -24,11 +24,12 @@ qc_diagnostic <- function(data.dir,
                           nhvf = 1000,
                           npcs = 10,
                           min_nCount_RNA = 300,
-                          resolutions = seq(0.4,0.9,0.1),
+                          resolutions = c(0.4,0.7,0.9),
                           SoupX = F,
                           SoupX.resolution = 0.6,
                           cells = NULL,
                           invert_cells = F,
+                          qc_meta_resolution = 0.4,
                           ...) {
 
   # set ... for computeDoubletDensity
@@ -80,6 +81,10 @@ qc_diagnostic <- function(data.dir,
 
   if (SoupX && !any(grepl(SoupX.resolution, resolutions))) {
     stop("SoupX.resolution not found in resolutions.")
+  }
+
+  if (!is.numeric(qc_meta_resolution) | length(qc_meta_resolution) != 1) {
+    stop("qc_meta_resolution has to a numeric of length one. It is passed to the resolution parameter of Seurat::FindClusters.")
   }
 
 
@@ -188,52 +193,114 @@ qc_diagnostic <- function(data.dir,
     SO@meta.data$residuals <- stats::residuals(lm)
     SO@meta.data$residuals_norm <- SO@meta.data$residuals/SO@meta.data$nCount_RNA_log/SO@meta.data$nFeature_RNA_log
 
-    qc_p1 <- scexpr::feature_plot(SO, features = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals_norm", paste0("RNA_snn_res.", resolutions[length(resolutions)])),
-                                  reduction = "UMAP", legend.position = c(0,1), plot.labels = "text", label.size = 6)
 
-    qc_p2 <- cowplot::plot_grid(scexpr::qc_params_meta_cols(SO,
-                                                            qc.cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals_norm"),
-                                                            meta.cols = paste0("RNA_snn_res.", resolutions[length(resolutions)]),
-                                                            strip.text = element_text(size = 6), panel.grid.minor = ggplot2::element_blank()),
-                                ggplot2::ggplot(SO@meta.data, ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = !!rlang::sym(paste0("RNA_snn_res.", resolutions[length(resolutions)])))) +
-                                  ggplot2::geom_point() +
+    wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
+
+    ## clustering on meta data (quality metrics)
+    meta <- dplyr::select(SO@meta.data, nCount_RNA, nFeature_RNA, dbl_score, pct_mt, residuals)
+    meta <- scale_min_max(meta)
+    umap_dims <- uwot::umap(meta, metric = "cosine")
+    colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
+    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta, annoy.metric = "cosine")$snn, resolution = qc_meta_resolution)
+    colnames(clusters) <- paste0("meta_", colnames(clusters))
+    SO <- Seurat::AddMetaData(SO, cbind(umap_dims, clusters))
+
+    meta <- cbind(meta, cbind(umap_dims, clusters))
+    # dependencies below!
+    qc_cols <- c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log")
+    meta_cols <- c(paste0("RNA_snn_res.", resolutions[length(resolutions)]), colnames(clusters))
+
+    qc_p1 <- feature_plot(SO,
+                          features = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", meta_cols[1]),
+                          reduction = "UMAP", legend.position = "none")
+
+    qc_p2 <- cowplot::plot_grid(ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, meta_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
+                                                ggplot2::aes(x = !!rlang::sym(meta_cols[1]), y = value, color = !!rlang::sym(meta_cols[2]))) +
+                                  ggplot2::geom_jitter(width = 0.2, size = 0.3) +
                                   ggplot2::theme_bw() +
-                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),
-                                                 legend.key = element_blank(), legend.key.size = ggplot2::unit(0.3, "cm")) +
-                                  ggplot2::scale_color_manual(values = scexpr::col_pal()) +
-                                  ggplot2::labs(color = ""),
-                                ggplot2::ggplot(dplyr::arrange(SO@meta.data, dbl_score_log), ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = dbl_score_log)) +
-                                  ggplot2::geom_point() +
-                                  ggplot2::theme_bw() +
-                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank()) +
-                                  ggplot2::scale_color_gradientn(colors = scexpr::col_pal("spectral")),
-                                ggplot2::ggplot(dplyr::arrange(SO@meta.data, pct_mt_log), ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = pct_mt_log)) +
-                                  ggplot2::geom_point() +
-                                  ggplot2::theme_bw() +
-                                  ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank()) +
-                                  ggplot2::scale_color_gradientn(colors = scexpr::col_pal("spectral")),
+                                  ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
+                                                 panel.grid.minor.x = ggplot2::element_blank(), axis.title = ggplot2::element_blank(),
+                                                 legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
+                                  ggplot2::scale_color_manual(values = col_pal()) +
+                                  ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
+                                  ggplot2::facet_grid(rows = ggplot2::vars(qc_param), cols = ggplot2::vars(meta_cols[1]), scales = "free_y"),
+                                cowplot::plot_grid(
+                                  ggplot2::ggplot(SO@meta.data, ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = !!rlang::sym(meta_cols[1]))) +
+                                    ggplot2::geom_point() +
+                                    ggplot2::theme_bw() +
+                                    ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0),
+                                                   legend.background = ggplot2::element_blank(),
+                                                   panel.grid = ggplot2::element_blank(), legend.key = ggplot2::element_blank(),
+                                                   legend.key.size = ggplot2::unit(0.4, "cm")) +
+                                    ggplot2::scale_color_manual(values = col_pal()) +
+                                    ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3), ncol = 3)) +
+                                    ggplot2::labs(color = ""),
+                                  ggplot2::ggplot(dplyr::arrange(SO@meta.data, dbl_score_log), ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = dbl_score_log)) +
+                                    ggplot2::geom_point() +
+                                    ggplot2::theme_bw() +
+                                    ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid = ggplot2::element_blank()) +
+                                    ggplot2::scale_color_gradientn(colors = col_pal("spectral"))  +
+                                    ggplot2::guides(color = ggplot2::guide_colorbar(barwidth = 0.5, barheight = 3, label.theme = ggplot2::element_text(size = 6), title.theme = ggplot2::element_text(size = 8))),
+                                  ggplot2::ggplot(dplyr::arrange(SO@meta.data, pct_mt_log), ggplot2::aes(nCount_RNA_log, nFeature_RNA_log, color = pct_mt_log)) +
+                                    ggplot2::geom_point() +
+                                    ggplot2::theme_bw() +
+                                    ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid = ggplot2::element_blank()) +
+                                    ggplot2::scale_color_gradientn(colors = col_pal("spectral"))  +
+                                    ggplot2::guides(color = ggplot2::guide_colorbar(barwidth = 0.5, barheight = 3, label.theme = ggplot2::element_text(size = 6), title.theme = ggplot2::element_text(size = 8))),
+                                  ncol = 1, align = "hv", axis = "tblr"),
                                 align = "hv", axis = "tblr")
 
-    qc_p3 <- cowplot::plot_grid(scexpr::feature_plot(SO,
-                                                     features = paste0("RNA_snn_res.", resolutions),
-                                                     reduction = "UMAP", legend.position = "none", plot.labels = "text", label.size = 3, nrow.combine = 1, plot.title = F),
-                                scexpr::qc_params_meta_cols(SO,
-                                                            qc.cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log"),
-                                                            meta.cols = paste0("RNA_snn_res.", resolutions),
-                                                            panel.grid.minor = ggplot2::element_blank()),
+    qc_p3 <- cowplot::plot_grid(feature_plot(SO,
+                                             features = meta_cols[1],
+                                             reduction = "UMAP", legend.position = "none", plot.labels = "text", label.size = 3, nrow.combine = 1, plot.title = F),
+                                qc_params_meta_cols(SO,
+                                                    qc.cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log"),
+                                                    meta.cols = paste0("RNA_snn_res.", resolutions),
+                                                    panel.grid.minor.x = ggplot2::element_blank(),
+                                                    panel.grid.minor.y = ggplot2::element_blank(),
+                                                    panel.grid.major.x = ggplot2::element_blank()),
                                 nrow = 2,
                                 rel_heights = c(0.3,0.7),
                                 align = "hv", axis = "tblr")
 
+    qc_p4 <- cowplot::plot_grid(
+      cowplot::plot_grid(ggplot2::ggplot(meta, ggplot2::aes(x = meta_UMAP_1, y = meta_UMAP_2, color = !!rlang::sym(meta_cols[2]))) +
+                           ggplot2::geom_point() +
+                           ggplot2::theme_bw() +
+                           ggplot2::theme(legend.position = "none", legend.background = ggplot2::element_blank(), legend.key = ggplot2::element_blank(), panel.grid = ggplot2::element_blank(),
+                                          axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank()) +
+                           scale_color_manual(values = col_pal("custom")) +
+                           facet_wrap(vars(meta_cols[2])),
+                         ggplot2::ggplot(meta, ggplot2::aes(x = meta_UMAP_1, y = meta_UMAP_2)) +
+                           ggpointdensity::geom_pointdensity() +
+                           ggplot2::theme_bw() +
+                           ggplot2::theme(legend.position = "none", panel.grid = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank()) +
+                           ggplot2::scale_color_gradientn(colors = col_pal("spectral")),
+                         scexpr:::freq_pie_chart(SO = SO, meta.col = meta.cols[2]),
+                         ncol = 1, align = "hv", axis = "tblr"),
+      ggplot2::ggplot(meta %>% tidyr::pivot_longer(cols = c(nCount_RNA, nFeature_RNA, dbl_score, pct_mt, residuals), names_to = "stat", values_to = "value"), ggplot2::aes(x = !!rlang::sym(meta_cols[2]), y = value, color = !!rlang::sym(meta_cols[2]))) +
+        ggplot2::geom_jitter(width = 0.1) +
+        ggplot2::theme_bw() +
+        ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(), panel.grid.minor.x = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), legend.position = "none") +
+        scale_color_manual(values = col_pal("custom")) +
+        ggplot2::facet_wrap(ggplot2::vars(stat)),
+      align = "hv", axis = "tblr")
+
+    cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolutions), function(x) {
+      presto::wilcoxauc(SO, group_by = x, seurat_assay = "RNA", assay = "data")
+    })
+    names(cluster_marker_list) <- paste0("RNA_snn_res.", resolutions)
+
     #remove count slot to save memory
     return(list(SO = Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions)),
-                qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3))
+                qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3, qc_p4 = qc_p4,
+                cluster_markers = cluster_marker_list))
   })
 
   if (length(results) == 1) {
     return(results[[1]])
   } else {
-    message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = scexpr::col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
+    message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
     results <- c(results, list(sc), list(sc_info_df))
     names(results) <- c(names(SOs), "sc", "sc_info")
     return(results)
