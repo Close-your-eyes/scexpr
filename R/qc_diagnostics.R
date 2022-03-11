@@ -88,7 +88,7 @@ qc_diagnostic <- function(data.dir,
     filt_data <- filt_data[["Gene Expression"]]
   }
 
-  if (!is.null(cells))) {
+  if (!is.null(cells)) {
     if (any(cells) %in% colnames(filt_data)) {
       message(length(which((any(cells) %in% colnames(filt_data)))), " names from cells found in column names of data.")
       cells_sub <- cells[which(cells %in% colnames(filt_data))]
@@ -122,7 +122,7 @@ qc_diagnostic <- function(data.dir,
 
   if (SoupX) {
 
-    if (!is.null(cells))) {
+    if (!is.null(cells)) {
       # read again to get the full picture, in case cells (e.g. low quality ones) were removed
       filt_data <- Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T))
       if (is.list(filt_data)) {
