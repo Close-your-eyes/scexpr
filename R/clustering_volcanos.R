@@ -7,6 +7,7 @@
 #' @param save.path
 #' @param lapply_fun function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
 #' @param ... additional argument to the lapply function; e.g. mc.cores may be passed when parallel::mclapply is chosen above
+#' @param assay
 #'
 #' @return
 #' @export

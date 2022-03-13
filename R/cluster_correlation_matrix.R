@@ -1,17 +1,28 @@
-#' Title
+#' Find groups (clusters) of cells (single cell transcriptomes) with highest gene expression correlation in two Seurat objects
 #'
-#' @param SO
-#' @param assay
-#' @param meta.cols
-#' @param levels
-#' @param complement.levels
-#' @param features
-#' @param avg.expr
-#' @param method
-#' @param corr.in.percent
-#' @param round.corr
+#' Sometimes one wants to avoid combining data sets into a single seurat object as this often requires to employ an integration procedure or a
+#' batch correction and respective uncertainties. At some point then one may be interested in which clusters correspond to
+#' each other in separate seurat object. This function quickly returns a graphic and data frames to judge best matching clusters.
+#' Seurat::AverageExpression is used to derive average gene expressions per cluster. Selected gene (features) are then used
+#' for correlation calculation.
 #'
-#' @return
+#' @param SO named list of exactly 2 Seurat objects
+#' @param assay which assay to obtain expression values from
+#' @param meta.cols character vector of length 2, indicating the column names of meta.data in SO[[1]] and SO[[2]] to use for comparison,
+#' e.g. the clustering columns in both SOs
+#' @param levels list of length 2 indicating the factor levels in meta.cols to include; this also defines axis orders;
+#' can be incomplete e.g. if order matters only for some levels, if complement.levels = T the missing levels are added randomly
+#' @param complement.levels add all missing levels in random order
+#' @param features features to use for correlation calculation; will always be reduced to intersecting features between SOs;
+#' if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
+#' or a vector of features
+#' @param avg.expr avg.expr from a previous return list of cluster_correlation_matrix; e.g. only to change axis orders avoiding
+#' repeated calculation
+#' @param method which correlation metric to calculate, passed to stats::cor
+#' @param corr.in.percent display correlation in percent (TRUE, T) or as a fraction (FALSE, F)
+#' @param round.corr decimal places to round correlation values to
+#'
+#' @return list with (i) ggplot object of correlation matrix, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
 #'
 #' @examples
@@ -20,7 +31,7 @@ cluster_correlation_matrix <- function(SO,
                                        meta.cols,
                                        levels = NULL, # NA possible
                                        complement.levels = F,
-                                       features = NULL, # all, pca
+                                       features = c("all", "pca"),
                                        avg.expr,
                                        method = c("pearson", "kendall", "spearman"),
                                        corr.in.percent = FALSE,
@@ -28,6 +39,10 @@ cluster_correlation_matrix <- function(SO,
 
   if (!requireNamespace("reshape2", quietly = T)) {
     utils::install.packages("reshape2")
+  }
+
+  if (length(features) == 1) {
+    match.arg(features, choices = c("all", "pca"))
   }
 
   if (missing(meta.cols)) {
@@ -69,10 +84,7 @@ cluster_correlation_matrix <- function(SO,
   meta.cols[1] <- .check.features(SO[[1]], features = meta.cols[1], rownames = F)
   meta.cols[2] <- .check.features(SO[[2]], features = meta.cols[2], rownames = F)
 
-  if (is.null(features)) {
-    print("Using all intersecting features. Provide features = 'all' to avoid this message.")
-    features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
-  } else if (features == "all") {
+  if (features == "all") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
   } else if (features == "pca") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x@reductions[["pca"]]@feature.loadings)))
