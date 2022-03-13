@@ -62,6 +62,7 @@ prep_SO <- function(SO_unprocessed,
                     celltype_label = "label.main",
                     ...) {
 
+
   mydots <- list(...)
 
   options(warn = 1)
@@ -146,7 +147,7 @@ prep_SO <- function(SO_unprocessed,
 
 
   if (length(SO.list) > 1 && batch_corr == "harmony" && !any(grepl("RunHarmony__group.by.vars", names(mydots)))) {
-    stop(paste0("Please provide one or more group.by.vars from meta.data (with prefix: RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), "."))
+    stop("Please provide one or more group.by.vars from meta.data (with prefix: RunHarmony__group.by.vars) for RunHarmony: ", paste(names(SO.list[[1]]@meta.data), collapse = ", "), ".")
   }
 
   if (!is.null(cells)) {
@@ -219,6 +220,9 @@ prep_SO <- function(SO_unprocessed,
     }
 
     if (batch_corr == "harmony") {
+      if (!requireNamespace("harmony", quietly = T)) {
+        utils::install.packages("harmony")
+      }
       dots <- mydots[which(grepl("^RunHarmony__", names(mydots), ignore.case = T))]
       names(dots) <- gsub("^RunHarmony__", "", names(dots), ignore.case = T)
       SO <- do.call(harmony::RunHarmony, args = c(list(object = SO, assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), reference_values = ref_sample), dots))
@@ -275,6 +279,13 @@ prep_SO <- function(SO_unprocessed,
   }
 
   if (any(grepl("som", reductions, ignore.case = T))) {
+    if (!requireNamespace("devtools", quietly = T)) {
+      utils::install.packages("devtools")
+    }
+    if (!requireNamespace("EmbedSOM", quietly = T)) {
+      devtools::install_github("exaexa/EmbedSOM")
+    }
+
     dots <- mydots[which(grepl("^SOM__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^SOM__", "", names(dots), ignore.case = T)
     map <- do.call(EmbedSOM::SOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings), dots))
@@ -287,6 +298,13 @@ prep_SO <- function(SO_unprocessed,
   }
 
   if (any(grepl("gqtsom", reductions, ignore.case = T))) {
+    if (!requireNamespace("devtools", quietly = T)) {
+      utils::install.packages("devtools")
+    }
+    if (!requireNamespace("EmbedSOM", quietly = T)) {
+      devtools::install_github("exaexa/EmbedSOM")
+    }
+
     dots <- mydots[which(grepl("^GQTSOM__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^GQTSOM__", "", names(dots), ignore.case = T)
     map <- do.call(EmbedSOM::GQTSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings), dots))

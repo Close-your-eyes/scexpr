@@ -1,4 +1,4 @@
-#' Align reads from (sc)RNAseq to known HLA reference alleles and infer the HLA type
+#' Align reads from (sc)RNAseq to known HLA reference alleles, count the number of matches and infer the HLA type
 #'
 #' This function tries to infer the HLA type by plotting the number of matching reads. Inspection of output-plots is seen as an alternative to statistical analysis.
 #' Please provide data (read and hla_ref) for only one gene at a time, e.g. only HLA-A or HLA-B or HLA-C. Run the function sequentially for every single gene.
@@ -29,7 +29,7 @@
 #'
 #' @importFrom magrittr %>%
 #'
-#' @return list of data frames and ggplot2 objects
+#' @return list of data frames and ggplot2 objects which, upon visual inspection, may allow to infer hla type
 #' @export
 #'
 #' @examples
@@ -49,6 +49,12 @@ hla_typing <- function(hla_ref,
   # check for unique read names
   # check for columns in data frames
 
+  if (!requireNamespace("BiocManager", quietly = T)) {
+    utils::install.packages("BiocManager")
+  }
+  if (!requireNamespace("Biostrings", quietly = T)) {
+    BiocManager::install("Biostrings")
+  }
 
   lapply_fun <- match.fun(lapply_fun)
 
@@ -196,7 +202,11 @@ reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
   stats::reorder(new_x, by, FUN = fun)
 }
 
-ceiling_any = function(x, accuracy, f = ceiling){f(x/ accuracy) * accuracy}
+ceiling_any = function(x, accuracy, f = ceiling) {
+  f(x / accuracy) * accuracy
+}
 
-floor_any = function(x, accuracy, f = floor){f(x/ accuracy) * accuracy}
+floor_any = function(x, accuracy, f = floor) {
+  f(x / accuracy) * accuracy
+}
 

@@ -12,7 +12,7 @@
 #' # Default LogNormalize from Seurat does this:
 #' nCount_RNA <- Matrix::colSums(GetAssayData(SO, slot = "counts", assay = "RNA"))
 #' # devide each column by corresponding index in nCount_RNA
-#' norm_UMI <- sweep(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"), 2, nCount_RNA, FUN = '/')
+#' norm_UMI <- sweep(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"), 2, nCount_RNA, FUN = `/`) ## test if backticks works
 #' norm_UMI <- norm_UMI*10000
 #' lognorm_UMI <- log1p(norm_UMI)
 #'
@@ -38,8 +38,8 @@ reverse_lognorm <- function(SO,
   if (assay == "RNA") {
     if (is.null(nCount_RNA)) {
       warning("Misc slot in SO not found. Assuming lowest value > 0 per column to represent UMI = 1 originally.")
-      nCount_RNA <- apply(Seurat::GetAssayData(SO, slot = "data", assay = "RNA"), 2, function(x) min(x[which(x>0)]))
-      nCount_RNA <- unname(1/(expm1(nCount_RNA)/10000))
+      nCount_RNA <- apply(Seurat::GetAssayData(SO, slot = "data", assay = "RNA"), 2, function(x) min(x[which(x > 0)]))
+      nCount_RNA <- unname(1 / (expm1(nCount_RNA) / 10000))
     } else {
       if (!is.vector(nCount_RNA)) {
         stop("nCount_RNA must be a vector.")
@@ -50,7 +50,7 @@ reverse_lognorm <- function(SO,
     }
 
     if (return.SO) {
-      if (any(dim(SO@assays[["RNA"]]@counts) != c(0,0))) {
+      if (any(dim(SO@assays[["RNA"]]@counts) != c(0, 0))) {
         warning("Counts slot of RNA assay has not been empty before and will be overwritten.")
       }
       SO@assays[["RNA"]]@counts <- sweep(expm1(Seurat::GetAssayData(SO, slot = "data", assay = "RNA"))/scale.factor, 2, nCount_RNA, FUN = '*')

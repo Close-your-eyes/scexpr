@@ -63,7 +63,6 @@
 #' @param ...
 #' @param plot.labels
 #' @param label.size
-#' @param speed
 #'
 #' @return
 #' @export
@@ -142,10 +141,9 @@ feature_plot <- function(SO,
 
                          plot.labels = NULL,
                          label.size = 12,
-
-                         speed = F,
                          ...) {
 
+  # speed = F,
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
 
@@ -225,9 +223,9 @@ feature_plot <- function(SO,
       }
     }
 
-    if (speed) {
+   ' if (speed) {
       if (!requireNamespace("scattermore", quietly = T)) {
-        devtools::install_github('exaexa/scattermore')
+        devtools::install_github("exaexa/scattermore")
       }
       if (nlevels(as.factor(data$SO.split)) > 1 && nlevels(as.factor(data$split.by)) > 1) {
         subtitle <- "both"
@@ -269,7 +267,7 @@ feature_plot <- function(SO,
       plot <- plot[!sapply(plot, is.null)]
       plot <- cowplot::plot_grid(plotlist = plot, ncol = ncol.combine, nrow = nrow.combine, align = "hv", axis = "tblr")
       return(plot)
-    }
+    }'
 
     # excluded cells
     plot <-

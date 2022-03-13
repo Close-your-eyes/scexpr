@@ -5,13 +5,19 @@
 #' @return
 #' @export
 #'
-#' @importFrom ggraph guide_edge_colourbar
 #'
 #' @examples
 shiny_uis <- function(name = c("single_volcano_sc",
                                "multi_clustering_volcano_sc")) {
 
   name <- match.arg(name, c("single_volcano_sc", "multi_clustering_volcano_sc"))
+
+  if (!requireNamespace("shiny", quietly = T)) {
+    utils::install.packages("shiny")
+  }
+  if (!requireNamespace("DT", quietly = T)) {
+    utils::install.packages("DT")
+  }
 
   if (name == "multi_clustering_volcano_sc") {
     ui <- shiny::fluidPage(
@@ -50,8 +56,8 @@ shiny_uis <- function(name = c("single_volcano_sc",
         shiny::column(10,shiny::plotOutput("jitter_plot")),
         shiny::column(2,
                       shiny::fluidRow(shiny::numericInput(inputId = "n.max", label = "Max plots:", min = 0, max = 48, value = 9)),
-                      shiny::fluidRow(shiny::selectInput(inputId = "geom1", label = "geom1", choices = as.character(formals(scexpr::feature_plot_stat)$geom1)[-1], selected = as.character(formals(scexpr::feature_plot_stat)$geom1)[-1][1])),
-                      shiny::fluidRow(shiny::selectInput(inputId = "geom2", label = "geom2", choices = as.character(formals(scexpr::feature_plot_stat)$geom2)[-1], selected = as.character(formals(scexpr::feature_plot_stat)$geom2)[-1][1])),
+                      shiny::fluidRow(shiny::selectInput(inputId = "geom1", label = "geom1", choices = as.character(formals(feature_plot_stat)$geom1)[-1], selected = as.character(formals(feature_plot_stat)$geom1)[-1][1])),
+                      shiny::fluidRow(shiny::selectInput(inputId = "geom2", label = "geom2", choices = as.character(formals(feature_plot_stat)$geom2)[-1], selected = as.character(formals(feature_plot_stat)$geom2)[-1][1])),
                       shiny::fluidRow(shiny::numericInput(inputId = "pt.size", label = "dot size", min = 0.01, max = 100, value = 0.5)),
                       shiny::fluidRow(shiny::selectInput(inputId = "freq.expr", label = "plot freq expr", choices = c(T, F), selected = F)),
                       shiny::fluidRow(shiny::selectInput(inputId = "filter", label = "filter non expr", choices = c(T, F), selected = F)),
@@ -94,8 +100,8 @@ shiny_uis <- function(name = c("single_volcano_sc",
         shiny::column(10,shiny::plotOutput("jitter_plot")),
         shiny::column(2,
                       shiny::fluidRow(shiny::numericInput(inputId = "n.max", label = "Max plots:", min = 0, max = 48, value = 9)),
-                      shiny::fluidRow(shiny::selectInput(inputId = "geom1", label = "geom1", choices = as.character(formals(scexpr::feature_plot_stat)$geom1)[-1], selected = as.character(formals(scexpr::feature_plot_stat)$geom1)[-1][1])),
-                      shiny::fluidRow(shiny::selectInput(inputId = "geom2", label = "geom2", choices = as.character(formals(scexpr::feature_plot_stat)$geom2)[-1], selected = as.character(formals(scexpr::feature_plot_stat)$geom2)[-1][1])),
+                      shiny::fluidRow(shiny::selectInput(inputId = "geom1", label = "geom1", choices = as.character(formals(feature_plot_stat)$geom1)[-1], selected = as.character(formals(feature_plot_stat)$geom1)[-1][1])),
+                      shiny::fluidRow(shiny::selectInput(inputId = "geom2", label = "geom2", choices = as.character(formals(feature_plot_stat)$geom2)[-1], selected = as.character(formals(feature_plot_stat)$geom2)[-1][1])),
                       shiny::fluidRow(shiny::numericInput(inputId = "pt.size", label = "dot size", min = 0.01, max = 100, value = 0.5)),
                       shiny::fluidRow(shiny::selectInput(inputId = "freq.expr", label = "plot freq expr", choices = c(T, F), selected = F)),
                       shiny::fluidRow(shiny::selectInput(inputId = "filter", label = "filter non expr", choices = c(T, F), selected = F)),

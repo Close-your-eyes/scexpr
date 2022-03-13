@@ -26,6 +26,17 @@ convert_gene_identifier <- function (idents,
 
   # https://medium.com/computational-biology/gene-id-mapping-using-r-14ff50eec9ba
 
+  if (!requireNamespace("BiocManager", quietly = T)) {
+    utils::install.packages("BiocManager")
+  }
+  if (!requireNamespace("BiocManager", quietly = T)) {
+    utils::install.packages("BiocManager")
+  }
+  if (!requireNamespace("limma", quietly = T)) {
+    BiocManager::install("limma")
+  }
+
+
   if (missing(species) && ident_in %in% c("SYMBOL", "ALIAS")) {
     # guess the species by case of letters
     if (all(idents == toupper(idents))) {
@@ -39,6 +50,7 @@ convert_gene_identifier <- function (idents,
 
   species <- match.arg(species, c("Hs", "Mm"))
   return <- match.arg(return, c("data.frame", "vector"))
+
   if (return == "vector" && length(ident_out) > 1) {
     print("ident_out has more than one entry, setting return to 'data.frame'.")
     return <- "data.frame"

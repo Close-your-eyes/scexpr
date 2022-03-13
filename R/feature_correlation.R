@@ -30,6 +30,13 @@ feature_correlation <- function(SO,
                                 topn = c(10,10), # n for min and max
                                 ...) { # theme and psych::corr.test
 
+  if (!requireNamespace("psych", quietly = T)) {
+    utils::install.packages("psych")
+  }
+  if (!requireNamespace("reshape2", quietly = T)) {
+    utils::install.packages("reshape2")
+  }
+
   if (missing(features)) {
     stop("Please provide features.")
   }

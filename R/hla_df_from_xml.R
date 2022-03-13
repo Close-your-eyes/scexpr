@@ -22,7 +22,12 @@
 #' }
 hla_df_from_xml <- function(file_path,
                             lapply_fun = lapply,
-                            replace_none_pg = T, ...) {
+                            replace_none_pg = T,
+                            ...) {
+
+  if (!requireNamespace("xml2", quietly = T)) {
+    utils::install.packages("xml2")
+  }
 
   if (grepl("zip$", file_path)) {
     utils::unzip(file_path, exdir = tempdir())

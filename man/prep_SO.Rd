@@ -78,8 +78,8 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
 Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
 prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
-for EmbedSOM::SOM with "SOM__", for EmbedSOM::GQTSOM with "GQTSOM__" and for EmbedSOM::EmbedSOM
-with "EmbedSOM__"}
+for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
+and for EmbedSOM::EmbedSOM with "EmbedSOM__"}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file

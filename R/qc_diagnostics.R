@@ -32,6 +32,10 @@ qc_diagnostic <- function(data.dir,
                           qc_meta_resolution = 0.4,
                           ...) {
 
+  if (!requireNamespace("matrixStats", quietly = T)) {
+    utils::install.packages('matrixStats')
+  }
+
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
   # decontX as alternative if raw_feature_bc_matrix is missing (https://github.com/campbio/celda)
@@ -81,6 +85,12 @@ qc_diagnostic <- function(data.dir,
 
   if (SoupX && !any(grepl(SoupX.resolution, resolutions))) {
     stop("SoupX.resolution not found in resolutions.")
+  }
+
+  if (SoupX) {
+    if (!requireNamespace("SoupX", quietly = T)) {
+      utils::install.packages('SoupX')
+    }
   }
 
   if (!is.numeric(qc_meta_resolution) | length(qc_meta_resolution) != 1) {

@@ -16,11 +16,12 @@ fgsea_on_msigdbr <- function(gene.ranks,
                              min.padj = 0.001, # which plots to generate
                              ...) {
 
-  if (length(gene.ranks) == 0) {
-    return(NULL)
-  }
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
+  }
+
+  if (length(gene.ranks) == 0) {
+    return(NULL)
   }
 
   dots <- list(...)
@@ -35,6 +36,9 @@ fgsea_on_msigdbr <- function(gene.ranks,
   }
 
   if (use.msigdbr) {
+    if (!requireNamespace("msigdbr", quietly = T)) {
+      utils::install.packages("msigdbr")
+    }
     sets <- as.data.frame(do.call(msigdbr::msigdbr, args = dots[which(names(dots) %in% names(formals(msigdbr::msigdbr)))])[,c("gs_name", "gene_symbol")])
     sets <- split(sets$gene_symbol, sets$gs_name)
   }

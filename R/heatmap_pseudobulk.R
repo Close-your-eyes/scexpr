@@ -78,6 +78,9 @@ heatmap_pseudobulk <- function(SO,
 
   # ... arguments to ggrepel, like nudge_y and scexpr::convert_gene_identifier
 
+  if (!requireNamespace("devtools", quietly = T)) {
+    utils::install.packages("devtools")
+  }
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }

@@ -76,6 +76,10 @@ reads_from_bam <- function(file_path,
                            revcomp_minus_strand = T,
                            lapply_fun = lapply,
                            ...) {
+
+  if (!requireNamespace("BiocManager", quietly = T)) {
+    utils::install.packages("BiocManager")
+  }
   if (!requireNamespace("Biostrings", quietly = T)) {
     BiocManager::install("Biostrings")
   }

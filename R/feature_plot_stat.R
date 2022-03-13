@@ -66,10 +66,18 @@ feature_plot_stat <- function(SO,
                               theme = ggplot2::theme_bw(),
                               ...) {
 
-  if (missing(SO)) {stop("Seurat object list or feature vector is missing.")}
-  if (missing(meta.col)) {stop("meta.col reauired.")}
-  if (!is.null(ncol) && !is.null(nrow)) {stop("Please only select one, ncol or nrow Leave the other NULL.")}
-  if (!is.null(split.by)) {warning("split.by requires testing.")}
+  if (missing(SO)) {
+    stop("Seurat object list or feature vector is missing.")
+  }
+  if (missing(meta.col)) {
+    stop("meta.col reauired.")
+  }
+  if (!is.null(ncol) && !is.null(nrow)) {
+    stop("Please only select one, ncol or nrow Leave the other NULL.")
+  }
+  if (!is.null(split.by)) {
+    warning("split.by requires testing.")
+  }
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   geom1 <- match.arg(geom1, c("jitter", "point"))

@@ -6,19 +6,33 @@
 \usage{
 qc_diagnostic(
   data.dir,
-  nhvf = 500,
+  nhvf = 1000,
   npcs = 10,
   min_nCount_RNA = 300,
-  resolutions = seq(0.6, 0.9, 0.1),
+  resolutions = c(0.4, 0.7, 0.9),
+  SoupX = F,
+  SoupX.resolution = 0.6,
+  cells = NULL,
+  invert_cells = F,
+  qc_meta_resolution = 0.4,
   ...
 )
 }
 \arguments{
+\item{data.dir}{list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix, or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
+if not named, then the name of the common parent folder is uses as name(s)}
+
+\item{SoupX}{logical whether to run SoupX. If T, raw_feature_bc_matrix is needed.}
+
+\item{cells}{select to include}
+
+\item{invert_cells}{invert cell selection, if TRUE cells are excluded}
+
 \item{...}{}
 }
 \value{
 
 }
 \description{
-Title
+On error in scDblFinder: Increase nhvf or try to change any other parameter
 }

@@ -358,6 +358,13 @@ volcano_plot <- function(SO,
                      use.limma = F) {
 
   if (use.limma) {
+    if (!requireNamespace("BiocManager", quietly = T)) {
+      utils::install.packages("BiocManager")
+    }
+    if (!requireNamespace("limma", quietly = T)) {
+      BiocManager::install("limma")
+    }
+
     message("(i) limma: p.adjust ignored. (ii) caution: limma calculates log2.fc differently as Seurat, see here: https://support.bioconductor.org/p/82478/ ")
     vd <- limma::topTable(limma::eBayes(limma::lmFit(assay_data[, c(ngc,pgc)],design = model.matrix(~c(colnames(assay_data[, c(ngc,pgc)]) %in% pgc)))), number = nrow(assay_data), confint = T)
 
@@ -378,6 +385,10 @@ volcano_plot <- function(SO,
                      check.names = F)
 
   } else {
+    if (!requireNamespace("matrixTests", quietly = T)) {
+      utils::install.packages("matrixTests")
+    }
+
     p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
     assay_data <- expm1(assay_data) + 1
     p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
@@ -598,6 +609,11 @@ volcano_plot <- function(SO,
 
 
 .calc_fc <- function(x, y, conf.level = 95, var.equal = F) {
+
+  if (!requireNamespace("matrixStats", quietly = T)) {
+    utils::install.packages("matrixStats")
+  }
+
   # modified from here:
   # from # https://gist.github.com/wulingyun/e555fef011f0b5da2694b622b56a2252
   # https://www.zippia.com/advice/how-to-calculate-confidence-interval-with-examples/

@@ -11,8 +11,6 @@
 #' @return
 #' @export
 #'
-#' @importFrom ggraph guide_edge_colourbar
-#'
 #' @examples
 clustering_volcanos <- function(SO,
                                 assay = c("RNA", "SCT"),
@@ -23,6 +21,10 @@ clustering_volcanos <- function(SO,
                                 lapply_fun = lapply,
                                 ...) {
   # meta.cols - keeping additional columns
+
+  if (!requireNamespace("clustree", quietly = T)) {
+    utils::install.packages("clustree")
+  }
 
   if (missing(cluster.meta.cols)) {
     stop("Please provide cluster.meta.cols from SO@meta.data.")
@@ -113,5 +115,6 @@ clustering_volcanos <- function(SO,
   names(data_list) <- c(cluster.meta.cols, "clustree_plot", "Seurat_object")
   file.copy(from = system.file("extdata", "app.R", package = "scexpr"), to = file.path(save.path, "app.R"))
   saveRDS(data_list, file = file.path(save.path, "data.rds"))
+
   return(data_list)
 }
