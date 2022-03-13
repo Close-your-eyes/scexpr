@@ -16,6 +16,8 @@ clustering_volcanos(
 )
 }
 \arguments{
+\item{assay}{}
+
 \item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 
 \item{...}{additional argument to the lapply function; e.g. mc.cores may be passed when parallel::mclapply is chosen above}

@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster_correlation_matrix.R
 \name{cluster_correlation_matrix}
 \alias{cluster_correlation_matrix}
-\title{Title}
+\title{Find groups (clusters) of cells (single cell transcriptomes) with highest gene expression correlation in two Seurat objects}
 \usage{
 cluster_correlation_matrix(
   SO,
@@ -10,7 +10,7 @@ cluster_correlation_matrix(
   meta.cols,
   levels = NULL,
   complement.levels = F,
-  features = NULL,
+  features = c("all", "pca"),
   avg.expr,
   method = c("pearson", "kendall", "spearman"),
   corr.in.percent = FALSE,
@@ -18,11 +18,38 @@ cluster_correlation_matrix(
 )
 }
 \arguments{
-\item{round.corr}{}
+\item{SO}{named list of exactly 2 Seurat objects}
+
+\item{assay}{which assay to obtain expression values from}
+
+\item{meta.cols}{character vector of length 2, indicating the column names of meta.data in SO[\link{1}] and SO[\link{2}] to use for comparison,
+e.g. the clustering columns in both SOs}
+
+\item{levels}{list of length 2 indicating the factor levels in meta.cols to include; this also defines axis orders;
+can be incomplete e.g. if order matters only for some levels, if complement.levels = T the missing levels are added randomly}
+
+\item{complement.levels}{add all missing levels in random order}
+
+\item{features}{features to use for correlation calculation; will always be reduced to intersecting features between SOs;
+if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
+or a vector of features}
+
+\item{avg.expr}{avg.expr from a previous return list of cluster_correlation_matrix; e.g. only to change axis orders avoiding
+repeated calculation}
+
+\item{method}{which correlation metric to calculate, passed to stats::cor}
+
+\item{corr.in.percent}{display correlation in percent (TRUE, T) or as a fraction (FALSE, F)}
+
+\item{round.corr}{decimal places to round correlation values to}
 }
 \value{
-
+list with (i) ggplot object of correlation matrix, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 }
 \description{
-Title
+Sometimes one wants to avoid combining data sets into a single seurat object as this often requires to employ an integration procedure or a
+batch correction and respective uncertainties. At some point then one may be interested in which clusters correspond to
+each other in separate seurat object. This function quickly returns a graphic and data frames to judge best matching clusters.
+Seurat::AverageExpression is used to derive average gene expressions per cluster. Selected gene (features) are then used
+for correlation calculation.
 }
