@@ -26,7 +26,12 @@
         "allele.1", "allele.2", "allele_group.1", "allele_group.2", "p_group.1.2", "row.number.rank",
         "allele_group", "plot.color", "g_group.1", "g_group.2",
         #qc_params_meta_cols
-        "level", "value", "qc_param", "meta.col")
+        "level", "value", "qc_param", "meta.col",
+        #misc
+        "ID", "abs_diff", "count", "data", "dbl_score_log", "end_angle", "frac", "meta_UMAP_1",
+        "meta_UMAP_2", "mid_angle", "nCount_RNA", "nCount_RNA_log", "nFeature_RNA",
+        "nFeature_RNA_log", "n_expr_corrected", "n_expr_uncorrected", "pct_mt",
+        "pct_mt_log", "r", "ref_feature", "residuals", "start_angle", "stat", "x")
 
 
     )

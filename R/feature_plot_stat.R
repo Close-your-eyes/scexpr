@@ -167,19 +167,19 @@ feature_plot_stat <- function(SO,
 
   plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta.col), y = expr, color = !!rlang::sym(legend.title)))
   if (!is.null(my_geom2)) {
-    plot <- plot + suppressWarnings(my_geom2(outlier.shape = NA, position = position_dodge(width = 0.75)))
+    plot <- plot + suppressWarnings(my_geom2(outlier.shape = NA, position = ggplot2::position_dodge(width = 0.75)))
   }
   ##ggforce::geom_sina()
   if (geom1 == "jitter" && jitterwidth > 0) {
-    plot <- plot + ggplot2::geom_point(size = pt.size, position = position_jitterdodge(jitter.width = jitterwidth, dodge.width = 0.75))
+    plot <- plot + ggplot2::geom_point(size = pt.size, position = ggplot2::position_jitterdodge(jitter.width = jitterwidth, dodge.width = 0.75))
   } else if (geom1 == "point") {
-    plot <- plot + ggplot2::geom_point(size = pt.size, position = position_dodge(width = 0.75))
+    plot <- plot + ggplot2::geom_point(size = pt.size, position = ggplot2::position_dodge(width = 0.75))
   }
 
   #plot <- plot + ggplot2::geom_dotplot(binaxis = "y", binwidth = (max(data$expr) - min(data$expr))/40, stackdir = "center", fill = "black", stackratio = 0.7)
 
   if (plot.expr.freq) {
-    plot <- plot + ggplot2::geom_text(data = stat, ggplot2::aes(label = round(pct.expr, 2), y = max.feat.expr + expr.freq.hjust), position = position_dodge(width = 0.75), size = label.size, family = font.family, show.legend = F)
+    plot <- plot + ggplot2::geom_text(data = stat, ggplot2::aes(label = round(pct.expr, 2), y = max.feat.expr + expr.freq.hjust), position = ggplot2::position_dodge(width = 0.75), size = label.size, family = font.family, show.legend = F)
     #expand_limits
   }
 
@@ -189,7 +189,7 @@ feature_plot_stat <- function(SO,
 
   plot <- plot + theme
   if (length(SO) == 1) {
-    plot <- plot + theme(legend.position = "none")
+    plot <- plot + ggplot2::theme(legend.position = "none")
   }
   if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
   plot <- plot + ggplot2::theme(...)

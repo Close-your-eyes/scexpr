@@ -33,8 +33,27 @@ qc_diagnostic <- function(data.dir,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
-    utils::install.packages('matrixStats')
+    utils::install.packages("matrixStats")
   }
+  if (!requireNamespace("uwot", quietly = T)) {
+    utils::install.packages("uwot")
+  }
+  if (!requireNamespace("ggpointdensity", quietly = T)) {
+    utils::install.packages("ggpointdensity")
+  }
+  if (!requireNamespace("devtools", quietly = T)) {
+    utils::install.packages("devtools")
+  }
+  if (!requireNamespace("presto", quietly = T)) {
+    devtools::install_github("immunogenomics/presto")
+  }
+  if (!requireNamespace("BiocManager", quietly = T)) {
+    utils::install.packages("BiocManager")
+  }
+  if (!requireNamespace("scDblFinder", quietly = T)) {
+    BiocManager::install("scDblFinder")
+  }
+
 
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
@@ -189,10 +208,10 @@ qc_diagnostic <- function(data.dir,
     }
 
 
-    dbl_score <- setNames(scDblFinder::computeDoubletDensity(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
-                                                             subset.row = Seurat::VariableFeatures(SO),
-                                                             dims = npcs, ...),
-                          nm = colnames(counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)]))
+    dbl_score <- stats::setNames(scDblFinder::computeDoubletDensity(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
+                                                                    subset.row = Seurat::VariableFeatures(SO),
+                                                                    dims = npcs, ...),
+                                 nm = colnames(counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)]))
 
     SO <- Seurat::AddMetaData(SO, dbl_score, "dbl_score")
     SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
@@ -277,20 +296,20 @@ qc_diagnostic <- function(data.dir,
                            ggplot2::theme_bw() +
                            ggplot2::theme(legend.position = "none", legend.background = ggplot2::element_blank(), legend.key = ggplot2::element_blank(), panel.grid = ggplot2::element_blank(),
                                           axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank()) +
-                           scale_color_manual(values = col_pal("custom")) +
-                           facet_wrap(vars(meta_cols[2])),
+                           ggplot2::scale_color_manual(values = col_pal("custom")) +
+                           ggplot2::facet_wrap(ggplot2::vars(meta_cols[2])),
                          ggplot2::ggplot(meta, ggplot2::aes(x = meta_UMAP_1, y = meta_UMAP_2)) +
                            ggpointdensity::geom_pointdensity(size = 0.3) +
                            ggplot2::theme_bw() +
                            ggplot2::theme(legend.position = "none", panel.grid = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank()) +
                            ggplot2::scale_color_gradientn(colors = col_pal("spectral")),
-                         suppressMessages(scexpr:::freq_pie_chart(SO = SO, meta.col = meta_cols[2])),
+                         suppressMessages(freq_pie_chart(SO = SO, meta.col = meta_cols[2])),
                          ncol = 1, align = "hv", axis = "tblr"),
       ggplot2::ggplot(meta %>% tidyr::pivot_longer(cols = c(nCount_RNA, nFeature_RNA, dbl_score, pct_mt, residuals), names_to = "stat", values_to = "value"), ggplot2::aes(x = !!rlang::sym(meta_cols[2]), y = value, color = !!rlang::sym(meta_cols[2]))) +
         ggplot2::geom_jitter(width = 0.1, size = 0.3) +
         ggplot2::theme_bw() +
         ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(), panel.grid.minor.x = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), legend.position = "none") +
-        scale_color_manual(values = col_pal("custom")) +
+        ggplot2::scale_color_manual(values = col_pal("custom")) +
         ggplot2::facet_wrap(ggplot2::vars(stat)),
       align = "hv", axis = "tblr", rel_widths = c(1/3,2/3))
 

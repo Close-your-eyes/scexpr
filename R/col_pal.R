@@ -24,13 +24,12 @@ col_pal <- function(name = "custom",
 
   scl <- NULL
 
-  if (any(grepl(name, c(ls(getNamespace("viridisLite")))))) {
+  if (any(grepl(name, c(ls(loadNamespace("viridisLite")))))) {
     scl <- viridis::viridis_pal(option = name)(n)
   }
 
-  if (any(grepl(name, ls(getNamespace("colorRamps")), ignore.case = T))) {
-    library("colorRamps")
-    colfun <- match.fun(grep(name, ls(getNamespace("colorRamps")), ignore.case = T, value = T)[1])
+  if (any(grepl(name, ls(loadNamespace("colorRamps")), ignore.case = T))) {
+    colfun <- match.fun(grep(name, ls(loadNamespace("colorRamps")), ignore.case = T, value = T)[1])
     scl <- colfun(n)
   }
 

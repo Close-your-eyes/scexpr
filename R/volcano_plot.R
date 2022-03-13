@@ -160,7 +160,7 @@ volcano_plot <- function(SO,
 
   # filter meta.col
   SO@meta.data <- SO@meta.data[,c(colname, meta.cols),drop=F]
-  Misc(SO, "volcano.group.col") <- colname
+  Seurat::Misc(SO, "volcano.group.col") <- colname
   SO@meta.data[,colname] <- factor(SO@meta.data[,colname], levels = c(negative.group.name, positive.group.name))
 
   # get Assay data, overwrite SO to save memory
@@ -327,10 +327,10 @@ volcano_plot <- function(SO,
   }
 
   # SO for interactive volcano
-  Misc(SO, "volcano.data") <- vd
-  Misc(SO, "features.exclude") <- features.exclude
-  Misc(SO, "ngn") <- negative.group.name
-  Misc(SO, "pgn") <- positive.group.name
+  Seurat::Misc(SO, "volcano.data") <- vd
+  Seurat::Misc(SO, "features.exclude") <- features.exclude
+  Seurat::Misc(SO, "ngn") <- negative.group.name
+  Seurat::Misc(SO, "pgn") <- positive.group.name
 
   if (!is.null(save.path.interactive)) {
     dir.create(save.path.interactive, showWarnings = FALSE, recursive = TRUE)
@@ -366,7 +366,7 @@ volcano_plot <- function(SO,
     }
 
     message("(i) limma: p.adjust ignored. (ii) caution: limma calculates log2.fc differently as Seurat, see here: https://support.bioconductor.org/p/82478/ ")
-    vd <- limma::topTable(limma::eBayes(limma::lmFit(assay_data[, c(ngc,pgc)],design = model.matrix(~c(colnames(assay_data[, c(ngc,pgc)]) %in% pgc)))), number = nrow(assay_data), confint = T)
+    vd <- limma::topTable(limma::eBayes(limma::lmFit(assay_data[, c(ngc,pgc)], design = stats::model.matrix(~c(colnames(assay_data[, c(ngc,pgc)]) %in% pgc)))), number = nrow(assay_data), confint = T)
 
     assay_data <- expm1(assay_data) + 1
     apm <- Matrix::rowMeans(assay_data[, pgc])
@@ -605,168 +605,6 @@ volcano_plot <- function(SO,
     }
   }
   return(vp)
-}
-
-
-.calc_fc <- function(x, y, conf.level = 95, var.equal = F) {
-
-  if (!requireNamespace("matrixStats", quietly = T)) {
-    utils::install.packages("matrixStats")
-  }
-
-  # modified from here:
-  # from # https://gist.github.com/wulingyun/e555fef011f0b5da2694b622b56a2252
-  # https://www.zippia.com/advice/how-to-calculate-confidence-interval-with-examples/
-  # stat test for equal vars ?
-
-  # log rules:
-  #log2(mean(expm1(gnly.1))+1) - log2(mean(expm1(gnly.2))+1)
-  # equal to, due to logarithm rules
-  #log2((mean(expm1(gnly.1))+1)/(mean(expm1(gnly.2))+1))
-
-  # provide x and y from Seurat from the data slot, and correct as follows: assay_data <- expm1(assay_data) + 1
-  # this is also required to reproduce fold changes as calculated by FindMarkers
-  # provide vectors of expression values for 2 groups as x and y respectively
-
-  # make this accept matrices and vectors
-
-  # apply log2 afterwards
-  '  x.n = length(x)
-  y.n = length(y)
-  x.mu <- mean(x)
-  x.var = var(x)
-  y.mu <- mean(y)
-  y.var = var(y)
-  mu <- x.mu / y.mu'
-
-  if (!is.matrix(x)) {
-    x <- as.matrix(x)
-  }
-  if (!is.matrix(y)) {
-    y <- as.matrix(y)
-  }
-
-  x.n = nrow(x)
-  y.n = nrow(y)
-  x.mu <- matrixStats::rowMeans2(x)
-  x.var = matrixStats::rowVars(x)
-  y.mu <- matrixStats::rowMeans2(y)
-  y.var = matrixStats::rowVars(y)
-  mu <- x.mu / y.mu
-
-  if (var.equal) {
-    nu <- x.n + y.n - 2
-    se <- sqrt(((x.n-1)*x.var + (y.n-1)*y.var) / nu) * sqrt(1/x.n + 1/y.n)
-  }
-  else {
-    nu <- (x.var/x.n + y.var/y.n)^2 / (x.var^2/x.n^2/(x.n-1) + y.var^2/y.n^2/(y.n-1))
-    se <- sqrt(x.var/x.n + y.var/y.n)
-  }
-  t <- -qt((1-conf.level/100)/2, df=nu)
-  # CI.L and CI.R are defined differently by limma
-  '  if (mu >= 0) {
-    mu.lower <- max(0, mu - t*se)
-    mu.upper <- mu + t*se
-  }
-  else {
-    mu.lower <- min(0, mu + t*se)
-    mu.upper <- mu - t*se
-  }'
-  ret_mat <- cbind(fc = mu, CI.L = mu-t*se, CI.R = mu+t*se)
-  rownames(ret_mat) <- rownames(x)
-  return(ret_mat) #df=nu
-
-  ##########################################
-  ##########################################
-  ##########################################
-  # log2fc issue and conf. interval issue, 2022
-
-  #marker <- FindMarkers(SO_urine, ident.1 = 1, ident.2 = 2, assay = "RNA")
-  # log2fc = 5.22 for GNLY, reproduce:
-  #gnly <- GetAssayData(SO_urine, assay = "RNA")["GNLY",]
-  #gnly.1 <- gnly[WhichCells(SO_urine, idents = 1)]
-  #gnly.2 <- gnly[WhichCells(SO_urine, idents = 2)]
-
-  #log2(mean(expm1(gnly.1))+1) - log2(mean(expm1(gnly.2))+1)
-  # equal to, due to logarithm rules
-  #log2((mean(expm1(gnly.1))+1)/(mean(expm1(gnly.2))+1))
-  # https://www.rdocumentation.org/packages/Seurat/versions/3.1.1/topics/NormalizeData
-  #"LogNormalize: Feature counts for each cell are divided by the total counts for that cell and multiplied by the scale.factor. This is then natural-log transformed using log1p"
-  'mean.fxn <- mean.fxn %||% switch(
-  EXPR = slot,
-  "data" = function(x) {
-    return(log(x = rowMeans(x = expm1(x = x)) + pseudocount.use, base = base))
-  },
-  "scale.data" = rowMeans,
-  function(x) {
-    return(log(x = rowMeans(x = x) + pseudocount.use, base = base))
-  }
-)'
-  # https://github.com/satijalab/seurat/issues/4875
-  '
-data.1 <- mean.fxn(object[features, cells.1, drop = FALSE])
-data.2 <- mean.fxn(object[features, cells.2, drop = FALSE])
-fc <- (data.1 - data.2) ## minus here like in limma
-'
-  # disucssion:
-  # https://github.com/satijalab/seurat/issues/5542
-  # https://genome.cshlp.org/content/15/10/1388
-  ## limma is different though:
-  # https://support.bioconductor.org/p/82478/
-  # anyhow: log2[(mean(A_n)/mean(Ctrl_n)]
-
-  ##########################################
-  ##########################################
-  ##########################################
-
-
-  '  x <- as.matrix(assay_data[, ngc])
-  y <- as.matrix(assay_data[, pgc])
-  res <- wilcox.test(x[1,], y[1,], conf.int = T)
-  out <- broom::tidy(res)
-  resres <- pbapply::pbmapply(wilcox.test, x = split(x, 1:nrow(x))[1:5], y = split(y, 1:nrow(y))[1:5], MoreArgs = list(conf.int = T), SIMPLIFY = F)
-  # lapply with broom
-  res2 <- do.call(rbind,lapply(resres, broom::tidy))
-  ## wilcox.test uses x-y as location parameter and hence conf.interval; but we want x/y (logFC) which is different. so, how to get a confidence interval
-  ## for logFC?
-  '
-  ' browser()
-
-  x <- as.matrix(assay_data[, ngc])
-  y <- as.matrix(assay_data[, pgc])
-  wilcox.test(x["ISG15",], y["ISG15",], conf.int = T)
-  calc_fc(x["ISG15",], y["ISG15",], log2.mean = T)
-  log2(calc_fc(x["GNLY",], y["GNLY",], log2.mean = F))
-  log2(mean(x["ISG15",])) - log2(mean(y["ISG15",]))
-
-  exp_mat <- assay_data[, c(ngc,pgc)]
-  fit <- lmFit(exp_mat, design = model.matrix(~c(colnames(exp_mat) %in% ngc)))
-  fit <- limma::eBayes(fit)
-  limma::topTable(fit, confint = T)
-
-
-  if(confint) {
-    if(is.numeric(confint)) alpha <- (1+confint[1])/2 else alpha <- 0.975
-    margin.error <- sqrt(eb$s2.post[top])*fit$stdev.unscaled[top,coef]*qt(alpha,df=eb$df.total[top])
-    tab$CI.L <- M[top]-margin.error
-    tab$CI.R <- M[top]+margin.error
-  }
-'
-
-  '
-  exp_mat <- assay_data[, c(ngc,pgc)]+1
-  fit <- limma::lmFit(exp_mat, design = model.matrix(~c(colnames(exp_mat) %in% pgc)))
-  fit <- limma::eBayes(fit)
-  limma::topTable(fit, confint = T)
-'
-  '  z = -0.862 + sqrt(0.743 - 2.404*log(vd["GNLY","p.val"]))
-  SE = vd["GNLY","log2.fc"]/z
-  vd["GNLY","log2.fc"] + qnorm(0.975)*SE
-  vd["GNLY","log2.fc"] - qnorm(0.975)*SE'
-
-  ##########################################
-  ##########################################
-  ##########################################
 }
 
 

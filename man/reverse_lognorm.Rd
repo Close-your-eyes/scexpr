@@ -27,7 +27,7 @@ Title
 # Default LogNormalize from Seurat does this:
 nCount_RNA <- Matrix::colSums(GetAssayData(SO, slot = "counts", assay = "RNA"))
 # devide each column by corresponding index in nCount_RNA
-norm_UMI <- sweep(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"), 2, nCount_RNA, FUN = '/')
+norm_UMI <- sweep(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"), 2, nCount_RNA, FUN = `/`) ## test if backticks works
 norm_UMI <- norm_UMI*10000
 lognorm_UMI <- log1p(norm_UMI)
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/hla_typing.R
 \name{hla_typing}
 \alias{hla_typing}
-\title{Align reads from (sc)RNAseq to known HLA reference alleles and infer the HLA type}
+\title{Align reads from (sc)RNAseq to known HLA reference alleles, count the number of matches and infer the HLA type}
 \usage{
 hla_typing(
   hla_ref,
@@ -48,7 +48,7 @@ expression difference of alleles HLA-A from father and HLA-A from mother. Intend
 \item{...}{additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen}
 }
 \value{
-list of data frames and ggplot2 objects
+list of data frames and ggplot2 objects which, upon visual inspection, may allow to infer hla type
 }
 \description{
 This function tries to infer the HLA type by plotting the number of matching reads. Inspection of output-plots is seen as an alternative to statistical analysis.

@@ -31,11 +31,14 @@ Imports:
     ggrepel,
     cowplot,
     MASS,
-    methods,
-    
-    ggraph,
+    methods
 Suggests: 
     presto,
+    psych,
+    reshape2,
+    scDblFinder,
+    uwot,
+    ggpointdensity,
     clustree,
     BiocManager,
     limma,

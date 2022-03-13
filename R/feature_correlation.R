@@ -142,7 +142,7 @@ feature_correlation <- function(SO,
                    "kendall" = paste0("kendall ", "\u03C4 "))
 
   if (bar_fill == "correlation_sign") {
-    plot <- plot + ggplot2::scale_fill_manual(values = c("forestgreen", "tomato2")) + labs(y = "Feature", x = xlabel, fill = "direction")
+    plot <- plot + ggplot2::scale_fill_manual(values = c("forestgreen", "tomato2")) + ggplot2::labs(y = "Feature", x = xlabel, fill = "direction")
   } else if (bar_fill == "ref_feature_pct") {
     plot <- plot + ggplot2::scale_fill_viridis_c() + ggplot2::labs(y = "Feature", x = xlabel, fill = "pct")
   }

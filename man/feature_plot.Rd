@@ -67,12 +67,11 @@ feature_plot(
   strip.selection = NA,
   plot.labels = NULL,
   label.size = 12,
-  speed = F,
   ...
 )
 }
 \arguments{
-\item{speed}{}
+\item{label.size}{}
 }
 \value{
 

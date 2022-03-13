@@ -328,7 +328,7 @@ feature_plot <- function(SO,
           data %>%
           tibble::rownames_to_column(temp_name) %>%
           dplyr::group_by(!!rlang::sym(x)) %>%
-          dplyr::mutate(count = n()) %>%
+          dplyr::mutate(count = dplyr::n()) %>%
           dplyr::ungroup() %>%
           dplyr::arrange(-count) %>%
           tibble::column_to_rownames(temp_name)
@@ -1047,6 +1047,10 @@ feature_plot <- function(SO,
 }
 
 .get.contours <- function(x, cells = NULL, levels = 0.9) {
+
+  if (!requireNamespace("reshape2", quietly = T)) {
+    utils::install.packages("reshape2")
+  }
 
   ## x only with x any y columm (dim reduction dims)
   # handle levels attribute differently

@@ -15,16 +15,20 @@
 #' @export
 #'
 #' @examples
-cluster_correlation_matrix <- function (SO,
-                                        assay = c("RNA", "SCT"),
-                                        meta.cols,
-                                        levels = NULL, # NA possible
-                                        complement.levels = F,
-                                        features = NULL, # all, pca
-                                        avg.expr,
-                                        method = c("pearson", "kendall", "spearman"),
-                                        corr.in.percent = FALSE,
-                                        round.corr = 2) {
+cluster_correlation_matrix <- function(SO,
+                                       assay = c("RNA", "SCT"),
+                                       meta.cols,
+                                       levels = NULL, # NA possible
+                                       complement.levels = F,
+                                       features = NULL, # all, pca
+                                       avg.expr,
+                                       method = c("pearson", "kendall", "spearman"),
+                                       corr.in.percent = FALSE,
+                                       round.corr = 2) {
+
+  if (!requireNamespace("reshape2", quietly = T)) {
+    utils::install.packages("reshape2")
+  }
 
   if (missing(meta.cols)) {
     stop("Please provide meta.cols for the first and second SO.")
