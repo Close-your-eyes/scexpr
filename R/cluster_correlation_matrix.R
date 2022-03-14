@@ -16,13 +16,13 @@
 #' @param features features to use for correlation calculation; will always be reduced to intersecting features between SOs;
 #' if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
 #' or a vector of features
-#' @param avg.expr avg.expr from a previous return list of cluster_correlation_matrix; e.g. only to change axis orders avoiding
-#' repeated calculation
+#' @param avg.expr avg.expr from a previous return list of cluster_correlation_matrix; e.g. provide that to  only change axis
+#' orders or similar but avoid repeated calculation
 #' @param method which correlation metric to calculate, passed to stats::cor
 #' @param corr.in.percent display correlation in percent (TRUE, T) or as a fraction (FALSE, F)
 #' @param round.corr decimal places to round correlation values to
 #'
-#' @return list with (i) ggplot object of correlation matrix, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
+#' @return list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
 #'
 #' @examples

@@ -1,6 +1,6 @@
 #' Color palettes
 #'
-#' Common function to get color palettes from different packages: viridisLite, colorRamps, wesanderson and RColorBrewer.
+#' Common interface to get color palettes from different packages: viridisLite, colorRamps, wesanderson and RColorBrewer.
 #' Moreover three custom palettes: "custom", "dutch" and "spanish".
 #'
 #' See available palettes:

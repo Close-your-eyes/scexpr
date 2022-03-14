@@ -314,7 +314,11 @@ qc_diagnostic <- function(data.dir,
       align = "hv", axis = "tblr", rel_widths = c(1/3,2/3))
 
     cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolutions), function(x) {
-      presto::wilcoxauc(SO, group_by = x, seurat_assay = "RNA", assay = "data")
+      presto::wilcoxauc(SO, group_by = x, seurat_assay = "RNA", assay = "data")  %>%
+        dplyr::filter(padj < 0.0001) %>%
+        dplyr::filter(abs(logFC) > 0.3) %>%
+        dplyr::select(-c(statistic, pval)) %>%
+        dplyr::mutate(pct_in = round(pct_in,2), pct_out = round(pct_out,2))
     })
     names(cluster_marker_list) <- paste0("RNA_snn_res.", resolutions)
 

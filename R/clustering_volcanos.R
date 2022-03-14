@@ -1,11 +1,11 @@
 #' Title
 #'
-#' @param SO
-#' @param assay
-#' @param cluster.meta.cols
-#' @param reduction
-#' @param clustree.prefix
-#' @param save.path
+#' @param SO Seurat object, with cluster annotations in meta.data columns
+#' @param assay which assay to obtain expression values from
+#' @param cluster.meta.cols column names in meta.data of SO that contain different clusterings (e.g. increasing resolutions)
+#' @param reduction which reduction to plot cluster identities on, must be present in SO
+#' @param clustree.prefix the common prefix-string of clusterings, passed to clustree::clustree; if missing will be guessed based on cluster.meta.cols.
+#' @param save.path path to a folder on disk where to save results to; if it does not exist yet it will be created
 #' @param lapply_fun function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
 #' @param ... additional argument to the lapply function; e.g. mc.cores may be passed when parallel::mclapply is chosen above
 #'
@@ -16,7 +16,7 @@
 clustering_volcanos <- function(SO,
                                 assay = c("RNA", "SCT"),
                                 cluster.meta.cols,
-                                reduction = "tSNE",
+                                reduction = "UMAP",
                                 clustree.prefix = NULL,
                                 save.path = NULL,
                                 lapply_fun = lapply,
@@ -38,10 +38,15 @@ clustering_volcanos <- function(SO,
   lapply_fun <- match.fun(lapply_fun)
 
   if (is.null(save.path)) {
-    print(paste0("save.path not provided, set to getwd(): ", getwd()))
-    save.path <- getwd()
+    stop("Please provide a save.path.")
   }
-  dir.create(save.path, showWarnings = FALSE, recursive = TRUE)
+
+  tryCatch({
+    dir.create(save.path, showWarnings = FALSE, recursive = TRUE)
+  }, error = function(e) {
+    stop(e)
+  })
+
 
   if (is.null(clustree.prefix) && length(cluster.meta.cols) > 1) {
     splits <- strsplit(cluster.meta.cols, "")
@@ -53,9 +58,9 @@ clustering_volcanos <- function(SO,
       equal <- nlevels(as.factor(sapply(splits, "[", i))) == 1 && all(suppressWarnings(is.na(as.numeric(sapply(splits, "[", i)))))
     }
     clustree.prefix <- substr(cluster.meta.cols[1], 1, i-1)
-    print(paste0("Tried to assume clustree.prefix: '", clustree.prefix, "'. Provide manually if wrong."))
+    message("Tried to assume clustree.prefix: '", clustree.prefix, "'. Provide manually if wrong.")
   } else if (is.null(clustree.prefix) && length(cluster.meta.cols) == 1) {
-    stop("clustree.prefix cannot be guessed with one meta.col only.")
+    stop("clustree.prefix cannot be guessed with one cluster.meta.col only.")
   }
 
   # remove not relevant cluster.meta.cols for clustree plot
