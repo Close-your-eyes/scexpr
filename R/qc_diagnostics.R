@@ -29,7 +29,7 @@ qc_diagnostic <- function(data.dir,
                           SoupX.resolution = 0.6,
                           cells = NULL,
                           invert_cells = F,
-                          qc_meta_resolution = 0.4,
+                          qc_meta_resolution = 0.8,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -224,10 +224,10 @@ qc_diagnostic <- function(data.dir,
 
     ## clustering on meta data (quality metrics)
     meta <- dplyr::select(SO@meta.data, nCount_RNA, nFeature_RNA, dbl_score, pct_mt, residuals)
-    meta <- scale_min_max(meta)
-    umap_dims <- uwot::umap(meta, metric = "cosine")
+    #meta <- scale_min_max(meta) # leave unscaled, only scale for umap and finding neighbors
+    umap_dims <- uwot::umap(scale_min_max(meta), metric = "cosine")
     colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
-    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta, annoy.metric = "cosine")$snn, resolution = qc_meta_resolution)
+    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine")$snn, resolution = qc_meta_resolution)
     colnames(clusters) <- paste0("meta_", colnames(clusters))
     SO <- Seurat::AddMetaData(SO, cbind(umap_dims, clusters))
 
@@ -310,7 +310,7 @@ qc_diagnostic <- function(data.dir,
         ggplot2::theme_bw() +
         ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(), panel.grid.minor.x = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), legend.position = "none") +
         ggplot2::scale_color_manual(values = col_pal("custom")) +
-        ggplot2::facet_wrap(ggplot2::vars(stat)),
+        ggplot2::facet_wrap(ggplot2::vars(stat), scales = "free_y"),
       align = "hv", axis = "tblr", rel_widths = c(1/3,2/3))
 
     cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolutions), function(x) {
