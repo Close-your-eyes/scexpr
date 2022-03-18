@@ -320,7 +320,7 @@ feature_plot <- function(SO,
       # shuffle to make plotting order random
       # only if order == TRUE and data is integer/discrete
       # or if is not numeric
-      if ((!order && as.integer(data[,1]) == data[,1]) || !is.numeric(data[,1])) {
+      if (!order || !is.numeric(data[,1])) { # ( && all(as.integer(data[,1]) == data[,1]))
         data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
       }
 
