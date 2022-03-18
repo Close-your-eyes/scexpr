@@ -1,6 +1,7 @@
 #' Title
 #'
 #' On error in scDblFinder: Increase nhvf or try to change any other parameter
+#' SoupX and/or decontX to filter cells or for correction
 #'
 #' @param data.dir list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix, or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
 #' if not named, then the name of the common parent folder is uses as name(s)
@@ -39,9 +40,7 @@ qc_diagnostic <- function(data.dir,
   if (!requireNamespace("uwot", quietly = T)) {
     utils::install.packages("uwot")
   }
-  if (!requireNamespace("ggpointdensity", quietly = T)) {
-    utils::install.packages("ggpointdensity")
-  }
+  #if (!requireNamespace("ggpointdensity", quietly = T)) {utils::install.packages("ggpointdensity")}
   if (!requireNamespace("devtools", quietly = T)) {
     utils::install.packages("devtools")
   }
@@ -103,16 +102,9 @@ qc_diagnostic <- function(data.dir,
     stop("Please provide full path to filtered_feature_bc_matrix and/or raw_feature_bc_matrix.")
   }
 
-
   if (SoupX && length(data.dir) != 2) {
     warning("SoupX requires filtered_feature_bc_matrix and raw_feature_bc_matrix. SoupX will not run.")
     SoupX <- F
-  }
-
-  if (SoupX) {
-    if (!requireNamespace("SoupX", quietly = T)) {
-      utils::install.packages('SoupX')
-    }
   }
 
   if (!is.numeric(qc_meta_resolution) | length(qc_meta_resolution) != 1) {
@@ -146,7 +138,6 @@ qc_diagnostic <- function(data.dir,
     }
   }
 
-
   SO <-
     Seurat::CreateSeuratObject(counts = as.matrix(filt_data)) %>%
     Seurat::NormalizeData() %>%
@@ -158,15 +149,7 @@ qc_diagnostic <- function(data.dir,
     Seurat::FindClusters(algorithm = 1, resolution = resolution)
 
   if (SoupX) {
-
-    if (!is.null(cells)) {
-      # read again to get the full picture, in case cells (e.g. low quality ones) were removed
-      filt_data <- Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T))
-      if (is.list(filt_data)) {
-        filt_data <- filt_data[["Gene Expression"]]
-      }
-    }
-
+    # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the picture of the soup
     raw_data <- Seurat::Read10X(data.dir = grep("raw_feature_bc_matrix", data.dir, value = T))
     if (is.list(raw_data)) {
       raw_data <- raw_data[["Gene Expression"]]
@@ -178,6 +161,8 @@ qc_diagnostic <- function(data.dir,
     sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
     sc = SoupX::autoEstCont(sc)
     out = SoupX::adjustCounts(sc)
+    # add percentage of soup as meta data, similar to decontX
+    SO <- Seurat::AddMetaData(SO, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
     SO_sx <-
       Seurat::CreateSeuratObject(counts = out) %>%
@@ -188,6 +173,7 @@ qc_diagnostic <- function(data.dir,
       Seurat::RunUMAP(dims = 1:npcs) %>%
       Seurat::FindNeighbors(dims = 1:npcs) %>%
       Seurat::FindClusters(algorithm = 1, resolution = resolution)
+    SO_sx <- Seurat::AddMetaData(SO_sx, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
     sc <- SoupX::setDR(sc, SO_sx@reductions$umap@cell.embeddings)
 
@@ -200,7 +186,7 @@ qc_diagnostic <- function(data.dir,
 
     message("Create a SoupX RNA assay as follows: SO[['SoupXRNA']] <- Seurat::CreateAssayObject(counts = soupx_matrix).")
     SO <- list(SO, SO_sx)
-    names(SOs) <- c("original", "SoupX")
+    names(SO) <- c("original", "SoupX")
   } else {
     SO <- list(SO)
   }
@@ -211,6 +197,7 @@ qc_diagnostic <- function(data.dir,
     if (any(matrixStats::colSums2(counts) < min_nCount_RNA)) {
       warning(paste0("Transcriptomes (cells) with less than ", min_nCount_RNA, " total transcripts found. These will be excluded from finding doublets. They will have NA as dbl_score."))
     }
+
 
     dbl_score <- log1p(stats::setNames(scDblFinder::computeDoubletDensity(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
                                                                           subset.row = Seurat::VariableFeatures(SOx),
@@ -225,18 +212,23 @@ qc_diagnostic <- function(data.dir,
     } else if (!any(grepl("^MT-", rownames(SOx))) && any(grepl("^mt-", rownames(SOx)))) {
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^mt-"), "pct_mt")
     } else {
+      message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
       qc_cols <- c("nCount_RNA", "nFeature_RNA", "dbl_score")
     }
     qc_cols <- paste0(qc_cols, "_log")
 
     if (decontX) {
-      SOx <- Seurat::AddMetaData(SOx, celda::decontX(Seurat::GetAssayData(SOx))[["contamination"]], "decontX_pct")
-      qc_cols <- c(qc_cols, "decontX_pct")
+      SOx <- Seurat::AddMetaData(SOx, celda::decontX(Seurat::GetAssayData(SOx))[["contamination"]], "pct_soup_decontX")
+      qc_cols <- c(qc_cols, "pct_soup_decontX")
+    }
+    if (SoupX) {
+      qc_cols <- c(qc_cols, "pct_soup_SoupX")
     }
 
     SOx@meta.data$nFeature_RNA_log <- log1p(SOx@meta.data$nFeature_RNA)
     SOx@meta.data$nCount_RNA_log <- log1p(SOx@meta.data$nCount_RNA)
-    SOx@meta.data$residuals <- stats::residuals(stats::lm(nFeature_RNA~nCount_RNA, data = SOx@meta.data))
+    SOx@meta.data$pct_mt_log <- log1p(SOx@meta.data$pct_mt)
+    SOx@meta.data$residuals <- stats::residuals(stats::lm(nFeature_RNA_log~nCount_RNA_log, data = SOx@meta.data))
     ## clustering on meta data (quality metrics)
     meta <- dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals)
     #meta <- scale_min_max(meta) # leave unscaled, only scale for umap and finding neighbors
@@ -271,17 +263,20 @@ qc_diagnostic <- function(data.dir,
                                   ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1),
                                 align = "hv", axis = "tblr")
 
+
+
     qc_p3 <- cowplot::plot_grid(
       cowplot::plot_grid(feature_plot(SOx, features = meta_cols[2], reduction = "umapmeta", pt.size = 0.5, legend.position = "none",
                                       label.size = 6, plot.labels = "text"),
                          suppressMessages(scexpr:::freq_pie_chart(SO = SOx, meta.col = meta_cols[2])),
                          ncol = 1, align = "hv", axis = "tblr"),
-      ggplot2::ggplot(meta %>% tidyr::pivot_longer(cols = c(dplyr::all_of(qc_cols), residuals), names_to = "stat", values_to = "value"), ggplot2::aes(x = !!rlang::sym(meta_cols[2]), y = value, color = !!rlang::sym(meta_cols[2]))) +
-        ggplot2::geom_jitter(width = 0.1, size = 0.3) +
-        ggplot2::theme_bw() +
-        ggplot2::theme(panel.grid.major.x = ggplot2::element_blank(), panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), legend.position = "none") +
-        ggplot2::scale_color_manual(values = col_pal("custom")) +
-        ggplot2::facet_wrap(ggplot2::vars(stat), scales = "free_y"),
+      feature_plot_stat(SOx,
+                        features = c(qc_cols, "residuals"),
+                        meta.col = meta_cols[2],
+                        geom2 = "none",
+                        jitterwidth = 0.9,
+                        panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                        axis.title.y = ggplot2::element_blank()),
       align = "hv", axis = "tblr", rel_widths = c(1/3,2/3))
 
 
