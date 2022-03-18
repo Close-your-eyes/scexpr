@@ -85,7 +85,7 @@ feature_plot_stat <- function(SO,
 
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by) # length = 1 only one SO currently
-  features <- .check.features(SO = SO, features = unique(features), meta.data = F)
+  features <- .check.features(SO = SO, features = unique(features), meta.data = T)
   if (length(meta.col) > 1) {
     stop("Please provide only one meta.col.")
   }
@@ -191,6 +191,7 @@ feature_plot_stat <- function(SO,
   if (length(SO) == 1) {
     plot <- plot + ggplot2::theme(legend.position = "none")
   }
+
   if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
   plot <- plot + ggplot2::theme(...)
   plot <- plot + ggplot2::scale_color_manual(values = col.pal)

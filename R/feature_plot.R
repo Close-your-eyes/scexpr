@@ -9,7 +9,7 @@
 #' @param make.cells.unique
 #' @param pt.size
 #' @param pt.size.expr.factor
-#' @param order
+#' @param order for meta.col: remains T if var is continous but becomes F if var is integer (~probably discrete)
 #' @param min.q.cutoff
 #' @param max.q.cutoff
 #' @param reduction
@@ -318,7 +318,10 @@ feature_plot <- function(SO,
       data <- aliases.list[[2]]
 
       # shuffle to make plotting order random
-      data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+      # only if order == TRUE and data is integer/discrete
+      if (!order && as.integer(data[,1]) == data[,1]) {
+        data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+      }
 
       if (is.null(order.discrete)) {
         plot <- plot + ggplot2::geom_point(data = data[names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)

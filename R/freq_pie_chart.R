@@ -24,5 +24,6 @@ freq_pie_chart <- function(SO,
                    axis.ticks = ggplot2::element_blank()) +
     ggplot2::geom_text(ggplot2::aes(color = unlist(sapply(col_pal("custom", n = nlevels(as.factor(tab[,"cluster"]))), function(x) get_lum(grDevices::col2rgb(x)), simplify = F)) < 20, x = inset.text.radius*sin(mid_angle), y = inset.text.radius*cos(mid_angle), label = format(round(frac, 2), nsmall = 2)), size = inset.text.size) +
     ggplot2::scale_fill_manual(values = col_pal("custom", n = nlevels(as.factor(tab[,"cluster"])))) +
-    ggplot2::scale_color_manual(guide = FALSE, values = c("black", "white"))
+    ggplot2::scale_color_manual(guide = FALSE, values = c("black", "white")) +
+    ggplot2::coord_fixed(ratio = 1)
 }
