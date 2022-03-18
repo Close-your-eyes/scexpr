@@ -165,7 +165,13 @@ feature_plot_stat <- function(SO,
                      "boxplot" = ggplot2::geom_boxplot,
                      "none" = NULL)
 
-  plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta.col), y = expr, color = !!rlang::sym(legend.title)))
+  if (length(SO) > 1) {
+    plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta.col), y = expr, color = !!rlang::sym(legend.title)))
+  } else {
+    plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta.col), y = expr, color = !!rlang::sym(meta.col)))
+  }
+
+
   if (!is.null(my_geom2)) {
     plot <- plot + suppressWarnings(my_geom2(outlier.shape = NA, position = ggplot2::position_dodge(width = 0.75)))
   }
