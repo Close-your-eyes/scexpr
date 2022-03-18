@@ -29,7 +29,7 @@ qc_diagnostic <- function(data.dir,
                           SoupX.resolution = 0.6,
                           cells = NULL,
                           invert_cells = F,
-                          qc_meta_resolution = 0.8,
+                          qc_meta_resolution = 0.6,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -224,7 +224,9 @@ qc_diagnostic <- function(data.dir,
 
     ## clustering on meta data (quality metrics)
     meta <- dplyr::select(SO@meta.data, nCount_RNA, nFeature_RNA, dbl_score, pct_mt, residuals)
+
     #meta <- scale_min_max(meta) # leave unscaled, only scale for umap and finding neighbors
+    # scale(cbind(meta, SO@reductions[["pca"]]@cell.embeddings))
     umap_dims <- uwot::umap(scale_min_max(meta), metric = "cosine")
     colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
     clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine")$snn, resolution = qc_meta_resolution)
