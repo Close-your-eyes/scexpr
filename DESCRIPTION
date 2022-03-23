@@ -20,6 +20,7 @@ Imports:
     Seurat,
     colorRamps,
     RColorBrewer,
+    MetBrewer,
     grDevices,
     viridis,
     viridisLite,

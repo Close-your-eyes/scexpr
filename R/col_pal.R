@@ -1,10 +1,10 @@
 #' Color palettes
 #'
-#' Common interface to get color palettes from different packages: viridisLite, colorRamps, wesanderson and RColorBrewer.
+#' Common interface to get color palettes from different packages: viridisLite, colorRamps, \href{"https://github.com/BlakeRMills/MetBrewer"}{MetBrewer}, href{"https://github.com/karthik/wesanderson"}{wesanderson} and RColorBrewer.
 #' Moreover three custom palettes: "custom", "dutch" and "spanish".
 #'
 #' See available palettes:
-#' c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)], rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish")
+#' c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)], rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish"), MetBrewer::MetPalettes
 #'
 #' @param name name of the palette
 #' @param n number of colors to return; may not work for every palette
@@ -23,6 +23,10 @@ col_pal <- function(name = "custom",
                     reverse = F) {
 
   scl <- NULL
+
+  if (any(grepl(name, names(MetBrewer::MetPalettes)))) {
+    scl <- grDevices::colorRampPalette(MetBrewer::MetPalettes[[name]][[1]], interpolate = "linear")(n)
+  }
 
   if (any(grepl(name, c(ls(loadNamespace("viridisLite")))))) {
     scl <- viridis::viridis_pal(option = name)(n)
