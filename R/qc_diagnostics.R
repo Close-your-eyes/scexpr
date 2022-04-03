@@ -60,7 +60,7 @@ qc_diagnostic <- function(data.dir,
     install.packages("SoupX")
   }
 
-  resolution <- gsub("1.0", "1", resolution)
+  resolution <- as.numeric(gsub("1.0", "1", resolution))
 
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
