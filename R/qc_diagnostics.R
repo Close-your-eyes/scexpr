@@ -60,6 +60,7 @@ qc_diagnostic <- function(data.dir,
     install.packages("SoupX")
   }
 
+  resolution <- gsub("1.0", "1", resolution)
 
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
@@ -218,7 +219,9 @@ qc_diagnostic <- function(data.dir,
     qc_cols <- paste0(qc_cols, "_log")
 
     if (decontX) {
-      SOx <- Seurat::AddMetaData(SOx, celda::decontX(Seurat::GetAssayData(SOx))[["contamination"]], "pct_soup_decontX")
+      SOx <- Seurat::AddMetaData(SOx, celda::decontX(x = Seurat::GetAssayData(SOx),
+                                                     z = SOx@meta.data[[paste0("RNA_snn_res.", resolution)]],
+                                                     varGenes = nhvf)[["contamination"]], "pct_soup_decontX")
       qc_cols <- c(qc_cols, "pct_soup_decontX")
     }
     if (SoupX) {
