@@ -32,6 +32,7 @@ qc_diagnostic <- function(data.dir,
                           cells = NULL,
                           invert_cells = F,
                           qc_meta_resolution = 0.6,
+                          n_PCs_to_meta_clustering = 0,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -60,7 +61,7 @@ qc_diagnostic <- function(data.dir,
     install.packages("SoupX")
   }
 
-  resolution <- as.numeric(gsub("1.0", "1", resolution))
+  resolution <- as.numeric(gsub("^1.0$", "1", resolution))
 
   # set ... for computeDoubletDensity
   # set ... for autoEstCont
@@ -119,23 +120,17 @@ qc_diagnostic <- function(data.dir,
   }
 
   if (!is.null(cells)) {
-    if (any(cells) %in% colnames(filt_data)) {
-      message(length(which((any(cells) %in% colnames(filt_data)))), " names from cells found in column names of data.")
-      cells_sub <- cells[which(cells %in% colnames(filt_data))]
+    if (any(cells %in% colnames(filt_data))) {
+      message(length(cells), " cells provided.")
+      message(length(which(cells %in% colnames(filt_data))), " of cells from a total of ", ncol(filt_data), " cells found in data (", length(which(cells %in% colnames(filt_data)))/ncol(filt_data), " %).")
+      cells <- cells[which(cells %in% colnames(filt_data))]
       if (invert_cells) {
-        filt_data <- filt_data[,which(!colnames(filt_data) %in% cells_sub)]
+        filt_data <- filt_data[,which(!colnames(filt_data) %in% cells)]
       } else {
-        filt_data <- filt_data[,cells_sub]
+        filt_data <- filt_data[,cells]
       }
     } else {
-      message("Non of cells found in column names of data.")
-    }
-
-    cells_sub <- cells[which(cells %in% colnames(filt_data))]
-    if (invert_cells) {
-      filt_data <- filt_data[,which(!colnames(filt_data) %in% cells_sub)]
-    } else {
-      filt_data <- filt_data[,cells_sub]
+      message("Non of cells found in data.")
     }
   }
 
@@ -232,10 +227,12 @@ qc_diagnostic <- function(data.dir,
     SOx@meta.data$nCount_RNA_log <- log1p(SOx@meta.data$nCount_RNA)
     SOx@meta.data$pct_mt_log <- log1p(SOx@meta.data$pct_mt)
     SOx@meta.data$residuals <- stats::residuals(stats::lm(nFeature_RNA_log~nCount_RNA_log, data = SOx@meta.data))
+
     ## clustering on meta data (quality metrics)
     meta <- dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals)
-    #meta <- scale_min_max(meta) # leave unscaled, only scale for umap and finding neighbors
-    # scale(cbind(meta, SO@reductions[["pca"]]@cell.embeddings))
+    if (n_PCs_to_meta_clustering > 0) {
+      meta <- cbind(meta, SOx@reductions[["pca"]]@cell.embeddings[,1:n_PCs_to_meta_clustering])
+    }
     umap_dims <- uwot::umap(scale_min_max(meta), metric = "cosine")
     colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
     SOx[["umapmeta"]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = "UMAPMETA_", assay = "RNA")
@@ -299,7 +296,7 @@ qc_diagnostic <- function(data.dir,
   })
 
   if (length(results) == 1) {
-    return(results[[1]])
+    return(results)
   } else {
     message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
     results <- c(results, list(sc), list(sc_info_df))
