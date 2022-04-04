@@ -30,7 +30,7 @@ qc_diagnostic <- function(data.dir,
                           nhvf = 1000,
                           npcs = 10,
                           min_nCount_RNA = 300,
-                          resolution = 0.9,
+                          resolution = 0.8,
                           SoupX = F,
                           decontX = F,
                           SoupX.resolution = 0.6,
@@ -254,34 +254,105 @@ qc_diagnostic <- function(data.dir,
                                            reduction = "UMAP", legend.position = "none",
                                            plot.labels = "text", label.size = 6))
 
-    qc_p2 <- cowplot::plot_grid(ggplot2::ggplot(tidyr::pivot_longer(SOx@meta.data[,c(qc_cols, meta_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
-                                                ggplot2::aes(x = !!rlang::sym(meta_cols[1]), y = value, color = !!rlang::sym(meta_cols[2]))) +
-                                  ggplot2::geom_jitter(width = 0.2, size = 0.3) +
-                                  ggplot2::theme_bw() +
-                                  ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
-                                                 panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
-                                                 legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
-                                  ggplot2::scale_color_manual(values = col_pal()) +
-                                  ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.))) +
-                                  ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
-                                  ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1),
-                                align = "hv", axis = "tblr")
+    qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SOx@meta.data[,c(qc_cols, meta_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
+                             ggplot2::aes(x = !!rlang::sym(meta_cols[1]), y = value, color = !!rlang::sym(meta_cols[2]))) +
+      ggplot2::geom_jitter(width = 0.2, size = 0.3) +
+      ggplot2::theme_bw() +
+      ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
+                     panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
+                     legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
+      ggplot2::scale_color_manual(values = col_pal()) +
+      ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.))) +
+      ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
+      ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)
+
+    p3_1 <- patchwork::wrap_plots(feature_plot(SOx, features = meta_cols[2], reduction = "umapmeta", pt.size = 0.5, legend.position = "none",
+                                               label.size = 6, plot.labels = "text", plot.title = F),
+                                  suppressMessages(scexpr:::freq_pie_chart(SO = SOx, meta.col = meta_cols[2])),
+                                  ncol = 1)
+
+    x1<-ceiling_any(min(expm1(SOx@meta.data$nCount_RNA_log)), 1000)
+    x2<-floor_any(max(expm1(SOx@meta.data$nCount_RNA_log)), 10000)
+    p3_2 <- feature_plot_stat(SOx,
+                              features = "nCount_RNA_log",
+                              meta.col = meta_cols[2],
+                              geom2 = "none",
+                              jitterwidth = 0.9,
+                              panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                              axis.title.y = ggplot2::element_blank(),
+                              axis.text.x = ggplot2::element_blank(),
+                              axis.title.x = ggplot2::element_blank())
+
+    p3_2 <- tryCatch({
+       p3_2 + ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = c(seq(x1, 10000, 2000), seq(20000, x2, 20000))))
+    }, warning = function(wc) {
+      p3_2
+      message("nCount_RNA secondary axis failed.")
+    })
 
 
 
-    qc_p3 <- cowplot::plot_grid(
-      cowplot::plot_grid(feature_plot(SOx, features = meta_cols[2], reduction = "umapmeta", pt.size = 0.5, legend.position = "none",
-                                      label.size = 6, plot.labels = "text"),
-                         suppressMessages(scexpr:::freq_pie_chart(SO = SOx, meta.col = meta_cols[2])),
-                         ncol = 1, align = "hv", axis = "tblr"),
-      feature_plot_stat(SOx,
-                        features = c(qc_cols, "residuals"),
-                        meta.col = meta_cols[2],
-                        geom2 = "none",
-                        jitterwidth = 0.9,
-                        panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                        axis.title.y = ggplot2::element_blank()),
-      align = "hv", axis = "tblr", rel_widths = c(1/3,2/3))
+    x1<-ceiling_any(min(expm1(SOx@meta.data$nFeature_RNA_log)), 100)
+    x2<-floor_any(max(expm1(SOx@meta.data$nFeature_RNA_log)), 1000)
+    p3_3 <- feature_plot_stat(SOx,
+                              features = "nFeature_RNA_log",
+                              meta.col = meta_cols[2],
+                              geom2 = "none",
+                              jitterwidth = 0.9,
+                              panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                              axis.title.y = ggplot2::element_blank(),
+                              axis.text.x = ggplot2::element_blank(),
+                              axis.title.x = ggplot2::element_blank())
+
+    p3_3 <- tryCatch({
+      p3_3 + ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = c(seq(x1, 1000, 200), seq(2000, x2, 2000))))
+    }, warning = function(wc) {
+      p3_3
+      message("nFeature_RNA secondary axis failed.")
+    })
+
+
+
+    x1<-ceiling_any(min(expm1(SOx@meta.data$pct_mt_log)), 1)
+    x2<-floor_any(max(expm1(SOx@meta.data$pct_mt_log)), 10)
+    p3_4 <- feature_plot_stat(SOx,
+                              features = "pct_mt_log",
+                              meta.col = meta_cols[2],
+                              geom2 = "none",
+                              jitterwidth = 0.9,
+                              panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                              axis.title.y = ggplot2::element_blank())
+
+
+
+    p3_4 <- tryCatch({
+      p3_4 + ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = c(seq(x1, 8, 2), 2, 10, seq(20, x2, 20))))
+    }, warning = function(wc) {
+      p3_4
+      message("pct_mt secondary axis failed.")
+    })
+
+
+    p3_x <- lapply(c(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], "residuals"), function(qcf) {
+      p3_x <- feature_plot_stat(SOx,
+                                features = qcf,
+                                meta.col = meta_cols[2],
+                                geom2 = "none",
+                                jitterwidth = 0.9,
+                                panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                                axis.title.y = ggplot2::element_blank())
+      if (qcf != "residuals") {
+        p3_x <-
+          p3_x +
+          ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.title.x = ggplot2::element_blank())
+      }
+      return(p3_x)
+    })
+
+
+    p3_2 <- patchwork::wrap_plots(p3_2, p3_3, p3_4, ncol = 1)
+    p3_3 <- patchwork::wrap_plots(p3_x, ncol = 1)
+    qc_p3 <- patchwork::wrap_plots(p3_1, p3_2, p3_3, nrow = 1)
 
 
     cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolution), function(x) {
@@ -309,41 +380,10 @@ qc_diagnostic <- function(data.dir,
   }
 }
 
+ceiling_any = function(x, accuracy, f = ceiling) {
+  f(x/ accuracy) * accuracy
+}
 
-
-'cowplot::plot_grid(
-                                  ggplot2::ggplot(SOx@meta.data, ggplot2::aes(nCount_RNA, nFeature_RNA, color = !!rlang::sym(meta_cols[1]))) +
-                                    ggplot2::geom_point(size = 0.4) +
-                                    ggplot2::theme_bw() +
-                                    ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0),
-                                                   legend.background = ggplot2::element_blank(),
-                                                   panel.grid = ggplot2::element_blank(), legend.key = ggplot2::element_blank(),
-                                                   legend.key.size = ggplot2::unit(0.4, "cm")) +
-                                    ggplot2::scale_color_manual(values = col_pal()) +
-                                    ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3), ncol = 3)) +
-                                    ggplot2::labs(color = ""),
-                                  ggplot2::ggplot(dplyr::arrange(SOx@meta.data, dbl_score), ggplot2::aes(nCount_RNA, nFeature_RNA, color = dbl_score)) +
-                                    ggplot2::geom_point(size = 0.4) +
-                                    ggplot2::theme_bw() +
-                                    ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid = ggplot2::element_blank()) +
-                                    ggplot2::scale_color_gradientn(colors = col_pal("spectral"))  +
-                                    ggplot2::guides(color = ggplot2::guide_colorbar(barwidth = 0.5, barheight = 3, label.theme = ggplot2::element_text(size = 6), title.theme = ggplot2::element_text(size = 8))),
-                                  ggplot2::ggplot(dplyr::arrange(SOx@meta.data, pct_mt), ggplot2::aes(nCount_RNA, nFeature_RNA, color = pct_mt)) +
-                                    ggplot2::geom_point(size = 0.4) +
-                                    ggplot2::theme_bw() +
-                                    ggplot2::theme(legend.justification = c(1,0), legend.position = c(1,0), legend.background = ggplot2::element_blank(), panel.grid = ggplot2::element_blank()) +
-                                    ggplot2::scale_color_gradientn(colors = col_pal("spectral"))  +
-                                    ggplot2::guides(color = ggplot2::guide_colorbar(barwidth = 0.5, barheight = 3, label.theme = ggplot2::element_text(size = 6), title.theme = ggplot2::element_text(size = 8))),
-                                  ncol = 1, align = "hv", axis = "tblr")'
-
-
-'ggplot2::ggplot(meta, ggplot2::aes(x = meta_UMAP_1, y = meta_UMAP_2)) +
-                           ggpointdensity::geom_pointdensity(size = 0.3) +
-                           ggplot2::theme_bw() +
-                           ggplot2::theme(legend.position = "none", panel.grid = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank()) +
-                           ggplot2::scale_color_gradientn(colors = col_pal("spectral"))
-'
-
-'    feature_plot_stat(SOx, features = qc_cols, meta.col = meta_cols[2], col.pal = "custom", geom2 = "none") +
-      scale_color_manual(values = col_pal())
-'
+floor_any = function(x, accuracy, f = floor) {
+  f(x/ accuracy) * accuracy
+}
