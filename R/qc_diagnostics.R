@@ -14,6 +14,11 @@
 #' @param cells select to include
 #' @param invert_cells invert cell selection, if TRUE cells are excluded
 #' @param ...
+#' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
+#' @param qc_meta_resolution the resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
+#' @param n_PCs_to_meta_clustering how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
+#' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
+#' phenotypic influence becomes
 #'
 #' @return
 #' @export
@@ -31,8 +36,8 @@ qc_diagnostic <- function(data.dir,
                           SoupX.resolution = 0.6,
                           cells = NULL,
                           invert_cells = F,
-                          qc_meta_resolution = 0.6,
-                          n_PCs_to_meta_clustering = 0,
+                          qc_meta_resolution = 0.8,
+                          n_PCs_to_meta_clustering = 2,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -41,7 +46,6 @@ qc_diagnostic <- function(data.dir,
   if (!requireNamespace("uwot", quietly = T)) {
     utils::install.packages("uwot")
   }
-  #if (!requireNamespace("ggpointdensity", quietly = T)) {utils::install.packages("ggpointdensity")}
   if (!requireNamespace("devtools", quietly = T)) {
     utils::install.packages("devtools")
   }
