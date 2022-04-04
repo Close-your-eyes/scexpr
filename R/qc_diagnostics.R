@@ -271,8 +271,12 @@ qc_diagnostic <- function(data.dir,
                                   suppressMessages(scexpr:::freq_pie_chart(SO = SOx, meta.col = meta_cols[2])),
                                   ncol = 1)
 
-    x1<-ceiling_any(min(expm1(SOx@meta.data$nCount_RNA_log)), 1000)
-    x2<-floor_any(max(expm1(SOx@meta.data$nCount_RNA_log)), 10000)
+    rrr <- c(seq(0, 1e1, 2e0),
+             seq(0, 1e2, 2e1),
+             seq(0, 1e3, 2e2),
+             seq(0, 1e4, 2e3),
+             seq(0, 1e5, 2e4))
+    rrr <- rrr[which(rrr != 0)]
     p3_2 <- feature_plot_stat(SOx,
                               features = "nCount_RNA_log",
                               meta.col = meta_cols[2],
@@ -281,19 +285,10 @@ qc_diagnostic <- function(data.dir,
                               panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                               axis.title.y = ggplot2::element_blank(),
                               axis.text.x = ggplot2::element_blank(),
-                              axis.title.x = ggplot2::element_blank())
+                              axis.title.x = ggplot2::element_blank()) +
+      ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = rrr[intersect(which(rrr > min(expm1(SOx@meta.data$nCount_RNA_log))),
+                                                                                         which(rrr < max(expm1(SOx@meta.data$nCount_RNA_log))))]))
 
-    p3_2 <- tryCatch({
-       p3_2 + ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = c(seq(x1, 10000, 2000), seq(20000, x2, 20000))))
-    }, warning = function(wc) {
-      p3_2
-      message("nCount_RNA secondary axis failed.")
-    })
-
-
-
-    x1<-ceiling_any(min(expm1(SOx@meta.data$nFeature_RNA_log)), 100)
-    x2<-floor_any(max(expm1(SOx@meta.data$nFeature_RNA_log)), 1000)
     p3_3 <- feature_plot_stat(SOx,
                               features = "nFeature_RNA_log",
                               meta.col = meta_cols[2],
@@ -302,36 +297,19 @@ qc_diagnostic <- function(data.dir,
                               panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                               axis.title.y = ggplot2::element_blank(),
                               axis.text.x = ggplot2::element_blank(),
-                              axis.title.x = ggplot2::element_blank())
+                              axis.title.x = ggplot2::element_blank()) +
+      ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = rrr[intersect(which(rrr > min(expm1(SOx@meta.data$nFeature_RNA_log))),
+                                                                                         which(rrr < max(expm1(SOx@meta.data$nFeature_RNA_log))))]))
 
-    p3_3 <- tryCatch({
-      p3_3 + ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = c(seq(x1, 1000, 200), seq(2000, x2, 2000))))
-    }, warning = function(wc) {
-      p3_3
-      message("nFeature_RNA secondary axis failed.")
-    })
-
-
-
-    x1<-ceiling_any(min(expm1(SOx@meta.data$pct_mt_log)), 1)
-    x2<-floor_any(max(expm1(SOx@meta.data$pct_mt_log)), 10)
     p3_4 <- feature_plot_stat(SOx,
                               features = "pct_mt_log",
                               meta.col = meta_cols[2],
                               geom2 = "none",
                               jitterwidth = 0.9,
                               panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                              axis.title.y = ggplot2::element_blank())
-
-
-
-    p3_4 <- tryCatch({
-      p3_4 + ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = c(seq(x1, 8, 2), 2, 10, seq(20, x2, 20))))
-    }, warning = function(wc) {
-      p3_4
-      message("pct_mt secondary axis failed.")
-    })
-
+                              axis.title.y = ggplot2::element_blank()) +
+      ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = rrr[intersect(which(rrr > min(expm1(SOx@meta.data$pct_mt_log))),
+                                                                                         which(rrr < max(expm1(SOx@meta.data$pct_mt_log))))]))
 
     p3_x <- lapply(c(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], "residuals"), function(qcf) {
       p3_x <- feature_plot_stat(SOx,
