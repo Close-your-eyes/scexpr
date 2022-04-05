@@ -517,7 +517,8 @@ feature_plot <- function(SO,
   }
 
   if (combine) {
-    plots <- cowplot::plot_grid(plotlist = plots, ncol = ncol.combine, nrow = nrow.combine, align = "hv", axis = "tblr")
+    #plots <- cowplot::plot_grid(plotlist = plots, ncol = ncol.combine, nrow = nrow.combine, align = "hv", axis = "tblr")
+    plots <- patchwork::wrap_plots(plots, ncol = ncol.combine, nrow = nrow.combine)
   }
   if (length(plots) == 1 && !combine) {
     plots <- plots[[1]]
