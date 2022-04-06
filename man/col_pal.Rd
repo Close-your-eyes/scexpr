@@ -19,12 +19,12 @@ col_pal(name = "custom", n = 100, nbrew = NULL, reverse = F)
 a color palette as character vector
 }
 \description{
-Common function to get color palettes from different packages: viridisLite, colorRamps, wesanderson and RColorBrewer.
+Common interface to get color palettes from different packages: viridisLite, colorRamps, \href{"https://github.com/BlakeRMills/MetBrewer"}{MetBrewer}, href{"https://github.com/karthik/wesanderson"}{wesanderson} and RColorBrewer.
 Moreover three custom palettes: "custom", "dutch" and "spanish".
 }
 \details{
 See available palettes:
-c(rev(ls("package:viridisLite"))\link{-c(1:2)}, rev(ls("package:colorRamps"))\link{-c(2:3)}, rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish")
+c(rev(ls("package:viridisLite"))\link{-c(1:2)}, rev(ls("package:colorRamps"))\link{-c(2:3)}, rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish"), MetBrewer::MetPalettes
 }
 \examples{
 \dontrun{

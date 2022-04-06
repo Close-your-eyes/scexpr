@@ -8,7 +8,7 @@ clustering_volcanos(
   SO,
   assay = c("RNA", "SCT"),
   cluster.meta.cols,
-  reduction = "tSNE",
+  reduction = "UMAP",
   clustree.prefix = NULL,
   save.path = NULL,
   lapply_fun = lapply,
@@ -16,7 +16,17 @@ clustering_volcanos(
 )
 }
 \arguments{
-\item{assay}{}
+\item{SO}{Seurat object, with cluster annotations in meta.data columns}
+
+\item{assay}{which assay to obtain expression values from}
+
+\item{cluster.meta.cols}{column names in meta.data of SO that contain different clusterings (e.g. increasing resolutions)}
+
+\item{reduction}{which reduction to plot cluster identities on, must be present in SO}
+
+\item{clustree.prefix}{the common prefix-string of clusterings, passed to clustree::clustree; if missing will be guessed based on cluster.meta.cols.}
+
+\item{save.path}{path to a folder on disk where to save results to; if it does not exist yet it will be created}
 
 \item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 

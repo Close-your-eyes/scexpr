@@ -13,14 +13,20 @@ convert_gene_identifier(
 )
 }
 \arguments{
+\item{idents}{character vector of gene indentifiers}
+
+\item{ident_in}{type of identifier provided in idents}
+
+\item{ident_out}{type(s) of identifier(s) to return}
+
 \item{return}{}
 }
 \value{
 
 }
 \description{
-Convert gene identifiers from ident_in to ident_out while taking care
-of known duplicates and providing aliases.
+Convert gene identifiers from ident_in to ident_out with AnnotationDbi while taking care of known duplicates and providing aliases.
+For human org.Hs.eg.db is used, for mouse org.Mm.eg.db.
 }
 \details{
 keytypes(org.Hs.eg.db) or colums(org.Hs.eg.db) are: ACCNUM ALIAS ENSEMBL

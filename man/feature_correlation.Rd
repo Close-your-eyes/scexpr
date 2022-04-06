@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_correlation.R
 \name{feature_correlation}
 \alias{feature_correlation}
-\title{Title}
+\title{Get features whose expression is correlated or anti-correlated across all cells or groups of cells}
 \usage{
 feature_correlation(
   SO,
@@ -12,21 +12,51 @@ feature_correlation(
   cells = NULL,
   min_pct = 0.1,
   limit_p = 1e-303,
-  lm_resid = F,
   bar_fill = c("correlation_sign", "ref_feature_pct"),
   theme = ggplot2::theme_bw(),
-  group.by = NULL,
+  group_by = NULL,
   min.group.size = 20,
   topn = c(10, 10),
   ...
 )
 }
 \arguments{
-\item{...}{}
+\item{SO}{Seurat object}
+
+\item{assay}{which assay to obtain expression values from; the data slot will be used in any case}
+
+\item{method}{which metric of correlation to calculate}
+
+\item{features}{which features to calculate correlations for (must be rownames in the selected assay)}
+
+\item{cells}{vector of cell names to consider for correlation anaylsis; if NULL (default) all cells are used}
+
+\item{min_pct}{minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis}
+
+\item{limit_p}{p-value which p-values of 0 will be set to; this avoids obtaining INF when deriving -log10(p-val)}
+
+\item{bar_fill}{which bar fill to apply}
+
+\item{theme}{which ggplot theme to set as basis}
+
+\item{group_by}{groups for correlation analysis; must be a categorical column in meta.data of SO}
+
+\item{min.group.size}{required number of cell in one group to be considered in analysis}
+
+\item{topn}{numeric vector of length two; number of top anti-correlated and correlated features, respectively}
+
+\item{...}{additional arguments to psych::corr.test and to ggplot2::theme}
 }
 \value{
-
+a default plot (ggplot2 object) and the underlying data frame with correlation values
 }
 \description{
-Title
+Find out the expression of which features is correlated or anti-correlated using simple correlation metrics like pearson or spearman.
+The analysis may be applied to a subset of cells or subset of features (see arguments). Due to dropouts in some scRNAseq technologies
+this analysis is not super-clean but may still provide a valid, relative, comparison of feature correlations.
+Other methods considering the dropout-effect exist: \href{"https://academic.oup.com/nargab/article/3/3/lqab072/6348150"}{COTAN}.
+}
+\examples{
+\dontrun{
+}
 }
