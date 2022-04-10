@@ -33,6 +33,7 @@ col_pal <- function(name = "custom",
   }
 
   if (any(grepl(name, ls(loadNamespace("colorRamps")), ignore.case = T))) {
+    attachNamespace("colorRamps")
     colfun <- match.fun(grep(name, ls(loadNamespace("colorRamps")), ignore.case = T, value = T)[1])
     scl <- colfun(n)
   }
