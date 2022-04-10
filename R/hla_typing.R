@@ -184,7 +184,7 @@ hla_typing <- function(hla_ref,
   height.2 <- height.2/total
   height.3 <- height.3/total
 
-  pairwise.plot <- cowplot::plot_grid(rank.plot.p1, rank.plot.p2, rank.read.plot, ncol = 1, align = "v", rel_heights = c(height.1,height.2,height.3))
+  pairwise.plot <- cowplot::plot_grid(rank.plot.p1, rank.plot.p2, rank.read.plot, ncol = 1, align = "v", rel_heights = c(height.1,height.2,height.3)) # check how to replace with patchwork
 
   return(list(top_single_res_df = top_single_res_df,
               top_single_res_matrix = top_single_res,

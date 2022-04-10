@@ -9,12 +9,14 @@ qc_diagnostic(
   nhvf = 1000,
   npcs = 10,
   min_nCount_RNA = 300,
-  resolutions = c(0.4, 0.7, 0.9),
+  resolution = 0.8,
   SoupX = F,
+  decontX = F,
   SoupX.resolution = 0.6,
   cells = NULL,
   invert_cells = F,
-  qc_meta_resolution = 0.4,
+  qc_meta_resolution = 0.8,
+  n_PCs_to_meta_clustering = 2,
   ...
 )
 }
@@ -24,15 +26,22 @@ if not named, then the name of the common parent folder is uses as name(s)}
 
 \item{SoupX}{logical whether to run SoupX. If T, raw_feature_bc_matrix is needed.}
 
+\item{decontX}{logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)}
+
 \item{cells}{select to include}
 
 \item{invert_cells}{invert cell selection, if TRUE cells are excluded}
 
-\item{...}{}
+\item{qc_meta_resolution}{the resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
+
+\item{n_PCs_to_meta_clustering}{how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
+this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
+phenotypic influence becomes}
 }
 \value{
 
 }
 \description{
 On error in scDblFinder: Increase nhvf or try to change any other parameter
+SoupX and/or decontX to filter cells or for correction
 }

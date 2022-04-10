@@ -34,8 +34,8 @@ can be incomplete e.g. if order matters only for some levels, if complement.leve
 if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
 or a vector of features}
 
-\item{avg.expr}{avg.expr from a previous return list of cluster_correlation_matrix; e.g. only to change axis orders avoiding
-repeated calculation}
+\item{avg.expr}{avg.expr from a previous return list of cluster_correlation_matrix; e.g. provide that to  only change axis
+orders or similar but avoid repeated calculation}
 
 \item{method}{which correlation metric to calculate, passed to stats::cor}
 
@@ -44,7 +44,7 @@ repeated calculation}
 \item{round.corr}{decimal places to round correlation values to}
 }
 \value{
-list with (i) ggplot object of correlation matrix, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
+list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 }
 \description{
 Sometimes one wants to avoid combining data sets into a single seurat object as this often requires to employ an integration procedure or a

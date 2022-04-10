@@ -71,6 +71,8 @@ feature_plot(
 )
 }
 \arguments{
+\item{order}{for meta.col: remains T if var is continous but becomes F if var is integer (~probably discrete)}
+
 \item{label.size}{}
 }
 \value{

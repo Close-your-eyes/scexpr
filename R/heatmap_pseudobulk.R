@@ -136,10 +136,12 @@ heatmap_pseudobulk <- function(SO,
     SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels.calc),,drop=F]))
   }
 
+  ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
+  ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
+  wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
+  wil_auc <- wil_auc[which(wil_auc$feature %in% features),]
+
   if (missing(features)) {
-    ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
-    ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
-    wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
     topn.metric <- match.arg(topn.metric, c("logFC", "auc", "padj"))
 
     features <-
@@ -216,7 +218,7 @@ heatmap_pseudobulk <- function(SO,
       ggplot2::scale_y_continuous(limits = c(0, length(levels(htp$Feature)) + 0.5), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme_void()
     heatmap.plot <- heatmap.plot + ggplot2::theme(axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank()) + ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "pt"))
-    heatmap.plot <- cowplot::plot_grid(axis, heatmap.plot, align = "h", axis = "tb", nrow = 1, rel_widths = c(feature.labels.axis.width,1))
+    heatmap.plot <- cowplot::plot_grid(axis, heatmap.plot, align = "h", axis = "tb", nrow = 1, rel_widths = c(feature.labels.axis.width,1)) ## check how to replace with patchwork
   }
 
   if (plot.sec.axis) {

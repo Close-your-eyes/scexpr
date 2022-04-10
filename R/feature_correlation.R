@@ -1,20 +1,33 @@
-#' Title
+#' Get features whose expression is correlated or anti-correlated across all cells or groups of cells
 #'
-#' @param SO
-#' @param assay
-#' @param features
-#' @param cells
-#' @param min_pct
-#' @param limit_p
-#' @param lm_resid
-#' @param ...
+#' Find out the expression of which features is correlated or anti-correlated using simple correlation metrics like pearson or spearman.
+#' The analysis may be applied to a subset of cells or subset of features (see arguments). Due to dropouts in some scRNAseq technologies
+#' this analysis is not super-clean but may still provide a valid, relative, comparison of feature correlations.
+#' Other methods considering the dropout-effect exist: \href{"https://academic.oup.com/nargab/article/3/3/lqab072/6348150"}{COTAN}.
 #'
-#' @return
+#'
+#' @param SO Seurat object
+#' @param assay which assay to obtain expression values from; the data slot will be used in any case
+#' @param features which features to calculate correlations for (must be rownames in the selected assay)
+#' @param cells vector of cell names to consider for correlation anaylsis; if NULL (default) all cells are used
+#' @param min_pct minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis
+#' @param limit_p p-value which p-values of 0 will be set to; this avoids obtaining INF when deriving -log10(p-val)
+#' @param method which metric of correlation to calculate
+#' @param bar_fill which bar fill to apply
+#' @param theme which ggplot theme to set as basis
+#' @param group_by groups for correlation analysis; must be a categorical column in meta.data of SO
+#' @param min.group.size required number of cell in one group to be considered in analysis
+#' @param topn numeric vector of length two; number of top anti-correlated and correlated features, respectively
+#' @param ... additional arguments to psych::corr.test and to ggplot2::theme
+#'
+#' @return a default plot (ggplot2 object) and the underlying data frame with correlation values
 #' @export
 #'
 #' @importFrom magrittr %>%
 #'
 #' @examples
+#' \dontrun{
+#' }
 feature_correlation <- function(SO,
                                 assay = c("RNA", "SCT"),
                                 method = c("pearson", "spearman", "kendall"),
@@ -22,13 +35,12 @@ feature_correlation <- function(SO,
                                 cells = NULL,
                                 min_pct = 0.1,
                                 limit_p = 1e-303,
-                                lm_resid = F,
                                 bar_fill = c("correlation_sign", "ref_feature_pct"),
                                 theme = ggplot2::theme_bw(),
-                                group.by = NULL,
+                                group_by = NULL,
                                 min.group.size = 20,
                                 topn = c(10,10), # n for min and max
-                                ...) { # theme and psych::corr.test
+                                ...) {
 
   if (!requireNamespace("psych", quietly = T)) {
     utils::install.packages("psych")
@@ -65,9 +77,9 @@ feature_correlation <- function(SO,
   }
 
   ## do all the checking
-  if (!is.null(group.by)) {
+  if (!is.null(group_by)) {
     groups <-
-      SO@meta.data[,group.by,drop=F] %>%
+      SO@meta.data[ ,group_by, drop=F] %>%
       tibble::rownames_to_column("ID") %>%
       dplyr::filter(ID %in% cells)
     groups <- split(groups$ID, groups$prim_cell_atlas_labels)
@@ -115,7 +127,7 @@ feature_correlation <- function(SO,
   corr_df <- do.call(rbind, sapply(out, "[", 1))
   corr_df_plot <- do.call(rbind, sapply(out, "[", 2))
 
-  if (is.null(group.by)) {
+  if (is.null(group_by)) {
     corr_df <- corr_df[,which(names(corr_df) != "group")]
     corr_df_plot <- corr_df_plot[,which(names(corr_df_plot) != "group")]
   }
@@ -128,7 +140,7 @@ feature_correlation <- function(SO,
     do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
 
   wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), scales = "free")}
-  if (is.null(group.by)) {
+  if (is.null(group_by)) {
     plot <- plot + wrap_by(feature)
   } else {
     plot <- plot + wrap_by(feature, group)

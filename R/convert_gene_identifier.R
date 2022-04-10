@@ -1,16 +1,16 @@
 #' Title
 #'
-#' Convert gene identifiers from ident_in to ident_out while taking care
-#' of known duplicates and providing aliases.
+#' Convert gene identifiers from ident_in to ident_out with AnnotationDbi while taking care of known duplicates and providing aliases.
+#' For human org.Hs.eg.db is used, for mouse org.Mm.eg.db.
 #'
 #' keytypes(org.Hs.eg.db) or colums(org.Hs.eg.db) are: ACCNUM ALIAS ENSEMBL
 #' ENSEMBLPROT ENSEMBLTRANS ENTREZID ENZYME EVIDENCE EVIDENCEALL
 #' GENENAME GENETYPE GO GOALL IPI MAP OMIM ONTOLOGY ONTOLOGYALL
 #' PATH PFAM PMID PROSITE REFSEQ SYMBOL UCSCKG UNIPROT
 #'
-#' @param idents
-#' @param ident_in
-#' @param ident_out
+#' @param idents character vector of gene indentifiers
+#' @param ident_in type of identifier provided in idents
+#' @param ident_out type(s) of identifier(s) to return
 #' @param species
 #' @param return
 #'
