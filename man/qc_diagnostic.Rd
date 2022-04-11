@@ -2,7 +2,7 @@
 % Please edit documentation in R/qc_diagnostics.R
 \name{qc_diagnostic}
 \alias{qc_diagnostic}
-\title{Title}
+\title{Run a bunch of default quality checks on scRNAseq data from 10X genomics (Cell Ranger)}
 \usage{
 qc_diagnostic(
   data.dir,
@@ -21,27 +21,59 @@ qc_diagnostic(
 )
 }
 \arguments{
-\item{data.dir}{list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix, or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
-if not named, then the name of the common parent folder is uses as name(s)}
+\item{data.dir}{list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix; or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
+if not named, then the name of the common parent folder is used}
 
-\item{SoupX}{logical whether to run SoupX. If T, raw_feature_bc_matrix is needed.}
+\item{nhvf}{number of highly variable features when preparing Seurat object; e.g. 2000 for pbmc dataset (or other diverse samples) and 500 for isolated subsets}
+
+\item{npcs}{number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets}
+
+\item{min_nCount_RNA}{minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity}
+
+\item{resolution}{resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)}
+
+\item{SoupX}{logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.}
 
 \item{decontX}{logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)}
 
-\item{cells}{select to include}
+\item{SoupX.resolution}{resolution for (louvain algorithm) SoupX analysis}
 
-\item{invert_cells}{invert cell selection, if TRUE cells are excluded}
+\item{cells}{vector of cell names to include, consider the trailing '-1' in cell names}
 
-\item{qc_meta_resolution}{the resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
+\item{invert_cells}{invert cell selection, if TRUE cell names provides in 'cells' are excluded}
+
+\item{qc_meta_resolution}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
 
 \item{n_PCs_to_meta_clustering}{how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
 this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 phenotypic influence becomes}
+
+\item{...}{arguments to scDblFinder::computeDoubletDensity prefixed by 'scDbl__' or to SoupX::autoEstCont prefixed
+with 'SoupX__'}
 }
 \value{
 
 }
 \description{
-On error in scDblFinder: Increase nhvf or try to change any other parameter
-SoupX and/or decontX to filter cells or for correction
+Taking Cell Rangers output, namely the (i) feature, (ii) barcode, (iii) matrix files
+within respective folder(s), filtered_feature_bc_matrix and optionally additionally raw_feature_bc_matrix,
+a very default Seurat Object is generated and quality metrics are computed. Moreover, these
+metrics are used to cluster the cells. Groups of cells with low quality scores (e.g. high
+mt-fraction plus low number of detected features) will likely clusters together. This allows to filter them easily.
+If raw_feature_bc_matrix is provided, \href{https://github.com/constantAmateur/SoupX}{SoupX} may be run.
+In that case the whole pipeline in run twice.
+Namely once with the original count matrix and once with a corrected count matrix after running SoupX with default
+settings. If raw_feature_bc_matrix is not available, only \href{https://github.com/campbio/celda}{DecontX}
+is available to check for ambient RNA contamination. Both of these metrics (SoupX and DecontX estimation of ambient RNA)
+become part of clustering by qc metrics if set to TRUE. \href{https://github.com/plger/scDblFinder}{scDblFinder} is run
+to detect doublets which is another quality metric.
+In addition to qc metrics, a number of principle components (PCs) from feature expression may be added to clustering and
+dimension reduction as also the feature composition of low quality transcriptomes may be skewed.
+This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
+also a pure analysis with feature expression values only is run. That may allow subset-wise application
+of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
+a first round.
+}
+\details{
+On error in scDblFinder: Increase nhvf or try to change any other parameter.
 }

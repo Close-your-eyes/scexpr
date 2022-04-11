@@ -1,21 +1,40 @@
-#' Title
+#' Run a bunch of default quality checks on scRNAseq data from 10X genomics (Cell Ranger)
 #'
-#' On error in scDblFinder: Increase nhvf or try to change any other parameter
-#' SoupX and/or decontX to filter cells or for correction
+#' Taking Cell Rangers output, namely the (i) feature, (ii) barcode, (iii) matrix files
+#' within respective folder(s), filtered_feature_bc_matrix and optionally additionally raw_feature_bc_matrix,
+#' a very default Seurat Object is generated and quality metrics are computed. Moreover, these
+#' metrics are used to cluster the cells. Groups of cells with low quality scores (e.g. high
+#' mt-fraction plus low number of detected features) will likely clusters together. This allows to filter them easily.
+#' If raw_feature_bc_matrix is provided, \href{https://github.com/constantAmateur/SoupX}{SoupX} may be run.
+#' In that case the whole pipeline in run twice.
+#' Namely once with the original count matrix and once with a corrected count matrix after running SoupX with default
+#' settings. If raw_feature_bc_matrix is not available, only \href{https://github.com/campbio/celda}{DecontX}
+#' is available to check for ambient RNA contamination. Both of these metrics (SoupX and DecontX estimation of ambient RNA)
+#' become part of clustering by qc metrics if set to TRUE. \href{https://github.com/plger/scDblFinder}{scDblFinder} is run
+#' to detect doublets which is another quality metric.
+#' In addition to qc metrics, a number of principle components (PCs) from feature expression may be added to clustering and
+#' dimension reduction as also the feature composition of low quality transcriptomes may be skewed.
+#' This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
+#' also a pure analysis with feature expression values only is run. That may allow subset-wise application
+#' of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
+#' a first round.
 #'
-#' @param data.dir list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix, or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
-#' if not named, then the name of the common parent folder is uses as name(s)
-#' @param nhvf
-#' @param npcs
-#' @param min_nCount_RNA
-#' @param resolution
-#' @param SoupX logical whether to run SoupX. If T, raw_feature_bc_matrix is needed.
-#' @param SoupX.resolution
-#' @param cells select to include
-#' @param invert_cells invert cell selection, if TRUE cells are excluded
-#' @param ...
+#' On error in scDblFinder: Increase nhvf or try to change any other parameter.
+#'
+#' @param data.dir list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix; or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
+#' if not named, then the name of the common parent folder is used
+#' @param nhvf number of highly variable features when preparing Seurat object; e.g. 2000 for pbmc dataset (or other diverse samples) and 500 for isolated subsets
+#' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
+#' @param min_nCount_RNA minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity
+#' @param resolution resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)
+#' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
+#' @param SoupX.resolution resolution for (louvain algorithm) SoupX analysis
+#' @param cells vector of cell names to include, consider the trailing '-1' in cell names
+#' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
+#' @param ... arguments to scDblFinder::computeDoubletDensity prefixed by 'scDbl__' or to SoupX::autoEstCont prefixed
+#' with 'SoupX__'
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
-#' @param qc_meta_resolution the resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
+#' @param qc_meta_resolution resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
 #' @param n_PCs_to_meta_clustering how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
 #' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 #' phenotypic influence becomes
@@ -67,9 +86,8 @@ qc_diagnostic <- function(data.dir,
 
   resolution <- as.numeric(gsub("^1.0$", "1", resolution))
 
-  # set ... for computeDoubletDensity
-  # set ... for autoEstCont
-  # decontX as alternative if raw_feature_bc_matrix is missing (https://github.com/campbio/celda)
+  dots <- list(...)
+  ## check dots for first letters
 
   # check data.dir
   if (class(data.dir) == "list") {
@@ -159,7 +177,12 @@ qc_diagnostic <- function(data.dir,
       SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = SoupX.resolution)
     }
     sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
-    sc = SoupX::autoEstCont(sc)
+
+    temp_dots <- dots[which(grepl("^SoupX__", names(dots), ignore.case = T))]
+    names(temp_dots) <- gsub("^SoupX__", "", names(temp_dots), ignore.case = T)
+    temp_dots <- temp_dots[which(names(temp_dots) %in% formals(SoupX::autoEstCont))]
+    sc <- do.call(SoupX::autoEstCont, args = c(list(sc = sc), temp_dots))
+
     out = SoupX::adjustCounts(sc)
     # add percentage of soup as meta data, similar to decontX
     SO <- Seurat::AddMetaData(SO, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
@@ -198,11 +221,14 @@ qc_diagnostic <- function(data.dir,
       warning(paste0("Transcriptomes (cells) with less than ", min_nCount_RNA, " total transcripts found. These will be excluded from finding doublets. They will have NA as dbl_score."))
     }
 
+    temp_dots <- dots[which(grepl("^scDbl__", names(dots), ignore.case = T))]
+    names(temp_dots) <- gsub("^scDbl__", "", names(temp_dots), ignore.case = T)
 
-    dbl_score <- log1p(stats::setNames(scDblFinder::computeDoubletDensity(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
-                                                                          subset.row = Seurat::VariableFeatures(SOx),
-                                                                          dims = npcs, ...),
-                                       nm = colnames(counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)])))
+    dbl_score <- do.call(scDblFinder::computeDoubletDensity, args = c(list(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
+                                                                           subset.row = Seurat::VariableFeatures(SOx),
+                                                                           dims = npcs),
+                                                                      temp_dots))
+    dbl_score <- log1p(stats::setNames(dbl_score, nm = colnames(counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)])))
 
     SOx <- Seurat::AddMetaData(SOx, dbl_score, "dbl_score_log")
     # differentiate mouse, human or no MT-genes at all
