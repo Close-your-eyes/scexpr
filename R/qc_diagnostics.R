@@ -136,7 +136,7 @@ qc_diagnostic <- function(data.dir,
     stop("qc_meta_resolution has to a numeric of length one. It is passed to the resolution parameter of Seurat::FindClusters.")
   }
 
-
+  message("Reading filtered_feature_bc_matrix data.")
   filt_data <- Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T))
   if (is.list(filt_data)) {
     message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
@@ -167,6 +167,7 @@ qc_diagnostic <- function(data.dir,
     }
   }
 
+  message("Creating initial Seurat object with ", ncol(filt_data), " cells.")
   SO <-
     Seurat::CreateSeuratObject(counts = as.matrix(filt_data)) %>%
     Seurat::NormalizeData(verbose = F) %>%
@@ -179,10 +180,12 @@ qc_diagnostic <- function(data.dir,
 
   if (SoupX) {
     # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the picture of the soup
+    message("Reading raw_feature_bc_matrix data.")
     raw_data <- Seurat::Read10X(data.dir = grep("raw_feature_bc_matrix", data.dir, value = T))
     if (is.list(raw_data)) {
       raw_data <- raw_data[["Gene Expression"]]
     }
+    message("Running SoupX.")
     sc <- SoupX::SoupChannel(tod = raw_data, toc = filt_data)
     if (SoupX.resolution != resolution) {
       SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = SoupX.resolution, verbose = F)
@@ -198,6 +201,7 @@ qc_diagnostic <- function(data.dir,
     # add percentage of soup as meta data, similar to decontX
     SO <- Seurat::AddMetaData(SO, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
+    message("Creating Seurat object on SoupX-corrected count matrix with ", ncol(filt_data), " cells.")
     SO_sx <-
       Seurat::CreateSeuratObject(counts = out, verbose = F) %>%
       Seurat::NormalizeData(verbose = F) %>%
@@ -219,7 +223,7 @@ qc_diagnostic <- function(data.dir,
       dplyr::filter(abs_diff > 0) %>%
       tibble::rownames_to_column("Feature")
 
-    message("Create a SoupX RNA assay as follows: SO[['SoupXRNA']] <- Seurat::CreateAssayObject(counts = soupx_matrix).")
+    message("Optionally: Create a SoupX RNA assay as follows: SO[['SoupXRNA']] <- Seurat::CreateAssayObject(counts = soupx_matrix).")
     SO <- list(SO, SO_sx)
     names(SO) <- c("original", "SoupX")
   } else {
@@ -228,6 +232,7 @@ qc_diagnostic <- function(data.dir,
 
   results <- lapply(SO, function(SOx) {
 
+    message("Running scDblFinder.")
     dbl_score <- NULL
     if (scDblFinder) {
       dbl_score <- tryCatch({
@@ -289,6 +294,7 @@ qc_diagnostic <- function(data.dir,
     SOx@meta.data$residuals <- stats::residuals(stats::lm(nFeature_RNA_log~nCount_RNA_log, data = SOx@meta.data))
 
     ## clustering on meta data (quality metrics)
+    message("Running dimension reduction and clustering on qc meta data.")
     meta <- dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals)
     if (n_PCs_to_meta_clustering > 0) {
       meta <- cbind(meta, SOx@reductions[["pca"]]@cell.embeddings[,1:n_PCs_to_meta_clustering])
@@ -324,7 +330,7 @@ qc_diagnostic <- function(data.dir,
 
     p3_1 <- patchwork::wrap_plots(feature_plot(SOx, features = meta_cols[2], reduction = "umapmeta", pt.size = 0.5, legend.position = "none",
                                                label.size = 6, plot.labels = "text", plot.title = F),
-                                  suppressMessages(scexpr:::freq_pie_chart(SO = SOx, meta.col = meta_cols[2])),
+                                  suppressMessages(freq_pie_chart(SO = SOx, meta.col = meta_cols[2])),
                                   ncol = 1)
 
     rrr <- c(seq(0, 1e1, 2e0),
@@ -389,6 +395,7 @@ qc_diagnostic <- function(data.dir,
     qc_p3 <- patchwork::wrap_plots(p3_1, p3_2, p3_3, nrow = 1)
 
 
+    message("Calculating phenotype cluster markers.")
     cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolution), function(x) {
       presto::wilcoxauc(SOx, group_by = x, seurat_assay = "RNA", assay = "data")  %>%
         dplyr::filter(padj < 0.0001) %>%
@@ -400,8 +407,8 @@ qc_diagnostic <- function(data.dir,
 
     #remove count slot to save memory
     return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), counts = F, dimreducs = names(SOx@reductions)),
-                qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3,
-                cluster_markers = cluster_marker_list))
+                phenotype_clusters_plot = qc_p1, meta_vs_phenotype_clusters_plot = qc_p2, meta_clusters_plot = qc_p3,
+                phenotype_cluster_markers = cluster_marker_list))
   })
 
   if (length(results) == 1) {
