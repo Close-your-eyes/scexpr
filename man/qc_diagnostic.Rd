@@ -6,10 +6,11 @@
 \usage{
 qc_diagnostic(
   data.dir,
-  nhvf = 1000,
+  nhvf = 5000,
   npcs = 10,
-  min_nCount_RNA = 300,
+  min_nCount_RNA = 100,
   resolution = 0.8,
+  scDblFinder = T,
   SoupX = F,
   decontX = F,
   SoupX.resolution = 0.6,
@@ -24,7 +25,8 @@ qc_diagnostic(
 \item{data.dir}{list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix; or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
 if not named, then the name of the common parent folder is used}
 
-\item{nhvf}{number of highly variable features when preparing Seurat object; e.g. 2000 for pbmc dataset (or other diverse samples) and 500 for isolated subsets}
+\item{nhvf}{number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
+at the risk of scDblFinder returning an error 'size factors should be positive'}
 
 \item{npcs}{number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets}
 
@@ -48,8 +50,7 @@ if not named, then the name of the common parent folder is used}
 this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 phenotypic influence becomes}
 
-\item{...}{arguments to scDblFinder::computeDoubletDensity prefixed by 'scDbl__' or to SoupX::autoEstCont prefixed
-with 'SoupX__'}
+\item{...}{arguments to SoupX::autoEstCont prefixed with 'SoupX__'}
 }
 \value{
 
