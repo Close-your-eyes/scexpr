@@ -23,7 +23,8 @@
 #'
 #' @param data.dir list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix; or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
 #' if not named, then the name of the common parent folder is used
-#' @param nhvf number of highly variable features when preparing Seurat object; e.g. 2000 for pbmc dataset (or other diverse samples) and 500 for isolated subsets
+#' @param nhvf number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
+#' at the risk of scDblFinder returning an error 'size factors should be positive'
 #' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
 #' @param min_nCount_RNA minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity
 #' @param resolution resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)
@@ -31,8 +32,7 @@
 #' @param SoupX.resolution resolution for (louvain algorithm) SoupX analysis
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
-#' @param ... arguments to scDblFinder::computeDoubletDensity prefixed by 'scDbl__' or to SoupX::autoEstCont prefixed
-#' with 'SoupX__'
+#' @param ... arguments to SoupX::autoEstCont prefixed with 'SoupX__'
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
 #' @param qc_meta_resolution resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
 #' @param n_PCs_to_meta_clustering how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
@@ -46,10 +46,11 @@
 #'
 #' @examples
 qc_diagnostic <- function(data.dir,
-                          nhvf = 1000,
+                          nhvf = 5000,
                           npcs = 10,
-                          min_nCount_RNA = 300,
+                          min_nCount_RNA = 100,
                           resolution = 0.8,
+                          scDblFinder = T,
                           SoupX = F,
                           decontX = F,
                           SoupX.resolution = 0.6,
@@ -138,7 +139,17 @@ qc_diagnostic <- function(data.dir,
 
   filt_data <- Seurat::Read10X(data.dir = grep("filtered_feature_bc_matrix", data.dir, value = T))
   if (is.list(filt_data)) {
+    message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
     filt_data <- filt_data[["Gene Expression"]]
+  }
+  # filter cells with very low RNA_count
+  nCount_RNA <- Matrix::colSums(filt_data) ## fix
+  if (any(nCount_RNA < min_nCount_RNA)) {
+    message(length(which(nCount_RNA < min_nCount_RNA)), " cells removed due to min_nCount_RNA.")
+    filt_data <- filt_data[,which(nCount_RNA >= min_nCount_RNA)]
+    if (ncol(filt_data) == 0) {
+      stop("No cells left after filtering for min_nCount_RNA.")
+    }
   }
 
   if (!is.null(cells)) {
@@ -158,13 +169,13 @@ qc_diagnostic <- function(data.dir,
 
   SO <-
     Seurat::CreateSeuratObject(counts = as.matrix(filt_data)) %>%
-    Seurat::NormalizeData() %>%
-    Seurat::FindVariableFeatures(nfeatures = nhvf) %>%
-    Seurat::ScaleData() %>%
-    Seurat::RunPCA(npcs = npcs) %>%
-    Seurat::RunUMAP(dims = 1:npcs) %>%
-    Seurat::FindNeighbors(dims = 1:npcs) %>%
-    Seurat::FindClusters(algorithm = 1, resolution = resolution)
+    Seurat::NormalizeData(verbose = F) %>%
+    Seurat::FindVariableFeatures(nfeatures = nhvf, verbose = F) %>%
+    Seurat::ScaleData(verbose = F) %>%
+    Seurat::RunPCA(npcs = npcs, verbose = F) %>%
+    Seurat::RunUMAP(dims = 1:npcs, verbose = F) %>%
+    Seurat::FindNeighbors(dims = 1:npcs, verbose = F) %>%
+    Seurat::FindClusters(algorithm = 1, resolution = resolution, verbose = F)
 
   if (SoupX) {
     # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the picture of the soup
@@ -174,7 +185,7 @@ qc_diagnostic <- function(data.dir,
     }
     sc <- SoupX::SoupChannel(tod = raw_data, toc = filt_data)
     if (SoupX.resolution != resolution) {
-      SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = SoupX.resolution)
+      SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = SoupX.resolution, verbose = F)
     }
     sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
 
@@ -188,14 +199,15 @@ qc_diagnostic <- function(data.dir,
     SO <- Seurat::AddMetaData(SO, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
     SO_sx <-
-      Seurat::CreateSeuratObject(counts = out) %>%
-      Seurat::NormalizeData() %>%
-      Seurat::FindVariableFeatures(nfeatures = nhvf) %>%
-      Seurat::ScaleData() %>%
-      Seurat::RunPCA(npcs = npcs) %>%
-      Seurat::RunUMAP(dims = 1:npcs) %>%
-      Seurat::FindNeighbors(dims = 1:npcs) %>%
-      Seurat::FindClusters(algorithm = 1, resolution = resolution)
+      Seurat::CreateSeuratObject(counts = out, verbose = F) %>%
+      Seurat::NormalizeData(verbose = F) %>%
+      Seurat::FindVariableFeatures(nfeatures = nhvf, verbose = F) %>%
+      Seurat::ScaleData(verbose = F) %>%
+      Seurat::RunPCA(npcs = npcs, verbose = F) %>%
+      Seurat::RunUMAP(dims = 1:npcs, verbose = F) %>%
+      Seurat::FindNeighbors(dims = 1:npcs, verbose = F) %>%
+      Seurat::FindClusters(algorithm = 1, resolution = resolution, verbose = F)
+
     SO_sx <- Seurat::AddMetaData(SO_sx, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
     sc <- SoupX::setDR(sc, SO_sx@reductions$umap@cell.embeddings)
@@ -216,30 +228,48 @@ qc_diagnostic <- function(data.dir,
 
   results <- lapply(SO, function(SOx) {
 
-    counts <- as.matrix(Seurat::GetAssayData(SOx, slot = "counts"))
-    if (any(matrixStats::colSums2(counts) < min_nCount_RNA)) {
-      warning(paste0("Transcriptomes (cells) with less than ", min_nCount_RNA, " total transcripts found. These will be excluded from finding doublets. They will have NA as dbl_score."))
+    dbl_score <- NULL
+    if (scDblFinder) {
+      dbl_score <- tryCatch({
+        log1p(scDblFinder::computeDoubletDensity(x = as.matrix(Seurat::GetAssayData(SOx, slot = "counts")),
+                                                 subset.row = Seurat::VariableFeatures(SOx),
+                                                 dims = npcs))
+      }, error = function(error_condition) {
+        message("doublet calculation failed. Ty to increase nhvf.")
+        message(error_condition)
+        return(NULL)
+      })
     }
 
-    temp_dots <- dots[which(grepl("^scDbl__", names(dots), ignore.case = T))]
-    names(temp_dots) <- gsub("^scDbl__", "", names(temp_dots), ignore.case = T)
+    if (is.null(dbl_score)) {
+      qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt")
+    } else {
+      dbl_score <- stats::setNames(dbl_score, nm = colnames(Seurat::GetAssayData(SOx, slot = "counts")))
+      SOx <- Seurat::AddMetaData(SOx, dbl_score, "dbl_score_log")
+      qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt", "dbl_score")
+    }
 
-    dbl_score <- do.call(scDblFinder::computeDoubletDensity, args = c(list(x = counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)],
+
+    # slow !!
+    'temp_dots <- dots[which(grepl("^scDbl__", names(dots), ignore.case = T))]
+    names(temp_dots) <- gsub("^scDbl__", "", names(temp_dots), ignore.case = T)
+    dbl_score <- do.call(scDblFinder::computeDoubletDensity, args = c(list(x = counts[,which(matrixStats::colSums2(counts) >= 2000)],
                                                                            subset.row = Seurat::VariableFeatures(SOx),
                                                                            dims = npcs),
-                                                                      temp_dots))
-    dbl_score <- log1p(stats::setNames(dbl_score, nm = colnames(counts[,which(matrixStats::colSums2(counts) >= min_nCount_RNA)])))
+                                                                      temp_dots))'
 
-    SOx <- Seurat::AddMetaData(SOx, dbl_score, "dbl_score_log")
+
+    # impute missing dbl score values with medians
+    #SOx@meta.data$dbl_score_log[which(is.na(SOx@meta.data$dbl_score_log))] <- median(SOx@meta.data$dbl_score_log, na.rm = T)
+
     # differentiate mouse, human or no MT-genes at all
-    qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt", "dbl_score")
     if (any(grepl("^MT-", rownames(SOx))) && !any(grepl("^mt-", rownames(SOx)))) {
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^MT-"), "pct_mt")
     } else if (!any(grepl("^MT-", rownames(SOx))) && any(grepl("^mt-", rownames(SOx)))) {
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^mt-"), "pct_mt")
     } else {
       message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
-      qc_cols <- c("nCount_RNA", "nFeature_RNA", "dbl_score")
+      qc_cols <- qc_cols[-which(qc_cols == "pct_mt")]
     }
     qc_cols <- paste0(qc_cols, "_log")
 
@@ -267,7 +297,7 @@ qc_diagnostic <- function(data.dir,
     colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
     SOx[["umapmeta"]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = "UMAPMETA_", assay = "RNA")
 
-    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine")$snn, resolution = qc_meta_resolution)
+    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine", verbose = F)$snn, resolution = qc_meta_resolution, verbose = F)
     colnames(clusters) <- paste0("meta_", colnames(clusters))
     SOx <- Seurat::AddMetaData(SOx, cbind(umap_dims, clusters))
 
