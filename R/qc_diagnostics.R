@@ -32,12 +32,12 @@
 #' @param SoupX.resolution resolution for (louvain algorithm) SoupX analysis
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
-#' @param ... arguments to SoupX::autoEstCont prefixed with 'SoupX__'
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
 #' @param qc_meta_resolution resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
 #' @param n_PCs_to_meta_clustering how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
 #' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 #' phenotypic influence becomes
+#' @param ... additinal arguments to SoupX::autoEstCont
 #'
 #' @return
 #' @export
@@ -87,7 +87,7 @@ qc_diagnostic <- function(data.dir,
 
   resolution <- as.numeric(gsub("^1.0$", "1", resolution))
 
-  dots <- list(...)
+  #dots <- list(...)
   ## check dots for first letters
 
   # check data.dir
@@ -192,12 +192,13 @@ qc_diagnostic <- function(data.dir,
     }
     sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
 
-    temp_dots <- dots[which(grepl("^SoupX__", names(dots), ignore.case = T))]
-    names(temp_dots) <- gsub("^SoupX__", "", names(temp_dots), ignore.case = T)
-    temp_dots <- temp_dots[which(names(temp_dots) %in% formals(SoupX::autoEstCont))]
-    sc <- do.call(SoupX::autoEstCont, args = c(list(sc = sc), temp_dots))
+    #temp_dots <- dots[which(grepl("^SoupX__", names(dots), ignore.case = T))]
+    #names(temp_dots) <- gsub("^SoupX__", "", names(temp_dots), ignore.case = T)
+    #temp_dots <- temp_dots[which(names(temp_dots) %in% formals(SoupX::autoEstCont))]
+    #sc <- do.call(SoupX::autoEstCont, args = c(list(sc = sc, verbose = F), temp_dots))
 
-    out = SoupX::adjustCounts(sc)
+    sc <- SoupX::autoEstCont(sc, verbose = F, ...)
+    out = SoupX::adjustCounts(sc, verbose = 0)
     # add percentage of soup as meta data, similar to decontX
     SO <- Seurat::AddMetaData(SO, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(out))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
