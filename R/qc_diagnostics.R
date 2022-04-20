@@ -89,7 +89,10 @@ qc_diagnostic <- function(data_dirs,
     BiocManager::install("celda")
   }
   if (SoupX && !requireNamespace("SoupX", quietly = T)) {
-    install.packages("SoupX")
+    utils:install.packages("SoupX")
+  }
+  if (!requireNamespace("patchwork", quietly = T)) {
+    utils::install.packages("patchwork")
   }
 
   resolution <- as.numeric(gsub("^1.0$", "1", resolution))
@@ -210,7 +213,7 @@ qc_diagnostic <- function(data_dirs,
       message("Running SoupX.")
 
       sc <- SoupX::autoEstCont(sc, verbose = F, ...)
-      sx_counts = suppressWarnings(SoupX::adjustCounts(sc, verbose = 0))
+      sx_counts <- suppressWarnings(SoupX::adjustCounts(sc, verbose = 0))
 
       if (return_SoupX) {
         message("Creating Seurat object on SoupX-corrected count matrix with ", ncol(filt_data), " cells.")
@@ -487,7 +490,7 @@ qc_plots <- function(SO,
                                              reduction = "umapmeta", pt.size = 0.5,
                                              legend.position = "none",
                                              label.size = 6, plot.labels = "text", plot.title = F),
-                                suppressMessages(scexpr:::freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
+                                suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
                                 ncol = 1)
 
   p3_2 <- feature_plot_stat(SO,
@@ -511,7 +514,7 @@ qc_plots <- function(SO,
                             axis.title.y = ggplot2::element_blank(),
                             axis.text.x = ggplot2::element_blank(),
                             axis.title.x = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nFeature_RNA_log))),
+    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nFeature_RNA_log))),
                                                                                           which(breaks < max(expm1(SO@meta.data$nFeature_RNA_log))))]))
 
   p3_4 <- feature_plot_stat(SO,
@@ -521,7 +524,7 @@ qc_plots <- function(SO,
                             jitterwidth = 0.9,
                             panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                             axis.title.y = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$pct_mt_log))),
+    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$pct_mt_log))),
                                                                                           which(breaks < max(expm1(SO@meta.data$pct_mt_log))))]))
 
   p3_x <- lapply(c(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], "residuals"), function(qcf) {

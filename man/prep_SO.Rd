@@ -25,6 +25,7 @@ prep_SO(
   save_path = NULL,
   celltype_refs = NULL,
   celltype_label = "label.main",
+  diet_seurat = T,
   ...
 )
 }
@@ -73,6 +74,8 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 \item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())}
 
 \item{celltype_label}{label}
+
+\item{diet_seurat}{logical whether to run Seurat::Die}
 
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,

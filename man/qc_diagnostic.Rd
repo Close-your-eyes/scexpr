@@ -5,52 +5,61 @@
 \title{Run a bunch of default quality checks on scRNAseq data from 10X genomics (Cell Ranger)}
 \usage{
 qc_diagnostic(
-  data.dir,
+  data_dirs,
   nhvf = 5000,
   npcs = 10,
   min_nCount_RNA = 100,
   resolution = 0.8,
+  SoupX.resolution = 0.6,
+  qc_meta_resolution = 0.8,
+  n_PCs_to_meta_clustering = 2,
   scDblFinder = T,
   SoupX = F,
   decontX = F,
-  SoupX.resolution = 0.6,
+  return_SoupX = T,
   cells = NULL,
   invert_cells = F,
-  qc_meta_resolution = 0.8,
-  n_PCs_to_meta_clustering = 2,
   ...
 )
 }
 \arguments{
-\item{data.dir}{list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix; or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
-if not named, then the name of the common parent folder is used}
+\item{data_dirs}{list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
+on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
+is missing, SoupX is disable for all others}
 
 \item{nhvf}{number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
 at the risk of scDblFinder returning an error 'size factors should be positive'}
 
 \item{npcs}{number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets}
 
-\item{min_nCount_RNA}{minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity}
+\item{min_nCount_RNA}{minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity; cells with less
+transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)}
 
 \item{resolution}{resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)}
+
+\item{SoupX.resolution}{resolution for (louvain algorithm) SoupX analysis}
+
+\item{qc_meta_resolution}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
+
+\item{n_PCs_to_meta_clustering}{how many principle components (PCs) from phenotypic clustering to add to qc meta data;
+this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
+phenotypic influence becomes}
+
+\item{scDblFinder}{logical, whether to run doublet detection algorithm from scDblFinder}
 
 \item{SoupX}{logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.}
 
 \item{decontX}{logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)}
 
-\item{SoupX.resolution}{resolution for (louvain algorithm) SoupX analysis}
+\item{return_SoupX}{logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
+have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
+filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.}
 
 \item{cells}{vector of cell names to include, consider the trailing '-1' in cell names}
 
 \item{invert_cells}{invert cell selection, if TRUE cell names provides in 'cells' are excluded}
 
-\item{qc_meta_resolution}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
-
-\item{n_PCs_to_meta_clustering}{how many principle compoments (PCs) from phenotypic clustering to add to qc meta data;
-this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
-phenotypic influence becomes}
-
-\item{...}{arguments to SoupX::autoEstCont prefixed with 'SoupX__'}
+\item{...}{additional arguments to SoupX::autoEstCont}
 }
 \value{
 

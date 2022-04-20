@@ -33,6 +33,7 @@
 #' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
 #' @param celltype_label label
+#' @param diet_seurat logical whether to run Seurat::Die
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export

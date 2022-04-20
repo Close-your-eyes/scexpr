@@ -1,9 +1,12 @@
 Package: scexpr
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9001
+Title: Lots of helpers and wrappers to analyze scRNAseq data sets
+Version: 0.0.0.9010
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+    person(given = "Christopher Mark",
+           family = "Skopnik",
+           role = c("aut", "cre"),
+           email = "vonskopnik@pm.me",
+           comment = c(ORCID = "0000-0002-6089-4769"))
 Description: What the package does (one paragraph).
 License: GPL (>= 3)
 Encoding: UTF-8
@@ -35,6 +38,8 @@ Imports:
     methods
 Suggests: 
     presto,
+    patchwork,
+    celda,
     psych,
     reshape2,
     scDblFinder,
