@@ -271,8 +271,8 @@ qc_diagnostic <- function(data_dirs,
                                                    subset.row = Seurat::VariableFeatures(SOx),
                                                    dims = npcs))
         }, error = function(error_condition) {
-          message("doublet calculation failed. Try to increase nhvf.")
-          message(error_condition)
+          message(error_condition, " ... doublet calculation failed. Try to increase nhvf.")
+          message("")
           return(NULL)
         })
         if (is.null(dbl_score_temp)) {
