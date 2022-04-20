@@ -60,6 +60,7 @@ prep_SO <- function(SO_unprocessed,
                     save_path = NULL,
                     celltype_refs = NULL, # list of celldex::objects
                     celltype_label = "label.main",
+                    diet_seurat = T,
                     ...) {
 
 
@@ -67,8 +68,8 @@ prep_SO <- function(SO_unprocessed,
 
   options(warn = 1)
   if (is.null(save_path)) {
-    stop("Please provide a save_path to save Seurat objects to.")
-  } else if (!is.character(save_path)) {
+    message("No save_path to save Seurat objects to provided.")
+  } else if (!is.character(save_path) || length(save_path) != 1) {
     stop("save_path has to be a character; a path to a folder where to save Seurat objects to.")
   }
 
@@ -130,7 +131,7 @@ prep_SO <- function(SO_unprocessed,
   }
 
   if (downsample > 1 && downsample < min_cells) {
-    print("downsample set to min_cells.")
+    message("downsample set to min_cells.")
     downsample <- min_cells
   }
 
@@ -138,7 +139,7 @@ prep_SO <- function(SO_unprocessed,
     samples <- names(SO.list)
   } else {
     if (any(!samples %in% names(SO.list))) {
-      print(paste0("samples not found in SO_unprocessed: ", samples[which(!samples %in% names(SO.list))]))
+      message("samples not found in SO_unprocessed: ", samples[which(!samples %in% names(SO.list))])
     }
 
   }
@@ -160,7 +161,7 @@ prep_SO <- function(SO_unprocessed,
     })
   }
   if (any(sapply(SO.list, is.null))) {
-    print(paste0("No cells found for: ", paste(names(SO.list)[which(sapply(SO.list, is.null))], collapse = ", ")))
+    message("No cells found for: ", paste(names(SO.list)[which(sapply(SO.list, is.null))], collapse = ", "))
     SO.list <- SO.list[which(!sapply(SO.list, is.null))]
     if (length(SO.list) == 0) {
       stop("No Seurat objects left after filtering for cells.")
@@ -177,10 +178,10 @@ prep_SO <- function(SO_unprocessed,
   rm.nm <- names(SO.list[which(sapply(SO.list, function(x){length(Seurat::Cells(x)) < min_cells}))])
   if (length(rm.nm) > 0) {
     SO.list <- SO.list[which(!names(SO.list) %in% rm.nm)]
-    print(paste0("samples removed due to min.cells: ", paste(rm.nm, collapse = ",")))
+    message("samples removed due to min.cells: ", paste(rm.nm, collapse = ","))
   }
 
-  print(paste0("Samples included (", length(SO.list), "): ", paste(names(SO.list), collapse=", ")))
+  message("Samples included (", length(SO.list), "): ", paste(names(SO.list), collapse=", "))
 
   if (length(SO.list) == 1) {
     batch_corr <- "none"
@@ -207,7 +208,7 @@ prep_SO <- function(SO_unprocessed,
       SO <- merge(x = SO.list[[1]], y = SO.list[2:length(SO.list)], merge.data = T)
       if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
         vars.to.regress <- NULL
-        print("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")
+        message("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")
       }
       if (normalization == "SCT") {
         SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = F))
@@ -268,7 +269,7 @@ prep_SO <- function(SO_unprocessed,
   if (any(grepl("umap", reductions, ignore.case = T))) {
 '    dots <- mydots[which(grepl("^RunUMAP__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^RunUMAP__", "", names(dots), ignore.case = T)'
-    SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, ...)
+    SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", metric = "cosine", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, ...)
     #SO <- do.call(Seurat::RunUMAP, args = c(list(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T), dots))
   }
   if (any(grepl("tsne", reductions, ignore.case = T))) {
@@ -335,12 +336,17 @@ prep_SO <- function(SO_unprocessed,
   }
 
   # remove counts as they can be recalculated with rev_lognorm
-  Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA")))
-  SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
-  dir.create(save_path, showWarnings = F, recursive = T)
-  save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
-  saveRDS(SO, compress = T, file = file.path(save_path, paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")))
-  print(paste0("SO saved to: ", save_path))
+  if (diet_seurat) {
+    Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA")))
+    SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
+  }
+
+  if (!is.null(save_path)) {
+    dir.create(save_path, showWarnings = F, recursive = T)
+    save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
+    saveRDS(SO, compress = T, file = file.path(save_path, paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")))
+    message(paste0("SO saved to: ", save_path))
+  }
 
   return(SO)
 }
