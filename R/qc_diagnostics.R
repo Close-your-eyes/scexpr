@@ -21,12 +21,14 @@
 #'
 #' On error in scDblFinder: Increase nhvf or try to change any other parameter.
 #'
-#' @param data_dirs list or vector of full paths to filtered_feature_bc_matrix and raw_feature_bc_matrix; or filtered_feature_bc_matrix only (prohibiting the use of SoupX);
-#' if not named, then the name of the common parent folder is used
+#' @param data_dirs list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
+#' on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
+#' is missing, SoupX is disable for all others
 #' @param nhvf number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
 #' at the risk of scDblFinder returning an error 'size factors should be positive'
 #' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
-#' @param min_nCount_RNA minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity
+#' @param min_nCount_RNA minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity; cells with less
+#' transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)
 #' @param resolution resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)
 #' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
 #' @param SoupX.resolution resolution for (louvain algorithm) SoupX analysis
@@ -38,6 +40,10 @@
 #' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 #' phenotypic influence becomes
 #' @param ... additional arguments to SoupX::autoEstCont
+#' @param scDblFinder logical, whether to run doublet detection algorithm from scDblFinder
+#' @param return_SoupX logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
+#' have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
+#' filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.
 #'
 #' @return
 #' @export
@@ -88,7 +94,7 @@ qc_diagnostic <- function(data_dirs,
 
   resolution <- as.numeric(gsub("^1.0$", "1", resolution))
 
-  if (!is.numeric(qc_meta_resolution) | length(qc_meta_resolution) != 1) {
+  if (!is.numeric(qc_meta_resolution) || length(qc_meta_resolution) != 1) {
     stop("qc_meta_resolution has to a numeric of length one. It is passed to the resolution parameter of Seurat::FindClusters.")
   }
 
@@ -187,13 +193,13 @@ qc_diagnostic <- function(data_dirs,
       if (is.list(raw_data)) {
         raw_data <- raw_data[["Gene Expression"]]
       }
-      message("Running SoupX.")
 
       sc <- SoupX::SoupChannel(tod = raw_data, toc = filt_data)
-      if (SoupX.resolution != resolution) {
-        SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = SoupX.resolution, verbose = F)
-      }
-      sc <- SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
+
+      ## https://github.com/constantAmateur/SoupX/issues/93
+      ## run clustering on the specified subset only, otherwise an error may occur
+      clusts <- Seurat::FindClusters(Seurat::FindNeighbors(SO@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[rownames(sc$metaData),], verbose = F)$snn , algorithm = 1, resolution = SoupX.resolution, verbose = F)
+      sc <- SoupX::setClusters(sc, stats::setNames(clusts[,1], rownames(clusts)))
 
       ## old
       #temp_dots <- dots[which(grepl("^SoupX__", names(dots), ignore.case = T))]
@@ -201,8 +207,10 @@ qc_diagnostic <- function(data_dirs,
       #temp_dots <- temp_dots[which(names(temp_dots) %in% formals(SoupX::autoEstCont))]
       #sc <- do.call(SoupX::autoEstCont, args = c(list(sc = sc, verbose = F), temp_dots))
 
+      message("Running SoupX.")
+
       sc <- SoupX::autoEstCont(sc, verbose = F, ...)
-      sx_counts = SoupX::adjustCounts(sc, verbose = 0)
+      sx_counts = suppressWarnings(SoupX::adjustCounts(sc, verbose = 0))
 
       if (return_SoupX) {
         message("Creating Seurat object on SoupX-corrected count matrix with ", ncol(filt_data), " cells.")
@@ -237,9 +245,8 @@ qc_diagnostic <- function(data_dirs,
         return(list(pct_soup_SoupX = (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(sx_counts))/Matrix::colSums(sc[["toc"]])*100))
       }
     })
-
     # add percentage of soup as meta data, similar to decontX
-    SO <- Seurat::AddMetaData(SO, SoupX_results[["pct_soup_SoupX"]], "pct_soup_SoupX")
+    SO <- Seurat::AddMetaData(SO, unlist(sapply(SoupX_results, "[", "pct_soup_SoupX")), "pct_soup_SoupX")
   }
 
   if (return_SoupX) {
@@ -363,9 +370,7 @@ qc_diagnostic <- function(data_dirs,
 
 
     ## qc plots here
-    qc_p <- qc_plots(SO = SOx,
-                     qc_cols = qc_cols,
-                     clustering_cols = meta_cols)
+    #qc_p <- qc_plots(SO = SOx,qc_cols = qc_cols,clustering_cols = meta_cols)
 
     message("Calculating phenotype cluster markers.")
     cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolution), function(x) {
@@ -379,9 +384,11 @@ qc_diagnostic <- function(data_dirs,
 
     #remove count slot to save memory
     return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), counts = F, dimreducs = names(SOx@reductions)),
-                phenotype_clusters_plot = qc_p[[1]], meta_vs_phenotype_clusters_plot = qc_p[[2]], meta_clusters_plot = qc_p[[3]],
+                #phenotype_clusters_plot = qc_p[[1]], meta_vs_phenotype_clusters_plot = qc_p[[2]], meta_clusters_plot = qc_p[[3]],
                 phenotype_cluster_markers = cluster_marker_list))
   })
+
+  message("Run scexpr:::qc_plots() on the Seurat object for visualization of clustering on phenotype and qc data.")
 
   if (length(results) == 1) {
     return(results)
