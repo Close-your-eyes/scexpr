@@ -403,7 +403,7 @@ qc_diagnostic <- function(data_dirs,
   }
 }
 
-check_dir <- function(data_dirs, SoupX) {
+check_dir <- function(data_dirs, SoupX = F) {
 
   dir_roots <- unlist(lapply(data_dirs, function(x) {
     dd <- list.dirs(x)
