@@ -242,19 +242,13 @@ qc_diagnostic <- function(data_dirs,
     SO <- Seurat::AddMetaData(SO, SoupX_results[["pct_soup_SoupX"]], "pct_soup_SoupX")
   }
 
-  browser()
-
-
-  ' else {
+  if (return_SoupX) {
+    SO <- list(SO, SO_sx[["SO"]])
+    names(SO) <- c("original", "SoupX")
+  } else {
     SO <- list(SO)
     names(SO) <- "original"
-  }'
-
-  '  SO <- list(SO, SO_sx)
-        names(SO) <- c("original", "SoupX")'
-
-  'SO <- list(SO)
-  names(SO) <- "original"'
+  }
 
   results <- lapply(SO, function(SOx) {
     dbl_score <- NULL
@@ -393,7 +387,7 @@ qc_diagnostic <- function(data_dirs,
     return(results)
   } else {
     message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
-    results <- c(results, list(sc), list(sc_info_df))
+    results <- c(results, list(SO_sx[["sc"]]), list(SO_sx[["sc_info"]]))
     names(results) <- c(names(SO), "sc", "sc_info")
     return(results)
   }
