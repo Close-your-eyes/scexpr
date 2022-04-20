@@ -7,7 +7,7 @@
 #' mt-fraction plus low number of detected features) will likely clusters together. This allows to filter them easily.
 #' If raw_feature_bc_matrix is provided, \href{https://github.com/constantAmateur/SoupX}{SoupX} may be run.
 #' In that case the whole pipeline in run twice.
-#' Namely once with the original count matrix and once with a corrected count matrix after running SoupX with default
+#' Namely, once with the original count matrix and once with a corrected count matrix after running SoupX with default
 #' settings. If raw_feature_bc_matrix is not available, only \href{https://github.com/campbio/celda}{DecontX}
 #' is available to check for ambient RNA contamination. Both of these metrics (SoupX and DecontX estimation of ambient RNA)
 #' become part of clustering by qc metrics if set to TRUE. \href{https://github.com/plger/scDblFinder}{scDblFinder} is run
@@ -17,7 +17,7 @@
 #' This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
 #' also a pure analysis with feature expression values only is run. That may allow subset-wise application
 #' of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
-#' a first round.
+#' a first round. If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
 #'
 #' On error in scDblFinder: Increase nhvf or try to change any other parameter.
 #'
@@ -172,15 +172,6 @@ qc_diagnostic <- function(data_dirs,
                                  normalization = "LogNormalize",
                                  diet_seurat = F))
 
-  '
-    Seurat::FindVariableFeatures(nfeatures = nhvf, verbose = F) %>%
-    Seurat::ScaleData(verbose = F) %>%
-    Seurat::RunPCA(npcs = npcs, verbose = F) %>%
-    Seurat::RunUMAP(dims = 1:npcs, umap.method = "uwot", metric = "cosine", verbose = F) %>%
-    Seurat::FindNeighbors(dims = 1:npcs, verbose = F) %>%
-    Seurat::FindClusters(algorithm = 1, resolution = resolution, verbose = F)
-  '
-
   if (SoupX) {
     # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the whole picture of the soup
     message("Reading filtered and raw_feature_bc_matrix data.")
@@ -201,6 +192,7 @@ qc_diagnostic <- function(data_dirs,
 
       ## https://github.com/constantAmateur/SoupX/issues/93
       ## run clustering on the specified subset only, otherwise an error may occur
+      ## use harmonized PCA dims or raw PCA dims? Or recalculate PCA for single samples?
       clusts <- Seurat::FindClusters(Seurat::FindNeighbors(SO@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[rownames(sc$metaData),], verbose = F)$snn , algorithm = 1, resolution = SoupX.resolution, verbose = F)
       sc <- SoupX::setClusters(sc, stats::setNames(clusts[,1], rownames(clusts)))
 
