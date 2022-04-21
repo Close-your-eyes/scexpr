@@ -1,8 +1,8 @@
 freq_pie_chart <- function(SO,
-                                meta.col,
-                                inset.text.size = 5,
-                                inset.text.radius = 0.75,
-                                legend.position = "none") {
+                           meta.col,
+                           inset.text.size = 5,
+                           inset.text.radius = 0.75,
+                           legend.position = "none") {
 
   if (!requireNamespace("ggforce", quietly = T)) {
     utils::install.packages("ggforce")

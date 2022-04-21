@@ -39,6 +39,7 @@ Imports:
 Suggests: 
     presto,
     patchwork,
+    scuttle,
     celda,
     psych,
     reshape2,

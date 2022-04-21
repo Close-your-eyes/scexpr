@@ -15,9 +15,13 @@
 #' In addition to qc metrics, a number of principle components (PCs) from feature expression may be added to clustering and
 #' dimension reduction as also the feature composition of low quality transcriptomes may be skewed.
 #' This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
-#' also a pure analysis with feature expression values only is run. That may allow subset-wise application
+#' also a pure analysis with feature expression values only is run. That may allow cluster-wise application
 #' of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
-#' a first round. If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
+#' a first round based on qc metric clustering.
+#' If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
+#' (i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
+#' of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
+#' the common Seurat object though, the merged and harmonzized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
 #'
 #' On error in scDblFinder: Increase nhvf or try to change any other parameter.
 #'
@@ -29,7 +33,7 @@
 #' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
 #' @param min_nCount_RNA minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity; cells with less
 #' transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)
-#' @param resolution resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)
+#' @param resolution resolution (louvain algorithm) for clustering based on feature expression
 #' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
 #' @param SoupX.resolution resolution for (louvain algorithm) SoupX analysis
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
@@ -45,7 +49,7 @@
 #' have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
 #' filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.
 #'
-#' @return
+#' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
 #'
 #' @importFrom magrittr %>%
@@ -94,16 +98,24 @@ qc_diagnostic <- function(data_dirs,
   if (!requireNamespace("patchwork", quietly = T)) {
     utils::install.packages("patchwork")
   }
+  if (!requireNamespace("scuttle", quietly = T)) {
+    BiocManager::install("scuttle")
+  }
+
 
   resolution <- as.numeric(gsub("^1.0$", "1", resolution))
 
-  if (!is.numeric(qc_meta_resolution) || length(qc_meta_resolution) != 1) {
-    stop("qc_meta_resolution has to a numeric of length one. It is passed to the resolution parameter of Seurat::FindClusters.")
+  if (!is.numeric(qc_meta_resolution)) {
+    stop("qc_meta_resolution has to be numeric.")
+  }
+  if (!is.numeric(SoupX.resolution) || length(SoupX.resolution) != 1) {
+    stop("SoupX.resolution has to be numeric and of length 1.")
+  }
+  if (!is.numeric(resolution) || length(resolution) != 1) {
+    stop("resolution has to be numeric and of length 1.")
   }
 
   #dots <- list(...)
-
-  # data_dirs <- "/Users/vonskopnik/Charité - Universitätsmedizin Berlin/AG Enghard - Zelluläre Urindiagnostik - FlurinoCoV 2020/data/scRNAseq/sequencing_data"
 
   checked_dirs <- check_dir(data_dirs = data_dirs, SoupX = SoupX)
   data_dirs <- checked_dirs[[1]]
@@ -132,14 +144,12 @@ qc_diagnostic <- function(data_dirs,
       message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
       filt_data <- filt_data[["Gene Expression"]]
     }
+
     # filter cells with very low RNA_count
     nCount_RNA <- Matrix::colSums(filt_data)
     if (any(nCount_RNA < min_nCount_RNA)) {
       message(length(which(nCount_RNA < min_nCount_RNA)), " cells removed due to min_nCount_RNA.")
       filt_data <- filt_data[,which(nCount_RNA >= min_nCount_RNA)]
-      if (ncol(filt_data) == 0) {
-        stop("No cells left after filtering for min_nCount_RNA.")
-      }
     }
 
     if (!is.null(cells)) {
@@ -157,10 +167,34 @@ qc_diagnostic <- function(data_dirs,
       }
     }
 
+    if (ncol(filt_data) == 0) {
+      message("No cells left after filtering. Return NULL for this sample.")
+      return(NULL)
+      ## check that (giving names after loop.)
+    }
     ## mutli-dirs: harmony for batch correction?!
     message("Creating initial Seurat object with ", ncol(filt_data), " cells.")
     SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
     SO@meta.data$orig.ident <- basename(dirname(x))
+
+    # filter cells which have library size of zero to enable scDblFinder without error
+    # https://github.com/plger/scDblFinder/issues/55
+    if (scDblFinder) {
+
+      var_feat <- Seurat::VariableFeatures(Seurat::FindVariableFeatures(SO,
+                                                                        selection.method = "vst",
+                                                                        nfeatures = nhvf,
+                                                                        verbose = F,
+                                                                        assay = "RNA"))
+
+      factors <- scuttle::librarySizeFactors(filt_data[var_feat,])
+      zero_libsize_cells <- names(which(factors == 0))
+      if (length(zero_libsize_cells) > 0) {
+        message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are exlcuded to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
+      }
+      SO <- subset(SO, cells = setdiff(names(factors), zero_libsize_cells))
+    }
+
     return(SO)
   })
   names(SO) <- names(ffbms)
@@ -263,6 +297,7 @@ qc_diagnostic <- function(data_dirs,
 
   results <- lapply(SO, function(SOx) {
     dbl_score <- NULL
+
     if (scDblFinder) {
       message("Running scDblFinder.")
 
@@ -276,14 +311,20 @@ qc_diagnostic <- function(data_dirs,
       for (x in names(split_mats)) {
         message(x)
         dbl_score_temp <- tryCatch({
-          log1p(scDblFinder::computeDoubletDensity(x = split_mats[[x]],
-                                                   subset.row = Seurat::VariableFeatures(SOx),
-                                                   dims = npcs))
+          log1p(computeDoubletDensity(x = split_mats[[x]],
+                                      subset.row = Seurat::VariableFeatures(Seurat::FindVariableFeatures(subset(SOx, cells = colnames(split_mats[[x]])),
+                                                                                                         selection.method = "vst",
+                                                                                                         nfeatures = nhvf,
+                                                                                                         verbose = F,
+                                                                                                         assay = "RNA")),
+                                      dims = npcs))
         }, error = function(error_condition) {
-          message(error_condition, " ... doublet calculation failed. Try to increase nhvf.")
+          message(error_condition, " ... doublet calculation failed. Try to increase nhvf. Seurat object is exported as global variable: SO_qc_export_rescue")
           message("")
+          SO_qc_export_rescue <<- SO
           return(NULL)
         })
+
         if (is.null(dbl_score_temp)) {
           ## in case of error an any data set: dbl_score set NULL and hence excluded (see below)
           dbl_score <- NULL
@@ -443,7 +484,8 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 qc_plots <- function(SO,
                      qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals"),
-                     clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8")) {
+                     clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8"),
+                     geom2 = "boxplot") {
 
 
   # extra to do: nCount_RNA_log, nFeature_RNA_log, pct_mt_log - check and calc if needed
@@ -477,7 +519,8 @@ qc_plots <- function(SO,
 
   qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
                            ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
-    ggplot2::geom_jitter(width = 0.2, size = 0.3) +
+    ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
+    ggplot2::geom_jitter(width = 0.1, size = 0.3) +
     ggplot2::theme_bw() +
     ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
                    panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
@@ -491,13 +534,13 @@ qc_plots <- function(SO,
                                              reduction = "umapmeta", pt.size = 0.5,
                                              legend.position = "none",
                                              label.size = 6, plot.labels = "text", plot.title = F),
-                                suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
+                                suppressMessages(scexpr:::freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
                                 ncol = 1)
 
   p3_2 <- feature_plot_stat(SO,
                             features = "nCount_RNA_log",
                             meta.col = clustering_cols[2],
-                            geom2 = "none",
+                            geom2 = geom2,
                             jitterwidth = 0.9,
                             panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                             axis.title.y = ggplot2::element_blank(),
@@ -509,7 +552,7 @@ qc_plots <- function(SO,
   p3_3 <- feature_plot_stat(SO,
                             features = "nFeature_RNA_log",
                             meta.col = clustering_cols[2],
-                            geom2 = "none",
+                            geom2 = geom2,
                             jitterwidth = 0.9,
                             panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                             axis.title.y = ggplot2::element_blank(),
@@ -521,7 +564,7 @@ qc_plots <- function(SO,
   p3_4 <- feature_plot_stat(SO,
                             features = "pct_mt_log",
                             meta.col = clustering_cols[2],
-                            geom2 = "none",
+                            geom2 = geom2,
                             jitterwidth = 0.9,
                             panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                             axis.title.y = ggplot2::element_blank()) +
@@ -532,7 +575,7 @@ qc_plots <- function(SO,
     p3_x <- feature_plot_stat(SO,
                               features = qcf,
                               meta.col = clustering_cols[2],
-                              geom2 = "none",
+                              geom2 = geom2,
                               jitterwidth = 0.9,
                               panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                               axis.title.y = ggplot2::element_blank())
@@ -675,3 +718,40 @@ floor_any = function(x, accuracy, f = floor) {
           Seurat::FindClusters(algorithm = 1, resolution = resolution, verbose = F)
         SO_sx@meta.data$orig.ident <- names(data_dirs)[1]
         '
+## old scDblFinder
+'    if (scDblFinder) {
+      message("Running scDblFinder.")
+
+      ## https://stackoverflow.com/questions/62161916/is-there-a-function-in-r-that-splits-a-matrix-along-a-margin-using-a-factor-or-c
+      ## modified from base function split.data.frame (to avoid 2 x transposation)
+      ## multi dirs: split count matrix by orig.idents
+      split_mats <- lapply(split(x = seq_len(ncol(Seurat::GetAssayData(SOx, slot = "counts"))), f = SOx@meta.data$orig.ident), function(ind) Seurat::GetAssayData(SOx, slot = "counts")[,ind , drop = FALSE])
+      names(split_mats) <- basename(dirname(ffbms))
+
+      ## use for-loop to allow break-statement
+      for (x in names(split_mats)) {
+        message(x)
+        dbl_score_temp <- tryCatch({
+          log1p(computeDoubletDensity(x = split_mats[[x]],
+                                      subset.row = Seurat::VariableFeatures(Seurat::FindVariableFeatures(subset(SOx, cells = colnames(split_mats[[x]])),
+                                                                                                         selection.method = "vst",
+                                                                                                         nfeatures = nhvf,
+                                                                                                         verbose = F,
+                                                                                                         assay = "RNA")),
+                                      dims = npcs))
+        }, error = function(error_condition) {
+          message(error_condition, " ... doublet calculation failed. Try to increase nhvf. Seurat object is exported as global variable: SO_qc_export_rescue")
+          message("")
+          SO_qc_export_rescue <<- SO
+          return(NULL)
+        })
+
+        if (is.null(dbl_score_temp)) {
+          ## in case of error an any data set: dbl_score set NULL and hence excluded (see below)
+          dbl_score <- NULL
+          break
+        } else {
+          dbl_score <- c(dbl_score, dbl_score_temp)
+        }
+      }
+    }'
