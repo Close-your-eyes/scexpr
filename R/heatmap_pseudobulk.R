@@ -1,22 +1,41 @@
 #' Title
 #'
-#' @param SO
-#' @param assay
-#' @param meta.col
-#' @param levels.calc which levels in meta.col to include in calculation; all levels if NULL; also defines order on x-axis
-#' @param levels.plot which levels in meta.col (and subset of levels.calc) to include in platting; set to levels.calc if NULL; also defines order on x-axis
-#' @param features
-#' @param normalization
-#' @param topn.features
-#' @param topn.metric
-#' @param min.pct
-#' @param max.padj
-#' @param title
-#' @param title.font.size
-#' @param font.family
-#' @param y.font.size
-#' @param tile.borders
-#' @param dotplot
+#' @param SO Seurat object
+#' @param assay which assay to obtain expression values from
+#' @param meta.col which column from meta.data of SO to use as x-axis; if NULL current Idents(SO) are used
+#' @param levels.calc which levels in meta.col to include in calculation;
+#' all levels if NULL; the order provided defines order on x-axis; level selection
+#' will affect scaling calculations
+#' @param levels.plot which levels in meta.col to include in platting;
+#' if NULL this equals to levels.calc; must be subset of levels.calc;
+#' the order provided defines order on x-axis; this will not affect scaling
+#' calculation but only select levels for plotting
+#' @param features optionally choose which features to plot (supervised)
+#' @param normalization how to scale expression values; may be "scale" to
+#' use base::scale and transform average expression value to a standardized
+#' normal distribution or may be a numeric vector of length 2 for scaling
+#' each feature from min (first value) to max (second value); in the latter case
+#' c(-1,1) is most meaningful
+#' @param topn.features if no features are selected, this will select how many
+#' features to plot per level in meta.col; selection is done based on the metric
+#' selected in topn.metric; respective features with greatest difference between
+#' meta.col levels are selected (best DE features so to say)
+#' @param topn.metric which differential expression metric to apply for feature
+#' selection
+#' @param min.pct filter features across levels in meta.col for a minimal fraction
+#' of expressing cells; 0.1 stands for min 10 % expressing cells
+#' @param max.padj filter features across levels in meta.col for a significance
+#' level of differential expression (one level vs. all others)
+#' @param title which title to add to plot; if NULL no title is plotted
+#' @param title.font.size font size of title
+#' @param font.family which font type (family) to use for plotting,
+#' e.g. mono or sans
+#' @param y.font.size font size of features names on y-axis
+#' @param tile.borders plot black tile border (TRUE) or not (FALSE);
+#' better set to FALSE for may features and optionally set to TRUE for few
+#' features only
+#' @param dotplot plot heatmap as a dotplot which will also reveal the fraction
+#' of expressing cells by dot sizes
 #' @param plot.feature.breaks
 #' @param plot.sec.axis
 #' @param legend.position
@@ -107,7 +126,12 @@ heatmap_pseudobulk <- function(SO,
     meta.col <- "idents"
   } else {
     meta.col <- match.arg(meta.col, names(SO@meta.data))
+    if (is.numeric(SO@meta.data[,meta.col])) {
+      stop("meta.col is numeric. Please make it factor or character.")
+    }
   }
+
+
 
   legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
   if (legend.direction == "horizontal") {
@@ -199,7 +223,7 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21)
   } else {
     if (tile.borders) {
-      heatmap.plot <- heatmap.plot + ggplot2::geom_tile(colour = "black")
+      heatmap.plot <- heatmap.plot + ggplot2::geom_tile(color = "black")
     } else {
       heatmap.plot <- heatmap.plot + ggplot2::geom_tile()
     }

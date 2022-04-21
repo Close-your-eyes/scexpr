@@ -1,10 +1,19 @@
 #' Color palettes
 #'
-#' Common interface to get color palettes from different packages: viridisLite, colorRamps, \href{"https://github.com/BlakeRMills/MetBrewer"}{MetBrewer}, href{"https://github.com/karthik/wesanderson"}{wesanderson} and RColorBrewer.
+#' Common interface to get color palettes from different packages:
+#' viridisLite, colorRamps,
+#' \href{"https://github.com/BlakeRMills/MetBrewer"}{MetBrewer},
+#' href{"https://github.com/karthik/wesanderson"}{wesanderson}
+#' and RColorBrewer.
 #' Moreover three custom palettes: "custom", "dutch" and "spanish".
 #'
 #' See available palettes:
-#' c(rev(ls("package:viridisLite"))[-c(1:2)], rev(ls("package:colorRamps"))[-c(2:3)], rownames(RColorBrewer::brewer.pal.info), names(wesanderson::wes_palettes), "custom", "dutch", "spanish"), MetBrewer::MetPalettes
+#' c(rev(ls("package:viridisLite"))[-c(1:2)],
+#' rev(ls("package:colorRamps"))[-c(2:3)],
+#' rownames(RColorBrewer::brewer.pal.info),
+#' names(wesanderson::wes_palettes), "custom", "dutch", "spanish",
+#' MetBrewer::MetPalettes)
+#' Use scales::show_col() to plot color grid
 #'
 #' @param name name of the palette
 #' @param n number of colors to return; may not work for every palette

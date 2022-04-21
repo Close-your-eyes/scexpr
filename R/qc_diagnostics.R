@@ -115,6 +115,9 @@ qc_diagnostic <- function(data_dirs,
     message("More than one data_dir provided. return_SoupX set to FALSE.")
   }
   return_SoupX <- checked_dirs[[3]]
+  if (!SoupX) {
+    return_SoupX <- F
+  }
 
   ffbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("filtered_feature_bc_matrix", x))]))
   rfbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("raw_feature_bc_matrix", x))]))
@@ -162,15 +165,21 @@ qc_diagnostic <- function(data_dirs,
   })
   names(SO) <- names(ffbms)
 
-  SO <- suppressMessages(prep_SO(SO_unprocessed = SO,
-                                 reductions = "umap",
-                                 nhvf = nhvf,
-                                 npcs = npcs,
-                                 batch_corr = "harmony",
-                                 RunHarmony__group.by.vars = "orig.ident",
-                                 cluster_resolutions = resolution,
-                                 normalization = "LogNormalize",
-                                 diet_seurat = F))
+  if (length(SO) > 1) {
+    message("Preparing merged and harmonized Seurat object with ", length(unlist(lapply(SO, Cells))), " cells.")
+  } else {
+    message("Preparing Seurat object.")
+  }
+
+  SO <- prep_SO(SO_unprocessed = SO,
+                reductions = "umap",
+                nhvf = nhvf,
+                npcs = npcs,
+                batch_corr = "harmony",
+                RunHarmony__group.by.vars = "orig.ident",
+                cluster_resolutions = resolution,
+                normalization = "LogNormalize",
+                diet_seurat = F)
 
   if (SoupX) {
     # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the whole picture of the soup
@@ -193,7 +202,7 @@ qc_diagnostic <- function(data_dirs,
       ## https://github.com/constantAmateur/SoupX/issues/93
       ## run clustering on the specified subset only, otherwise an error may occur
       ## use harmonized PCA dims or raw PCA dims? Or recalculate PCA for single samples?
-      clusts <- Seurat::FindClusters(Seurat::FindNeighbors(SO@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[rownames(sc$metaData),], verbose = F)$snn , algorithm = 1, resolution = SoupX.resolution, verbose = F)
+      clusts <- Seurat::FindClusters(Seurat::FindNeighbors(SO@reductions[["pca"]]@cell.embeddings[rownames(sc$metaData),], verbose = F)$snn , algorithm = 1, resolution = SoupX.resolution, verbose = F)
       sc <- SoupX::setClusters(sc, stats::setNames(clusts[,1], rownames(clusts)))
 
       ## old
@@ -212,13 +221,13 @@ qc_diagnostic <- function(data_dirs,
         SO_sx <- Seurat::CreateSeuratObject(counts = sx_counts)
         SO_sx@meta.data$orig.ident <- x
 
-        SO_sx <- suppressMessages(prep_SO(SO_unprocessed = SO_sx,
-                                          reductions = "umap",
-                                          nhvf = nhvf,
-                                          npcs = npcs,
-                                          cluster_resolutions = resolution,
-                                          normalization = "LogNormalize",
-                                          diet_seurat = F))
+        SO_sx <- prep_SO(SO_unprocessed = SO_sx,
+                         reductions = "umap",
+                         nhvf = nhvf,
+                         npcs = npcs,
+                         cluster_resolutions = resolution,
+                         normalization = "LogNormalize",
+                         diet_seurat = F)
 
         SO_sx <- Seurat::AddMetaData(SO_sx, (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(sx_counts))/Matrix::colSums(sc[["toc"]])*100, "pct_soup_SoupX")
 
@@ -433,7 +442,7 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 
 qc_plots <- function(SO,
-                     qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log"),
+                     qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals"),
                      clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8")) {
 
 
@@ -507,7 +516,7 @@ qc_plots <- function(SO,
                             axis.text.x = ggplot2::element_blank(),
                             axis.title.x = ggplot2::element_blank()) +
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nFeature_RNA_log))),
-                                                                                          which(breaks < max(expm1(SO@meta.data$nFeature_RNA_log))))]))
+                                                                                                   which(breaks < max(expm1(SO@meta.data$nFeature_RNA_log))))]))
 
   p3_4 <- feature_plot_stat(SO,
                             features = "pct_mt_log",
@@ -517,9 +526,9 @@ qc_plots <- function(SO,
                             panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                             axis.title.y = ggplot2::element_blank()) +
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$pct_mt_log))),
-                                                                                          which(breaks < max(expm1(SO@meta.data$pct_mt_log))))]))
+                                                                                                   which(breaks < max(expm1(SO@meta.data$pct_mt_log))))]))
 
-  p3_x <- lapply(c(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], "residuals"), function(qcf) {
+  p3_x <- lapply(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))]), function(qcf) {
     p3_x <- feature_plot_stat(SO,
                               features = qcf,
                               meta.col = clustering_cols[2],

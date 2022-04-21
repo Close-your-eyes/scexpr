@@ -33,7 +33,8 @@
 #' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
 #' @param celltype_label label
-#' @param diet_seurat logical whether to run Seurat::Die
+#' @param diet_seurat logical whether to run Seurat::DietSeurat
+#' @param verbose print messages and progress bars from functions
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -62,6 +63,7 @@ prep_SO <- function(SO_unprocessed,
                     celltype_refs = NULL, # list of celldex::objects
                     celltype_label = "label.main",
                     diet_seurat = T,
+                    verbose = F,
                     ...) {
 
 
@@ -192,15 +194,15 @@ prep_SO <- function(SO_unprocessed,
   if (length(SO.list) == 1) {
     SO <- SO.list[[1]]
     if (normalization == "SCT") {
-      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = F, assay = "RNA"))
-      SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
-      SO <- Seurat::ScaleData(SO, assay = "RNA")
+      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = verbose, assay = "RNA"))
+      SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
+      SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     } else if (normalization == "LogNormalize") {
-      SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
-      SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = F, assay = "RNA")
-      SO <- Seurat::ScaleData(SO, assay = "RNA")
+      SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
+      SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = verbose, assay = "RNA")
+      SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     }
-    SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
+    SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
   }
 
   if (length(SO.list) > 1) {
@@ -212,13 +214,13 @@ prep_SO <- function(SO_unprocessed,
         message("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")
       }
       if (normalization == "SCT") {
-        SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = F))
-        SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
-        SO <- Seurat::ScaleData(SO, assay = "RNA")
+        SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose))
+        SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
+        SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
       } else if (normalization == "LogNormalize") {
-        SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = F), selection.method = "vst", nfeatures = nhvf, verbose = F), vars.to.regress = vars.to.regress)
+        SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = verbose), selection.method = "vst", nfeatures = nhvf, verbose = verbose), vars.to.regress = vars.to.regress, verbose = verbose)
       }
-      SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
+      SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
     }
 
     if (batch_corr == "harmony") {
@@ -227,9 +229,9 @@ prep_SO <- function(SO_unprocessed,
       }
       dots <- mydots[which(grepl("^RunHarmony__", names(mydots), ignore.case = T))]
       names(dots) <- gsub("^RunHarmony__", "", names(dots), ignore.case = T)
-      SO <- do.call(harmony::RunHarmony, args = c(list(object = SO, assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), reference_values = ref_sample), dots))
-      SO <- Seurat::NormalizeData(SO, verbose = F, assay = "RNA")
-      SO <- Seurat::ScaleData(SO, assay = "RNA")
+      SO <- suppressWarnings(do.call(harmony::RunHarmony, args = c(list(object = SO, assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), reference_values = ref_sample, verbose = verbose), dots)))
+      SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
+      SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     }
 
     if (batch_corr == "integration") {
@@ -238,8 +240,8 @@ prep_SO <- function(SO_unprocessed,
       if (normalization == "SCT") {
 '        dots <- mydots[which(grepl("^PrepSCTIntegration__", names(mydots), ignore.case = T))]
         names(dots) <- gsub("^PrepSCTIntegration__", "", names(dots), ignore.case = T)'
-        #SO.list <- do.call(Seurat::PrepSCTIntegration, args = c(list(object.list = SO.list, verbose = F), dots))
-        SO.list <- Seurat::PrepSCTIntegration(object.list = SO.list, verbose = F, ...)
+        #SO.list <- do.call(Seurat::PrepSCTIntegration, args = c(list(object.list = SO.list, verbose = verbose), dots))
+        SO.list <- Seurat::PrepSCTIntegration(object.list = SO.list, verbose = verbose, ...)
       }
 '      dots <- mydots[which(grepl("^FindIntegrationAnchors__", names(mydots), ignore.case = T))]
       names(dots) <- gsub("^FindIntegrationAnchors__", "", names(dots), ignore.case = T)'
@@ -252,13 +254,13 @@ prep_SO <- function(SO_unprocessed,
       Seurat::DefaultAssay(SO) <- "integrated"
 
       if (normalization == "SCT") {
-        SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
-        SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
+        SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
+        SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
       }
       if (normalization == "LogNormalize") {
-        SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
-        SO <- Seurat::ScaleData(SO)
-        SO <- Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = F, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = F)
+        SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
+        SO <- Seurat::ScaleData(SO, verbose = verbose)
+        SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
       }
     }
 
@@ -270,13 +272,13 @@ prep_SO <- function(SO_unprocessed,
   if (any(grepl("umap", reductions, ignore.case = T))) {
 '    dots <- mydots[which(grepl("^RunUMAP__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^RunUMAP__", "", names(dots), ignore.case = T)'
-    SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", metric = "cosine", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, ...)
+    SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", metric = "cosine", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, ...)
     #SO <- do.call(Seurat::RunUMAP, args = c(list(object = SO, umap.method = "uwot", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T), dots))
   }
   if (any(grepl("tsne", reductions, ignore.case = T))) {
 '    dots <- mydots[which(grepl("^RunTSNE__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^RunTSNE__", "", names(dots), ignore.case = T)'
-    SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0, ...)
+    SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, num_threads = 0, ...)
     #SO <- do.call(Seurat::RunTSNE, args = c(list(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = T, num_threads = 0), dots))
   }
 
@@ -320,12 +322,12 @@ prep_SO <- function(SO_unprocessed,
 
 '  dots <- mydots[which(grepl("^FindNeighbors__", names(mydots), ignore.case = T))]
   names(dots) <- gsub("^FindNeighbors__", "", names(dots), ignore.case = T)'
-  SO <- Seurat::FindNeighbors(object = SO, reduction = red, dims = 1:npcs, ...)
+  SO <- Seurat::FindNeighbors(object = SO, reduction = red, dims = 1:npcs, verbose = verbose, ...)
   #SO <- do.call(Seurat::FindNeighbors, args = c(list(object = SO, reduction = red, dims = 1:npcs), dots))
 
 '  dots <- mydots[which(grepl("^FindClusters__", names(mydots), ignore.case = T))]
   names(dots) <- gsub("^FindClusters__", "", names(dots), ignore.case = T)'
-  SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, ...)
+  SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, verbose = verbose, ...)
   #SO <- do.call(Seurat::FindClusters, args = c(list(object = SO, resolution = cluster_resolutions), dots))
 
   if (!is.null(celltype_refs)) {

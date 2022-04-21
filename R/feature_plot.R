@@ -9,7 +9,7 @@
 #' @param make.cells.unique
 #' @param pt.size
 #' @param pt.size.expr.factor
-#' @param order for meta.col: remains T if var is continous but becomes F if var is integer (~probably discrete)
+#' @param order for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)
 #' @param min.q.cutoff
 #' @param max.q.cutoff
 #' @param reduction
