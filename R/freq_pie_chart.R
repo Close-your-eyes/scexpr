@@ -34,4 +34,3 @@ freq_pie_chart <- function(SO,
     ggplot2::scale_color_manual(guide = FALSE, values = c("white", "black")) +
     ggplot2::coord_fixed(ratio = 1)
 }
-
