@@ -528,7 +528,7 @@ qc_plots <- function(SO,
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$pct_mt_log))),
                                                                                                    which(breaks < max(expm1(SO@meta.data$pct_mt_log))))]))
 
-  p3_x <- lapply(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))]), function(qcf) {
+  p3_x <- lapply(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], function(qcf) {
     p3_x <- feature_plot_stat(SO,
                               features = qcf,
                               meta.col = clustering_cols[2],
@@ -536,7 +536,7 @@ qc_plots <- function(SO,
                               jitterwidth = 0.9,
                               panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                               axis.title.y = ggplot2::element_blank())
-    if (qcf != "residuals") {
+    if (qcf != rev(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))])[1]) {
       p3_x <-
         p3_x +
         ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.title.x = ggplot2::element_blank())
