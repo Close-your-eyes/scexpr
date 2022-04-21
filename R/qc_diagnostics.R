@@ -311,13 +311,13 @@ qc_diagnostic <- function(data_dirs,
       for (x in names(split_mats)) {
         message(x)
         dbl_score_temp <- tryCatch({
-          log1p(computeDoubletDensity(x = split_mats[[x]],
-                                      subset.row = Seurat::VariableFeatures(Seurat::FindVariableFeatures(subset(SOx, cells = colnames(split_mats[[x]])),
-                                                                                                         selection.method = "vst",
-                                                                                                         nfeatures = nhvf,
-                                                                                                         verbose = F,
-                                                                                                         assay = "RNA")),
-                                      dims = npcs))
+          log1p(scDblFinder::computeDoubletDensity(x = split_mats[[x]],
+                                                   subset.row = Seurat::VariableFeatures(Seurat::FindVariableFeatures(subset(SOx, cells = colnames(split_mats[[x]])),
+                                                                                                                      selection.method = "vst",
+                                                                                                                      nfeatures = nhvf,
+                                                                                                                      verbose = F,
+                                                                                                                      assay = "RNA")),
+                                                   dims = npcs))
         }, error = function(error_condition) {
           message(error_condition, " ... doublet calculation failed. Try to increase nhvf. Seurat object is exported as global variable: SO_qc_export_rescue")
           message("")
