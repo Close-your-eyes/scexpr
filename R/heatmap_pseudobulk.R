@@ -163,11 +163,9 @@ heatmap_pseudobulk <- function(SO,
   ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
   ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
   wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
-  wil_auc <- wil_auc[which(wil_auc$feature %in% features),]
 
-  if (missing(features)) {
+  if (is.null(features)) {
     topn.metric <- match.arg(topn.metric, c("logFC", "auc", "padj"))
-
     features <-
       wil_auc %>%
       dplyr::group_by(feature) %>%
@@ -184,6 +182,7 @@ heatmap_pseudobulk <- function(SO,
     features <- .check.features(SO = SO, features = unique(features), meta.data = F)
     #features <- sapply(features, function(x) grep(x, rownames(Seurat::GetAssayData(SO, assay = assay, slot = "data")), ignore.case = T, value = T))
   }
+  #wil_auc <- wil_auc[which(wil_auc$feature %in% features),]
 
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
   if (class(normalization) == "character" && normalization == "scale") {
@@ -266,7 +265,7 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- heatmap.plot + ggplot2::theme(axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank())
   }
 
-  return(list(plot = heatmap.plot, data = htp))
+  return(list(plot = heatmap.plot, data = htp, complete_data = wil_auc))
 }
 
 .check.levels <- function(SO, meta.col, levels = NULL, append_by_missing = F) {

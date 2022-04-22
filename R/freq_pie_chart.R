@@ -2,7 +2,8 @@ freq_pie_chart <- function(SO,
                            meta.col,
                            inset.text.size = 5,
                            inset.text.radius = 0.75,
-                           legend.position = "none") {
+                           legend.position = "none",
+                           col_pal = "custom") {
 
   if (!requireNamespace("ggforce", quietly = T)) {
     utils::install.packages("ggforce")
@@ -12,14 +13,15 @@ freq_pie_chart <- function(SO,
   }
 
   # https://stackoverflow.com/questions/16184188/ggplot-facet-piechart-placing-text-in-the-middle-of-pie-chart-slices (ggforce)
-  tab <- table(SO@meta.data[,meta.col])
+  tab <- sort(table(SO@meta.data[,meta.col]), decreasing = T)
   tab <- data.frame(frac = as.numeric(tab/sum(tab)), cluster = factor(names(tab), levels = names(tab)))
   tab <- tab[order(tab$frac, decreasing = T), ]
   tab$start_angle <- c(0,cumsum(tab$frac))[-(length(tab$frac) + 1)]*pi*2
   tab$end_angle <- c(cumsum(tab$frac))*pi*2
   tab$mid_angle <-  0.5*(tab$start_angle + tab$end_angle)
 
-  cols <- col_pal("custom", n = nlevels(as.factor(tab[,"cluster"])))
+
+  cols <- col_pal(col_pal, n = nlevels(as.factor(tab[,"cluster"])))
   ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = "white") +
     ggplot2::theme_bw() +
@@ -31,6 +33,6 @@ freq_pie_chart <- function(SO,
                                     label = format(round(frac, 2), nsmall = 2)),
                        size = inset.text.size) +
     ggplot2::scale_fill_manual(values = cols) +
-    ggplot2::scale_color_manual(guide = FALSE, values = c("white", "black")) +
+    ggplot2::scale_color_manual(guide = "none", values = c("white", "black")) +
     ggplot2::coord_fixed(ratio = 1)
 }
