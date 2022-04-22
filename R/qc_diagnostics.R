@@ -516,7 +516,7 @@ qc_plots <- function(SO,
                                          features = c(qc_cols, clustering_cols[1]),
                                          reduction = "UMAP", legend.position = "none",
                                          plot.labels = "text", label.size = 6))
-
+  
   qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
                            ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
     ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
@@ -534,7 +534,7 @@ qc_plots <- function(SO,
                                              reduction = "umapmeta", pt.size = 0.5,
                                              legend.position = "none",
                                              label.size = 6, plot.labels = "text", plot.title = F),
-                                suppressMessages(scexpr:::freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
+                                suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
                                 ncol = 1)
 
   p3_2 <- feature_plot_stat(SO,
