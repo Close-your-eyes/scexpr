@@ -35,7 +35,7 @@ at the risk of scDblFinder returning an error 'size factors should be positive'}
 \item{min_nCount_RNA}{minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity; cells with less
 transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)}
 
-\item{resolution}{resolution (louvain algorithm) for clustering based on feature expression (UMI count matrix)}
+\item{resolution}{resolution (louvain algorithm) for clustering based on feature expression}
 
 \item{SoupX.resolution}{resolution for (louvain algorithm) SoupX analysis}
 
@@ -62,7 +62,7 @@ filtered_feature_bc_matrix is supplied. So, only possible when data set are prov
 \item{...}{additional arguments to SoupX::autoEstCont}
 }
 \value{
-
+a list of Seurat object and data frame with marker genes for clusters based on feature expression
 }
 \description{
 Taking Cell Rangers output, namely the (i) feature, (ii) barcode, (iii) matrix files
@@ -72,7 +72,7 @@ metrics are used to cluster the cells. Groups of cells with low quality scores (
 mt-fraction plus low number of detected features) will likely clusters together. This allows to filter them easily.
 If raw_feature_bc_matrix is provided, \href{https://github.com/constantAmateur/SoupX}{SoupX} may be run.
 In that case the whole pipeline in run twice.
-Namely once with the original count matrix and once with a corrected count matrix after running SoupX with default
+Namely, once with the original count matrix and once with a corrected count matrix after running SoupX with default
 settings. If raw_feature_bc_matrix is not available, only \href{https://github.com/campbio/celda}{DecontX}
 is available to check for ambient RNA contamination. Both of these metrics (SoupX and DecontX estimation of ambient RNA)
 become part of clustering by qc metrics if set to TRUE. \href{https://github.com/plger/scDblFinder}{scDblFinder} is run
@@ -80,9 +80,13 @@ to detect doublets which is another quality metric.
 In addition to qc metrics, a number of principle components (PCs) from feature expression may be added to clustering and
 dimension reduction as also the feature composition of low quality transcriptomes may be skewed.
 This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
-also a pure analysis with feature expression values only is run. That may allow subset-wise application
+also a pure analysis with feature expression values only is run. That may allow cluster-wise application
 of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
-a first round.
+a first round based on qc metric clustering.
+If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
+(i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
+of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
+the common Seurat object though, the merged and harmonzized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
 }
 \details{
 On error in scDblFinder: Increase nhvf or try to change any other parameter.

@@ -26,6 +26,7 @@ prep_SO(
   celltype_refs = NULL,
   celltype_label = "label.main",
   diet_seurat = T,
+  verbose = F,
   ...
 )
 }
@@ -75,7 +76,9 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 
 \item{celltype_label}{label}
 
-\item{diet_seurat}{logical whether to run Seurat::Die}
+\item{diet_seurat}{logical whether to run Seurat::DietSeurat}
+
+\item{verbose}{print messages and progress bars from functions}
 
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,

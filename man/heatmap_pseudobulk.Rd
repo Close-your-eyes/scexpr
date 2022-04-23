@@ -41,9 +41,58 @@ heatmap_pseudobulk(
 )
 }
 \arguments{
-\item{levels.calc}{which levels in meta.col to include in calculation; all levels if NULL; also defines order on x-axis}
+\item{SO}{Seurat object}
 
-\item{levels.plot}{which levels in meta.col (and subset of levels.calc) to include in platting; set to levels.calc if NULL; also defines order on x-axis}
+\item{assay}{which assay to obtain expression values from}
+
+\item{meta.col}{which column from meta.data of SO to use as x-axis; if NULL current Idents(SO) are used}
+
+\item{levels.calc}{which levels in meta.col to include in calculation;
+all levels if NULL; the order provided defines order on x-axis; level selection
+will affect scaling calculations}
+
+\item{levels.plot}{which levels in meta.col to include in platting;
+if NULL this equals to levels.calc; must be subset of levels.calc;
+the order provided defines order on x-axis; this will not affect scaling
+calculation but only select levels for plotting}
+
+\item{features}{optionally choose which features to plot (supervised)}
+
+\item{normalization}{how to scale expression values; may be "scale" to
+use base::scale and transform average expression value to a standardized
+normal distribution or may be a numeric vector of length 2 for scaling
+each feature from min (first value) to max (second value); in the latter case
+c(-1,1) is most meaningful}
+
+\item{topn.features}{if no features are selected, this will select how many
+features to plot per level in meta.col; selection is done based on the metric
+selected in topn.metric; respective features with greatest difference between
+meta.col levels are selected (best DE features so to say)}
+
+\item{topn.metric}{which differential expression metric to apply for feature
+selection}
+
+\item{min.pct}{filter features across levels in meta.col for a minimal fraction
+of expressing cells; 0.1 stands for min 10 \% expressing cells}
+
+\item{max.padj}{filter features across levels in meta.col for a significance
+level of differential expression (one level vs. all others)}
+
+\item{title}{which title to add to plot; if NULL no title is plotted}
+
+\item{title.font.size}{font size of title}
+
+\item{font.family}{which font type (family) to use for plotting,
+e.g. mono or sans}
+
+\item{y.font.size}{font size of features names on y-axis}
+
+\item{tile.borders}{plot black tile border (TRUE) or not (FALSE);
+better set to FALSE for may features and optionally set to TRUE for few
+features only}
+
+\item{dotplot}{plot heatmap as a dotplot which will also reveal the fraction
+of expressing cells by dot sizes}
 
 \item{...}{}
 }
