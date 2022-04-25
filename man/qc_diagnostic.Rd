@@ -10,8 +10,8 @@ qc_diagnostic(
   npcs = 10,
   min_nCount_RNA = 100,
   resolution = 0.8,
-  SoupX.resolution = 0.6,
-  qc_meta_resolution = 0.8,
+  resolution_SoupX = 0.6,
+  resolution_meta = 0.8,
   n_PCs_to_meta_clustering = 2,
   scDblFinder = T,
   SoupX = F,
@@ -37,9 +37,9 @@ transcripts will be excluded in a very early stage and will not appear in the re
 
 \item{resolution}{resolution (louvain algorithm) for clustering based on feature expression}
 
-\item{SoupX.resolution}{resolution for (louvain algorithm) SoupX analysis}
+\item{resolution_SoupX}{resolution for (louvain algorithm) SoupX analysis}
 
-\item{qc_meta_resolution}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
+\item{resolution_meta}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
 
 \item{n_PCs_to_meta_clustering}{how many principle components (PCs) from phenotypic clustering to add to qc meta data;
 this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the

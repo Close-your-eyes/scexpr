@@ -221,7 +221,7 @@ qc_diagnostic <- function(data_dirs,
 
     SoupX_results <- lapply(names(rfbms), ..., FUN = function(x) {
       message(x)
-
+      browser()
       filt_data <- Seurat::Read10X(data.dir = ffbms[x])
       if (is.list(filt_data)) {
         filt_data <- filt_data[["Gene Expression"]]
