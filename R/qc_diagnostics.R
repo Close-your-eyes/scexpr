@@ -35,11 +35,11 @@
 #' transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)
 #' @param resolution resolution (louvain algorithm) for clustering based on feature expression
 #' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
-#' @param SoupX.resolution resolution for (louvain algorithm) SoupX analysis
+#' @param resolution_SoupX resolution for (louvain algorithm) SoupX analysis
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
-#' @param qc_meta_resolution resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
+#' @param resolution_meta resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
 #' @param n_PCs_to_meta_clustering how many principle components (PCs) from phenotypic clustering to add to qc meta data;
 #' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 #' phenotypic influence becomes
@@ -60,8 +60,8 @@ qc_diagnostic <- function(data_dirs,
                           npcs = 10,
                           min_nCount_RNA = 100,
                           resolution = 0.8,
-                          SoupX.resolution = 0.6,
-                          qc_meta_resolution = 0.8,
+                          resolution_SoupX = 0.6,
+                          resolution_meta = 0.8,
                           n_PCs_to_meta_clustering = 2,
                           scDblFinder = T,
                           SoupX = F,
@@ -105,11 +105,11 @@ qc_diagnostic <- function(data_dirs,
 
   resolution <- as.numeric(gsub("^1.0$", "1", resolution))
 
-  if (!is.numeric(qc_meta_resolution)) {
-    stop("qc_meta_resolution has to be numeric.")
+  if (!is.numeric(resolution_meta)) {
+    stop("resolution_meta has to be numeric.")
   }
-  if (!is.numeric(SoupX.resolution) || length(SoupX.resolution) != 1) {
-    stop("SoupX.resolution has to be numeric and of length 1.")
+  if (!is.numeric(resolution_SoupX) || length(resolution_SoupX) != 1) {
+    stop("resolution_SoupX has to be numeric and of length 1.")
   }
   if (!is.numeric(resolution) || length(resolution) != 1) {
     stop("resolution has to be numeric and of length 1.")
@@ -226,6 +226,8 @@ qc_diagnostic <- function(data_dirs,
       if (is.list(filt_data)) {
         filt_data <- filt_data[["Gene Expression"]]
       }
+      ## filter for existing cells in SO (potential scDblFinder filtering, above)
+      filt_data <- filt_data[,intersect(Seurat::Cells(SO), colnames(filt_data))]
       raw_data <- Seurat::Read10X(data.dir = rfbms[x])
       if (is.list(raw_data)) {
         raw_data <- raw_data[["Gene Expression"]]
@@ -235,9 +237,18 @@ qc_diagnostic <- function(data_dirs,
 
       ## https://github.com/constantAmateur/SoupX/issues/93
       ## run clustering on the specified subset only, otherwise an error may occur
-      ## use harmonized PCA dims or raw PCA dims? Or recalculate PCA for single samples?
-      clusts <- Seurat::FindClusters(Seurat::FindNeighbors(SO@reductions[["pca"]]@cell.embeddings[rownames(sc$metaData),], verbose = F)$snn , algorithm = 1, resolution = SoupX.resolution, verbose = F)
-      sc <- SoupX::setClusters(sc, stats::setNames(clusts[,1], rownames(clusts)))
+      ## use intersect here as some cells may have been excluded above for scDblFinder
+      SO_sub <-
+        subset(SO, cells = intersect(Seurat::Cells(SO), rownames(sc$metaData))) %>%
+        Seurat::FindVariableFeatures(selection.method = "vst", nfeatures = nhvf, verbose = F, assay = "RNA") %>%
+        Seurat::ScaleData(verbose = F) %>%
+        Seurat::RunPCA(verbose = F) %>%
+        Seurat::FindNeighbors(verbose = F) %>%
+        Seurat::FindClusters(verbose = F, algorithm = 1, resolution = resolution_SoupX)
+      #Seurat::FetchData(vars = paste0("RNA_snn_res.",resolution_SoupX))
+
+      #clusts <- Seurat::FindClusters(Seurat::FindNeighbors(SO@reductions[["pca"]]@cell.embeddings[rownames(sc$metaData),], verbose = F)$snn , algorithm = 1, resolution = resolution_SoupX, verbose = F)
+      sc <- SoupX::setClusters(sc, stats::setNames(as.character(SO_sub@meta.data[,paste0("RNA_snn_res.",resolution_SoupX)]), rownames(SO_sub@meta.data)))
 
       ## old
       #temp_dots <- dots[which(grepl("^SoupX__", names(dots), ignore.case = T))]
@@ -405,7 +416,7 @@ qc_diagnostic <- function(data_dirs,
     colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
     SOx[["umapmeta"]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = "UMAPMETA_", assay = "RNA")
 
-    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine", verbose = F)$snn, resolution = qc_meta_resolution, verbose = F)
+    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine", verbose = F)$snn, resolution = resolution_meta, verbose = F)
     colnames(clusters) <- paste0("meta_", colnames(clusters))
     SOx <- Seurat::AddMetaData(SOx, cbind(umap_dims, clusters))
 
@@ -516,7 +527,7 @@ qc_plots <- function(SO,
                                          features = c(qc_cols, clustering_cols[1]),
                                          reduction = "UMAP", legend.position = "none",
                                          plot.labels = "text", label.size = 6))
-  
+
   qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
                            ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
     ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
@@ -657,10 +668,10 @@ floor_any = function(x, accuracy, f = floor) {
     }
     message("Running SoupX.")
     sc <- SoupX::SoupChannel(tod = raw_data, toc = filt_data)
-    if (SoupX.resolution != resolution) {
-      SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = SoupX.resolution, verbose = F)
+    if (resolution_SoupX != resolution) {
+      SO <- Seurat::FindClusters(SO, algorithm = 1, resolution = resolution_SoupX, verbose = F)
     }
-    sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", SoupX.resolution)])
+    sc = SoupX::setClusters(sc, SO@meta.data[rownames(sc$metaData), paste0("RNA_snn_res.", resolution_SoupX)])
 
     #temp_dots <- dots[which(grepl("^SoupX__", names(dots), ignore.case = T))]
     #names(temp_dots) <- gsub("^SoupX__", "", names(temp_dots), ignore.case = T)
