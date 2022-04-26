@@ -439,7 +439,7 @@ qc_diagnostic <- function(data_dirs,
     names(cluster_marker_list) <- paste0("RNA_snn_res.", resolution)
 
     #remove count slot to save memory
-    return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), counts = F, dimreducs = names(SOx@reductions)),
+    return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), data = F, dimreducs = names(SOx@reductions)),
                 #phenotype_clusters_plot = qc_p[[1]], meta_vs_phenotype_clusters_plot = qc_p[[2]], meta_clusters_plot = qc_p[[3]],
                 phenotype_cluster_markers = cluster_marker_list))
   })
