@@ -428,7 +428,7 @@ qc_diagnostic <- function(data_dirs,
     ## qc plots here
     #qc_p <- qc_plots(SO = SOx,qc_cols = qc_cols,clustering_cols = meta_cols)
 
-    message("Calculating phenotype cluster markers.")
+'    message("Calculating phenotype cluster markers.")
     cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolution), function(x) {
       presto::wilcoxauc(SOx, group_by = x, seurat_assay = "RNA", assay = "data")  %>%
         dplyr::filter(padj < 0.0001) %>%
@@ -436,12 +436,13 @@ qc_diagnostic <- function(data_dirs,
         dplyr::select(-c(statistic, pval)) %>%
         dplyr::mutate(pct_in = round(pct_in,2), pct_out = round(pct_out,2))
     })
-    names(cluster_marker_list) <- paste0("RNA_snn_res.", resolution)
+    names(cluster_marker_list) <- paste0("RNA_snn_res.", resolution)'
 
     #remove count slot to save memory
-    return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), data = F, dimreducs = names(SOx@reductions)),
+    return(SOx)
+'    return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), data = F, dimreducs = names(SOx@reductions)),
                 #phenotype_clusters_plot = qc_p[[1]], meta_vs_phenotype_clusters_plot = qc_p[[2]], meta_clusters_plot = qc_p[[3]],
-                phenotype_cluster_markers = cluster_marker_list))
+                phenotype_cluster_markers = cluster_marker_list))'
   })
 
   message("Run scexpr:::qc_plots() on the Seurat object for visualization of clustering on phenotype and qc data.")
