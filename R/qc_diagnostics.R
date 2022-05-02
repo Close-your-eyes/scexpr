@@ -392,7 +392,7 @@ qc_diagnostic <- function(data_dirs,
 
     ## multi-dirs: split matrix!
     SOx@meta.data$residuals <- unlist(lapply(unique(SOx@meta.data$orig.ident), function(x) {
-      stats::residuals(stats::lm(nFeature_RNA_log~nCount_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))
+      stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))
     }))
 
     ## clustering on meta data (quality metrics)
@@ -516,7 +516,7 @@ qc_plots <- function(SO,
                                          features = c(qc_cols, clustering_cols[1]),
                                          reduction = "UMAP", legend.position = "none",
                                          plot.labels = "text", label.size = 6))
-  
+
   qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
                            ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
     ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
