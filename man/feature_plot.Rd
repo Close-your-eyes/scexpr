@@ -19,6 +19,7 @@ feature_plot(
   max.q.cutoff = 1,
   reduction = "tsne",
   split.by = NULL,
+  split.by.scales = "fixed",
   shape.by = NULL,
   combine = T,
   ncol.combine = NULL,

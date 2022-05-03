@@ -84,6 +84,7 @@ feature_plot <- function(SO,
                          max.q.cutoff = 1,
                          reduction = "tsne",
                          split.by = NULL,
+                         split.by.scales = "fixed",
                          shape.by = NULL,
                          combine = T,
                          ncol.combine = NULL,
@@ -475,7 +476,7 @@ feature_plot <- function(SO,
 
     # define facets and plot freq.of.expr annotation
 
-    wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = "free", nrow = nrow.inner, ncol = ncol.inner)}
+    wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales, nrow = nrow.inner, ncol = ncol.inner)}
     if (is.null(SO.split) && !is.null(split.by)) {
       plot <- plot + wrap_by(split.by)
     } else if (!is.null(SO.split) && is.null(split.by)) {

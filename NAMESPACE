@@ -3,6 +3,7 @@
 export(cluster_correlation_matrix)
 export(clustering_volcanos)
 export(col_pal)
+export(composition_barplot)
 export(convert_gene_identifier)
 export(feature_correlation)
 export(feature_plot)
