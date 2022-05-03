@@ -403,7 +403,7 @@ qc_diagnostic <- function(data_dirs,
 
     ## multi-dirs: split matrix!
     SOx@meta.data$residuals <- unlist(lapply(unique(SOx@meta.data$orig.ident), function(x) {
-      stats::residuals(stats::lm(nFeature_RNA_log~nCount_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))
+      stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))
     }))
 
     ## clustering on meta data (quality metrics)
