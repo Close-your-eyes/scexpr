@@ -65,7 +65,7 @@ heatmap_pseudobulk <- function(SO,
                                levels.calc = NULL,
                                levels.plot = NULL,
                                features = NULL,
-                               normalization = c(-1,1), # scale
+                               normalization = "scale", # scale
                                topn.features = 10,
                                topn.metric = c("logFC", "auc", "padj"),
                                min.pct = 0.1,
@@ -269,7 +269,7 @@ heatmap_pseudobulk <- function(SO,
 }
 
 .check.levels <- function(SO, meta.col, levels = NULL, append_by_missing = F) {
-  if (is.null(levels) || is.na(levels)) {
+  if (any(is.null(levels)) || any(is.na(levels))) {
     levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
     if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
       levels <- as.character(sort(as.numeric(unique(levels))))
