@@ -32,7 +32,11 @@
 #' for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
 #' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
-#' @param celltype_label label
+#' @param celltype_label label name to use from the reference data set
+#' @param celltype_ref_clusters use a clustering as basis for grouped celltype annotation with SingleR. This will
+#' fundamentally speed up the calculation!
+#' e.g. if SCT assay is used and cluster_resolutions includes 0.8 then pass: SCT_snn_res.0.8.
+#' when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay: RNA_snn_res.0.8.
 #' @param diet_seurat logical whether to run Seurat::DietSeurat
 #' @param verbose print messages and progress bars from functions
 #'
@@ -62,6 +66,7 @@ prep_SO <- function(SO_unprocessed,
                     save_path = NULL,
                     celltype_refs = NULL, # list of celldex::objects
                     celltype_label = "label.main",
+                    celltype_ref_clusters = NULL,
                     diet_seurat = T,
                     verbose = F,
                     ...) {
@@ -107,6 +112,17 @@ prep_SO <- function(SO_unprocessed,
   normalization <- match.arg(normalization, c("SCT", "LogNormalize"))
   batch_corr <- match.arg(batch_corr, c("harmony", "integration", "regression", "none"))
   integr_reduction <- match.arg(integr_reduction, c("rpca", "cca", "rlsi"))
+
+  if (!is.null(celltype_ref_clusters)) {
+    #check if celltype_ref_clusters can exist
+    pref <- ifelse(batch_corr == "integration", "integrated", ifelse(normalization == "SCT", "SCT", "RNA"))
+    mid <- "_snn_res."
+    suf <- gsub("\\.0$", "", cluster_resolutions)
+    candidates <- paste0(pref,mid,suf)
+    if (!celltype_ref_clusters %in% candidates) {
+      stop("celltype_ref_clusters not found in candidates based on batch_corr, normalization and cluster_resolutions: ", paste(candidates, collapse = ", "))
+    }
+  }
 
   if (class(SO_unprocessed) == "list") {
     SO.list <- SO_unprocessed
@@ -361,8 +377,15 @@ prep_SO <- function(SO_unprocessed,
   SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, verbose = verbose, ...)
 
   if (!is.null(celltype_refs)) {
+    if (!celltype_ref_clusters %in% names(SO@meta.data) && !is.null(celltype_ref_clusters)) {
+      message("celltype_ref_clusters not found in SO meta data. Will be set to NULL and SingleR will operate on single cell level.")
+      celltype_ref_clusters <- NULL
+    }
     for (i in seq_along(celltype_refs)) {
-      celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"), ref = celltype_refs[[i]], labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]])
+      celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
+                                    ref = celltype_refs[[i]],
+                                    labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]],
+                                    clusters = celltype_ref_clusters)
       SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
       Seurat::Misc(SO, paste0(names(celltype_refs)[i], "_object")) <- celltypes
     }
