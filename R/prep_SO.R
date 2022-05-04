@@ -326,7 +326,7 @@ prep_SO <- function(SO_unprocessed,
     SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, num_threads = 0, ...)
   }
 
-  if (any(grepl("som", reductions, ignore.case = T))) {
+  if (any(grepl("^som$", reductions, ignore.case = T))) {
     if (!requireNamespace("devtools", quietly = T)) {
       utils::install.packages("devtools")
     }
@@ -345,7 +345,7 @@ prep_SO <- function(SO_unprocessed,
     SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = mydots[which(grepl("^SOM__|^EmbedSOM__", names(mydots), ignore.case = T))])
   }
 
-  if (any(grepl("gqtsom", reductions, ignore.case = T))) {
+  if (any(grepl("^gqtsom$", reductions, ignore.case = T))) {
     if (!requireNamespace("devtools", quietly = T)) {
       utils::install.packages("devtools")
     }
@@ -385,8 +385,15 @@ prep_SO <- function(SO_unprocessed,
       celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
                                     ref = celltype_refs[[i]],
                                     labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]],
-                                    clusters = celltype_ref_clusters)
-      SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
+                                    clusters = SO@meta.data[,celltype_ref_clusters])
+      if (is.null(celltype_ref_clusters)) {
+        SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
+      } else {
+        celltypes_df <- utils::stack(stats::setNames(celltypes$labels, levels(SO@meta.data[,celltype_ref_clusters])))
+        names(celltypes_df) <- c(paste0(names(celltype_refs)[i], "_labels"), celltype_ref_clusters)
+        celltypes_df <- tibble::column_to_rownames(dplyr::left_join(tibble::rownames_to_column(SO@meta.data[,celltype_ref_clusters,drop=F], "ID"), celltypes_df, by = celltype_ref_clusters), "ID")
+        SO <- Seurat::AddMetaData(SO, celltypes_df)
+      }
       Seurat::Misc(SO, paste0(names(celltype_refs)[i], "_object")) <- celltypes
     }
   }
