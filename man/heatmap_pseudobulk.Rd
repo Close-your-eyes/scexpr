@@ -11,7 +11,7 @@ heatmap_pseudobulk(
   levels.calc = NULL,
   levels.plot = NULL,
   features = NULL,
-  normalization = c(-1, 1),
+  normalization = "scale",
   topn.features = 10,
   topn.metric = c("logFC", "auc", "padj"),
   min.pct = 0.1,

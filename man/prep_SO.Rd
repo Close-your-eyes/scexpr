@@ -25,6 +25,7 @@ prep_SO(
   save_path = NULL,
   celltype_refs = NULL,
   celltype_label = "label.main",
+  celltype_ref_clusters = NULL,
   diet_seurat = T,
   verbose = F,
   ...
@@ -74,7 +75,12 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 
 \item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())}
 
-\item{celltype_label}{label}
+\item{celltype_label}{label name to use from the reference data set}
+
+\item{celltype_ref_clusters}{use a clustering as basis for grouped celltype annotation with SingleR. This will
+fundamentally speed up the calculation!
+e.g. if SCT assay is used and cluster_resolutions includes 0.8 then pass: SCT_snn_res.0.8.
+when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay: RNA_snn_res.0.8.}
 
 \item{diet_seurat}{logical whether to run Seurat::DietSeurat}
 
