@@ -380,12 +380,15 @@ prep_SO <- function(SO_unprocessed,
     if (!celltype_ref_clusters %in% names(SO@meta.data) && !is.null(celltype_ref_clusters)) {
       message("celltype_ref_clusters not found in SO meta data. Will be set to NULL and SingleR will operate on single cell level.")
       celltype_ref_clusters <- NULL
+      refs <- NULL
+    } else {
+      refs <- SO@meta.data[,celltype_ref_clusters]
     }
     for (i in seq_along(celltype_refs)) {
       celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
                                     ref = celltype_refs[[i]],
                                     labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]],
-                                    clusters = SO@meta.data[,celltype_ref_clusters])
+                                    clusters = refs)
       if (is.null(celltype_ref_clusters)) {
         SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
       } else {
