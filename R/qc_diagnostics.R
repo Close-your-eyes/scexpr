@@ -32,7 +32,7 @@
 #' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
 #' @param resolution resolution (louvain algorithm) for clustering based on feature expression
 #' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
-#' @param resolution_SoupX resolution for (louvain algorithm) SoupX analysis
+#' @param resolution_SoupX resolution (louvain algorithm) for SoupX analysis
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
