@@ -23,7 +23,6 @@
 #' of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
 #' the common Seurat object though, the merged and harmonzized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
 #'
-#' On error in scDblFinder: Increase nhvf or try to change any other parameter.
 #'
 #' @param data_dirs list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
 #' on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
@@ -31,11 +30,9 @@
 #' @param nhvf number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
 #' at the risk of scDblFinder returning an error 'size factors should be positive'
 #' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
-#' @param min_nCount_RNA minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity; cells with less
-#' transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)
 #' @param resolution resolution (louvain algorithm) for clustering based on feature expression
 #' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
-#' @param resolution_SoupX resolution for (louvain algorithm) SoupX analysis
+#' @param resolution_SoupX resolution (louvain algorithm) for SoupX analysis
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
@@ -58,7 +55,6 @@
 qc_diagnostic <- function(data_dirs,
                           nhvf = 5000,
                           npcs = 10,
-                          min_nCount_RNA = 100,
                           resolution = 0.8,
                           resolution_SoupX = 0.6,
                           resolution_meta = 0.8,
@@ -145,13 +141,6 @@ qc_diagnostic <- function(data_dirs,
       filt_data <- filt_data[["Gene Expression"]]
     }
 
-    # filter cells with very low RNA_count
-    nCount_RNA <- Matrix::colSums(filt_data)
-    if (any(nCount_RNA < min_nCount_RNA)) {
-      message(length(which(nCount_RNA < min_nCount_RNA)), " cells removed due to min_nCount_RNA.")
-      filt_data <- filt_data[,which(nCount_RNA >= min_nCount_RNA)]
-    }
-
     if (!is.null(cells)) {
       if (any(cells %in% colnames(filt_data))) {
         message(length(cells), " cells provided.")
@@ -172,7 +161,7 @@ qc_diagnostic <- function(data_dirs,
       return(NULL)
       ## check that (giving names after loop.)
     }
-    ## mutli-dirs: harmony for batch correction?!
+
     message("Creating initial Seurat object with ", ncol(filt_data), " cells.")
     SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
     SO@meta.data$orig.ident <- basename(dirname(x))
@@ -193,8 +182,12 @@ qc_diagnostic <- function(data_dirs,
         message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are exlcuded to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
       }
       SO <- subset(SO, cells = setdiff(names(factors), zero_libsize_cells))
-    }
 
+      SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"),
+                                                                   subset.row = var_feat,
+                                                                   dims = npcs)
+      SO@meta.data$dbl_score_log <- log1p(SO@meta.data$dbl_score)
+    }
     return(SO)
   })
   names(SO) <- names(ffbms)
@@ -306,63 +299,13 @@ qc_diagnostic <- function(data_dirs,
     names(SO) <- "original"
   }
 
-  results <- lapply(SO, function(SOx) {
-    dbl_score <- NULL
+  SO <- lapply(SO, function(SOx) {
 
-    if (scDblFinder) {
-      message("Running scDblFinder.")
-
-      ## https://stackoverflow.com/questions/62161916/is-there-a-function-in-r-that-splits-a-matrix-along-a-margin-using-a-factor-or-c
-      ## modified from base function split.data.frame (to avoid 2 x transposation)
-      ## multi dirs: split count matrix by orig.idents
-      split_mats <- lapply(split(x = seq_len(ncol(Seurat::GetAssayData(SOx, slot = "counts"))), f = SOx@meta.data$orig.ident), function(ind) Seurat::GetAssayData(SOx, slot = "counts")[,ind , drop = FALSE])
-      names(split_mats) <- basename(dirname(ffbms))
-
-      ## use for-loop to allow break-statement
-      for (x in names(split_mats)) {
-        message(x)
-        dbl_score_temp <- tryCatch({
-          log1p(scDblFinder::computeDoubletDensity(x = split_mats[[x]],
-                                                   subset.row = Seurat::VariableFeatures(Seurat::FindVariableFeatures(subset(SOx, cells = colnames(split_mats[[x]])),
-                                                                                                                      selection.method = "vst",
-                                                                                                                      nfeatures = nhvf,
-                                                                                                                      verbose = F,
-                                                                                                                      assay = "RNA")),
-                                                   dims = npcs))
-        }, error = function(error_condition) {
-          message(error_condition, " ... doublet calculation failed. Try to increase nhvf. Seurat object is exported as global variable: SO_qc_export_rescue")
-          message("")
-          SO_qc_export_rescue <<- SO
-          return(NULL)
-        })
-
-        if (is.null(dbl_score_temp)) {
-          ## in case of error an any data set: dbl_score set NULL and hence excluded (see below)
-          dbl_score <- NULL
-          break
-        } else {
-          dbl_score <- c(dbl_score, dbl_score_temp)
-        }
-      }
-    }
-
-    if (is.null(dbl_score)) {
+    if (!scDblFinder) {
       qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt")
     } else {
-      dbl_score <- stats::setNames(dbl_score, nm = colnames(Seurat::GetAssayData(SOx, slot = "counts")))
-      SOx <- Seurat::AddMetaData(SOx, dbl_score, "dbl_score_log")
       qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt", "dbl_score")
     }
-
-
-    # slow !!
-    'temp_dots <- dots[which(grepl("^scDbl__", names(dots), ignore.case = T))]
-    names(temp_dots) <- gsub("^scDbl__", "", names(temp_dots), ignore.case = T)
-    dbl_score <- do.call(scDblFinder::computeDoubletDensity, args = c(list(x = counts[,which(matrixStats::colSums2(counts) >= 2000)],
-                                                                           subset.row = Seurat::VariableFeatures(SOx),
-                                                                           dims = npcs),
-                                                                      temp_dots))'
-
 
     # differentiate mouse, human or no MT-genes at all
     if (any(grepl("^MT-", rownames(SOx))) && !any(grepl("^mt-", rownames(SOx)))) {
@@ -419,41 +362,18 @@ qc_diagnostic <- function(data_dirs,
     clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine", verbose = F)$snn, resolution = resolution_meta, verbose = F)
     colnames(clusters) <- paste0("meta_", colnames(clusters))
     SOx <- Seurat::AddMetaData(SOx, cbind(umap_dims, clusters))
-
-    meta <- cbind(meta, cbind(umap_dims, clusters))
-    # dependencies below!
-    meta_cols <- c(paste0("RNA_snn_res.", resolution), colnames(clusters))
-
-
-    ## qc plots here
-    #qc_p <- qc_plots(SO = SOx,qc_cols = qc_cols,clustering_cols = meta_cols)
-
-'    message("Calculating phenotype cluster markers.")
-    cluster_marker_list <- lapply(paste0("RNA_snn_res.", resolution), function(x) {
-      presto::wilcoxauc(SOx, group_by = x, seurat_assay = "RNA", assay = "data")  %>%
-        dplyr::filter(padj < 0.0001) %>%
-        dplyr::filter(abs(logFC) > 0.3) %>%
-        dplyr::select(-c(statistic, pval)) %>%
-        dplyr::mutate(pct_in = round(pct_in,2), pct_out = round(pct_out,2))
-    })
-    names(cluster_marker_list) <- paste0("RNA_snn_res.", resolution)'
-
-    #remove count slot to save memory
     return(SOx)
-'    return(list(SO = Seurat::DietSeurat(SOx, assays = names(SOx@assays), data = F, dimreducs = names(SOx@reductions)),
-                #phenotype_clusters_plot = qc_p[[1]], meta_vs_phenotype_clusters_plot = qc_p[[2]], meta_clusters_plot = qc_p[[3]],
-                phenotype_cluster_markers = cluster_marker_list))'
   })
 
   message("Run scexpr:::qc_plots() on the Seurat object for visualization of clustering on phenotype and qc data.")
 
-  if (length(results) == 1) {
-    return(results)
+  if (return_SoupX) {
+    return(SO)
   } else {
     message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
-    results <- c(results, list(SO_sx[["sc"]]), list(SO_sx[["sc_info"]]))
-    names(results) <- c(names(SO), "sc", "sc_info")
-    return(results)
+    SO <- c(SO, list(SO_sx[["sc"]]), list(SO_sx[["sc_info"]]))
+    names(SO) <- c(names(SO), "sc", "sc_info")
+    return(SO)
   }
 }
 
