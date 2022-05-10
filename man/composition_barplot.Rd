@@ -4,10 +4,16 @@
 \alias{composition_barplot}
 \title{Plot composition of one category by another}
 \usage{
-composition_barplot(SO, x_cat, fill_cat, col_pal = scexpr::col_pal("custom"))
+composition_barplot(
+  SO,
+  x_cat,
+  fill_cat,
+  col_pal = scexpr::col_pal("custom"),
+  plot_labels = F
+)
 }
 \arguments{
-\item{fill_cat}{}
+\item{plot_labels}{}
 }
 \value{
 

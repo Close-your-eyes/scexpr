@@ -376,30 +376,33 @@ prep_SO <- function(SO_unprocessed,
   SO <- Seurat::FindNeighbors(object = SO, reduction = red, dims = 1:npcs, verbose = verbose, ...)
   SO <- Seurat::FindClusters(object = SO, resolution = cluster_resolutions, verbose = verbose, ...)
 
-  if (!is.null(celltype_refs)) {
-    if (!celltype_ref_clusters %in% names(SO@meta.data) && !is.null(celltype_ref_clusters)) {
-      message("celltype_ref_clusters not found in SO meta data. Will be set to NULL and SingleR will operate on single cell level.")
-      celltype_ref_clusters <- NULL
-      refs <- NULL
-    } else {
-      refs <- SO@meta.data[,celltype_ref_clusters]
-    }
-    for (i in seq_along(celltype_refs)) {
-      celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
-                                    ref = celltype_refs[[i]],
-                                    labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]],
-                                    clusters = refs)
-      if (is.null(celltype_ref_clusters)) {
-        SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
-      } else {
-        celltypes_df <- utils::stack(stats::setNames(celltypes$labels, levels(SO@meta.data[,celltype_ref_clusters])))
-        names(celltypes_df) <- c(paste0(names(celltype_refs)[i], "_labels"), celltype_ref_clusters)
-        celltypes_df <- tibble::column_to_rownames(dplyr::left_join(tibble::rownames_to_column(SO@meta.data[,celltype_ref_clusters,drop=F], "ID"), celltypes_df, by = celltype_ref_clusters), "ID")
-        SO <- Seurat::AddMetaData(SO, celltypes_df)
-      }
-      Seurat::Misc(SO, paste0(names(celltype_refs)[i], "_object")) <- celltypes
-    }
+  if (!is.null(celltype_refs) && !is.null(celltype_ref_clusters) && !celltype_ref_clusters %in% names(SO@meta.data)) {
+    message("celltype_ref_clusters not found in SO meta data. Will be set to NULL and SingleR will operate on single cell level.")
+    celltype_ref_clusters <- NULL
   }
+
+  if (is.null(celltype_ref_clusters)) {
+    refs <- NULL
+  } else {
+    refs <- SO@meta.data[,celltype_ref_clusters]
+  }
+
+  for (i in seq_along(celltype_refs)) {
+    celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
+                                  ref = celltype_refs[[i]],
+                                  labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]],
+                                  clusters = refs)
+    if (is.null(celltype_ref_clusters)) {
+      SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
+    } else {
+      celltypes_df <- utils::stack(stats::setNames(celltypes$labels, levels(SO@meta.data[,celltype_ref_clusters])))
+      names(celltypes_df) <- c(paste0(names(celltype_refs)[i], "_labels"), celltype_ref_clusters)
+      celltypes_df <- tibble::column_to_rownames(dplyr::left_join(tibble::rownames_to_column(SO@meta.data[,celltype_ref_clusters,drop=F], "ID"), celltypes_df, by = celltype_ref_clusters), "ID")
+      SO <- Seurat::AddMetaData(SO, celltypes_df)
+    }
+    Seurat::Misc(SO, paste0(names(celltype_refs)[i], "_object")) <- celltypes
+  }
+
 
   # remove counts as they can be recalculated with rev_lognorm
   if (diet_seurat) {
