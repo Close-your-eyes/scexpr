@@ -8,7 +8,6 @@ qc_diagnostic(
   data_dirs,
   nhvf = 5000,
   npcs = 10,
-  min_nCount_RNA = 100,
   resolution = 0.8,
   resolution_SoupX = 0.6,
   resolution_meta = 0.8,
@@ -32,12 +31,9 @@ at the risk of scDblFinder returning an error 'size factors should be positive'}
 
 \item{npcs}{number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets}
 
-\item{min_nCount_RNA}{minimum number of transcripts per cells to be considered for scDblFinder::computeDoubletDensity; cells with less
-transcripts will be excluded in a very early stage and will not appear in the returned Seurat object(s)}
-
 \item{resolution}{resolution (louvain algorithm) for clustering based on feature expression}
 
-\item{resolution_SoupX}{resolution for (louvain algorithm) SoupX analysis}
+\item{resolution_SoupX}{resolution (louvain algorithm) for SoupX analysis}
 
 \item{resolution_meta}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
 
@@ -87,7 +83,4 @@ If data_dirs contains multiple samples then integration of samples is done with 
 (i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
 of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
 the common Seurat object though, the merged and harmonzized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
-}
-\details{
-On error in scDblFinder: Increase nhvf or try to change any other parameter.
 }

@@ -1,4 +1,10 @@
-#' Title
+#' Coalescing join function which will update NA values in the left-hand data frame
+#'
+#' This is a combination of join functions and the coalesce function from dplyr.
+#' It is a convenient way to solve the generic task of updating a data frame (replacing NAs)
+#' with another one that holds additional information. In its current form the information (non-NA)
+#' in the left-hand data frame (x) will be prioritized over that information in the right-hand
+#' data frame (y).
 #'
 #' @param x
 #' @param y
@@ -13,7 +19,7 @@
 #' @examples
 coalesce_join <- function(x, y,
                           by = NULL, suffix = c(".x", ".y"),
-                          join = dplyr::full_join, ...) {
+                          join = dplyr::left_join, ...) {
 
   # copied originally from: https://alistaire.rbind.io/blog/coalescing-joins/
   # ideas:
