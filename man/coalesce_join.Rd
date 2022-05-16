@@ -14,6 +14,12 @@ coalesce_join(
 )
 }
 \arguments{
+\item{x}{left-hand data frame}
+
+\item{y}{right-hand data frame}
+
+\item{by}{which column(s) to join by}
+
 \item{...}{}
 }
 \value{
@@ -25,4 +31,7 @@ It is a convenient way to solve the generic task of updating a data frame (repla
 with another one that holds additional information. In its current form the information (non-NA)
 in the left-hand data frame (x) will be prioritized over that information in the right-hand
 data frame (y).
+}
+\details{
+originally from: https://alistaire.rbind.io/blog/coalescing-joins/
 }

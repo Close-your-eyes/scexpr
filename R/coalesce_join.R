@@ -6,9 +6,11 @@
 #' in the left-hand data frame (x) will be prioritized over that information in the right-hand
 #' data frame (y).
 #'
-#' @param x
-#' @param y
-#' @param by
+#' originally from: https://alistaire.rbind.io/blog/coalescing-joins/
+#'
+#' @param x left-hand data frame
+#' @param y right-hand data frame
+#' @param by which column(s) to join by
 #' @param suffix
 #' @param join
 #' @param ...
