@@ -6,7 +6,7 @@
 \usage{
 qc_diagnostic(
   data_dirs,
-  nhvf = 5000,
+  nhvf = 2000,
   npcs = 10,
   resolution = 0.8,
   resolution_SoupX = 0.6,
@@ -26,8 +26,7 @@ qc_diagnostic(
 on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
 is missing, SoupX is disable for all others}
 
-\item{nhvf}{number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
-at the risk of scDblFinder returning an error 'size factors should be positive'}
+\item{nhvf}{number of highly variable features for every of the procedures}
 
 \item{npcs}{number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets}
 

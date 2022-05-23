@@ -27,8 +27,7 @@
 #' @param data_dirs list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
 #' on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
 #' is missing, SoupX is disable for all others
-#' @param nhvf number of highly variable features for every of the procedures; may be subject to lower numbers (e.g. 500 or 2000)
-#' at the risk of scDblFinder returning an error 'size factors should be positive'
+#' @param nhvf number of highly variable features for every of the procedures
 #' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
 #' @param resolution resolution (louvain algorithm) for clustering based on feature expression
 #' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
@@ -53,7 +52,7 @@
 #'
 #' @examples
 qc_diagnostic <- function(data_dirs,
-                          nhvf = 5000,
+                          nhvf = 2000,
                           npcs = 10,
                           resolution = 0.8,
                           resolution_SoupX = 0.6,
@@ -127,19 +126,27 @@ qc_diagnostic <- function(data_dirs,
     return_SoupX <- F
   }
 
-  ffbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("filtered_feature_bc_matrix", x))]))
-  rfbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("raw_feature_bc_matrix", x))]))
+  ffbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices", x))]))
+  rfbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("raw_feature_bc_matrix|raw_gene_bc_matrices", x))]))
+
+  if (any(duplicated(names(ffbms)))) {
+    print(ffbms)
+    stop("Duplicate names for paths not allowed.")
+  }
 
   message("Reading filtered_feature_bc_matrix data.")
-  SO <- lapply(ffbms, function(x) {
-    message(basename(dirname(x)))
+  SO <- lapply(names(ffbms), function(x) {
+
+    message(x)
     # this adds folder name prefix to cell names
-    names(x) <- basename(dirname(x))
-    filt_data <- Seurat::Read10X(data.dir = x)
+    #names(x) <- basename(dirname(x))
+
+    filt_data <- Seurat::Read10X(data.dir = ffbms[x])
     if (is.list(filt_data)) {
       message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
       filt_data <- filt_data[["Gene Expression"]]
     }
+    rownames(filt_data) <- gsub("_", "-", rownames(filt_data)) # handle error with scDblFinder below by manual correction of matrix, rather than have it corrected in SO only
 
     if (!is.null(cells)) {
       if (any(cells %in% colnames(filt_data))) {
@@ -164,7 +171,8 @@ qc_diagnostic <- function(data_dirs,
 
     message("Creating initial Seurat object with ", ncol(filt_data), " cells.")
     SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
-    SO@meta.data$orig.ident <- basename(dirname(x))
+    SO@meta.data$orig.ident <- x
+
 
     # filter cells which have library size of zero to enable scDblFinder without error
     # https://github.com/plger/scDblFinder/issues/55
@@ -193,7 +201,7 @@ qc_diagnostic <- function(data_dirs,
   names(SO) <- names(ffbms)
 
   if (length(SO) > 1) {
-    message("Preparing merged and harmonized Seurat object with ", length(unlist(lapply(SO, Cells))), " cells.")
+    message("Preparing merged and harmonized Seurat object with ", length(unlist(lapply(SO, Seurat::Cells))), " cells.")
   } else {
     message("Preparing Seurat object.")
   }
@@ -214,7 +222,6 @@ qc_diagnostic <- function(data_dirs,
 
     SoupX_results <- lapply(names(rfbms), ..., FUN = function(x) {
       message(x)
-      browser()
       filt_data <- Seurat::Read10X(data.dir = ffbms[x])
       if (is.list(filt_data)) {
         filt_data <- filt_data[["Gene Expression"]]
@@ -368,11 +375,11 @@ qc_diagnostic <- function(data_dirs,
   message("Run scexpr:::qc_plots() on the Seurat object for visualization of clustering on phenotype and qc data.")
 
   if (return_SoupX) {
-    return(SO)
-  } else {
     message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
     SO <- c(SO, list(SO_sx[["sc"]]), list(SO_sx[["sc_info"]]))
     names(SO) <- c(names(SO), "sc", "sc_info")
+    return(SO)
+  } else {
     return(SO)
   }
 }
@@ -381,31 +388,33 @@ check_dir <- function(data_dirs, SoupX = F) {
 
   dir_roots <- unlist(lapply(data_dirs, function(x) {
     dd <- list.dirs(x)
-    dirname(dd[which(basename(dd) == "filtered_feature_bc_matrix")])
+    dirname(dd[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices", basename(dd)))])
   }))
 
-  names(dir_roots) <- basename(dir_roots)
+  if (is.null(names(dir_roots))) {
+    names(dir_roots) <- basename(dir_roots)
+  }
 
-  message(length(dir_roots), " folders with filtered_feature_bc_matrix found in data_dirs.")
-
-  if (any(duplicated(basename(dir_roots)))) {
+  if (any(duplicated(names(dir_roots)))) {
     dup_inds <- which(duplicated(basename(dir_roots)))
     dup_names <- basename(dir_roots)[dup_inds]
-    stop("Duplicated parent folder names found: ", paste(dup_names, collapse = ", "), ". Please fix.")
+    stop("Duplicated names found: ", paste(dup_names, collapse = ", "), ". Please fix.")
   }
+  message(length(dir_roots), " folders with filtered_feature_bc_matrix or filtered_gene_bc_matrices found in data_dirs.")
 
   raw_and_filt <- unlist(lapply(dir_roots, function(x) {
     sub_folders <- basename(list.dirs(x, recursive = F))
-    all(c("filtered_feature_bc_matrix", "raw_feature_bc_matrix") %in% sub_folders)
+    all(c("filtered_feature_bc_matrix", "raw_feature_bc_matrix") %in% sub_folders) | all(c("filtered_gene_bc_matrices", "raw_gene_bc_matrices") %in% sub_folders)
   }))
 
   if (any(!raw_and_filt) && SoupX) {
-    message(length(raw_and_filt) - sum(raw_and_filt), " of ", length(raw_and_filt), " folder(s) (", paste(basename(dir_roots[which(!raw_and_filt)]), collapse = ", "), ") do not contain raw_feature_bc_matrix. Hence, SoupX cannot be run.")
+    message(length(raw_and_filt) - sum(raw_and_filt), " of ", length(raw_and_filt), " folder(s) (", paste(names(dir_roots[which(!raw_and_filt)]), collapse = ", "), ") do not contain raw_feature_bc_matrix. Hence, SoupX cannot be run.")
     SoupX <- F
   }
 
   dir_folders <- lapply(dir_roots, function(x) {
-    list.dirs(x, recursive = F)
+    dir_temp <- list.dirs(x, recursive = F)
+    dir_temp[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices|raw_feature_bc_matrix|raw_gene_bc_matrices", basename(dir_temp)))]
   })
 
   # length(dir_roots) == 1 sets return_SoupX
