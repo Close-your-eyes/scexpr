@@ -69,7 +69,7 @@ server <- function(input, output, session) {
       features.exclude = Seurat::Misc(data[[input$clustering]][[input$cc]][["Seurat_object"]])[["features.exclude"]]
     }
     plot <- scexpr:::.plot_vp(vd = ds$ds,
-                              p.plot = input$pval,
+                              y = input$pval,
                               pt.size = input$pt.size2,
                               font.size = input$font.size,
                               pval.tick = input$pval.tick,
@@ -83,8 +83,7 @@ server <- function(input, output, session) {
     if ("Seurat_object" %in% names(data)) {
       plot <- plot + ggplot2::labs(title = input$clustering)
     }
-
-
+    
     f <- unique(c(ds$ds[input$volcano_table_rows_selected, "Feature", drop = T], feats$bf, feats$text))
     f <- f[which(f %in% ds$ds$Feature)]
     plot <- plot + ggplot2::geom_point(color = "black", data = ds$ds[f,,drop=F])
@@ -140,10 +139,11 @@ server <- function(input, output, session) {
                                          assay = assay,
                                          strip.background = element_rect(fill = "white"),
                                          axis.title = element_blank(),
-                                         col.pal = "black",
+                                         #col.pal = "black",
                                          text = ggplot2::element_text(size = 20), ## font.size
                                          #axis.text.x = element_text(angle = 45, hjust = 1),
                                          strip.text = ggplot2::element_text(face = "italic"))
+      
       return(plots)
     }
   })
@@ -154,6 +154,6 @@ server <- function(input, output, session) {
 
 }
 
-#shiny::shinyApp(ui = scexpr::shiny_uis("single_volcano_sc"), server = server)
-shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
+shiny::shinyApp(ui = scexpr::shiny_uis("single_volcano_sc"), server = server)
+#shiny::shinyApp(ui = scexpr::shiny_uis("multi_clustering_volcano_sc"), server = server)
 

@@ -438,8 +438,8 @@ volcano_plot <- function(SO,
                       p.cut = NA,
                       fc.cut = NA) {
 
-  x <- match.arg(x, names(vd))
-  y <- match.arg(y, names(vd)) #c("adj.p.val", "p.val")
+  x <- match.arg(x, colnames(vd))
+  y <- match.arg(y, colnames(vd)) #c("adj.p.val", "p.val")
 
   vd <- as.data.frame(vd)
   vd$Feature <- rownames(vd)
