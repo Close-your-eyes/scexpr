@@ -41,8 +41,8 @@ cluster_correlation_matrix <- function(SO,
     utils::install.packages("reshape2")
   }
 
-  if (length(features) == 1) {
-    match.arg(features, choices = c("all", "pca"))
+  if (length(features) == 1 || length(features) == 2 && length(intersect(features, c("all", "pca"))) == 2) {
+    features <- match.arg(features, choices = c("all", "pca"))
   }
 
   if (missing(meta.cols)) {
@@ -68,14 +68,10 @@ cluster_correlation_matrix <- function(SO,
     if (length(levels) != 2) {
       stop("levels has to be of length 2.")
     }
-    levels <- sapply(seq_along(SO), function(x) {
-      .check.levels(SO[[x]], meta.cols[x], levels = levels[[x]], append_by_missing = complement.levels)
-    })
+    levels <- lapply(seq_along(SO), function(x) .check.levels(SO[[x]], meta.cols[x], levels = levels[[x]], append_by_missing = complement.levels))
 
   } else {
-    levels <- sapply(seq_along(SO), function(x) {
-      .check.levels(SO[[x]], meta.cols[x], levels = levels, append_by_missing = F)
-    })
+    levels <- lapply(seq_along(SO), function(x) .check.levels(SO[[x]], meta.cols[x], levels = levels, append_by_missing = F))
   }
 
   SO <- .check.SO(SO, assay = assay, length = 2)
@@ -84,9 +80,9 @@ cluster_correlation_matrix <- function(SO,
   meta.cols[1] <- .check.features(SO[[1]], features = meta.cols[1], rownames = F)
   meta.cols[2] <- .check.features(SO[[2]], features = meta.cols[2], rownames = F)
 
-  if (features == "all") {
+  if (length(features) == 1 && features == "all") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
-  } else if (features == "pca") {
+  } else if (length(features) == 1 && features == "pca") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x@reductions[["pca"]]@feature.loadings)))
   } else {
     features <- .check.features(SO, features, meta.data = F)

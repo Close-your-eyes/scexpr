@@ -226,10 +226,10 @@ prep_SO <- function(SO_unprocessed,
     ## 3 cases
     if (batch_corr %in% c("regression", "none", "harmony")) {
       SO <- merge(x = SO.list[[1]], y = SO.list[2:length(SO.list)], merge.data = T)
-      if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
+'      if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
         vars.to.regress <- NULL
-        message("vars.to.regress set to NULL as batch_corr %in% c('none', 'harmony').")
-      }
+        message("vars.to.regress set to NULL as batch_corr %in% c(none, harmony).")
+      }'
       if (normalization == "SCT") {
         SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose))
         SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
