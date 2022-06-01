@@ -32,6 +32,7 @@ cluster_correlation_matrix <- function(SO,
                                        levels = NULL, # NA possible
                                        complement.levels = F,
                                        features = c("all", "pca"),
+                                       split.by = NULL,
                                        avg.expr,
                                        method = c("pearson", "kendall", "spearman"),
                                        corr.in.percent = FALSE,
@@ -88,12 +89,44 @@ cluster_correlation_matrix <- function(SO,
     features <- .check.features(SO, features, meta.data = F)
   }
 
-  if (missing(avg.expr)) {
-    avg.expr <- lapply(seq_along(SO), function (x) Seurat::AverageExpression(SO[[x]], assays = assay, features = features, group.by = meta.cols[[x]], slot = "data", verbose = F)[[assay]])
-  } else {
-    avg.expr <- lapply(avg.expr, function (x) x[features,,drop=F])
+  ### add option to split comparison by another covariate and then use the average correlation coeff:
+  # https://www.researchgate.net/post/average_of_Pearson_correlation_coefficient_values
+  # https://en.wikipedia.org/wiki/Fisher_transformation
+  # https://stats.stackexchange.com/questions/8019/averaging-correlation-values
+
+  #split.by<-"Pat"
+'  if (!is.null(split.by)) {
+    split.by <- .check.features(SO, features = split.by, rownames = F)
+    intersect_levels <- intersect(SO[[1]]@meta.data[,split.by], SO[[2]]@meta.data[,split.by])
+    if (length(intersect_levels) == 0) {
+      stop("No intersecting levels in ", split.by, " column found in SOs.")
+    } else {
+      message("Intersecting levels for ", split.by, ": ", paste(intersect_levels, collapse = ", "), ".")
+    }
+    SO[[1]] <- Seurat::SplitObject(SO[[1]], split.by = split.by)[intersect_levels]
+    SO[[2]] <- Seurat::SplitObject(SO[[2]], split.by = split.by)[intersect_levels]
   }
 
+  SO_blood@meta.data <-
+    SO_blood@meta.data %>%
+    tidyr::separate(orig.ident, into = c("Pat", "rep", "body_fluid"), remove = F)
+  SO_urine@meta.data <-
+    SO_urine@meta.data %>%
+    tidyr::separate(orig.ident, into = c("Pat", "rep", "body_fluid"), remove = F)
+SO <- list(SO_blood, SO_urine)
+
+SO_blood_split <- Seurat::SplitObject(SO_blood, split.by = "orig.ident")
+SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
+
+purrr::map2(SO[[1]], SO[[2]], )
+'
+
+
+  if (missing(avg.expr)) {
+    avg.expr <- lapply(seq_along(SO), function(x) Seurat::AverageExpression(SO[[x]], assays = assay, features = features, group.by = meta.cols[[x]], slot = "data", verbose = F)[[assay]])
+  } else {
+    avg.expr <- lapply(avg.expr, function(x) x[features,,drop=F])
+  }
   cm <- stats::cor(avg.expr[[1]][,levels[[1]],drop=F], avg.expr[[2]][,levels[[2]],drop=F], method = method)
 
   '  if (correlation == "pearson") {
