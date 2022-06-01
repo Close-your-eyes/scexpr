@@ -140,8 +140,7 @@ SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
   # filter for levels
   avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) purrr::map(.x = x, .f = ~ .x[,y,drop=F]))
 
-
-  # calculate correlations; intersect_levels for correct order
+  # calculate correlations
   cm <- purrr::map2(.x = avg.expr[[1]], .y = avg.expr[[2]], function(x,y) stats::cor(x = x, y = y, method = method))
   #stats::cor(avg.expr[[1]][,levels[[1]],drop=F], avg.expr[[2]][,levels[[2]],drop=F], method = method)
 
@@ -155,6 +154,8 @@ SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
   } else {
     cm <- cm[[1]]
   }
+
+  cm[[1]]["1","1"]
 
   cm.melt <- reshape2::melt(cm)
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
