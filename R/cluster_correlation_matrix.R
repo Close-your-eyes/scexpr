@@ -95,7 +95,7 @@ cluster_correlation_matrix <- function(SO,
   # https://stats.stackexchange.com/questions/8019/averaging-correlation-values
 
   #split.by<-"Pat"
-'  if (!is.null(split.by)) {
+  if (!is.null(split.by)) {
     split.by <- .check.features(SO, features = split.by, rownames = F)
     intersect_levels <- intersect(SO[[1]]@meta.data[,split.by], SO[[2]]@meta.data[,split.by])
     if (length(intersect_levels) == 0) {
@@ -103,11 +103,15 @@ cluster_correlation_matrix <- function(SO,
     } else {
       message("Intersecting levels for ", split.by, ": ", paste(intersect_levels, collapse = ", "), ".")
     }
+    # intersect_levels for correct order
     SO[[1]] <- Seurat::SplitObject(SO[[1]], split.by = split.by)[intersect_levels]
     SO[[2]] <- Seurat::SplitObject(SO[[2]], split.by = split.by)[intersect_levels]
+  } else {
+    SO[[1]] <- list(SO[[1]])
+    SO[[2]] <- list(SO[[2]])
   }
 
-  SO_blood@meta.data <-
+  '  SO_blood@meta.data <-
     SO_blood@meta.data %>%
     tidyr::separate(orig.ident, into = c("Pat", "rep", "body_fluid"), remove = F)
   SO_urine@meta.data <-
@@ -117,50 +121,40 @@ SO <- list(SO_blood, SO_urine)
 
 SO_blood_split <- Seurat::SplitObject(SO_blood, split.by = "orig.ident")
 SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
-
-purrr::map2(SO[[1]], SO[[2]], )
 '
 
+  ## works
+  #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
+  #identical(Seurat::AverageExpression(SO[[1]][[1]], assays = assay, group.by = meta.cols[[1]], slot = "data", verbose = F)[[assay]], avg.expr2[[1]][[1]])
+
+  ## filter clusters with very few cells only (QC check so to say)
 
   if (missing(avg.expr)) {
-    avg.expr <- lapply(seq_along(SO), function(x) Seurat::AverageExpression(SO[[x]], assays = assay, features = features, group.by = meta.cols[[x]], slot = "data", verbose = F)[[assay]])
+    avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, slot = "data", verbose = F)[[assay]]))
+    # avg.expr <- lapply(seq_along(SO), function(x) Seurat::AverageExpression(SO[[x]], assays = assay, features = features, group.by = meta.cols[[x]], slot = "data", verbose = F)[[assay]])
   } else {
-    avg.expr <- lapply(avg.expr, function(x) x[features,,drop=F])
+    avg.expr <- purrr::map(.x = avg.expr, .f = ~ purrr::map(.x = .x, .f = ~ .x[features,,drop=F]))
+    #avg.expr <- lapply(avg.expr, function(x) x[features,,drop=F])
   }
-  cm <- stats::cor(avg.expr[[1]][,levels[[1]],drop=F], avg.expr[[2]][,levels[[2]],drop=F], method = method)
 
-  '  if (correlation == "pearson") {
-    # conduct linear model in case of pearson
-    # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
-
-    lms <- lapply(colnames(avg.expr[[1]]), function(x) {
-      lms <- lapply(colnames(avg.expr[[2]]), function(y) {
-        lm(y~x, data.frame(x = scale(avg.expr[[2]][,y]), y = scale(avg.expr[[1]][,x])))
-      })
-      names(lms) <- colnames(avg.expr[[2]])
-      return(lms)
-    })
-    names(lms) <- colnames(avg.expr[[1]])
+  # filter for levels
+  avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) purrr::map(.x = x, .f = ~ .x[,y,drop=F]))
 
 
-    cm <- sapply(lms, function(x) {
-      z <- sapply(x, function(y) {
-        y[["coefficients"]][["x"]]
-      })
-      ## just to avoid dropping
-      if (length(z) == 1) {
-        z <- c(z, 0)
-      }
-      return(z)
-    })
-    cm <- cm[which(!rownames(cm) == ""),,drop = F]
-    cm <- t(cm)
+  # calculate correlations; intersect_levels for correct order
+  cm <- purrr::map2(.x = avg.expr[[1]], .y = avg.expr[[2]], function(x,y) stats::cor(x = x, y = y, method = method))
+  #stats::cor(avg.expr[[1]][,levels[[1]],drop=F], avg.expr[[2]][,levels[[2]],drop=F], method = method)
 
+  # for pearson correlation, also a linear would be feasable
+  # conduct linear model in case of pearson
+  # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
 
+  if (length(cm) > 1) {
+    #https://stats.stackexchange.com/questions/8019/averaging-correlation-values
+    atanh()
   } else {
-
+    cm <- cm[[1]]
   }
-'
 
   cm.melt <- reshape2::melt(cm)
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
