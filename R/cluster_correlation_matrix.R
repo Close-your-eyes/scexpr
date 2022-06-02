@@ -36,6 +36,7 @@ cluster_correlation_matrix <- function(SO,
                                        avg.expr,
                                        method = c("pearson", "kendall", "spearman"),
                                        corr.in.percent = FALSE,
+                                       min.cells = 20,
                                        round.corr = 2) {
 
   if (!requireNamespace("reshape2", quietly = T)) {
@@ -76,6 +77,7 @@ cluster_correlation_matrix <- function(SO,
   }
 
   SO <- .check.SO(SO, assay = assay, length = 2)
+  ## names for SO are very important below. missing names will cause errors.
   assay <- match.arg(assay, c("RNA", "SCT"))
   method <- match.arg(method, c("pearson", "kendall", "spearman"))
   meta.cols[1] <- .check.features(SO[[1]], features = meta.cols[1], rownames = F)
@@ -101,7 +103,7 @@ cluster_correlation_matrix <- function(SO,
     if (length(intersect_levels) == 0) {
       stop("No intersecting levels in ", split.by, " column found in SOs.")
     } else {
-      message("Intersecting levels for ", split.by, ": ", paste(intersect_levels, collapse = ", "), ".")
+      message("Intersecting levels between SOs for meta column ", split.by, ": ", paste(intersect_levels, collapse = ", "), ".")
     }
     # intersect_levels for correct order
     SO[[1]] <- Seurat::SplitObject(SO[[1]], split.by = split.by)[intersect_levels]
@@ -111,7 +113,28 @@ cluster_correlation_matrix <- function(SO,
     SO[[2]] <- list(SO[[2]])
   }
 
-  '  SO_blood@meta.data <-
+
+  ## create a table of number of cells per clusters
+  fff <- function(so, meta.col) {
+    z <- stack(table(so@meta.data[,meta.col]))
+    #names(z) <- c("n_cells", meta.col)
+    names(z) <- c("n_cells", "meta_col_level")
+    z[,2] <- as.character(z[,2])
+    return(z)
+  }
+  ## use purrr to loop through SOs and check how many observations (cells) per cluster are found
+  n_cell_df <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ fff(.x,.y)))
+  n_cell_df <- purrr::map(n_cell_df, dplyr::bind_rows, .id = split.by)
+  # filter for relevant levels only
+  n_cell_df <- purrr::map2(.x = n_cell_df, .y = levels, .f = ~ .x[which(.x$meta_col_level %in% .y),])
+  n_cell_df <- dplyr::bind_rows(n_cell_df, .id = "SO")
+
+  if (nrow(n_cell_df[which(n_cell_df$n_cells < min.cells),]) > 0) {
+    message("These elements are excluded from correlation analysis due to low n_cells below ", min.cells, ".")
+    print(n_cell_df[which(n_cell_df$n_cells < min.cells),])
+  }
+
+'    SO_blood@meta.data <-
     SO_blood@meta.data %>%
     tidyr::separate(orig.ident, into = c("Pat", "rep", "body_fluid"), remove = F)
   SO_urine@meta.data <-
@@ -127,7 +150,9 @@ SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
   #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
   #identical(Seurat::AverageExpression(SO[[1]][[1]], assays = assay, group.by = meta.cols[[1]], slot = "data", verbose = F)[[assay]], avg.expr2[[1]][[1]])
 
-  ## filter clusters with very few cells only (QC check so to say)
+  # for pearson correlation, also a linear would be feasable
+  # conduct linear model in case of pearson
+  # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
 
   if (missing(avg.expr)) {
     avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, slot = "data", verbose = F)[[assay]]))
@@ -138,26 +163,58 @@ SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
   }
 
   # filter for levels
-  avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) purrr::map(.x = x, .f = ~ .x[,y,drop=F]))
+  avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) {purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F])})
 
-  # calculate correlations
-  cm <- purrr::map2(.x = avg.expr[[1]], .y = avg.expr[[2]], function(x,y) stats::cor(x = x, y = y, method = method))
-  #stats::cor(avg.expr[[1]][,levels[[1]],drop=F], avg.expr[[2]][,levels[[2]],drop=F], method = method)
+  if (!is.null(split.by)) {
+    n_cell_df_nest <-
+      n_cell_df %>%
+      dplyr::filter(n_cells >= min.cells) %>%
+      dplyr::group_by(SO, !!rlang::sym(split.by)) %>%
+      dplyr::summarise(meta_col_levels = list(meta_col_level), .groups = "drop") %>%
+      as.data.frame()
 
-  # for pearson correlation, also a linear would be feasable
-  # conduct linear model in case of pearson
-  # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
+    ## filter clusters with n cells below threshold
+    for (i in 1:nrow(n_cell_df_nest)) {
+      avg.expr[[n_cell_df_nest[i,"SO"]]][[n_cell_df_nest[i,split.by]]] <-
+        avg.expr[[n_cell_df_nest[i,"SO"]]][[n_cell_df_nest[i,split.by]]][,n_cell_df_nest[[i,"meta_col_levels"]]]
+    }
 
-  if (length(cm) > 1) {
-    #https://stats.stackexchange.com/questions/8019/averaging-correlation-values
-    atanh()
+    # calculate correlations
+    cm <- purrr::map2(.x = avg.expr[[1]], .y = avg.expr[[2]], function(x,y) stats::cor(x = x, y = y, method = method))
+
+    combs <- as.data.frame(tidyr::expand_grid(x = levels[[1]], y = levels[[2]]))
+    cm.melt <- dplyr::bind_rows(lapply(split(combs, 1:nrow(combs)), function(comb) {
+      corrs <- unlist(sapply(cm, function(z) {
+        tryCatch(z[comb[["x"]], comb[["y"]]], error = function (e) NULL)
+      }))
+      if (!is.null(corrs)) {
+        data.frame(Var1 = comb[["x"]], Var2 = comb[["y"]], value = tanh(mean(atanh(corrs))))
+      } else {
+        NULL
+      }
+    }))
+
   } else {
-    cm <- cm[[1]]
+    avg.expr <- purrr::flatten(avg.expr)
+
+    n_cell_df_nest <-
+      n_cell_df %>%
+      dplyr::filter(n_cells >= min.cells) %>%
+      dplyr::group_by(SO) %>%
+      dplyr::summarise(meta_col_levels = list(meta_col_level), .groups = "drop") %>%
+      as.data.frame()
+
+    ## filter clusters with n cells below threshold
+    for (i in 1:nrow(n_cell_df_nest)) {
+      avg.expr[[n_cell_df_nest[i,"SO"]]] <-
+        avg.expr[[n_cell_df_nest[i,"SO"]]][,n_cell_df_nest[[i,"meta_col_levels"]]]
+    }
+
+    # calculate correlations
+    cm <- stats::cor(x = avg.expr[[1]], y = avg.expr[[2]], method = method)
+    cm.melt <- reshape2::melt(cm)
   }
 
-  cm[[1]]["1","1"]
-
-  cm.melt <- reshape2::melt(cm)
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
   cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
 
