@@ -121,8 +121,7 @@ cluster_correlation_matrix <- function(SO,
 
   ## create a table of number of cells per clusters
   fff <- function(so, meta.col) {
-    z <- stack(table(so@meta.data[,meta.col]))
-    #names(z) <- c("n_cells", meta.col)
+    z <- utils::stack(table(so@meta.data[,meta.col]))
     names(z) <- c("n_cells", "meta_col_level")
     z[,2] <- as.character(z[,2])
     return(z)
@@ -155,7 +154,7 @@ SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
   #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
   #identical(Seurat::AverageExpression(SO[[1]][[1]], assays = assay, group.by = meta.cols[[1]], slot = "data", verbose = F)[[assay]], avg.expr2[[1]][[1]])
 
-  # for pearson correlation, also a linear would be feasable
+  # for pearson correlation, also a linear correlation would be feasable
   # conduct linear model in case of pearson
   # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
 
