@@ -11,9 +11,11 @@ cluster_correlation_matrix(
   levels = NULL,
   complement.levels = F,
   features = c("all", "pca"),
+  split.by = NULL,
   avg.expr,
   method = c("pearson", "kendall", "spearman"),
   corr.in.percent = FALSE,
+  min.cells = 20,
   round.corr = 2
 )
 }
@@ -34,12 +36,19 @@ can be incomplete e.g. if order matters only for some levels, if complement.leve
 if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
 or a vector of features}
 
+\item{split.by}{split correlation calculation by a common column with common levels in SOs;
+individual correlation coefficients are averaged after fishers z-transformation (atanh) and then
+transformed back (tanh)}
+
 \item{avg.expr}{avg.expr from a previous return list of cluster_correlation_matrix; e.g. provide that to  only change axis
 orders or similar but avoid repeated calculation}
 
 \item{method}{which correlation metric to calculate, passed to stats::cor}
 
 \item{corr.in.percent}{display correlation in percent (TRUE, T) or as a fraction (FALSE, F)}
+
+\item{min.cells}{minimum number of cells per group in meta.cols (and if provided split.by)
+to calculate and return a correlation coefficient}
 
 \item{round.corr}{decimal places to round correlation values to}
 }

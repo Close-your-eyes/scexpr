@@ -58,7 +58,7 @@ feature_plot(
   plot.freq = T,
   plot.legend.title = F,
   plot.title = T,
-  order.discrete = NULL,
+  order.discrete = T,
   freq.position = c(-Inf, Inf),
   freq.font.size = 4,
   plot.cutoff.feature.inset = F,
