@@ -129,7 +129,7 @@ feature_plot <- function(SO,
                          plot.legend.title = F,
                          plot.title = T,
 
-                         order.discrete = NULL, # "^" as first element, "$" as last to indicate plotting first or last of respective factor levels, first plotted ones are buried ## or order.discrete = T to plot most in order of abundance
+                         order.discrete = T, # "^" as first element, "$" as last to indicate plotting first or last of respective factor levels, first plotted ones are buried ## or order.discrete = T to plot most in order of abundance
                          freq.position = c(-Inf, Inf),
                          freq.font.size = 4,
 
@@ -144,7 +144,6 @@ feature_plot <- function(SO,
                          label.size = 12,
                          ...) {
 
-  # speed = F,
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
 
@@ -154,9 +153,8 @@ feature_plot <- function(SO,
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
   if (length(dims) != 2 || class(dims) != "numeric") {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
-  if (!is.null(plot.labels)) {
-    plot.labels <- match.arg(plot.labels, c("text", "label"))
-  }
+  if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
+  if (is.null(order.discrete) || is.na(order.discrete)) {stop("order.discrete should be logical or a vector of factor levels in order.")}
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -186,7 +184,18 @@ feature_plot <- function(SO,
 
   plots <- lapply(features, function(x) {
 
-    data <- .get.data(SO = SO, assay = assay, cells = names(cells), split.by = split.by, shape.by = shape.by, reduction = names(reduction), feature = x, min.q.cutoff = min.q.cutoff, max.q.cutoff = max.q.cutoff, order = order)
+    data <- .get.data(SO = SO,
+                      assay = assay,
+                      cells = names(cells),
+                      split.by = split.by,
+                      shape.by = shape.by,
+                      reduction = names(reduction),
+                      feature = x,
+                      min.q.cutoff = min.q.cutoff,
+                      max.q.cutoff = max.q.cutoff,
+                      order = order,
+                      order.discrete = order.discrete)
+
     # necessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
     # make it after .get.data
     shape.by <- tryCatch(rlang::sym(shape.by), error = function (e) NULL)
@@ -223,52 +232,6 @@ feature_plot <- function(SO,
         col.pal <- col.pal.d
       }
     }
-
-   ' if (speed) {
-      if (!requireNamespace("scattermore", quietly = T)) {
-        devtools::install_github("exaexa/scattermore")
-      }
-      if (nlevels(as.factor(data$SO.split)) > 1 && nlevels(as.factor(data$split.by)) > 1) {
-        subtitle <- "both"
-      } else if (nlevels(as.factor(data$SO.split)) > 1) {
-        subtitle <- "SO"
-      } else if (nlevels(as.factor(data$split.by)) > 1) {
-        subtitle <- "split"
-      } else {
-        subtitle <- "none"
-      }
-      plot <- lapply(levels(as.factor(data$SO.split)), function(y) {
-        lapply(levels(as.factor(data$split.by)), function(z) {
-          data <- data[intersect(which(data$SO.split == y), which(data$split.by == z)),]
-          if (nrow(data) > 0) {
-            plot <- ggplot2::ggplot() +  #no real data to plot
-              suppressWarnings(scattermore::geom_scattermost(data[names(which(cells == 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
-                                                             col = col.excluded.cells,
-                                                             pointsize = pt.size*2)) +
-              suppressWarnings(scattermore::geom_scattermost(data[intersect(which(cells == 1), which(data[,1] == 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
-                                                             col = col.non.expresser,
-                                                             pointsize = pt.size*2)) +
-              scattermore::geom_scattermost(data[intersect(which(cells == 1), which(data[,1] > 0)),c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))],    #manually plot and color the points
-                                            col = col_pal("spectral")[1+99*(data[intersect(which(cells == 1), which(data[,1] > 0)),1]-min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]))/(max(data[intersect(which(cells == 1), which(data[,1] > 0)),1])-min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]))],
-                                            pointsize = pt.size*2) +
-              ggplot2::labs(subtitle = switch(subtitle, "both" = paste0(y, "  ", z),"SO" = y,"split" = z,"none" = ""), title = x)
-
-            #geom_point(data=data.frame(x=double(0)), aes(x,x,color=x)) +
-            #scale_color_gradientn(limits = c(min(data[intersect(which(cells == 1), which(data[,1] > 0)),1]), max(data[intersect(which(cells == 1), which(data[,1] > 0)),1])), colors = col_pal("spectral"), name=x) +
-            plot <- plot + theme
-            if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
-            if (!plot.axis.labels) {plot <- plot + ggplot2::theme(axis.ticks = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.title = ggplot2::element_blank())}
-            return(plot)
-          } else {
-            return(NULL)
-          }
-        })
-      })
-      plot <- purrr::flatten(plot)
-      plot <- plot[!sapply(plot, is.null)]
-      plot <- cowplot::plot_grid(plotlist = plot, ncol = ncol.combine, nrow = nrow.combine, align = "hv", axis = "tblr")
-      return(plot)
-    }'
 
     # excluded cells
     plot <-
@@ -318,26 +281,9 @@ feature_plot <- function(SO,
       x <- aliases.list[[1]]
       data <- aliases.list[[2]]
 
-      # shuffle to make plotting order random
-      # only if order == TRUE and data is integer/discrete
-      # or if is not numeric
-      if (!order || !is.numeric(data[,1])) { # ( && all(as.integer(data[,1]) == data[,1]))
-        data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
-      }
-
-      if (is.null(order.discrete)) {
-        plot <- plot + ggplot2::geom_point(data = data[names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
-      } else if (is.logical(order.discrete) && order.discrete) {
-        temp_name <- make.names(as.character(Sys.time()))
-        data <-
-          data %>%
-          tibble::rownames_to_column(temp_name) %>%
-          dplyr::group_by(!!rlang::sym(x)) %>%
-          dplyr::mutate(count = dplyr::n()) %>%
-          dplyr::ungroup() %>%
-          dplyr::arrange(-count) %>%
-          tibble::column_to_rownames(temp_name)
-        # use rownames %in% ... to preserve order
+      if (is.logical(order.discrete)) {
+        # order.discrete T or F: ordering has been done in .get.data
+        # use rownames(data) %in% ... to preserve random order
         plot <- plot + ggplot2::geom_point(data = data[rownames(data) %in% names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
       } else {
         if (length(unique(order.discrete)) != length(order.discrete)) {
@@ -350,22 +296,20 @@ feature_plot <- function(SO,
           message("order.discrete reduced to existing levels: ", paste(gsub("\\$$", "", (gsub("^\\^", "", order.discrete))), collapse = ", "))
         }
 
-        # optionally: pt.size as names of order.discrete
         for (i in order.discrete[which(grepl("^\\^", order.discrete))]) {
           i <- gsub("^\\^", "", i)
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
         }
 
         for (i in order.discrete[intersect(which(!grepl("^\\^", order.discrete)), which(!grepl("\\$$", order.discrete)))]) {
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
         }
         plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(!data[,x] %in% gsub("\\$$", "", (gsub("^\\^", "", order.discrete))))),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
 
         for (i in order.discrete[which(grepl("\\$$", order.discrete))]) {
           i <- gsub("\\$$", "", i)
-          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size) #[i]
+          plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
         }
-
       }
 
       if (!is.null(plot.labels)) {
@@ -832,11 +776,12 @@ feature_plot <- function(SO,
                       cells = NULL,
                       split.by = NULL,
                       shape.by = NULL,
-                      reduction = "tsne",
+                      reduction = "umap",
                       meta.col = NULL,
                       min.q.cutoff = 0,
                       max.q.cutoff = 1,
-                      order = T) {
+                      order = T,
+                      order.discrete = T) {
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -898,15 +843,20 @@ feature_plot <- function(SO,
     }
   }
 
-
-  if (order) {
+  if (order && is.numeric(data[,1])) {
     # abs: in case negative values are contained in meta.col, any extreme away from 0 will be plotted on top
-    if (is.numeric(data[,1])) {
-      data <- data[order(abs(data[,1])),]
-    } else {
-      data <- data[order(data[,1]),]
-    }
+    data <- data[order(abs(data[,1])),]
+  } else if (!order || !is.numeric(data[,1])) {
+    # shuffle to make plotting order random
+    # only if order == TRUE and data is integer/discrete
+    # or if is not numeric
+    data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+  }
 
+  if (!is.numeric(data[,1]) && is.logical(order.discrete) && order.discrete) {
+    data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
+  } else if (!is.numeric(data[,1]) && is.logical(order.discrete) && !order.discrete) {
+    data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
   }
 
   return(data)
