@@ -21,6 +21,11 @@
 #' @param method which correlation metric to calculate, passed to stats::cor
 #' @param corr.in.percent display correlation in percent (TRUE, T) or as a fraction (FALSE, F)
 #' @param round.corr decimal places to round correlation values to
+#' @param split.by split correlation calculation by a common column with common levels in SOs;
+#' individual correlation coefficients are averaged after fishers z-transformation (atanh) and then
+#' transformed back (tanh)
+#' @param min.cells minimum number of cells per group in meta.cols (and if provided split.by)
+#' to calculate and return a correlation coefficient
 #'
 #' @return list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
