@@ -47,6 +47,10 @@ qc_plot <- function(SO1,
     stop("x_cat not found in SO2.")
   }
 
+  if (!is.logical(sec_axis_lin)) {
+    stop("sec_axis_lin has to be logical: TRUE or FALSE.")
+  }
+
   if (!is.null(SO2)) {
     SO_list <- list(SO1, SO2)
   } else {
