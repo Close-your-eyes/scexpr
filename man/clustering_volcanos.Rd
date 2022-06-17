@@ -32,9 +32,6 @@ clustering_volcanos(
 
 \item{...}{additional argument to the lapply function; e.g. mc.cores may be passed when parallel::mclapply is chosen above}
 }
-\value{
-
-}
 \description{
 Title
 }

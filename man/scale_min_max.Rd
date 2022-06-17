@@ -9,9 +9,6 @@ scale_min_max(x, min = 0, max = 1, margin = 2)
 \arguments{
 \item{margin}{}
 }
-\value{
-
-}
 \description{
 Title
 }

@@ -15,9 +15,6 @@ composition_barplot(
 \arguments{
 \item{plot_labels}{}
 }
-\value{
-
-}
 \description{
 Plot composition of one category by another
 }

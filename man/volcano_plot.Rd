@@ -53,9 +53,6 @@ volcano_plot(
 
 \item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{2:3}), c("other", "name1", "name2")), order.discrete = "^other",plot.title = F,}
 }
-\value{
-
-}
 \description{
 Title
 }

@@ -96,9 +96,6 @@ of expressing cells by dot sizes}
 
 \item{...}{}
 }
-\value{
-
-}
 \description{
 Title
 }

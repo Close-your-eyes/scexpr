@@ -15,9 +15,6 @@ split_mat(x, f, byrow = T, ...)
 
 \item{...}{arguments passed to split}
 }
-\value{
-
-}
 \description{
 split.data.frame method from base R actually does the job.
 The name is very intuitive though and by default it

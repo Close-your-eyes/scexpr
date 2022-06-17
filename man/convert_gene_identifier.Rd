@@ -21,9 +21,6 @@ convert_gene_identifier(
 
 \item{return}{}
 }
-\value{
-
-}
 \description{
 Convert gene identifiers from ident_in to ident_out with AnnotationDbi while taking care of known duplicates and providing aliases.
 For human org.Hs.eg.db is used, for mouse org.Mm.eg.db.

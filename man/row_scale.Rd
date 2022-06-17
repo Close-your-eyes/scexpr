@@ -17,9 +17,6 @@ row_scale(
 \arguments{
 \item{drop.na.rows}{}
 }
-\value{
-
-}
 \description{
 Title
 }

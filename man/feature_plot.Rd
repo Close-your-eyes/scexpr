@@ -17,7 +17,7 @@ feature_plot(
   order = T,
   min.q.cutoff = 0,
   max.q.cutoff = 1,
-  reduction = "tsne",
+  reduction = "umap",
   split.by = NULL,
   split.by.scales = "fixed",
   shape.by = NULL,
@@ -75,9 +75,6 @@ feature_plot(
 \item{order}{for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)}
 
 \item{label.size}{}
-}
-\value{
-
 }
 \description{
 Title

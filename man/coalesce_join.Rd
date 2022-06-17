@@ -22,9 +22,6 @@ coalesce_join(
 
 \item{...}{}
 }
-\value{
-
-}
 \description{
 This is a combination of join functions and the coalesce function from dplyr.
 It is a convenient way to solve the generic task of updating a data frame (replacing NAs)

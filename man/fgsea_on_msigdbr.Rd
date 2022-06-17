@@ -15,9 +15,6 @@ fgsea_on_msigdbr(
 \arguments{
 \item{...}{}
 }
-\value{
-
-}
 \description{
 Title
 }

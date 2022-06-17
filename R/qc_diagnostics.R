@@ -109,6 +109,9 @@ qc_diagnostic <- function(data_dirs,
   if (!is.numeric(resolution) || length(resolution) != 1) {
     stop("resolution has to be numeric and of length 1.")
   }
+  if (!is.numeric(n_PCs_to_meta_clustering)) {
+    stop("n_PCs_to_meta_clustering should be numeric.")
+  }
 
   #dots <- list(...)
 
@@ -359,16 +362,21 @@ qc_diagnostic <- function(data_dirs,
     ## clustering on meta data (quality metrics)
     message("Running dimension reduction and clustering on qc meta data.")
     meta <- dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals)
-    if (n_PCs_to_meta_clustering > 0) {
-      meta <- cbind(meta, SOx@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[,1:n_PCs_to_meta_clustering])
-    }
-    umap_dims <- uwot::umap(scale_min_max(meta), metric = "cosine")
-    colnames(umap_dims) <- c("meta_UMAP_1", "meta_UMAP_2")
-    SOx[["umapmeta"]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = "UMAPMETA_", assay = "RNA")
 
-    clusters <- Seurat::FindClusters(Seurat::FindNeighbors(scale_min_max(meta), annoy.metric = "cosine", verbose = F)$snn, resolution = resolution_meta, verbose = F)
-    colnames(clusters) <- paste0("meta_", colnames(clusters))
-    SOx <- Seurat::AddMetaData(SOx, cbind(umap_dims, clusters))
+
+    for (nn in n_PCs_to_meta_clustering) {
+      if (nn > 0) {
+        meta2 <- scale_min_max(cbind(meta, SOx@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn]))
+      }
+      umap_dims <- uwot::umap(meta2, metric = "cosine")
+      colnames(umap_dims) <- c(paste0("meta_UMAP_1_PC", nn), paste0("meta_UMAP_2_PC", nn))
+      SOx[[paste0("umapmeta_PC", nn)]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = paste0("UMAPMETA_PC", nn, "_"), assay = "RNA")
+
+      clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta2, annoy.metric = "cosine", verbose = F)$snn, resolution = resolution_meta, verbose = F)
+      colnames(clusters) <- paste0("meta_PC", nn, "_", colnames(clusters))
+      SOx <- Seurat::AddMetaData(SOx, cbind(umap_dims, clusters))
+    }
+
     return(SOx)
   })
 
@@ -426,6 +434,7 @@ check_dir <- function(data_dirs, SoupX = F) {
 qc_plots <- function(SO,
                      qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals"),
                      clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8"),
+                     reduction = "umapmeta_PC2",
                      geom2 = "boxplot") {
 
 
@@ -471,8 +480,10 @@ qc_plots <- function(SO,
     ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
     ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)
 
-  p3_1 <- patchwork::wrap_plots(feature_plot(SO, features = clustering_cols[2],
-                                             reduction = "umapmeta", pt.size = 0.5,
+  p3_1 <- patchwork::wrap_plots(feature_plot(SO,
+                                             features = clustering_cols[2],
+                                             reduction = reduction,
+                                             pt.size = 0.5,
                                              legend.position = "none",
                                              label.size = 6, plot.labels = "text", plot.title = F),
                                 suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),

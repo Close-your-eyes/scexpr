@@ -15,9 +15,6 @@ qc_params_meta_cols(
 \arguments{
 \item{...}{}
 }
-\value{
-
-}
 \description{
 Title
 }

@@ -82,7 +82,7 @@ feature_plot <- function(SO,
                          order = T,
                          min.q.cutoff = 0,
                          max.q.cutoff = 1,
-                         reduction = "tsne",
+                         reduction = "umap",
                          split.by = NULL,
                          split.by.scales = "fixed",
                          shape.by = NULL,
@@ -604,7 +604,7 @@ feature_plot <- function(SO,
 
   if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
     if (make.cells.unique.warning == 1) {
-      stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_. Where i the index of the SO in the list. Consider this renaming of cells when selecting cells for plotting.")
+      stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_. Where i the index of the SO in the list. Consider this way of renaming cells when selecting cells for plotting.")
     } else {
       stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells.")
     }

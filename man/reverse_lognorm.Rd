@@ -15,9 +15,6 @@ reverse_lognorm(
 \arguments{
 \item{colsSums}{}
 }
-\value{
-
-}
 \description{
 Title
 }

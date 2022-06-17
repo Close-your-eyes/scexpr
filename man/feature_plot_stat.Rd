@@ -40,9 +40,6 @@ feature_plot_stat(
 \arguments{
 \item{ncol}{}
 }
-\value{
-
-}
 \description{
 Title
 }
