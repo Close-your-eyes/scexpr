@@ -35,10 +35,11 @@
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
-#' @param resolution_meta resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
+#' @param resolution_meta resolution(s) (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
 #' @param n_PCs_to_meta_clustering how many principle components (PCs) from phenotypic clustering to add to qc meta data;
 #' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
-#' phenotypic influence becomes
+#' phenotypic influence becomes; one or more integers can be supplied to explore the effect; pass 0, to have no PCs included in meta clustering; e.g. when
+#' n_PCs_to_meta_clustering = 3 PCs 1-3 are used, when n_PCs_to_meta_clustering = 1 only PC 1 is used.
 #' @param ... additional arguments to SoupX::autoEstCont
 #' @param scDblFinder logical, whether to run doublet detection algorithm from scDblFinder
 #' @param return_SoupX logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
@@ -363,17 +364,25 @@ qc_diagnostic <- function(data_dirs,
     message("Running dimension reduction and clustering on qc meta data.")
     meta <- dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals)
 
-
     for (nn in n_PCs_to_meta_clustering) {
       if (nn > 0) {
         meta2 <- scale_min_max(cbind(meta, SOx@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn]))
+      } else {
+        meta2 <- scale_min_max(meta)
       }
+
       umap_dims <- uwot::umap(meta2, metric = "cosine")
       colnames(umap_dims) <- c(paste0("meta_UMAP_1_PC", nn), paste0("meta_UMAP_2_PC", nn))
-      SOx[[paste0("umapmeta_PC", nn)]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = paste0("UMAPMETA_PC", nn, "_"), assay = "RNA")
+      SOx[[paste0("umapmetaPC", nn)]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = paste0("UMAPMETAPC", nn, "_"), assay = "RNA")
 
-      clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta2, annoy.metric = "cosine", verbose = F)$snn, resolution = resolution_meta, verbose = F)
-      colnames(clusters) <- paste0("meta_PC", nn, "_", colnames(clusters))
+      # fix colnames manually as Seurat::CreateDimReducObject makes a mistake in taking the trailing number of umap_dims-colnames as trailing dim-number
+      colnames(SOx@reductions[[paste0("umapmetaPC", nn)]]@cell.embeddings) <- paste0(toupper(paste0("umapmetaPC", nn, "_")), c(1,2))
+
+      # matrix has to be supplied to FindNeighbors
+      clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta2, annoy.metric = "cosine", verbose = F)$snn,
+                                       resolution = resolution_meta,
+                                       verbose = F)
+      colnames(clusters) <- paste0("meta_", colnames(clusters), "_PC", nn)
       SOx <- Seurat::AddMetaData(SOx, cbind(umap_dims, clusters))
     }
 
@@ -433,8 +442,8 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 qc_plots <- function(SO,
                      qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals"),
-                     clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8"),
-                     reduction = "umapmeta_PC2",
+                     clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8_PC2"),
+                     reduction = "umapmetaPC2",
                      geom2 = "boxplot") {
 
 
