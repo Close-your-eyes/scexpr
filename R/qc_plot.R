@@ -1,6 +1,6 @@
 #' Quickly plot common qc metrics
 #'
-#' Plot qc metric in log scale with linear secondary axis.
+#' Plot qc metric, optional with a linear secondary axis.
 #' When SO1 only is provided: Only plot cells from one Seurat object.
 #' When SO1 and SO2 are provided:
 #' Plot additionally those cells that have been filtered from that object with more cells.
