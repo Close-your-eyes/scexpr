@@ -238,6 +238,7 @@ feature_plot <- function(SO,
       ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(paste0(reduction, "_", dims[1])), y = !!rlang::sym(paste0(reduction, "_", dims[2])))) +
       ggplot2::geom_point(data = data[names(which(cells == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.excluded.cells)
 
+
     # different procedure for gene feature or meta.data feature
     if (x %in% rownames(SO[[1]])) {
 
@@ -255,9 +256,9 @@ feature_plot <- function(SO,
         plot <- plot + ggplot2::geom_point(data = data[which(cells == 1),], ggplot2::aes(shape = !!shape.by, color = !!rlang::sym(x)), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
       } else {
         # non-expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(cells == 1), which(data[,1] == 0)),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), rownames(data[which(data[,1] == 0),])),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
         # expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(which(cells == 1), which(data[,1] > 0)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), rownames(data[which(data[,1] > 0),])),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
       }
 
       if (length(SO) > 1) {
