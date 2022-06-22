@@ -631,8 +631,8 @@ volcano_plot <- function(SO,
                       max.overlaps = 50,
                       p.signif = 0.001,
                       features.exclude = NULL,
-                      color.only = F
-                      label.only = F,) {
+                      color.only = F,
+                      label.only = F) {
 
   vd <- as.data.frame(vd)
   if (!"Feature" %in% names(vd)) {
