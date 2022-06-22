@@ -256,9 +256,10 @@ feature_plot <- function(SO,
         plot <- plot + ggplot2::geom_point(data = data[which(cells == 1),], ggplot2::aes(shape = !!shape.by, color = !!rlang::sym(x)), size = pt.size*pt.size.expr.factor) + ggplot2::scale_color_manual(values = c(col.non.expresser, col.expresser))
       } else {
         # non-expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), rownames(data[which(data[,1] == 0),])),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
+        plot <- plot + ggplot2::geom_point(data = data[intersect(rownames(data[which(data[,1] == 0),]), names(which(cells == 1))),], ggplot2::aes(shape = !!shape.by), size = pt.size, color = col.non.expresser)
         # expressers
-        plot <- plot + ggplot2::geom_point(data = data[intersect(names(which(cells == 1)), rownames(data[which(data[,1] > 0),])),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
+        # leave intersect like that to maintain order of data
+        plot <- plot + ggplot2::geom_point(data = data[intersect(rownames(data[which(data[,1] > 0),]), names(which(cells == 1))),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size*pt.size.expr.factor)
       }
 
       if (length(SO) > 1) {

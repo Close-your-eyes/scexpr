@@ -422,9 +422,20 @@ volcano_plot <- function(SO,
 .plot_vp <- function (vd,
                       x = "log2.fc",
                       y = "adj.p.val",
+                      x_label = NULL,
+                      y_label = NULL,
                       x.axis.symmetric = T,
                       y.axis.pseudo.log = F,
                       pseudo.log.sigma = 1,
+                      features.to.color = NULL, #which features to plot with color on top
+                      features.color.by = NULL, #which column to color them by
+                      errorbar.low.col = NULL, # absolute coordinate of lower errorbar
+                      errorbar.up.col = NULL, # absolute coordinate of upper errorbar
+                      errorbar.size = 0.2,
+                      errorbar.width = 0.2,
+                      col.pal = "RdBu",
+                      col.pal.rev = T,
+                      col.type = c("c", "d"), # continuous or discrete
                       pt.size = 1,
                       pt.alpha = 0.8,
                       font.size = 14,
@@ -440,14 +451,46 @@ volcano_plot <- function(SO,
 
   x <- match.arg(x, colnames(vd))
   y <- match.arg(y, colnames(vd)) #c("adj.p.val", "p.val")
+  col.type <- match.arg(col.type, c("c", "d"))
 
   vd <- as.data.frame(vd)
-  vd$Feature <- rownames(vd)
+  if (!"Feature" %in% names(vd)) {
+    # also row numbers would become a Feature column, but not relevant
+    vd$Feature <- rownames(vd)
+  }
 
   if (!is.null(features.exclude)) {
     print(paste0("The following features are excluded from the volcano plot: ", paste(vd[which(grepl(paste(features.exclude, collapse = "|"), vd$Feature)),"Feature"], collapse = ",")))
     vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd$Feature)),]
   }
+
+  if (!is.null(features.to.color)) {
+    if (any(!features.to.color %in% vd$Feature)) {
+      message("features.to.color: ", paste(features.to.color[which(!features.to.color %in% vd$Feature)], collapse = ", "), " not found.")
+    }
+    features.to.color <- features.to.color[which(features.to.color %in% vd$Feature)]
+    if (length(features.to.color) == 0) {
+      features.to.color <- NULL
+    }
+  }
+
+  if (!is.null(features.color.by) && !features.color.by %in% names(vd)) {
+    message("features.color.by not found as column.")
+    features.color.by <- NULL
+  }
+
+  if (!is.null(errorbar.low.col) && !errorbar.low.col %in% names(vd)) {
+    message("errorbar.low.col not found as column. Both errorbar limit will be ignored.")
+    errorbar.low.col <- NULL
+    errorbar.up.col <- NULL
+  }
+
+  if (!is.null(errorbar.up.col) && !errorbar.up.col %in% names(vd)) {
+    message("errorbar.up.col not found as column. Both errorbar limit will be ignored.")
+    errorbar.low.col <- NULL
+    errorbar.up.col <- NULL
+  }
+
 
   if (!is.null(ngn) && !is.null(pgn) && min.pct > 0) {
     vd <- rbind(vd[intersect(which(vd[,paste0("pct.", ngn)] >= min.pct), which(vd[,x] < 0)),],
@@ -460,6 +503,44 @@ volcano_plot <- function(SO,
     ggplot2::theme_bw(base_size = font.size, base_family = font.family) +
     ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
 
+
+  if (!is.null(features.color.by) && !is.null(features.to.color)) {
+    # select color scale
+    if (col.type == "c") {
+      if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
+        col.pal <- col_pal(name = col.pal, reverse = col.pal.rev)
+      }
+    } else if (col.type == "d") {
+      if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
+        col.pal <- col_pal(name = col.pal, reverse = col.pal.rev, n = nlevels(as.factor(vd[which(vd$Feature %in% features.to.color),features.color.by])))
+      }
+    }
+    if (col.type == "c") {
+      vp <-
+        vp +
+        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
+        ggplot2::scale_color_gradientn(colors = col.pal)
+    }
+    if (col.type == "d") {
+      vd[,features.color.by] <- as.factor(vd[,features.color.by])
+      vp <-
+        vp +
+        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
+        ggplot2::scale_color_manual(values = col.pal)
+    }
+
+    if (!is.null(errorbar.up.col)) {
+      # checking one of errorbar.up.col, errorbar.low.col is enough
+      vp <-
+        vp +
+        ggplot2::geom_errorbar(data = vd[which(vd$Feature %in% features.to.color),], aes(color = !!rlang::sym(features.color.by),
+                                                                                         xmin = !!rlang::sym(errorbar.low.col),
+                                                                                         xmax = !!rlang::sym(errorbar.up.col)),
+                               size = errorbar.size, width = errorbar.width)
+      ## 95 % conf-interval in case of metavolcanoR
+    }
+  }
+
   if (!is.null(pval.tick) && pval.tick > 0) {
     gg.brk <- ggplot2::ggplot_build(vp)[["layout"]][["panel_params"]][[1]][["y"]][["breaks"]]
     ord <- order(c(gg.brk, -log10(pval.tick)))
@@ -469,13 +550,16 @@ volcano_plot <- function(SO,
   }
 
 
-  if (y == "adj.p.val") {
-    y_label <- "(adj p-val)"
-  } else if (y == "p.val") {
-    y_label <- "(p-val)"
-  } else {
-    y_label <- "p"
+  if (is.null(y_label)) {
+    if (y == "adj.p.val") {
+      y_label <- "(adj p-val)"
+    } else if (y == "p.val") {
+      y_label <- "(p-val)"
+    } else {
+      y_label <- "p"
+    }
   }
+
 
   if (y.axis.pseudo.log) {
     vp <- vp + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10, sigma = pseudo.log.sigma),
@@ -485,9 +569,17 @@ volcano_plot <- function(SO,
   }
 
   if (is.null(ngn) && is.null(pgn)) {
-    vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(y_label))))
+    if (is.null(x_label)) {
+      vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(y_label))))
+    } else {
+      vp <- vp + ggplot2::labs(x = x_label, y = bquote(-log[10]~.(rlang::sym(y_label))))
+    }
   } else {
-    vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+    if (is.null(x_label)) {
+      vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+    } else {
+      vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ .(rlang::sym(x_label)) ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+    }
   }
 
   if (x.axis.symmetric) {
@@ -539,10 +631,15 @@ volcano_plot <- function(SO,
                       max.overlaps = 50,
                       p.signif = 0.001,
                       features.exclude = NULL,
-                      color.only = F) {
+                      color.only = F
+                      label.only = F,) {
 
   vd <- as.data.frame(vd)
-  vd$Feature <- rownames(vd)
+  if (!"Feature" %in% names(vd)) {
+    # also row numbers would become a Feature column, but not relevant
+    vd$Feature <- rownames(vd)
+  }
+
   if (!is.null(features.exclude)) {
     vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd$Feature)),]
   }
@@ -563,8 +660,9 @@ volcano_plot <- function(SO,
       f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
     }
-    vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), colour = "tomato2")
-
+    if (!label.only) {
+      vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), colour = "tomato2")
+    }
     if (!color.only) {
       if (label.neg.pos.sep) {
         vp <- vp +
@@ -580,7 +678,9 @@ volcano_plot <- function(SO,
       if (label.features == "significant") {
         label.features <- vd[which(as.numeric(vd[,p.plot]) < p.signif), "Feature"]
       } else {
-        vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
+        if (!label.only) {
+          vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
+        }
         if (!color.only) {
           if (label.neg.pos.sep) {
             vp <- vp +
@@ -592,7 +692,9 @@ volcano_plot <- function(SO,
         }
       }
     } else {
-      vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
+      if (!label.only) {
+        vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
+      }
       if (!color.only) {
         if (label.neg.pos.sep) {
           vp <- vp +
@@ -606,5 +708,4 @@ volcano_plot <- function(SO,
   }
   return(vp)
 }
-
 
