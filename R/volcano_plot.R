@@ -616,6 +616,7 @@ volcano_plot <- function(SO,
 
 .label_vp <- function(vp,
                       vd,
+                      x = "log2.fc",
                       p.plot = "adj.p.val",
                       label.features = NULL,
                       topn.metric = "p.value",
@@ -624,6 +625,7 @@ volcano_plot <- function(SO,
                       nudge.x = 0,
                       nudge.y = 0,
                       max.iter = 10000,
+                      dot.color = "tomato2", # set NA to have no color
                       label.neg.pos.sep = T,
                       label.col = "black",
                       label.face = "bold",
@@ -631,8 +633,7 @@ volcano_plot <- function(SO,
                       max.overlaps = 50,
                       p.signif = 0.001,
                       features.exclude = NULL,
-                      color.only = F,
-                      label.only = F) {
+                      plot.label = T) {
 
   vd <- as.data.frame(vd)
   if (!"Feature" %in% names(vd)) {
@@ -647,23 +648,21 @@ volcano_plot <- function(SO,
   if (is.null(label.features)) {
     if (topn.metric == "p.value") {
       f_lab <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
-      f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
-      f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
+      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
+      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
     } else if (topn.metric == "both") {
       f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
-      f_lab.logfc <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
+      f_lab.logfc <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, !!rlang::sym(x)), vd %>% dplyr::top_n(-(labels.topn/2), !!rlang::sym(x)))
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) %>% dplyr::distinct()
-      f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
-      f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
+      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
+      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
     } else {
-      f_lab <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, log2.fc), vd %>% dplyr::top_n(-(labels.topn/2), log2.fc))
-      f_lab.pos <- f_lab %>% dplyr::filter(log2.fc > 0) %>% dplyr::pull(Feature)
-      f_lab.neg <- f_lab %>% dplyr::filter(log2.fc < 0) %>% dplyr::pull(Feature)
+      f_lab <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, !!rlang::sym(x)), vd %>% dplyr::top_n(-(labels.topn/2), !!rlang::sym(x)))
+      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
+      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
     }
-    if (!label.only) {
-      vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), colour = "tomato2")
-    }
-    if (!color.only) {
+    vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), colour = dot.color)
+    if (plot.label) {
       if (label.neg.pos.sep) {
         vp <- vp +
           ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% f_lab.pos), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
@@ -678,28 +677,24 @@ volcano_plot <- function(SO,
       if (label.features == "significant") {
         label.features <- vd[which(as.numeric(vd[,p.plot]) < p.signif), "Feature"]
       } else {
-        if (!label.only) {
-          vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
-        }
-        if (!color.only) {
+        vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = dot.color)
+        if (plot.label) {
           if (label.neg.pos.sep) {
             vp <- vp +
-              ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-              ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+              ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+              ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
           } else {
             vp <- vp + ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
           }
         }
       }
     } else {
-      if (!label.only) {
-        vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = "tomato2")
-      }
-      if (!color.only) {
+      vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = dot.color)
+      if (plot.label) {
         if (label.neg.pos.sep) {
           vp <- vp +
-            ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-            ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & log2.fc < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+            ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+            ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
         } else {
           vp <- vp + ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
         }
