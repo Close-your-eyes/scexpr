@@ -115,11 +115,7 @@ prep_SO <- function(SO_unprocessed,
 
   if (!is.null(celltype_ref_clusters)) {
     #check if celltype_ref_clusters can exist
-    pref <- switch(batch_corr,
-                   "integration" = "integrated",
-                   "SCT" = "SCT",
-                   "RNA" = "RNA")
-    # ifelse(batch_corr == "integration", "integrated", ifelse(normalization == "SCT", "SCT", "RNA"))
+    pref <- ifelse(batch_corr == "integration", "integrated", ifelse(normalization == "SCT", "SCT", "RNA"))
     mid <- "_snn_res."
     suf <- gsub("\\.0$", "", cluster_resolutions)
     candidates <- paste0(pref,mid,suf)
