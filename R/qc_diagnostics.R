@@ -319,10 +319,15 @@ qc_diagnostic <- function(data_dirs,
     }
 
     # differentiate mouse, human or no MT-genes at all
+    # and add freq of RPS / RPL and MRPS / MRPL genes
     if (any(grepl("^MT-", rownames(SOx))) && !any(grepl("^mt-", rownames(SOx)))) {
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^MT-"), "pct_mt")
+      SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^RP[SL]"), "pct_ribo")
+      SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^MRP[SL]"), "pct_mribo")
     } else if (!any(grepl("^MT-", rownames(SOx))) && any(grepl("^mt-", rownames(SOx)))) {
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^mt-"), "pct_mt")
+      SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^Rp[sl]-"), "pct_ribo")
+      SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^Mrp[sl]-"), "pct_mribo")
     } else {
       message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
       qc_cols <- qc_cols[-which(qc_cols == "pct_mt")]
