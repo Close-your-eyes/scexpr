@@ -10,6 +10,9 @@
 #' @param pt.size
 #' @param pt.size.expr.factor
 #' @param order for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)
+#' @param order.abs do use absolute values for ordering (any value away from zero (+/) is treated equally)
+#' @param shuffle do shuffle if order if FALSE; allows to define a definite order for plotting if set to to F
+#' @param order.rev reverse the ordering to have lowest values on top (or zeros if order.abs = T)
 #' @param min.q.cutoff
 #' @param max.q.cutoff
 #' @param reduction
@@ -63,6 +66,7 @@
 #' @param ...
 #' @param plot.labels
 #' @param label.size
+#' @param split.by.scales
 #'
 #' @return
 #' @export
@@ -80,6 +84,9 @@ feature_plot <- function(SO,
                          pt.size = 1,
                          pt.size.expr.factor = 1,
                          order = T,
+                         order.abs = T,
+                         shuffle = T,
+                         order.rev = F,
                          min.q.cutoff = 0,
                          max.q.cutoff = 1,
                          reduction = "umap",
@@ -194,6 +201,9 @@ feature_plot <- function(SO,
                       min.q.cutoff = min.q.cutoff,
                       max.q.cutoff = max.q.cutoff,
                       order = order,
+                      order.rev = order.rev,
+                      order.abs = order.abs,
+                      shuffle = shuffle,
                       order.discrete = order.discrete)
 
     # necessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
@@ -208,8 +218,11 @@ feature_plot <- function(SO,
         scale.min <- 0
         scale.mid <- 0
       } else {
-        scale.max <- max(data[which(rownames(data) %in% names(which(cells == 1))),1])
-        scale.min <- min(data[intersect(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1)))),1]) # != 0 for module scores
+        if (anyNA(data[,1])) {
+          message(x, ": NA found in data.")
+        }
+        scale.max <- max(data[which(rownames(data) %in% names(which(cells == 1))),1], na.rm = T)
+        scale.min <- min(data[intersect(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1)))),1], na.rm = T) # != 0 for module scores
         scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
         scale.max <- as.numeric(format(ceiling_any(scale.max, 0.1), nsmall = 1))
@@ -783,6 +796,9 @@ feature_plot <- function(SO,
                       min.q.cutoff = 0,
                       max.q.cutoff = 1,
                       order = T,
+                      order.rev = F,
+                      order.abs = T,
+                      shuffle = T,
                       order.discrete = T) {
 
   assay <- match.arg(assay, c("RNA", "SCT"))
@@ -845,16 +861,25 @@ feature_plot <- function(SO,
     }
   }
 
+  ## new params:
+  # order.abs = T/F (switch on/off if ordering is done with absolute values)
+  # shuffle = T/F (allow to provide a defined order which is not altered)
+  # order.rev = T/F (reverse the order so that lowest values (or zeros if order.abs = T) are on top)
+
   if (order && is.numeric(data[,1])) {
     # abs: in case negative values are contained in meta.col, any extreme away from 0 will be plotted on top
-    data <- data[order(abs(data[,1])),]
+    if (order.abs) {
+      data <- data[order(abs(data[,1]), decreasing = order.rev),]
+    } else {
+      data <- data[order(data[,1], decreasing = order.rev),]
+    }
   } else if (!order || !is.numeric(data[,1])) {
-    # shuffle to make plotting order random
-    # only if order == TRUE and data is integer/discrete
-    # or if is not numeric
-    data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+    if (shuffle) {
+      data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+    }
   }
 
+  ## this is only for meta features; combine with if else from above??
   if (!is.numeric(data[,1]) && is.logical(order.discrete) && order.discrete) {
     data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
   } else if (!is.numeric(data[,1]) && is.logical(order.discrete) && !order.discrete) {

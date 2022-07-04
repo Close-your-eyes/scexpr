@@ -15,6 +15,9 @@ feature_plot(
   pt.size = 1,
   pt.size.expr.factor = 1,
   order = T,
+  order.abs = T,
+  shuffle = T,
+  order.rev = F,
   min.q.cutoff = 0,
   max.q.cutoff = 1,
   reduction = "umap",
@@ -74,7 +77,13 @@ feature_plot(
 \arguments{
 \item{order}{for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)}
 
-\item{label.size}{}
+\item{order.abs}{do use absolute values for ordering (any value away from zero (+/) is treated equally)}
+
+\item{shuffle}{do shuffle if order if FALSE; allows to define a definite order for plotting if set to to F}
+
+\item{order.rev}{reverse the ordering to have lowest values on top (or zeros if order.abs = T)}
+
+\item{split.by.scales}{}
 }
 \description{
 Title

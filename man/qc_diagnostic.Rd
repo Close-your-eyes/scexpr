@@ -34,11 +34,12 @@ is missing, SoupX is disable for all others}
 
 \item{resolution_SoupX}{resolution (louvain algorithm) for SoupX analysis}
 
-\item{resolution_meta}{resolution (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
+\item{resolution_meta}{resolution(s) (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)}
 
 \item{n_PCs_to_meta_clustering}{how many principle components (PCs) from phenotypic clustering to add to qc meta data;
 this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
-phenotypic influence becomes}
+phenotypic influence becomes; one or more integers can be supplied to explore the effect; pass 0, to have no PCs included in meta clustering; e.g. when
+n_PCs_to_meta_clustering = 3 PCs 1-3 are used, when n_PCs_to_meta_clustering = 1 only PC 1 is used.}
 
 \item{scDblFinder}{logical, whether to run doublet detection algorithm from scDblFinder}
 
