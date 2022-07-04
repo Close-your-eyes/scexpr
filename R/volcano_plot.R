@@ -518,14 +518,14 @@ volcano_plot <- function(SO,
     if (col.type == "c") {
       vp <-
         vp +
-        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
+        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
         ggplot2::scale_color_gradientn(colors = col.pal)
     }
     if (col.type == "d") {
       vd[,features.color.by] <- as.factor(vd[,features.color.by])
       vp <-
         vp +
-        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
+        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
         ggplot2::scale_color_manual(values = col.pal)
     }
 
@@ -533,9 +533,9 @@ volcano_plot <- function(SO,
       # checking one of errorbar.up.col, errorbar.low.col is enough
       vp <-
         vp +
-        ggplot2::geom_errorbar(data = vd[which(vd$Feature %in% features.to.color),], aes(color = !!rlang::sym(features.color.by),
-                                                                                         xmin = !!rlang::sym(errorbar.low.col),
-                                                                                         xmax = !!rlang::sym(errorbar.up.col)),
+        ggplot2::geom_errorbar(data = vd[which(vd$Feature %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by),
+                                                                                                  xmin = !!rlang::sym(errorbar.low.col),
+                                                                                                  xmax = !!rlang::sym(errorbar.up.col)),
                                size = errorbar.size, width = errorbar.width)
       ## 95 % conf-interval in case of metavolcanoR
     }
@@ -547,6 +547,11 @@ volcano_plot <- function(SO,
     brk <- c(gg.brk, -log10(pval.tick))
     lab <- c(gg.brk, paste0("p = ", pval.tick))
     lab <- gsub("^0$", "", lab)
+    brk <- brk[ord]
+    lab <- lab[ord]
+  } else {
+    brk <- ggplot2::waiver()
+    lab <- ggplot2::waiver()
   }
 
 
@@ -563,9 +568,9 @@ volcano_plot <- function(SO,
 
   if (y.axis.pseudo.log) {
     vp <- vp + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10, sigma = pseudo.log.sigma),
-                                           breaks = brk[ord], labels = lab[ord], limits = vp[["layout"]][["panel_params"]][[1]][["y"]][["limits"]])
+                                           breaks = brk, labels = lab, limits = vp[["layout"]][["panel_params"]][[1]][["y"]][["limits"]])
   } else {
-    vp <- vp + ggplot2::scale_y_continuous(breaks = brk[ord], labels = lab[ord], limits = vp[["layout"]][["panel_params"]][[1]][["y"]][["limits"]])
+    vp <- vp + ggplot2::scale_y_continuous(breaks = brk, labels = lab, limits = vp[["layout"]][["panel_params"]][[1]][["y"]][["limits"]])
   }
 
   if (is.null(ngn) && is.null(pgn)) {
