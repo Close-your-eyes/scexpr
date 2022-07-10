@@ -72,17 +72,17 @@ hs_mm_ortholog_table <- function(features_hs,
   # bind rows and make distinct
   ortholog_table <-
     hs_ids %>%
-    dplyr::left_join(mm_orth) %>%
+    dplyr::left_join(mm_orth, by = "Gene.stable.ID.HS") %>%
     dplyr::select(-Gene.stable.ID.MM) %>%
     dplyr::bind_rows(pt_table) %>%
     tidyr::drop_na() %>%
     dplyr::distinct(Gene.HS, Gene.MM, .keep_all = T) # keep an arbitrary Gene.stable.ID.HS for each match
 
-  features_hs_wo_found <- features_hs[which(!features_hs %in% ortholog_table$Gene.HS)]
-  features_mm_wo_found <- features_mm[which(!features_mm %in% ortholog_table$Gene.MM)]
+  features_hs_wo_ortholog <- features_hs[which(!features_hs %in% ortholog_table$Gene.HS)]
+  features_mm_wo_ortholog <- features_mm[which(!features_mm %in% ortholog_table$Gene.MM)]
 
   return(list(ortholog_table = ortholog_table,
-              features_hs_wo_found = features_hs_wo_found,
-              features_mm_wo_found = features_mm_wo_found))
+              features_hs_wo_ortholog = features_hs_wo_ortholog,
+              features_mm_wo_ortholog = features_mm_wo_ortholog))
 
 }
