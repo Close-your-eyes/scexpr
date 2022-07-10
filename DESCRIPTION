@@ -67,4 +67,9 @@ Suggests:
     shiny,
     DT,
     matrixTests,
-    xml2
+    xml2,
+    bioMart,
+    UCell,
+    scGate,
+    ProjecTILs,
+    remotes
