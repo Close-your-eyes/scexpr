@@ -281,7 +281,7 @@ volcano_plot <- function(SO,
                              label.face = label.face,
                              font.family = font.family,
                              max.overlaps = max.overlaps,
-                             color.only = T)
+                             plot.label = F)
       vp_gsea.2 <- .plot_vp(vd = vd,
                             y = p.plot,
                             x.axis.symmetric = x.axis.symmetric,
@@ -313,7 +313,7 @@ volcano_plot <- function(SO,
                              label.face = label.face,
                              font.family = font.family,
                              max.overlaps = max.overlaps,
-                             color.only = T)
+                             plot.label = F)
 
       gsea <- list(negative.gsea = g1, positive.gsea = g2, negative.volcano = vp_gsea.1, positive.volcano = vp_gsea.2)
     } else {
