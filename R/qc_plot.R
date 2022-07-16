@@ -61,7 +61,7 @@ qc_plot <- function(SO1,
   meta_data <-
     SO_list[[1]]@meta.data %>%
     tibble::rownames_to_column("ID") %>%
-    dplyr::select(ID, !!rlang::sym(x_cat), dplyr::all_of(cols)) %>%
+    dplyr::select(ID, !!rlang::sym(x_cat), dplyr::all_of(qc_cols)) %>%
     tidyr::pivot_longer(cols = -c(ID, orig.ident))
 
   ppp <- ggplot2::ggplot(meta_data, ggplot2::aes(x = !!rlang::sym(x_cat), y = value)) +
@@ -75,7 +75,7 @@ qc_plot <- function(SO1,
     meta_data2 <-
       SO_list[[2]]@meta.data %>%
       tibble::rownames_to_column("ID") %>%
-      dplyr::select(ID, !!rlang::sym(x_cat), dplyr::all_of(cols)) %>%
+      dplyr::select(ID, !!rlang::sym(x_cat), dplyr::all_of(qc_cols)) %>%
       tidyr::pivot_longer(cols = -c(ID, !!rlang::sym(x_cat))) %>%
       dplyr::filter(!ID %in% meta_data$ID)
     diff <- ncol(SO_list[[2]]) - ncol(SO_list[[1]])
