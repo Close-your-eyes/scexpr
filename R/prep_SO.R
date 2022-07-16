@@ -226,7 +226,7 @@ prep_SO <- function(SO_unprocessed,
     ## 3 cases
     if (batch_corr %in% c("regression", "none", "harmony")) {
       SO <- merge(x = SO.list[[1]], y = SO.list[2:length(SO.list)], merge.data = T)
-'      if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
+      '      if (batch_corr %in% c("none", "harmony") && !is.null(vars.to.regress)) {
         vars.to.regress <- NULL
         message("vars.to.regress set to NULL as batch_corr %in% c(none, harmony).")
       }'
@@ -337,6 +337,11 @@ prep_SO <- function(SO_unprocessed,
     dots <- mydots[which(grepl("^SOM__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^SOM__", "", names(dots), ignore.case = T)
     map <- do.call(EmbedSOM::SOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings), dots))
+
+    #map_3d <- EmbedSOM::SOM(SO@reductions[[red]]@cell.embeddings, zdim = 10, coordsFn = EmbedSOM::uwotCoords(dim = 3, min_dist = 0.01, metric = "cosine"))
+    #em <-EmbedSOM::EmbedSOM(data = SO@reductions[[red]]@cell.embeddings, map = map_3d)
+    #Seurat::Misc(SO, slot = "3d_SOM_embedding") <- em
+    #rgl::points3d(em, size = 0.5)
 
     dots <- mydots[which(grepl("^EmbedSOM__", names(mydots), ignore.case = T))]
     names(dots) <- gsub("^EmbedSOM__", "", names(dots), ignore.case = T)

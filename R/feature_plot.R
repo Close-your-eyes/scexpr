@@ -1,33 +1,33 @@
 #' Title
 #'
-#' @param SO
-#' @param features
-#' @param assay
-#' @param dims
-#' @param cells
-#' @param downsample
+#' @param SO one or more Seurat object(s)
+#' @param features vector of features to plot (genes or column names in meta data)
+#' @param assay which assay in SO to use
+#' @param dims which dimensions of the selected dimension reduction to plot
+#' @param cells a vector of cell names to include (not selected ones are plotted with color col.excluded.cells)
+#' @param downsample downsample the number of cells (intended to speed up test plottings)
 #' @param make.cells.unique
-#' @param pt.size
-#' @param pt.size.expr.factor
+#' @param pt.size dot size per cells
+#' @param pt.size.expr.factor factor of increased dot size for expressing cells
 #' @param order for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)
 #' @param order.abs do use absolute values for ordering (any value away from zero (+/) is treated equally)
 #' @param shuffle do shuffle if order if FALSE; allows to define a definite order for plotting if set to to F
 #' @param order.rev reverse the ordering to have lowest values on top (or zeros if order.abs = T)
-#' @param min.q.cutoff
-#' @param max.q.cutoff
-#' @param reduction
-#' @param split.by
-#' @param shape.by
-#' @param combine
-#' @param ncol.combine
-#' @param nrow.combine
-#' @param nrow.inner
-#' @param ncol.inner
-#' @param feature.aliases
-#' @param title
-#' @param title.font.size
-#' @param cutoff.feature
-#' @param cutoff.expression
+#' @param min.q.cutoff decimal number (> 1, < 0) of lower quantile limit where to cut the color scale, intended to squish extremes
+#' @param max.q.cutoff decimal number (> 1, < 0) of upper quantile limit where to cut the color scale, intended to squish extremes
+#' @param reduction which reduction to use for plotting
+#' @param split.by column in meta data to use to split plots
+#' @param shape.by column in meta data to shape dots (cells) b<
+#' @param combine combine multiple features to one plot (TRUE) or return a list with one entry per feature (FALSE)
+#' @param ncol.combine number of columns in combined graphic (feature combined)
+#' @param nrow.combine number of rows in combined graphic (feature combined)
+#' @param nrow.inner number of plots per row within one feature (originating from multiple SO and/or split.by)
+#' @param ncol.inner number of plots per column within one feature (originating from multiple SO and/or split.by)
+#' @param feature.aliases vector aliases for features; e.g. c("FAIM3" = "FCMR", "MS4A1" = "CD20")
+#' @param title force title for the plot instead of feature name which is the default
+#' @param title.font.size font size of the title
+#' @param cutoff.feature select a feature for cells to consider in plotting
+#' @param cutoff.expression select the cutoff feature expression levels for filtering
 #' @param exclusion.feature
 #' @param binary
 #' @param col.expresser
