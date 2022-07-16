@@ -30,7 +30,7 @@ composition_barplot <- function(SO,
     dplyr::mutate(rel = n/total) %>%
     tibble::as_tibble()
 
-  plot <- ggplot2::ggplot(table, aes(x = !!rlang::sym(x_cat), y = rel, fill = !!rlang::sym(fill_cat))) +
+  plot <- ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = rel, fill = !!rlang::sym(fill_cat))) +
     ggplot2::geom_col() +
     ggplot2::scale_fill_manual(values = col_pal)
 

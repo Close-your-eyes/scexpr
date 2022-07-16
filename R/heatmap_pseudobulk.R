@@ -107,7 +107,7 @@ heatmap_pseudobulk <- function(SO,
 
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  if (class(normalization) == "numeric") {
+  if (methods::is(normalization, "numeric")) {
     if (length(normalization) != 2) {
       stop("Please set normalization to 'scale' or a numeric vector of length 2 (e.g. c(-1,1)).")
     }
@@ -185,9 +185,9 @@ heatmap_pseudobulk <- function(SO,
   #wil_auc <- wil_auc[which(wil_auc$feature %in% features),]
 
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
-  if (class(normalization) == "character" && normalization == "scale") {
+  if ((methods::is(normalization, "character")) && normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
-  } else if (class(normalization) == "numeric") {
+  } else if (methods::is(normalization, "numeric")) {
     tab <- scale_min_max(raw_tab, min = min(normalization), max = max(normalization), margin = 1)
   }
 
@@ -205,7 +205,7 @@ heatmap_pseudobulk <- function(SO,
   scale.min <- as.numeric(format(ceiling_any(min(htp$norm_avgexpr), 0.1), nsmall = 1))
   scale.mid <- as.numeric(format(round(scale.min + ((scale.max - scale.min) / 2), 1), nsmall = 1))
 
-  if (class(normalization) == "numeric") {
+  if (methods::is(normalization, "numeric")) {
     labels <- c("min", "int", "max")
   } else {
     labels <- c(scale.min, scale.mid, scale.max)

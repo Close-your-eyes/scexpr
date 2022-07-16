@@ -33,7 +33,7 @@
         "nFeature_RNA_log", "n_expr_corrected", "n_expr_uncorrected", "pct_mt",
         "pct_mt_log", "r", "ref_feature", "residuals", "start_angle", "stat", "x",
         "Alt.symbol", "Alt.symbol.HS", "Gene.HS", "Gene.MM", "Gene.stable.ID.HS",
-        "Gene.stable.ID.MM",
+        "Gene.stable.ID.MM", "n_cells", "meta_col_level", "orig.ident", "name",
         #qc_diagnostics
         "logFC", "statistic", "pval", "pct_out")
 

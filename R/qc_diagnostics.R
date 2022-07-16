@@ -89,7 +89,7 @@ qc_diagnostic <- function(data_dirs,
     BiocManager::install("celda")
   }
   if (SoupX && !requireNamespace("SoupX", quietly = T)) {
-    utils:install.packages("SoupX")
+    utils::install.packages("SoupX")
   }
   if (!requireNamespace("patchwork", quietly = T)) {
     utils::install.packages("patchwork")

@@ -133,9 +133,9 @@ cluster_correlation_matrix <- function(SO,
   n_cell_df <- purrr::map2(.x = n_cell_df, .y = levels, .f = ~ .x[which(.x$meta_col_level %in% .y),])
   n_cell_df <- dplyr::bind_rows(n_cell_df, .id = "SO")
 
-  if (nrow(n_cell_df[which(n_cell_df$n_cells < min.cells),]) > 0) {
+  if (nrow(n_cell_df[which(n_cell_df[,"n_cells",drop=T] < min.cells),]) > 0) {
     message("These elements are excluded from correlation analysis due to low n_cells below ", min.cells, ".")
-    print(n_cell_df[which(n_cell_df$n_cells < min.cells),])
+    print(n_cell_df[which(n_cell_df[,"n_cells",drop=T] < min.cells),])
   }
 
 '    SO_blood@meta.data <-

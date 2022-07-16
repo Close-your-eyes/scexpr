@@ -75,6 +75,22 @@ feature_plot(
 )
 }
 \arguments{
+\item{SO}{one or more Seurat object(s)}
+
+\item{features}{vector of features to plot (genes or column names in meta data)}
+
+\item{assay}{which assay in SO to use}
+
+\item{dims}{which dimensions of the selected dimension reduction to plot}
+
+\item{cells}{a vector of cell names to include (not selected ones are plotted with color col.excluded.cells)}
+
+\item{downsample}{downsample the number of cells (intended to speed up test plottings)}
+
+\item{pt.size}{dot size per cells}
+
+\item{pt.size.expr.factor}{factor of increased dot size for expressing cells}
+
 \item{order}{for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)}
 
 \item{order.abs}{do use absolute values for ordering (any value away from zero (+/) is treated equally)}
@@ -83,7 +99,37 @@ feature_plot(
 
 \item{order.rev}{reverse the ordering to have lowest values on top (or zeros if order.abs = T)}
 
+\item{min.q.cutoff}{decimal number (> 1, < 0) of lower quantile limit where to cut the color scale, intended to squish extremes}
+
+\item{max.q.cutoff}{decimal number (> 1, < 0) of upper quantile limit where to cut the color scale, intended to squish extremes}
+
+\item{reduction}{which reduction to use for plotting}
+
+\item{split.by}{column in meta data to use to split plots}
+
 \item{split.by.scales}{}
+
+\item{shape.by}{column in meta data to shape dots (cells) b<}
+
+\item{combine}{combine multiple features to one plot (TRUE) or return a list with one entry per feature (FALSE)}
+
+\item{ncol.combine}{number of columns in combined graphic (feature combined)}
+
+\item{nrow.combine}{number of rows in combined graphic (feature combined)}
+
+\item{nrow.inner}{number of plots per row within one feature (originating from multiple SO and/or split.by)}
+
+\item{ncol.inner}{number of plots per column within one feature (originating from multiple SO and/or split.by)}
+
+\item{feature.aliases}{vector aliases for features; e.g. c("FAIM3" = "FCMR", "MS4A1" = "CD20")}
+
+\item{title}{force title for the plot instead of feature name which is the default}
+
+\item{title.font.size}{font size of the title}
+
+\item{cutoff.feature}{select a feature for cells to consider in plotting}
+
+\item{cutoff.expression}{select the cutoff feature expression levels for filtering}
 }
 \description{
 Title

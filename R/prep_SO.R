@@ -124,9 +124,9 @@ prep_SO <- function(SO_unprocessed,
     }
   }
 
-  if (class(SO_unprocessed) == "list") {
+  if (methods::is(SO_unprocessed, "list")) {
     SO.list <- SO_unprocessed
-  } else if (class(SO_unprocessed) == "character") {
+  } else if (methods::is(SO_unprocessed, "character")) {
     if (!file.exists(SO_unprocessed)) {
       stop(paste0(SO_unprocessed, "not found."))
     } else {
@@ -140,7 +140,7 @@ prep_SO <- function(SO_unprocessed,
          make it a list of length 1.")
   }
 
-  if (class(SO.list) == "Seurat") {
+  if (methods::is(SO.list, "Seurat")) {
     # if only one Seurat object is provided
     SO.list <- list(SO.list)
     names(SO.list) <- "sample"

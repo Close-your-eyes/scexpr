@@ -31,7 +31,7 @@ hs_mm_ortholog_table <- function(features_hs,
     remotes::install_github("carmonalab/ProjecTILs")
   }
   if (!requireNamespace("BiocManager", quietly = TRUE)) {
-    install.packages("BiocManager")
+    utils::install.packages("BiocManager")
   }
   if (!requireNamespace("biomaRt", quietly = TRUE)) {
     BiocManager::install("biomaRt")
