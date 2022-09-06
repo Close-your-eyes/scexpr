@@ -512,7 +512,7 @@ feature_plot <- function(SO,
   }
 
   if (!any(unlist(lapply(SO, class)) == "Seurat")) {
-    stop("All SO have to Seurat objects (class == Seurat).")
+    stop("All SO have to be Seurat objects (class == Seurat).")
   }
 
   if (!is.null(split.by) && length(.check.features(SO, split.by, rownames = F)) == 0) {
@@ -642,7 +642,7 @@ feature_plot <- function(SO,
   } else {
     cells_l <- length(cells)
     cells <- intersect(cells, all.cells)
-    if (cells == 0) {
+    if (length(cells) == 0) {
       stop("None of cells found in SO.")
     }
     if (length(cells) < cells_l) {
