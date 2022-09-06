@@ -138,8 +138,9 @@ volcano_plot <- function(SO,
     stop("Same cell names (barcodes) found in positive.group.cells and negative.group.cells. Please change selection or fix SOs with Seurat::RenameCells first.")
   }
 
+  #temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
   # done like this as cell names in SOs may be subject to prefixing when there are duplicates and .check.and.get.cells is called once
-  temp <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
+  temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
   #pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
   if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
     pgc <- purrr::map_chr(positive.group.cells, function(x) {
@@ -147,12 +148,14 @@ volcano_plot <- function(SO,
       if (length(m) > 1) {
         stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
       }
+      return(m)
     })
     ngc <- purrr::map_chr(negative.group.cells, function(x) {
       m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
       if (length(m) > 1) {
         stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
       }
+      return(m)
     })
   } else {
     pgc <- purrr::map_chr(positive.group.cells, function(x) {
@@ -160,12 +163,14 @@ volcano_plot <- function(SO,
       if (length(m) > 1) {
         stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
       }
+      return(m)
     })
     ngc <- purrr::map_chr(negative.group.cells, function(x) {
       m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
       if (length(m) > 1) {
         stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
       }
+      return(m)
     })
   }
 
