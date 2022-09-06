@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_plot.R
 \name{feature_plot}
 \alias{feature_plot}
-\title{Title}
+\title{Plot features of single cell transcriptomes on a dimension reduction map}
 \usage{
 feature_plot(
   SO,
@@ -11,7 +11,6 @@ feature_plot(
   dims = c(1, 2),
   cells = NULL,
   downsample = 1,
-  make.cells.unique = F,
   pt.size = 1,
   pt.size.expr.factor = 1,
   order = T,
@@ -79,7 +78,7 @@ feature_plot(
 
 \item{features}{vector of features to plot (genes or column names in meta data)}
 
-\item{assay}{which assay in SO to use}
+\item{assay}{which assay to get expression data from}
 
 \item{dims}{which dimensions of the selected dimension reduction to plot}
 
@@ -132,5 +131,5 @@ feature_plot(
 \item{cutoff.expression}{select the cutoff feature expression levels for filtering}
 }
 \description{
-Title
+Plot features of single cell transcriptomes on a dimension reduction map
 }

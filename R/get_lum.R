@@ -2,7 +2,7 @@ get_lum <- function(col) {
   #https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
 
   # list vs vector?!
-  if (length(col) == 1 && class(col) == "character") {
+  if (length(col) == 1 && methods::is(col, "character")) {
     col <- unname(grDevices::col2rgb(col)[,1])
   }
   if (!is.numeric(col) || length(col) != 3) {

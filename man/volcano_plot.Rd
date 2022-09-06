@@ -2,7 +2,7 @@
 % Please edit documentation in R/volcano_plot.R
 \name{volcano_plot}
 \alias{volcano_plot}
-\title{Title}
+\title{Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects}
 \usage{
 volcano_plot(
   SO,
@@ -21,7 +21,7 @@ volcano_plot(
   pt.size = 1,
   pt.alpha = 0.8,
   font.size = 14,
-  pval.tick = 0.01,
+  pval.tick = NULL,
   min.pct = 0.1,
   max.iter = 10000,
   max.overlaps = 50,
@@ -49,10 +49,59 @@ volcano_plot(
 )
 }
 \arguments{
+\item{SO}{SO one or more Seurat object(s)}
+
+\item{assay}{which assay to get expression data from}
+
+\item{volcano.data}{optionally provide a data frame with data that have been calculated before
+with this function. e.g. if only style element of the returned plot are to be modified.}
+
+\item{negative.group.cells}{vector of cell names for the negative group of cells; genes which
+are expressed at higher level in this group will have a negative sign (minus); use Seurat::Cells()
+or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells}
+
+\item{positive.group.cells}{vector of cell names for the positive group of cells; genes which
+are expressed at higher level in this group will have a positive sign (plus); use Seurat::Cells()
+or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells}
+
+\item{negative.group.name}{name for the negative group of cells; this will appear on plot axes}
+
+\item{positive.group.name}{name for the positive group of cells; this will appear on plot axes}
+
+\item{x.axis.symmetric}{logical; make the x-axis which indicates log-fold changes symmetric (same range
+in plus and minus direction)}
+
+\item{x.axis.extension}{numeric; positive or negative value to extend the x-axis by}
+
+\item{y.axis.pseudo.log}{logical; use a pseudo-log y-axis for -log10(pvalue); may be helpful
+to better visualize and label dense area of genes in the plot; done with scales::pseudo_log_trans}
+
+\item{pseudo.log.sigma}{numeric; adjustment to the pseudo-log tranasformation; passed to scales::pseudo_log_trans}
+
+\item{inf.fc.shift}{numeric; genes with an infinite fold-change (happens when a gene not expressed at all in one group)
+are not left infinite but will be put at: "largest finite fold-change +/- inf.fc.shift"; such genes are indicated
+specifically}
+
+\item{pt.size}{numeric; point size passed to ggplot2::geom_point}
+
+\item{pt.alpha}{numeric; point opacity (alpha value) passed to ggplot2::geom_point}
+
+\item{font.size}{numeric; font size of point labels; passed as base_size to ggplot2::theme_bw() and
+as size = 5/14*font.size to ggplot2::geom_text (5/14 is the conversion between how geom_text handles the
+size argument and how theme does it)}
+
+\item{pval.tick}{NULL or numeric, if not NULL: plot an extra y-axis-tick to indicate a significance level
+in the linear space (not -log10); e.g.: pval.tick = 0.01 will plot an axis-tick at p = 0.01}
+
+\item{min.pct}{numeric; only consider genes for the volcano plot which are expressed at least by this
+fraction of cells in both groups (negative.group.cells, positive.group.cells)}
+
+\item{max.iter}{max.iter passed to ggrepel::geom_text_repel}
+
 \item{use.limma}{limma for DE gene detection; intended to use subsequent MetaVolcanoR}
 
 \item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{2:3}), c("other", "name1", "name2")), order.discrete = "^other",plot.title = F,}
 }
 \description{
-Title
+Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects
 }

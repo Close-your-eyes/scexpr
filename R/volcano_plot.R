@@ -1,23 +1,38 @@
-#' Title
+#' Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects
 #'
-#' @param SO
-#' @param assay
-#' @param volcano.data
-#' @param negative.group.cells
-#' @param positive.group.cells
-#' @param negative.group.name
-#' @param positive.group.name
-#' @param x.axis.symmetric
-#' @param x.axis.extension
-#' @param y.axis.pseudo.log
-#' @param pseudo.log.sigma
-#' @param inf.fc.shift
-#' @param pt.size
-#' @param pt.alpha
-#' @param font.size
-#' @param pval.tick
-#' @param min.pct
-#' @param max.iter
+#'
+#'
+#' @param SO SO one or more Seurat object(s)
+#' @param assay which assay to get expression data from
+#' @param volcano.data optionally provide a data frame with data that have been calculated before
+#' with this function. e.g. if only style element of the returned plot are to be modified.
+#' @param negative.group.cells vector of cell names for the negative group of cells; genes which
+#' are expressed at higher level in this group will have a negative sign (minus); use Seurat::Cells()
+#' or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells
+#' @param positive.group.cells vector of cell names for the positive group of cells; genes which
+#' are expressed at higher level in this group will have a positive sign (plus); use Seurat::Cells()
+#' or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells
+#' @param negative.group.name name for the negative group of cells; this will appear on plot axes
+#' @param positive.group.name name for the positive group of cells; this will appear on plot axes
+#' @param x.axis.symmetric logical; make the x-axis which indicates log-fold changes symmetric (same range
+#' in plus and minus direction)
+#' @param x.axis.extension numeric; positive or negative value to extend the x-axis by
+#' @param y.axis.pseudo.log logical; use a pseudo-log y-axis for -log10(pvalue); may be helpful
+#' to better visualize and label dense area of genes in the plot; done with scales::pseudo_log_trans
+#' @param pseudo.log.sigma numeric; adjustment to the pseudo-log tranasformation; passed to scales::pseudo_log_trans
+#' @param inf.fc.shift numeric; genes with an infinite fold-change (happens when a gene not expressed at all in one group)
+#' are not left infinite but will be put at: "largest finite fold-change +/- inf.fc.shift"; such genes are indicated
+#' specifically
+#' @param pt.size numeric; point size passed to ggplot2::geom_point
+#' @param pt.alpha numeric; point opacity (alpha value) passed to ggplot2::geom_point
+#' @param font.size numeric; font size of point labels; passed as base_size to ggplot2::theme_bw() and
+#' as size = 5/14*font.size to ggplot2::geom_text (5/14 is the conversion between how geom_text handles the
+#' size argument and how theme does it)
+#' @param pval.tick NULL or numeric, if not NULL: plot an extra y-axis-tick to indicate a significance level
+#' in the linear space (not -log10); e.g.: pval.tick = 0.01 will plot an axis-tick at p = 0.01
+#' @param min.pct numeric; only consider genes for the volcano plot which are expressed at least by this
+#' fraction of cells in both groups (negative.group.cells, positive.group.cells)
+#' @param max.iter max.iter passed to ggrepel::geom_text_repel
 #' @param max.overlaps
 #' @param label.neg.pos.sep
 #' @param label.col
@@ -64,7 +79,7 @@ volcano_plot <- function(SO,
                          pt.size = 1,
                          pt.alpha = 0.8,
                          font.size = 14,
-                         pval.tick = 0.01,
+                         pval.tick = NULL,
                          min.pct = 0.1,
                          max.iter = 10000,
                          max.overlaps = 50,
@@ -93,6 +108,9 @@ volcano_plot <- function(SO,
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
   }
+  if (length(positive.group.name) > 1 || length(negative.group.cells) > 1) {
+    stop("Only provide one name for negative.group.cells and positive.group.name, each.")
+  }
   if (!is.null(gsea.param)) {
     if (!is.list(gsea.param)) {
       stop("gsea.param has to be a list.")
@@ -116,10 +134,39 @@ volcano_plot <- function(SO,
   # add option to label all features indicated with p.cut and fc.cut
 
   ## check cells
-  ngc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = negative.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
-  pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
-  if (length(intersect(ngc, pgc)) > 0) {
-    warning("Equal cell names in negative.group.cells and positive.group.cells found.")
+  if (length(intersect(negative.group.cells, positive.group.cells)) > 0) {
+    stop("Same cell names (barcodes) found in positive.group.cells and negative.group.cells. Please change selection or fix SOs with Seurat::RenameCells first.")
+  }
+
+  # done like this as cell names in SOs may be subject to prefixing when there are duplicates and .check.and.get.cells is called once
+  temp <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
+  #pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
+  if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
+    pgc <- purrr::map_chr(positive.group.cells, function(x) {
+      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+      if (length(m) > 1) {
+        stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+      }
+    })
+    ngc <- purrr::map_chr(negative.group.cells, function(x) {
+      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+      if (length(m) > 1) {
+        stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+      }
+    })
+  } else {
+    pgc <- purrr::map_chr(positive.group.cells, function(x) {
+      m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
+      if (length(m) > 1) {
+        stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
+      }
+    })
+    ngc <- purrr::map_chr(negative.group.cells, function(x) {
+      m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
+      if (length(m) > 1) {
+        stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
+      }
+    })
   }
 
   # make meta data column in SOs to identify ngc and pgc
@@ -443,7 +490,7 @@ volcano_plot <- function(SO,
                       ngn = "negative.group",
                       pgn = "positive.group",
                       x.axis.extension = 0,
-                      pval.tick = 0.01,
+                      pval.tick = NULL,
                       features.exclude = NULL,
                       min.pct = 0,
                       p.cut = NA,

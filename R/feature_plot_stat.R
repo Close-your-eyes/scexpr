@@ -112,12 +112,10 @@ feature_plot_stat <- function(SO,
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
                                 cells = cells,
-                                make.cells.unique = make.cells.unique,
                                 cutoff.feature = cutoff.feature,
                                 cutoff.expression = cutoff.expression,
                                 exclusion.feature = exclusion.feature,
                                 downsample = downsample,
-                                make.cells.unique.warning = 1,
                                 return.included.cells.only = T)
 
   # get data with SO being no list does not work

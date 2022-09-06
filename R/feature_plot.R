@@ -1,12 +1,11 @@
-#' Title
+#' Plot features of single cell transcriptomes on a dimension reduction map
 #'
 #' @param SO one or more Seurat object(s)
 #' @param features vector of features to plot (genes or column names in meta data)
-#' @param assay which assay in SO to use
+#' @param assay which assay to get expression data from
 #' @param dims which dimensions of the selected dimension reduction to plot
 #' @param cells a vector of cell names to include (not selected ones are plotted with color col.excluded.cells)
 #' @param downsample downsample the number of cells (intended to speed up test plottings)
-#' @param make.cells.unique
 #' @param pt.size dot size per cells
 #' @param pt.size.expr.factor factor of increased dot size for expressing cells
 #' @param order for meta.col: remains T if var is continuous but becomes F if var is integer (~probably discrete)
@@ -80,7 +79,6 @@ feature_plot <- function(SO,
                          dims = c(1,2),
                          cells = NULL,
                          downsample = 1,
-                         make.cells.unique = F,
                          pt.size = 1,
                          pt.size.expr.factor = 1,
                          order = T,
@@ -159,7 +157,7 @@ feature_plot <- function(SO,
   if (combine && (!is.null(ncol.combine) && !is.null(nrow.combine))) {stop("Please only select one, ncol.combine or nrow.combine. Leave the other NULL.")}
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
-  if (length(dims) != 2 || class(dims) != "numeric") {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
+  if (length(dims) != 2 || methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
   if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
   if (is.null(order.discrete) || is.na(order.discrete)) {stop("order.discrete should be logical or a vector of factor levels in order.")}
 
@@ -176,12 +174,12 @@ feature_plot <- function(SO,
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
                                 cells = cells,
-                                make.cells.unique = make.cells.unique,
+                                #make.cells.unique = make.cells.unique,
                                 cutoff.feature = cutoff.feature,
                                 cutoff.expression = cutoff.expression,
                                 exclusion.feature = exclusion.feature,
-                                downsample = downsample,
-                                make.cells.unique.warning = 1)
+                                downsample = downsample)
+                                #make.cells.unique.warning = 1)
 
   if (length(SO) > 1) {
     SO.split <- "SO.split"
@@ -571,13 +569,13 @@ feature_plot <- function(SO,
 
 .check.and.get.cells <- function (SO,
                                   assay = c("RNA", "SCT"),
-                                  make.cells.unique = F,
+                                  #make.cells.unique = F,
                                   cells = NULL,
                                   cutoff.feature = NULL,
                                   cutoff.expression = NULL,
                                   exclusion.feature  = NULL,
                                   downsample = 1,
-                                  make.cells.unique.warning = 1,
+                                  #make.cells.unique.warning = 1,
                                   return.included.cells.only = F) {
 
   if (!is.list(SO)) {
@@ -605,93 +603,92 @@ feature_plot <- function(SO,
   }
 
   if (any(duplicated(cells))) {
-    message("Duplicates found in cells.")
+    message("Duplicates found in cells. Cells is made unique though.")
     cells <- unique(cells)
   }
 
   # check if cell names are unique across SOs
   all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
 
-  if (length(SO) > 1 && any(duplicated(all.cells)) && is.null(cells)) {
-    # when cells is not provided it does not matter
-    make.cells.unique <- T
+  # check if any cells intersects with not unique cell names in SOs
+  if (length(SO) > 1 && any(duplicated(all.cells)) &&
+      !is.null(cells) && any(cells %in% all.cells[which(duplicated(all.cells))])) {
+    stop("Selected cells can not be identified unambiguously as they intersect/overlap with duplicate cell names (barcodes) across SOs. Please fix with Seurat::RenameCells and make cell names unique.")
   }
 
-  if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
+'  if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
     if (make.cells.unique.warning == 1) {
-      stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_. Where i the index of the SO in the list. Consider this way of renaming cells when selecting cells for plotting.")
+      stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_, where i is the index (starting with 1) of the SO in the list. Consider this way of renaming cells when selecting cells for plotting or other calculations.")
     } else {
       stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells.")
     }
-  }
+  }'
 
-  if (length(SO) > 1 && any(duplicated(all.cells)) && make.cells.unique) {
+  if (length(SO) > 1 && any(duplicated(all.cells))) {
     names.temp <- names(SO)
     SO <- lapply(seq_along(SO), function(x) Seurat::RenameCells(SO[[x]], add.cell.id = paste0("SO_", x)))
     names(SO) <- names.temp
     all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
     #print("Cells have been prefixed with 'SO_i_' .")
     assign("SO", SO, envir = parent.frame()) # assigns in parent environment (https://stackoverflow.com/questions/10904124/global-and-local-variables-in-r?rq=1)
+    if (!is.null(cells)) {
+      # change names of selected cells as well (above it was confirmed that they do not belong to duplicate names, so this is safe)
+      cells <- grep(pattern = paste(paste0("SO_[[:digit:]]{1,}_", cells, "$"), collapse = "|"), x = all.cells, value = T)
+    }
   }
 
   if (is.null(cells)) {
     cells <- all.cells
   } else {
-    if (length(intersect(cells, all.cells)) == 0) {
-      if (make.cells.unique) {
-        stop("Non of cells found in SO. Cells have been prefixed with 'SO_i_' as cell names were not unique across SOs. Please consider when selecting a subset of cells for plotting. (e.g. manually prefix them with 'SO_i_' where i is the index of the SO.")
-      } else {
-        stop("Non of cells found in SO.")
-      }
-    }
-    if (length(intersect(cells, all.cells)) < length(cells)) {
-      message("Not all cells found in SO(s). Reduced to those which exist.")
-    }
+    cells_l <- length(cells)
     cells <- intersect(cells, all.cells)
-    if (length(cells) == 0) {
-      stop("None of cells found.")
+    if (cells == 0) {
+      stop("None of cells found in SO.")
+    }
+    if (length(cells) < cells_l) {
+      message("Not all cells found in SO(s). Reduced to those which exist.")
     }
   }
 
   # create a vector of cells which identifies how to plot them; 0 indicates exclusion
-  cells.plot <- stats::setNames(rep(1, length(all.cells)), all.cells)
+  all.cells <- stats::setNames(rep(1, length(all.cells)), all.cells)
   ## cells excluded by arbitrary selection
-  cells.plot[!names(cells.plot) %in% cells] <- 0
+  all.cells[!names(all.cells) %in% cells] <- 0
   ## cells excluded by
   if (!is.null(cutoff.feature)) {
     compare_fun <- function(x,y) {x > y}
     exclude.cells <- names(which(Matrix::colSums(sweep(Seurat::GetAssayData(x, slot = "data", assay = assay)[cutoff.feature,,drop=F], 1, cutoff.expression, compare_fun)) < length(cutoff.feature)))
-    cells.plot[which(names(cells.plot) %in% exclude.cells)] <- 0
+    all.cells[which(names(all.cells) %in% exclude.cells)] <- 0
   }
-  if (length(cells.plot) == 0) {
+  if (length(all.cells) == 0) {
     stop("No cells left after filtering for cutoff.feature.")
   }
   ## cells excluded due to expression of an unwanted gene
   if (!is.null(exclusion.feature)) {
     exclude.cells <- unlist(lapply(SO, function(x) names(which(Matrix::colSums(Seurat::GetAssayData(x, slot = "data", assay = assay)[exclusion.feature,,drop=F]) > 0))))
-    cells.plot[which(names(cells.plot) %in% exclude.cells)] <- 0
+    all.cells[which(names(all.cells) %in% exclude.cells)] <- 0
   }
 
-  if (length(cells.plot) == 0) {
+  if (length(all.cells) == 0) {
     stop("No cells left after filtering for exclusion.feature")
   }
   # downsample - completely remove cells to speed up plotting which may alter the statistics though
   if (downsample < 1) {
-    downsample <- downsample*length(cells.plot)
+    downsample <- downsample*length(all.cells)
   } else if (downsample > 1) {
-    downsample <- min(downsample, length(cells.plot))
+    downsample <- min(downsample, length(all.cells))
   }
   if (downsample == 0) {
     stop("downsample has become 0.")
   }
   if (downsample != 1) {
-    cells.plot <- cells.plot[sample(seq_along(cells.plot), size = downsample)]
+    all.cells <- all.cells[sample(seq_along(all.cells), size = downsample)]
   }
 
   if (return.included.cells.only) {
-    return(names(cells.plot[which(cells.plot == 1)]))
+    return(names(all.cells[which(all.cells == 1)]))
   } else if (!return.included.cells.only) {
-    return(cells.plot)
+    return(all.cells)
   }
 
 }
