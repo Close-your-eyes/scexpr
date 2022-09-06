@@ -157,7 +157,7 @@ feature_plot <- function(SO,
   if (combine && (!is.null(ncol.combine) && !is.null(nrow.combine))) {stop("Please only select one, ncol.combine or nrow.combine. Leave the other NULL.")}
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
-  if (length(dims) != 2 || methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
+  if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
   if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
   if (is.null(order.discrete) || is.na(order.discrete)) {stop("order.discrete should be logical or a vector of factor levels in order.")}
 
