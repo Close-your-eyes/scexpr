@@ -108,7 +108,7 @@ volcano_plot <- function(SO,
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
   }
-  if (length(positive.group.name) > 1 || length(negative.group.cells) > 1) {
+  if (length(positive.group.name) > 1 || length(negative.group.name) > 1) {
     stop("Only provide one name for negative.group.cells and positive.group.name, each.")
   }
   if (!is.null(gsea.param)) {
