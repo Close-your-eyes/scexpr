@@ -2,10 +2,11 @@
 #'
 #'
 #'
-#' @param SO SO one or more Seurat object(s)
+#' @param SO one or more Seurat object(s); provide multiple objects as a (named) list
 #' @param assay which assay to get expression data from
 #' @param volcano.data optionally provide a data frame with data that have been calculated before
-#' with this function. e.g. if only style element of the returned plot are to be modified.
+#' with this function. e.g. if only style element of the returned plot are to be modified, providing this
+#' data frame will avoid to re-calculate DE genes
 #' @param negative.group.cells vector of cell names for the negative group of cells; genes which
 #' are expressed at higher level in this group will have a negative sign (minus); use Seurat::Cells()
 #' or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells
@@ -33,29 +34,49 @@
 #' @param min.pct numeric; only consider genes for the volcano plot which are expressed at least by this
 #' fraction of cells in both groups (negative.group.cells, positive.group.cells)
 #' @param max.iter max.iter passed to ggrepel::geom_text_repel
-#' @param max.overlaps
-#' @param label.neg.pos.sep
-#' @param label.col
-#' @param label.face
-#' @param font.family
-#' @param label.size
-#' @param labels.topn
-#' @param label.features
-#' @param topn.metric
-#' @param nudge.x
-#' @param nudge.y
-#' @param p.plot
-#' @param p.adjust
-#' @param p.cut
-#' @param p.signif
-#' @param fc.cut
-#' @param features.exclude
-#' @param meta.cols
-#' @param save.path.interactive
-#' @param gsea.param
-#' @param interactive.only
-#' @param use.limma limma for DE gene detection; intended to use subsequent MetaVolcanoR
-#' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[2:3]), c("other", "name1", "name2")), order.discrete = "^other",plot.title = F,
+#' @param max.overlaps max.overlaps passed to ggrepel::geom_text_repel
+#' @param label.neg.pos.sep logical whether to label genes with negative and positive fold change separately;
+#' this will make sure that labels on the left (negative log fc) point to the left and labels on the right
+#' (positive log fc) point to the right
+#' @param label.col font color of labels
+#' @param label.face font face of labels
+#' @param font.family font family (font type) of labels, e.g. Courier or Sans
+#' @param label.size size of labels
+#' @param labels.topn numeric; how many labels (roughly) to plot based on the selected metric
+#' @param label.features character vector; select genes which are to be labeled; OR: "significant"
+#' which will let p.signif come into usage
+#' @param topn.metric which metric to use for selection of top genes for labeling ()
+#' @param nudge.x nudge.x passed to ggrepel::geom_text_repel; shift labels into x-direction;
+#' for genes with negative fold change -nudge.x will be used; genes with positive fold change
+#' use nudge.x
+#' @param nudge.y nudge.x passed to ggrepel::geom_text_repel; shift labels into y-direction;
+#' @param p.plot which p-value to use for plotting, adjusted p-value or unadjusted p-value
+#' @param p.adjust method for p-value adjustment
+#' @param p.cut plot a horizontal line at this p-value; in combination with fc.cut
+#' all genes above this cut (and above fc.cut) are counted and the number is plotted
+#' @param p.signif a significance level from which on genes are labeled;
+#' supply label.features = "significant" to make use of this
+#' @param fc.cut plot vertical lines at these fold changes (plus and minus); in combination with p.cut
+#' all genes above this cut (and above p.cut) are counted and the number is plotted
+#' @param features.exclude character vector of features to exclude from plotting; you may
+#' supply regular expressions like "^RPL" and/or "^RPS" to exclude all ribosomal genes
+#' @param meta.cols which meta.cols to keep in SO for interactive plotting
+#' @param save.path.interactive path on disk where to save data for interactive
+#' analysis of the volcano plot; this will initiate a directory with a shiny script
+#' and an rds file of with SO and DE genes
+#' @param gsea.param list of length 2, each index holding a numeric vector of length 2:
+#' fold change (list index 1) and p-value (list index 2) limits for GSEA; first entry of each vector
+#' applies for genes with negative fold change, second entry for genes with positive fold change;
+#' 2 GSEA will be run separately on genes with negative and positive fold change;
+#' if argument is NULL no GSEA is performed; the function called for GSEA is scexpr::fgsea_on_msigdbr which
+#' uses all gene sets from \href{https://igordot.github.io/msigdbr/articles/msigdbr-intro.html}{msigdb(r)} by default
+#' and runs \href{https://bioconductor.org/packages/release/bioc/html/fgsea.html}{fgsea} for GSEA; alternative
+#' arguments to scexpr::fgsea_on_msigdbr can be supplied in ... (except for gene.ranks)
+#' @param interactive.only logical; do calculations only for interactive analysis and only
+#' return these values
+#' @param use.limma logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
+#' which relies on values returned from limma
+#' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[2:3]), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc
 #'
 #' @importFrom magrittr %>%
 #'
@@ -85,16 +106,16 @@ volcano_plot <- function(SO,
                          max.overlaps = 50,
                          label.neg.pos.sep = T,
                          label.col = "black",
-                         label.face = "bold",
+                         label.face = "italic",
                          font.family = "Courier",
                          label.size = 4,
                          labels.topn = 30,
                          label.features = NULL,
-                         topn.metric = "p.value",
+                         topn.metric = c("p.value", "fc", "both"),
                          nudge.x = 0,
                          nudge.y = 0,
-                         p.plot = "adj.p.val",
-                         p.adjust = "bonferroni",
+                         p.plot = c("adj.p.val", "p.val")
+                         p.adjust = c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none")
                          p.cut = NA,
                          p.signif = 0.001,
                          fc.cut = NA,
@@ -126,6 +147,7 @@ volcano_plot <- function(SO,
   assay <- match.arg(assay, c("RNA", "SCT"))
   p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
   p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
+  topn.metric <- match.arg(topn.metric, c("p.value", "fc", "both"))
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL)
 
   dots <- list(...)
@@ -713,7 +735,7 @@ volcano_plot <- function(SO,
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) %>% dplyr::distinct()
       f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
-    } else {
+    } else if (topn.metric == "fc") {
       f_lab <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, !!rlang::sym(x)), vd %>% dplyr::top_n(-(labels.topn/2), !!rlang::sym(x)))
       f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
       f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
