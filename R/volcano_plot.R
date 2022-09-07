@@ -114,8 +114,8 @@ volcano_plot <- function(SO,
                          topn.metric = c("p.value", "fc", "both"),
                          nudge.x = 0,
                          nudge.y = 0,
-                         p.plot = c("adj.p.val", "p.val")
-                         p.adjust = c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none")
+                         p.plot = c("adj.p.val", "p.val"),
+                         p.adjust = c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none"),
                          p.cut = NA,
                          p.signif = 0.001,
                          fc.cut = NA,
