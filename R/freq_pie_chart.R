@@ -36,7 +36,11 @@ freq_pie_chart <- function(SO,
   ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = "white") +
     ggplot2::theme_bw() +
-    ggplot2::theme(legend.title = ggplot2::element_blank(), legend.position = legend.position, panel.grid = ggplot2::element_blank(), axis.title = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), text = ggplot2::element_text(family = "mono"), axis.text = ggplot2::element_blank(),
+    ggplot2::theme(legend.title = ggplot2::element_blank(),
+                   legend.position = legend.position,
+                   panel.grid = ggplot2::element_blank(),
+                   axis.title = ggplot2::element_blank(),
+                   axis.text = ggplot2::element_blank(),
                    axis.ticks = ggplot2::element_blank()) +
     ggplot2::geom_text(ggplot2::aes(color = farver::decode_colour(cols, to = "hcl")[,"l"] > 50,
                                     x = inset.text.radius*sin(mid_angle),

@@ -76,7 +76,7 @@
 #' return these values
 #' @param use.limma logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
 #' which relies on values returned from limma
-#' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[2:3]), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc
+#' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[c(2,3)]), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc
 #'
 #' @importFrom magrittr %>%
 #'
@@ -107,7 +107,7 @@ volcano_plot <- function(SO,
                          label.neg.pos.sep = T,
                          label.col = "black",
                          label.face = "italic",
-                         font.family = "Courier",
+                         font.family = "sans",
                          label.size = 4,
                          labels.topn = 30,
                          label.features = NULL,
@@ -125,6 +125,8 @@ volcano_plot <- function(SO,
                          interactive.only = F,
                          use.limma = F,
                          ...) {
+
+  ### add option to only label positive or negative features
 
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
@@ -146,7 +148,7 @@ volcano_plot <- function(SO,
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
-  p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
+  p.adjust <- match.arg(p.adjust, c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none"))
   topn.metric <- match.arg(topn.metric, c("p.value", "fc", "both"))
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL)
 
@@ -164,36 +166,46 @@ volcano_plot <- function(SO,
   # done like this as cell names in SOs may be subject to prefixing when there are duplicates and .check.and.get.cells is called once
   temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
   #pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
-  if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
-    pgc <- purrr::map_chr(positive.group.cells, function(x) {
-      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
-      if (length(m) > 1) {
-        stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
-      }
-      return(m)
-    })
-    ngc <- purrr::map_chr(negative.group.cells, function(x) {
-      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
-      if (length(m) > 1) {
-        stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
-      }
-      return(m)
-    })
+
+  ## slow procedure; how to speed up? why needed actually?
+  if (is.null(volcano.data)) {
+    if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
+      pgc <- purrr::map_chr(positive.group.cells, function(x) {
+        m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+        if (length(m) > 1) {
+          stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+        }
+        return(m)
+      })
+      ngc <- purrr::map_chr(negative.group.cells, function(x) {
+        m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+        if (length(m) > 1) {
+          stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+        }
+        return(m)
+      })
+    } else {
+      pgc <- purrr::map_chr(positive.group.cells, function(x) {
+        #return(x)
+        m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
+        if (length(m) > 1) {
+          stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
+        }
+        return(m)
+      })
+      ngc <- purrr::map_chr(negative.group.cells, function(x) {
+        #return(x)
+        m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
+        if (length(m) > 1) {
+          stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in negative.group.cells is a substring of another cells barcode.")
+        }
+        return(m)
+      })
+    }
   } else {
-    pgc <- purrr::map_chr(positive.group.cells, function(x) {
-      m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
-      if (length(m) > 1) {
-        stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
-      }
-      return(m)
-    })
-    ngc <- purrr::map_chr(negative.group.cells, function(x) {
-      m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
-      if (length(m) > 1) {
-        stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
-      }
-      return(m)
-    })
+    ## 2022 11 07: not tested in detail
+    pgc <- positive.group.cells
+    ngc <- negative.group.cells
   }
 
   # make meta data column in SOs to identify ngc and pgc
@@ -294,7 +306,8 @@ volcano_plot <- function(SO,
                     label.face = label.face,
                     font.family = font.family,
                     max.overlaps = max.overlaps,
-                    p.signif = p.signif)
+                    p.signif = p.signif,
+                    topn.metric = topn.metric)
 
 
     ## to fgsea_on_msigdbr
@@ -355,6 +368,7 @@ volcano_plot <- function(SO,
                              label.face = label.face,
                              font.family = font.family,
                              max.overlaps = max.overlaps,
+                             topn.metric = topn.metric,
                              plot.label = F)
       vp_gsea.2 <- .plot_vp(vd = vd,
                             y = p.plot,
@@ -387,6 +401,7 @@ volcano_plot <- function(SO,
                              label.face = label.face,
                              font.family = font.family,
                              max.overlaps = max.overlaps,
+                             topn.metric = topn.metric,
                              plot.label = F)
 
       gsea <- list(negative.gsea = g1, positive.gsea = g2, negative.volcano = vp_gsea.1, positive.volcano = vp_gsea.2)
@@ -463,7 +478,7 @@ volcano_plot <- function(SO,
       utils::install.packages("matrixTests")
     }
 
-    p.adjust <- match.arg(p.adjust, c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"))
+    p.adjust <- match.arg(p.adjust, c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none"))
     assay_data <- expm1(assay_data) + 1
     p <- matrixTests::row_wilcoxon_twosample(as.matrix(assay_data[, ngc]), as.matrix(assay_data[, pgc]))$pvalue
     apm <- Matrix::rowMeans(assay_data[, pgc])
@@ -666,6 +681,7 @@ volcano_plot <- function(SO,
   } else {
     vp <- vp + ggplot2::xlim(round(min(vd[,x])) - 0.5 - x.axis.extension, round(max(vd[,x])) + 0.5 + x.axis.extension)
   }
+
 
   if (!any(c(is.na(p.cut), is.na(fc.cut)))) {
     vp <- vp + ggplot2::geom_hline(yintercept = -log10(p.cut), linetype = "dashed") + ggplot2::geom_vline(xintercept = c(-fc.cut, fc.cut), linetype = "dashed")
