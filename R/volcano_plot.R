@@ -129,6 +129,8 @@ volcano_plot <- function(SO,
   ### add option to only label positive or negative features
   ### attach attributes to vd; like the ngc, pgc, min.pct, assay, p.adjust, use.limma, and so on, this can then be tested for, when volcano.data as input
 
+  ## fix shiny app for interactive volcano plot
+
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
   }
