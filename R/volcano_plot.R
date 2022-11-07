@@ -127,6 +127,7 @@ volcano_plot <- function(SO,
                          ...) {
 
   ### add option to only label positive or negative features
+  ### attach attributes to vd; like the ngc, pgc and so on, this can then be tested for, when volcano.data as input
 
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
@@ -167,45 +168,42 @@ volcano_plot <- function(SO,
   temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
   #pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
 
-  ## slow procedure; how to speed up? why needed actually?
-  if (is.null(volcano.data)) {
-    if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
-      pgc <- purrr::map_chr(positive.group.cells, function(x) {
-        m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
-        if (length(m) > 1) {
-          stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
-        }
-        return(m)
-      })
-      ngc <- purrr::map_chr(negative.group.cells, function(x) {
-        m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
-        if (length(m) > 1) {
-          stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
-        }
-        return(m)
-      })
-    } else {
-      pgc <- purrr::map_chr(positive.group.cells, function(x) {
-        #return(x)
-        m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
-        if (length(m) > 1) {
-          stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
-        }
-        return(m)
-      })
-      ngc <- purrr::map_chr(negative.group.cells, function(x) {
-        #return(x)
-        m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
-        if (length(m) > 1) {
-          stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in negative.group.cells is a substring of another cells barcode.")
-        }
-        return(m)
-      })
-    }
+  ## slow procedure; how to speed up? why needed actually? 2022 11 07
+  # https://stackoverflow.com/questions/35726028/understanding-grep-with-fixed-t-in-r
+  # https://stackoverflow.com/questions/10128617/test-if-characters-are-in-a-string
+
+  if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
+    pgc <- purrr::map_chr(positive.group.cells, function(x) {
+      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+      if (length(m) > 1) {
+        stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+      }
+      return(m)
+    })
+    ngc <- purrr::map_chr(negative.group.cells, function(x) {
+      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+      if (length(m) > 1) {
+        stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+      }
+      return(m)
+    })
   } else {
-    ## 2022 11 07: not tested in detail
-    pgc <- positive.group.cells
-    ngc <- negative.group.cells
+    pgc <- purrr::map_chr(positive.group.cells, function(x) {
+      #m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
+      m <- grep(pattern = x, x = temp, value = T, fixed = T)
+      if (length(m) > 1) {
+        stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
+      }
+      return(m)
+    })
+    ngc <- purrr::map_chr(negative.group.cells, function(x) {
+      #m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
+      m <- grep(pattern = x, x = temp, value = T, fixed = T)
+      if (length(m) > 1) {
+        stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in negative.group.cells is a substring of another cells barcode.")
+      }
+      return(m)
+    })
   }
 
   # make meta data column in SOs to identify ngc and pgc
