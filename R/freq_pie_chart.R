@@ -1,3 +1,17 @@
+#' Title
+#'
+#' @param SO Seurat object or data frame
+#' @param meta.col
+#' @param inset.text.size
+#' @param inset.text.radius
+#' @param legend.position
+#' @param col_pal
+#' @param order_pieces
+#'
+#' @return
+#' @export
+#'
+#' @examples
 freq_pie_chart <- function(SO,
                            meta.col,
                            inset.text.size = 5,
@@ -13,8 +27,12 @@ freq_pie_chart <- function(SO,
     utils::install.packages("farver")
   }
 
+  if (methods::is(SO, "Seurat")) {
+    SO <- SO@meta.data
+  }
+
   # https://stackoverflow.com/questions/16184188/ggplot-facet-piechart-placing-text-in-the-middle-of-pie-chart-slices (ggforce)
-  tab <- table(SO@meta.data[,meta.col], exclude = c())
+  tab <- table(SO[,meta.col], exclude = c())
   tab <- data.frame(frac = as.numeric(tab/sum(tab)), cluster = factor(names(tab), levels = names(tab)))
   if (order_pieces) {
     tab <- tab[order(tab$frac, decreasing = T), ]

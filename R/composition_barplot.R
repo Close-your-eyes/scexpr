@@ -1,6 +1,6 @@
 #' Plot composition of one category by another
 #'
-#' @param SO
+#' @param SO Seurat object or data frame
 #' @param x_cat
 #' @param fill_cat
 #' @param col_pal
@@ -16,17 +16,22 @@ composition_barplot <- function(SO,
                                 col_pal = scexpr::col_pal("custom"),
                                 plot_labels = F) {
 
-  if (!x_cat %in% names(SO@meta.data)) {
-    stop("x_cat not found in SO@meta.data.")
+
+  if (methods::is(SO, "Seurat")) {
+    SO <- SO@meta.data
   }
-  if (!fill_cat %in% names(SO@meta.data)) {
-    stop("fill_cat not found in SO@meta.data.")
+
+  if (!x_cat %in% names(SO)) {
+    stop("x_cat not found in SO.")
+  }
+  if (!fill_cat %in% names(SO)) {
+    stop("fill_cat not found in SO.")
   }
 
   table <-
-    SO@meta.data %>%
+    SO %>%
     dplyr::count(!!rlang::sym(x_cat), !!rlang::sym(fill_cat)) %>%
-    dplyr::left_join(dplyr::count(SO@meta.data, !!rlang::sym(x_cat), name = "total"), by = x_cat) %>%
+    dplyr::left_join(dplyr::count(SO, !!rlang::sym(x_cat), name = "total"), by = x_cat) %>%
     dplyr::mutate(rel = n/total) %>%
     tibble::as_tibble()
 
