@@ -17,7 +17,7 @@ freq_pie_chart <- function(SO,
                            inset.text.size = 5,
                            inset.text.radius = 0.75,
                            legend.position = "right",
-                           col_pal = "custom",
+                           col_pal = scexpr::col_pal("custom"),
                            order_pieces = T) {
 
   if (!requireNamespace("ggforce", quietly = T)) {
@@ -41,16 +41,6 @@ freq_pie_chart <- function(SO,
   tab$end_angle <- c(cumsum(tab$frac))*pi*2
   tab$mid_angle <-  0.5*(tab$start_angle + tab$end_angle)
 
-  if (length(col_pal) == 1) {
-    cols <- col_pal(col_pal, n = length(unique(tab[,"cluster"])))
-  } else {
-    if (length(col_pal) != length(unique(tab[,"cluster"]))) {
-      stop("Number of colors provided has to match number of factor levels in meta.col.")
-    }
-    cols <- col_pal
-  }
-
-
   ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = "white") +
     ggplot2::theme_bw() +
@@ -60,12 +50,12 @@ freq_pie_chart <- function(SO,
                    axis.title = ggplot2::element_blank(),
                    axis.text = ggplot2::element_blank(),
                    axis.ticks = ggplot2::element_blank()) +
-    ggplot2::geom_text(ggplot2::aes(color = farver::decode_colour(cols, to = "hcl")[,"l"] > 50,
+    ggplot2::geom_text(ggplot2::aes(color = farver::decode_colour(col_pal, to = "hcl")[,"l"] > 50,
                                     x = inset.text.radius*sin(mid_angle),
                                     y = inset.text.radius*cos(mid_angle),
                                     label = format(round(frac, 2), nsmall = 2)),
                        size = inset.text.size) +
-    ggplot2::scale_fill_manual(values = cols) +
+    ggplot2::scale_fill_manual(values = col_pal) +
     ggplot2::scale_color_manual(guide = "none", values = c("white", "black")) +
     ggplot2::coord_fixed(ratio = 1)
 }
