@@ -655,9 +655,10 @@ feature_plot <- function(SO,
   ## cells excluded by arbitrary selection
   all.cells[!names(all.cells) %in% cells] <- 0
   ## cells excluded by
+
   if (!is.null(cutoff.feature)) {
     compare_fun <- function(x,y) {x > y}
-    exclude.cells <- names(which(Matrix::colSums(sweep(Seurat::GetAssayData(x, slot = "data", assay = assay)[cutoff.feature,,drop=F], 1, cutoff.expression, compare_fun)) < length(cutoff.feature)))
+    exclude.cells <- names(which(Matrix::colSums(sweep(do.call(cbind, lapply(SO, function(x) Seurat::GetAssayData(x, slot = "data", assay = assay)[cutoff.feature,,drop=F])), 1, cutoff.expression, compare_fun)) < length(cutoff.feature)))
     all.cells[which(names(all.cells) %in% exclude.cells)] <- 0
   }
   if (length(all.cells) == 0) {
@@ -665,7 +666,7 @@ feature_plot <- function(SO,
   }
   ## cells excluded due to expression of an unwanted gene
   if (!is.null(exclusion.feature)) {
-    exclude.cells <- unlist(lapply(SO, function(x) names(which(Matrix::colSums(Seurat::GetAssayData(x, slot = "data", assay = assay)[exclusion.feature,,drop=F]) > 0))))
+    exclude.cells <- unlist(lapply(SO, function(x) names(which(Matrix::colSums(do.call(cbind, lapply(SO, function(x) Seurat::GetAssayData(x, slot = "data", assay = assay)[exclusion.feature,,drop=F]))) > 0))))
     all.cells[which(names(all.cells) %in% exclude.cells)] <- 0
   }
 
