@@ -15,7 +15,7 @@
 #' @param add_flags a named list of columns to add; each element must have n elements (length of genomic_ranges)
 #' @param add_tags tags to extract from bam file, passed to Rsamtools::ScanBamParam(); character(0) for nothing; missing tags do not seem to matter
 #' @param read_scores calculate read scores from PhredQuality
-#' @param revcomp_minus_strand calculate reverse complement of reads on minus strand; passed to reverseComplement of Rsamtools::ScanBamParam
+#' @param revcomp_minus_strand calculate reverse complement of reads on minus strand; passed as reverseComplement to Rsamtools::ScanBamParam
 #' @param lapply_fun lapply function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
@@ -24,6 +24,10 @@
 #'
 #' @examples
 #' \dontrun{
+#' The seqnames of different BAM file may require different formats:
+#' GenomicRanges::GRanges(seqnames = "chr1", strand = "+", ranges = IRanges::IRanges(start = start, end = end)) or
+#' GenomicRanges::GRanges(seqnames = "1", strand = "+", ranges = IRanges::IRanges(start = start, end = end))
+#'
 #' # genomic range over part of chromosome 6 (or whole)
 #' chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
 #' ranges = IRanges::IRanges(start = 29000000, end = 35000000))
