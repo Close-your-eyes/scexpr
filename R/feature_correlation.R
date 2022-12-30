@@ -7,8 +7,8 @@
 #'
 #'
 #' @param SO Seurat object
-#' @param assay which assay to obtain expression values from; the data slot will be used in any case
 #' @param features which features to calculate correlations for (must be rownames in the selected assay)
+#' @param assay which assay to obtain expression values from; the data slot will be used in any case
 #' @param cells vector of cell names to consider for correlation anaylsis; if NULL (default) all cells are used
 #' @param min_pct minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis
 #' @param limit_p p-value which p-values of 0 will be set to; this avoids obtaining INF when deriving -log10(p-val)
@@ -29,9 +29,9 @@
 #' \dontrun{
 #' }
 feature_correlation <- function(SO,
+                                features,
                                 assay = c("RNA", "SCT"),
                                 method = c("pearson", "spearman", "kendall"),
-                                features,
                                 cells = NULL,
                                 min_pct = 0.1,
                                 limit_p = 1e-303,

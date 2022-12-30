@@ -7,15 +7,15 @@
 #' for correlation calculation.
 #'
 #' @param SO named list of exactly 2 Seurat objects
-#' @param assay which assay to obtain expression values from
 #' @param meta.cols character vector of length 2, indicating the column names of meta.data in SO[[1]] and SO[[2]] to use for comparison,
 #' e.g. the clustering columns in both SOs
-#' @param levels list of length 2 indicating the factor levels in meta.cols to include; this also defines axis orders;
-#' can be incomplete e.g. if order matters only for some levels, if complement.levels = T the missing levels are added randomly
-#' @param complement.levels add all missing levels in random order
 #' @param features features to use for correlation calculation; will always be reduced to intersecting features between SOs;
 #' if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
 #' or a vector of features
+#' @param assay which assay to obtain expression values from
+#' @param levels list of length 2 indicating the factor levels in meta.cols to include; this also defines axis orders;
+#' can be incomplete e.g. if order matters only for some levels, if complement.levels = T the missing levels are added randomly
+#' @param complement.levels add all missing levels in random order
 #' @param avg.expr avg.expr from a previous return list of cluster_correlation_matrix; e.g. provide that to  only change axis
 #' orders or similar but avoid repeated calculation
 #' @param method which correlation metric to calculate, passed to stats::cor
@@ -32,11 +32,11 @@
 #'
 #' @examples
 cluster_correlation_matrix <- function(SO,
-                                       assay = c("RNA", "SCT"),
                                        meta.cols,
+                                       features = c("all", "pca"),
+                                       assay = c("RNA", "SCT"),
                                        levels = NULL, # NA possible
                                        complement.levels = F,
-                                       features = c("all", "pca"),
                                        split.by = NULL,
                                        avg.expr,
                                        method = c("pearson", "kendall", "spearman"),
