@@ -29,7 +29,7 @@
 #' ranges = IRanges::IRanges(start = 29000000, end = 35000000))
 #' # ranges = IRanges::IRanges(start = 1, end = 536870912))
 #'
-#' # alternatively multiple regions of HLA-A exons
+#' # alternatively multiple regions of HLA-A exons (in hg19)
 #' # these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
 #' hlaa <- GenomicRanges::GRanges(
 #'   seqnames = "6", strand = "+",
@@ -39,7 +39,7 @@
 #'   )
 #' )
 #'
-#' reads_raw_6 <- scexpr::reads_from_bam(
+#' reads <- scexpr::reads_from_bam(
 #'   file_path = "my_bam_path",
 #'   genomic_ranges = chr6,
 #'   lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores()
@@ -47,7 +47,7 @@
 #'
 #' # passing multiple regions may return reads twice or multiple times
 #' # if these reads overlap two or more of the regions (see ?scanBam and ?ScanBamParam)
-#' reads_raw_hlaa <- scexpr::reads_from_bam(
+#' reads <- scexpr::reads_from_bam(
 #'   file_path = "my_bam_path",
 #'   genomic_ranges = hlaa,
 #'   lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
@@ -55,18 +55,17 @@
 #' )
 #'
 #' # filter and process reads
-#' reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27), ]
-#' reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3), ]
+#' reads <- reads[which(reads$minQual >= 27), ]
+#' reads <- reads[which(reads$n_belowQ30 <= 3), ]
 #' # filter duplicate reads
 #' # if additional flags like exons have been passed
 #' # these columns will prevent dplyr::distinct from filtering
-#' reads_raw_6 <- dplyr::distinct(reads_raw_6, start, seq, .keep_all = T)
-#' # only reads with
-#' reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""),
-#' function(x) !x %in% c("C", "G", "T", "A"), simplify = F), any)), ] # how to with Biostrings?
+#' reads <- dplyr::distinct(reads, start, seq, .keep_all = T)
+#' # only reads with standard nucleotides
+#' reads <- reads[which(!grepl("[^ACTGU]", reads[,"seq",drop=T])),]
 #' # readNames were found to be not unique in any case
 #' # (same name for reads with different start and different seq)
-#' reads_raw_6$readName <- make.unique(reads_raw_6$readName)
+#' reads$readName <- make.unique(reads$readName)
 #' }
 reads_from_bam <- function(file_path,
                            genomic_ranges,
@@ -116,7 +115,7 @@ reads_from_bam <- function(file_path,
       start = reads[[x]][["pos"]],
       length = reads[[x]][["qwidth"]],
       strand = reads[[x]][["strand"]],
-      seq = reads[[x]][["seq"]],
+      seq = reads[[x]][["seq"]], # as.character implicit
       qual = reads[[x]][["qual"]],
       stringsAsFactors = FALSE
     )
@@ -137,11 +136,11 @@ reads_from_bam <- function(file_path,
 
   if (read_scores) {
     print("Calculating read score.")
-    tl <- as.list(methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList"))
-    reads$minQual <- unlist(lapply_fun(tl, min, ...))
-    reads$meanQual <- unlist(lapply_fun(tl, mean, ...))
-    reads$n_belowQ30 <- unlist(lapply_fun(tl, function(x) sum(x < 30), ...))
+    xx <- methods::as(Biostrings::PhredQuality(reads$qual), "IntegerList")
+    reads$readQualNum <- unlist(lapply_fun(xx, paste, collapse = ".", ...))
+    reads$minQual <- unlist(lapply_fun(xx, min, ...))
+    reads$meanQual <- unlist(lapply_fun(xx, mean, ...))
+    reads$n_belowQ30 <- unlist(lapply_fun(xx, function(x) sum(x < 30), ...))
   }
-
   return(reads)
 }

@@ -28,6 +28,7 @@
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'
 #' @importFrom magrittr %>%
+#' @import Matrix
 #'
 #' @return list of data frames and ggplot2 objects which, upon visual inspection, may allow to infer hla type
 #' @export
@@ -58,20 +59,36 @@ hla_typing <- function(hla_ref,
 
   lapply_fun <- match.fun(lapply_fun)
 
+
+  if (length(invalid <- which(grepl("[^ACTGU]", reads[,read_seq_colName,drop=T]))) > 0) {
+    message(length(invalid), " sequences with non-DNA or non-RNA characters detected. Those are excluded.")
+    reads <- reads[-invalid,]
+    if (nrow(reads) == 0) {
+      stop("No reads left after filtering for ones with valid DNA/RNA characters only. Please fix the sequences.")
+    }
+  }
+
+  library(Matrix) # required for sparseMatrix below; saves memory
   print("Calculating single matches.")
-  single_res <- Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]), pdict = Biostrings::PDict(reads[,read_seq_colName,drop=T]))
-  colnames(single_res) <- hla_ref[,hla_allele_colName,drop=T]
-  rownames(single_res) <- reads[,read_name_colName,drop=T]
+  single_res <- do.call(rbind, lapply_fun(split(1:nrow(reads), ceiling(seq_along(1:nrow(reads))/1e4)), function(rows) {
+    single_res <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]), pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T])), "sparseMatrix")
+    colnames(single_res) <- hla_ref[,hla_allele_colName,drop=T]
+    rownames(single_res) <- reads[rows,read_name_colName,drop=T]
+    return(single_res)
+  }), ...)
   n_noHit <- sum(Matrix::rowSums(single_res) == 0)
   n_Hit <- sum(Matrix::rowSums(single_res) > 0)
 
-  top_single_res <- single_res[Matrix::rowSums(single_res) > 0, Matrix::colSums(single_res) >= max(Matrix::colSums(single_res))/allele_diff]
+  # as.matrix here as this will speed up iteration over col.combs below!
+  top_single_res <- as.matrix(single_res[Matrix::rowSums(single_res) > 0, Matrix::colSums(single_res) >= max(Matrix::colSums(single_res))/allele_diff])
   top_single_res_df <-
     data.frame(n_Hit = Matrix::colSums(top_single_res)) %>%
     tibble::rownames_to_column(hla_allele_colName) %>%
     dplyr::left_join(hla_ref, by = hla_allele_colName) %>%
     dplyr::mutate(rank = dplyr::row_number(-n_Hit))
 
+  # could also be made mapply or purrr::map2 with utils::combn(ncol(top_single_res), 2, simplify = T)
+  # but would require another argument to define with mapply fun to use
   col.combs <- utils::combn(ncol(top_single_res), 2, simplify = F)
   print(paste0("Calculating pairwise matches. Combinations: ", length(col.combs), "."))
   pairwise_results <- lapply_fun(col.combs, function(x) {
@@ -86,7 +103,7 @@ hla_typing <- function(hla_ref,
     dplyr::mutate(rank.sum = total_explained_reads_rank + unique_explained_reads_rank)
 
   top_pairwise_results_df <-
-    dplyr::bind_rows(pairwise_results_df %>% dplyr::top_n(-top_n_pairwise_results*2, unique_explained_reads_rank), pairwise_results_df %>% dplyr::top_n(-top_n_pairwise_results*2, total_explained_reads_rank)) %>%
+    dplyr::bind_rows(pairwise_results_df %>% dplyr::slice_min(n = top_n_pairwise_results*2, order_by = unique_explained_reads_rank), pairwise_results_df %>% dplyr::slice_min(n = top_n_pairwise_results*2, order_by = total_explained_reads_rank)) %>%
     dplyr::distinct() %>%
     dplyr::mutate(combined.rank = dplyr::dense_rank(base::interaction(-total_explained_reads, -unique_explained_reads, lex.order = TRUE)))
 
@@ -98,10 +115,10 @@ hla_typing <- function(hla_ref,
     dplyr::filter(combined.rank == min(combined.rank)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct(allele.1.2, .keep_all = T) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(!!rlang::sym(hla_allele_colName), !!rlang::sym(p_group_colName), !!rlang::sym(g_group_colName)), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("p_group.1" = p_group_colName, "g_group.1" = g_group_colName) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(!!rlang::sym(hla_allele_colName), !!rlang::sym(p_group_colName), !!rlang::sym(g_group_colName)), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("p_group.2" = p_group_colName, "g_group.2" = g_group_colName) %>%
-    dplyr::left_join(top_single_res_df %>% dplyr::select(!!rlang::sym(hla_allele_colName), n_Hit), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.1" = n_Hit) %>%
-    dplyr::left_join(top_single_res_df %>% dplyr::select(!!rlang::sym(hla_allele_colName), n_Hit), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.2" = n_Hit) %>%
+    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(hla_allele_colName), dplyr::all_of(p_group_colName), dplyr::all_of(g_group_colName)), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("p_group.1" = p_group_colName, "g_group.1" = g_group_colName) %>%
+    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(hla_allele_colName), dplyr::all_of(p_group_colName), dplyr::all_of(g_group_colName)), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("p_group.2" = p_group_colName, "g_group.2" = g_group_colName) %>%
+    dplyr::left_join(top_single_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), n_Hit), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.1" = n_Hit) %>%
+    dplyr::left_join(top_single_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), n_Hit), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.2" = n_Hit) %>%
     dplyr::mutate(n_Hit = n_Hit) %>%
     dplyr::mutate(n_noHit = n_noHit) %>%
     dplyr::mutate(explained.reads.diff = abs(explained_reads_allele.1 - explained_reads_allele.2)) %>%
@@ -131,6 +148,7 @@ hla_typing <- function(hla_ref,
     ggplot2::xlab("allele") +
     ggplot2::ylab("n explained reads") +
     ggplot2::theme_bw() +
+    scale_x_reordered() +
     ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
     ggplot2::facet_wrap(ggplot2::vars(allele_group), scales = "free_x")
 
@@ -184,7 +202,8 @@ hla_typing <- function(hla_ref,
   height.2 <- height.2/total
   height.3 <- height.3/total
 
-  pairwise.plot <- cowplot::plot_grid(rank.plot.p1, rank.plot.p2, rank.read.plot, ncol = 1, align = "v", rel_heights = c(height.1,height.2,height.3)) # check how to replace with patchwork
+  #pairwise.plot <- cowplot::plot_grid(rank.plot.p1, rank.plot.p2, rank.read.plot, ncol = 1, align = "v", rel_heights = c(height.1,height.2,height.3)) # check how to replace with patchwork
+  pairwise.plot <- patchwork::wrap_plots(rank.plot.p1, rank.plot.p2, rank.read.plot, ncol = 1, heights = c(height.1,height.2,height.3))
 
   return(list(top_single_res_df = top_single_res_df,
               top_single_res_matrix = top_single_res,
@@ -200,6 +219,16 @@ hla_typing <- function(hla_ref,
 reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
   new_x <- paste(x, within, sep = sep)
   stats::reorder(new_x, by, FUN = fun)
+}
+
+scale_x_reordered <- function(..., sep = "___") {
+  reg <- paste0(sep, ".+$")
+  ggplot2::scale_x_discrete(labels = function(x) gsub(reg, "", x), ...)
+}
+
+scale_y_reordered <- function(..., sep = "___") {
+  reg <- paste0(sep, ".+$")
+  ggplot2::scale_y_discrete(labels = function(x) gsub(reg, "", x), ...)
 }
 
 ceiling_any = function(x, accuracy, f = ceiling) {
