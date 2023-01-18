@@ -238,3 +238,16 @@ pct_feature <- function(SO,
   new_x <- paste(x, within, sep = sep)
   stats::reorder(new_x, by, FUN = fun)
 }
+
+# try this:
+# http://www.bioconductor.org/packages/release/bioc/html/scHOT.html
+
+# or this:
+# https://github.com/edvanburen/twosigma
+# https://academic.oup.com/bib/article-abstract/23/3/bbac084/6553609?login=true
+# https://www.biorxiv.org/content/10.1101/2021.01.24.427979v1
+
+# from Twitter:
+# https://divingintogeneticsandgenomics.rbind.io/post/how-to-do-gene-correlation-for-single-cell-rnaseq-data-part-1/
+
+
