@@ -203,7 +203,8 @@ heatmap_pseudobulk <- function(SO,
 
   scale.max <- as.numeric(format(floor_any(max(htp$norm_avgexpr), 0.1), nsmall = 1))
   scale.min <- as.numeric(format(ceiling_any(min(htp$norm_avgexpr), 0.1), nsmall = 1))
-  scale.mid <- as.numeric(format(round(scale.min + ((scale.max - scale.min) / 2), 1), nsmall = 1))
+  #scale.mid <- as.numeric(format(round(scale.min + ((scale.max - scale.min) / 2), 1), nsmall = 1))
+  scale.mid <- 0
 
   if (methods::is(normalization, "numeric")) {
     labels <- c("min", "int", "max")
