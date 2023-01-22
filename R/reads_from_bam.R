@@ -6,8 +6,8 @@
 #' a wider genomic range for reads to return (e.g. whole chr6 if HLA loci are of interest, see example).
 #'
 #' Read scores: https://support.illumina.com/help/BaseSpace_OLH_009008/Content/Source/Informatics/BS/QualityScoreEncoding_swBS.htm
-#' CellRanger tags: Cell barcode (CR), Cell barcode read quality (CY), Alignment score (AS), UMI (UR),
-#' UMI read quality (UR), Query hit index (HI), Number of reported alignments for query (NH), Number of mismatches per pair (nM),
+#' CellRanger tags: Cell barcode (CR), error-corrected Cell barcode (CB), Cell barcode read quality (CY), Alignment score (AS), UMI (UR),
+#' UMI read quality (UY), Query hit index (HI), Number of reported alignments for query (NH), Number of mismatches per pair (nM),
 #' Region type (E = exonic, N = intronic, I = intergenic) (RE)
 #'
 #' @param file_path path to a position-sorted bam file; index file (.bai) has to be in the same directory
@@ -73,7 +73,7 @@
 #' }
 reads_from_bam <- function(file_path,
                            genomic_ranges,
-                           add_tags = c("CR", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
+                           add_tags = c("CR", "CB", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
                            add_flags = NULL,
                            read_scores = T,
                            revcomp_minus_strand = T,
