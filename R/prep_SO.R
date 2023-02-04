@@ -32,7 +32,7 @@
 #' for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
 #' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
-#' @param celltype_label label name to use from the reference data set
+#' @param celltype_label list of label names to use from the reference data set (one list entry per celltype_refs; each entry may contain a vector of labels)
 #' @param celltype_ref_clusters use a clustering as basis for grouped celltype annotation with SingleR. This will
 #' fundamentally speed up the calculation!
 #' e.g. if SCT assay is used and cluster_resolutions includes 0.8 then pass: SCT_snn_res.0.8.
@@ -99,11 +99,11 @@ prep_SO <- function(SO_unprocessed,
       celltype_label <- rep(celltype_label, length(celltype_refs))
     }
     if (length(celltype_label) != length(celltype_refs)) {
-      stop("celltype_label and celltype_refs must have the same lengths.")
+      stop("celltype_label and celltype_refs must have the same lengths. Please choose one label for each ref.")
     }
     for (i in seq_along(celltype_refs)) {
-      if (!celltype_label[i] %in% names(celltype_refs[[i]]@colData@listData)) {
-        stop(paste0(celltype_label[i], " not found in ", names(celltype_refs)[i], "."))
+      if (any(!celltype_label[[i]] %in% names(celltype_refs[[i]]@colData@listData))) {
+        stop(paste0(paste(celltype_label[[i]][which(!celltype_label[[i]] %in% names(celltype_refs[[i]]@colData@listData))], collapse = ", "), " not found in ", names(celltype_refs)[i], "."))
       }
     }
 
@@ -453,19 +453,22 @@ prep_SO <- function(SO_unprocessed,
   }
 
   for (i in seq_along(celltype_refs)) {
-    celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
-                                  ref = celltype_refs[[i]],
-                                  labels = celltype_refs[[i]]@colData@listData[[celltype_label[i]]],
-                                  clusters = refs)
-    if (is.null(celltype_ref_clusters)) {
-      SO@meta.data[,paste0(names(celltype_refs)[i], "_labels")] <- celltypes$labels
-    } else {
-      celltypes_df <- utils::stack(stats::setNames(celltypes$labels, levels(SO@meta.data[,celltype_ref_clusters])))
-      names(celltypes_df) <- c(paste0(names(celltype_refs)[i], "_labels"), celltype_ref_clusters)
-      celltypes_df <- tibble::column_to_rownames(dplyr::left_join(tibble::rownames_to_column(SO@meta.data[,celltype_ref_clusters,drop=F], "ID"), celltypes_df, by = celltype_ref_clusters), "ID")
-      SO <- Seurat::AddMetaData(SO, celltypes_df)
+    for (j in seq_along(celltype_label[[i]])) {
+      celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
+                                    ref = celltype_refs[[i]],
+                                    labels = celltype_refs[[i]]@colData@listData[[celltype_label[[i]][j]]],
+                                    clusters = refs)
+
+      if (is.null(celltype_ref_clusters)) {
+        SO@meta.data[,paste0(names(celltype_refs)[i], "__", celltype_label[[i]][j])] <- celltypes$labels
+      } else {
+        celltypes_df <- utils::stack(stats::setNames(celltypes$labels, levels(SO@meta.data[,celltype_ref_clusters])))
+        names(celltypes_df) <- c(paste0(names(celltype_refs)[i], "__", celltype_label[[i]][j]), celltype_ref_clusters)
+        celltypes_df <- tibble::column_to_rownames(dplyr::left_join(tibble::rownames_to_column(SO@meta.data[,celltype_ref_clusters,drop=F], "ID"), celltypes_df, by = celltype_ref_clusters), "ID")
+        SO <- Seurat::AddMetaData(SO, celltypes_df[-which(names(celltypes_df) == celltype_ref_clusters)])
+      }
+      Seurat::Misc(SO, paste0(names(celltype_refs)[i], "__", celltype_label[[i]][j])) <- celltypes
     }
-    Seurat::Misc(SO, paste0(names(celltype_refs)[i], "_object")) <- celltypes
   }
 
 
