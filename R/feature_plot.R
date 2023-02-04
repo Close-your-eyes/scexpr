@@ -129,8 +129,8 @@ feature_plot <- function(SO,
                          plot.axis.labels = F,
                          plot.panel.grid = F,
 
-                         plot.freq.title = T,
-                         plot.freq = T,
+                         plot.freq.title = NULL, # if length(SO) == 1 --> defaults to T, else F
+                         plot.freq = NULL,  # if length(SO) > 1 --> defaults to T, else F
                          plot.legend.title = F,
                          plot.title = T,
 
@@ -166,6 +166,22 @@ feature_plot <- function(SO,
     message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
     max.q.cutoff <- max.q.cutoff/100
     min.q.cutoff <- min.q.cutoff/100
+  }
+
+  if (is.null(plot.freq.title)) {
+    plot.freq.title <- length(SO) == 1
+  } else {
+    if (!is.logical(plot.freq.title)) {
+      stop("plot.freq.title has to be NULL, TRUE or FALSE.")
+    }
+  }
+
+  if (is.null(plot.freq)) {
+    plot.freq <- length(SO) > 1
+  } else {
+    if (!is.logical(plot.freq)) {
+      stop("plot.freq has to be NULL, TRUE or FALSE.")
+    }
   }
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by,shape.by = shape.by)
@@ -219,8 +235,12 @@ feature_plot <- function(SO,
         if (anyNA(data[,1])) {
           message(x, ": NA found in data.")
         }
-        scale.max <- max(data[which(rownames(data) %in% names(which(cells == 1))),1], na.rm = T)
-        scale.min <- min(data[intersect(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1)))),1], na.rm = T) # != 0 for module scores
+        if (any(is.infinite(data[,1]))) {
+          message(x, ": Inf found in data.")
+        }
+
+        scale.max <- max(data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(is.finite(data[,1]))), 1], na.rm = T)
+        scale.min <- min(data[Reduce(intersect, list(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1))), which(is.finite(data[,1])))),1], na.rm = T) # != 0 for module scores
         scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
         scale.max <- as.numeric(format(ceiling_any(scale.max, 0.1), nsmall = 1))
@@ -339,7 +359,6 @@ feature_plot <- function(SO,
           }
         }
       }
-
       plot.colorbar <- is.numeric(data[,1])
       make.italic <- F
     }

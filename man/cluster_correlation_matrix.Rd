@@ -6,11 +6,11 @@
 \usage{
 cluster_correlation_matrix(
   SO,
-  assay = c("RNA", "SCT"),
   meta.cols,
+  features = c("all", "pca"),
+  assay = c("RNA", "SCT"),
   levels = NULL,
   complement.levels = F,
-  features = c("all", "pca"),
   split.by = NULL,
   avg.expr,
   method = c("pearson", "kendall", "spearman"),
@@ -22,19 +22,19 @@ cluster_correlation_matrix(
 \arguments{
 \item{SO}{named list of exactly 2 Seurat objects}
 
-\item{assay}{which assay to obtain expression values from}
-
 \item{meta.cols}{character vector of length 2, indicating the column names of meta.data in SO[\link{1}] and SO[\link{2}] to use for comparison,
 e.g. the clustering columns in both SOs}
+
+\item{features}{features to use for correlation calculation; will always be reduced to intersecting features between SOs;
+if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
+or a vector of features}
+
+\item{assay}{which assay to obtain expression values from}
 
 \item{levels}{list of length 2 indicating the factor levels in meta.cols to include; this also defines axis orders;
 can be incomplete e.g. if order matters only for some levels, if complement.levels = T the missing levels are added randomly}
 
 \item{complement.levels}{add all missing levels in random order}
-
-\item{features}{features to use for correlation calculation; will always be reduced to intersecting features between SOs;
-if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
-or a vector of features}
 
 \item{split.by}{split correlation calculation by a common column with common levels in SOs;
 individual correlation coefficients are averaged after fishers z-transformation (atanh) and then

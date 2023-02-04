@@ -13,6 +13,8 @@ composition_barplot(
 )
 }
 \arguments{
+\item{SO}{Seurat object or data frame}
+
 \item{plot_labels}{}
 }
 \description{

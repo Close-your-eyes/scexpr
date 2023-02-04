@@ -39,6 +39,9 @@
 #' when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay: RNA_snn_res.0.8.
 #' @param diet_seurat logical whether to run Seurat::DietSeurat
 #' @param verbose print messages and progress bars from functions
+#' @param var_feature_filter character vector of features which are to exclude from variable features;
+#' this will affect downstream PCA, dimension reduction and clustering;
+#' e.g.: var_feature_filter = grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T)
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -68,6 +71,7 @@ prep_SO <- function(SO_unprocessed,
                     celltype_label = "label.main",
                     celltype_ref_clusters = NULL,
                     diet_seurat = T,
+                    var_feature_filter = NULL,
                     verbose = F,
                     ...) {
 
@@ -212,11 +216,32 @@ prep_SO <- function(SO_unprocessed,
     SO <- SO.list[[1]]
     if (normalization == "SCT") {
       SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = verbose, assay = "RNA"))
+
+      # remove var features which are to filter
+      if (!is.null(var_feature_filter)) {
+        SO <- .var_feature_filter_removal(SO = SO,
+                                          var_feature_filter = var_feature_filter,
+                                          normalization = normalization,
+                                          nhvf = nhvf,
+                                          vars.to.regress = vars.to.regress,
+                                          seeed = seeed,
+                                          verbose = verbose)
+      }
+
       SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
       SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     } else if (normalization == "LogNormalize") {
       SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
       SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf, verbose = verbose, assay = "RNA")
+      if (!is.null(var_feature_filter)) {
+        SO <- .var_feature_filter_removal(SO = SO,
+                                          var_feature_filter = var_feature_filter,
+                                          normalization = normalization,
+                                          nhvf = nhvf,
+                                          vars.to.regress = vars.to.regress,
+                                          seeed = seeed,
+                                          verbose = verbose)
+      }
       SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     }
     SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
@@ -232,10 +257,33 @@ prep_SO <- function(SO_unprocessed,
       }'
       if (normalization == "SCT") {
         SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose))
+
+        # remove var features which are to filter
+        if (!is.null(var_feature_filter)) {
+          SO <- .var_feature_filter_removal(SO = SO,
+                                            var_feature_filter = var_feature_filter,
+                                            normalization = normalization,
+                                            nhvf = nhvf,
+                                            vars.to.regress = vars.to.regress,
+                                            seeed = seeed,
+                                            verbose = verbose)
+        }
+
         SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
         SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
       } else if (normalization == "LogNormalize") {
-        SO <- Seurat::ScaleData(Seurat::FindVariableFeatures(Seurat::NormalizeData(SO, verbose = verbose), selection.method = "vst", nfeatures = nhvf, verbose = verbose), vars.to.regress = vars.to.regress, verbose = verbose)
+        SO <- Seurat::NormalizeData(SO, verbose = verbose)
+        SO <- Seurat::FindVariableFeatures(SO , selection.method = "vst", nfeatures = nhvf, verbose = verbose, assay = "RNA")
+        if (!is.null(var_feature_filter)) {
+          SO <- .var_feature_filter_removal(SO = SO,
+                                            var_feature_filter = var_feature_filter,
+                                            normalization = normalization,
+                                            nhvf = nhvf,
+                                            vars.to.regress = vars.to.regress,
+                                            seeed = seeed,
+                                            verbose = verbose)
+        }
+        SO <- Seurat::ScaleData(SO, vars.to.regress = vars.to.regress, verbose = verbose)
       }
       SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
     }
@@ -257,6 +305,18 @@ prep_SO <- function(SO_unprocessed,
 
       if (normalization == "SCT") {
         SO.list <- lapply(SO.list, FUN = Seurat::SCTransform, verbose = verbose, ...)
+
+        # remove var features which are to filter
+        if (!is.null(var_feature_filter)) {
+          SO.list <- lapply(SO.list, FUN = .var_feature_filter_removal,
+                            var_feature_filter = var_feature_filter,
+                            normalization = normalization,
+                            nhvf = nhvf,
+                            vars.to.regress = vars.to.regress,
+                            seeed = seeed,
+                            verbose = verbose)
+        }
+
         anchor_features <- Seurat::SelectIntegrationFeatures(SO.list, verbose = verbose, ...)
         SO.list <- Seurat::PrepSCTIntegration(object.list = SO.list, anchor.features = anchor_features, verbose = verbose, ...) # error by wrong argument
       } else {
@@ -424,4 +484,45 @@ prep_SO <- function(SO_unprocessed,
 
   return(SO)
 }
+
+.var_feature_filter_removal <- function(SO,
+                                        var_feature_filter,
+                                        max_rounds = 5,
+                                        normalization,
+                                        nhvf,
+                                        vars.to.regress,
+                                        seeed,
+                                        verbose) {
+
+  ## rerun SCTransform (or FindVariableFeatures) until nhvf is met while filtering for var_feature_filter
+  ## max iterations is 5; maybe print some messages about progress
+  ## filtering for var_feature_filter will affect PCA and all other downstream calculation which are based on PCA
+
+  if (any(!var_feature_filter %in% rownames(SO))) {
+    ## print message?!
+    var_feature_filter <- var_feature_filter[which(var_feature_filter %in% rownames(SO))]
+    if (length(var_feature_filter) == 0) {
+      return(SO)
+    }
+  }
+
+  n <- 1
+  while (any(Seurat::VariableFeatures(SO) %in% var_feature_filter) &&
+         length(Seurat::VariableFeatures(SO)[which(!Seurat::VariableFeatures(SO) %in% var_feature_filter)]) < nhvf &&
+         n <= max_rounds) {
+    message(sum(Seurat::VariableFeatures(SO) %in% var_feature_filter), " of var_feature_filter found in Variable Features. Round ", n, " of increasing nhvf to ", nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), " so that var_feature_filter can be removed while nhvf = " , nhvf, " is met.")
+
+    if (normalization == "SCT") {
+      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose))
+    }
+    if (normalization == "LogNormalize") {
+      SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), verbose = verbose, assay = "RNA")
+    }
+    n <- n + 1
+  }
+  Seurat::VariableFeatures(SO) <- Seurat::VariableFeatures(SO)[which(!Seurat::VariableFeatures(SO) %in% var_feature_filter)]
+
+  return(SO)
+}
+
 

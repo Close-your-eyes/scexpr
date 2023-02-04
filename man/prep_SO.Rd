@@ -27,6 +27,7 @@ prep_SO(
   celltype_label = "label.main",
   celltype_ref_clusters = NULL,
   diet_seurat = T,
+  var_feature_filter = NULL,
   verbose = F,
   ...
 )
@@ -83,6 +84,10 @@ e.g. if SCT assay is used and cluster_resolutions includes 0.8 then pass: SCT_sn
 when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay: RNA_snn_res.0.8.}
 
 \item{diet_seurat}{logical whether to run Seurat::DietSeurat}
+
+\item{var_feature_filter}{character vector of features which are to exclude from variable features;
+this will affect downstream PCA, dimension reduction and clustering;
+e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]), value = T)}
 
 \item{verbose}{print messages and progress bars from functions}
 

@@ -7,7 +7,7 @@
 reads_from_bam(
   file_path,
   genomic_ranges,
-  add_tags = c("CR", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
+  add_tags = c("CR", "CB", "CY", "AS", "UR", "UY", "HI", "NH", "nM", "RE"),
   add_flags = NULL,
   read_scores = T,
   revcomp_minus_strand = T,
@@ -26,7 +26,7 @@ reads_from_bam(
 
 \item{read_scores}{calculate read scores from PhredQuality}
 
-\item{revcomp_minus_strand}{calculate reverse complement of reads on minus strand; passed to reverseComplement of Rsamtools::ScanBamParam}
+\item{revcomp_minus_strand}{calculate reverse complement of reads on minus strand; passed as reverseComplement to Rsamtools::ScanBamParam}
 
 \item{lapply_fun}{lapply function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 
@@ -43,18 +43,22 @@ a wider genomic range for reads to return (e.g. whole chr6 if HLA loci are of in
 }
 \details{
 Read scores: https://support.illumina.com/help/BaseSpace_OLH_009008/Content/Source/Informatics/BS/QualityScoreEncoding_swBS.htm
-CellRanger tags: Cell barcode (CR), Cell barcode read quality (CY), Alignment score (AS), UMI (UR),
-UMI read quality (UR), Query hit index (HI), Number of reported alignments for query (NH), Number of mismatches per pair (nM),
+CellRanger tags: Cell barcode (CR), error-corrected Cell barcode (CB), Cell barcode read quality (CY), Alignment score (AS), UMI (UR),
+UMI read quality (UY), Query hit index (HI), Number of reported alignments for query (NH), Number of mismatches per pair (nM),
 Region type (E = exonic, N = intronic, I = intergenic) (RE)
 }
 \examples{
 \dontrun{
+The seqnames of different BAM file may require different formats:
+GenomicRanges::GRanges(seqnames = "chr1", strand = "+", ranges = IRanges::IRanges(start = start, end = end)) or
+GenomicRanges::GRanges(seqnames = "1", strand = "+", ranges = IRanges::IRanges(start = start, end = end))
+
 # genomic range over part of chromosome 6 (or whole)
 chr6 <- GenomicRanges::GRanges(seqnames = "6", strand = "+",
 ranges = IRanges::IRanges(start = 29000000, end = 35000000))
 # ranges = IRanges::IRanges(start = 1, end = 536870912))
 
-# alternatively multiple regions of HLA-A exons
+# alternatively multiple regions of HLA-A exons (in hg19)
 # these may have to be obtained from the BAM file, e.g. IGV browser; or the reference genome
 hlaa <- GenomicRanges::GRanges(
   seqnames = "6", strand = "+",
@@ -64,7 +68,7 @@ hlaa <- GenomicRanges::GRanges(
   )
 )
 
-reads_raw_6 <- scexpr::reads_from_bam(
+reads <- scexpr::reads_from_bam(
   file_path = "my_bam_path",
   genomic_ranges = chr6,
   lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores()
@@ -72,7 +76,7 @@ reads_raw_6 <- scexpr::reads_from_bam(
 
 # passing multiple regions may return reads twice or multiple times
 # if these reads overlap two or more of the regions (see ?scanBam and ?ScanBamParam)
-reads_raw_hlaa <- scexpr::reads_from_bam(
+reads <- scexpr::reads_from_bam(
   file_path = "my_bam_path",
   genomic_ranges = hlaa,
   lapply_fun = parallel::mclapply, mc.cores = parallel::detectCores(),
@@ -80,17 +84,16 @@ reads_raw_hlaa <- scexpr::reads_from_bam(
 )
 
 # filter and process reads
-reads_raw_6 <- reads_raw_6[which(reads$minQual >= 27), ]
-reads_raw_6 <- reads_raw_6[which(reads$n_belowQ30 <= 3), ]
+reads <- reads[which(reads$minQual >= 27), ]
+reads <- reads[which(reads$n_belowQ30 <= 3), ]
 # filter duplicate reads
 # if additional flags like exons have been passed
 # these columns will prevent dplyr::distinct from filtering
-reads_raw_6 <- dplyr::distinct(reads_raw_6, start, seq, .keep_all = T)
-# only reads with
-reads_raw_6 <- reads_raw_6[which(!sapply(sapply(strsplit(reads_raw_6$seq, ""),
-function(x) !x \%in\% c("C", "G", "T", "A"), simplify = F), any)), ] # how to with Biostrings?
+reads <- dplyr::distinct(reads, start, seq, .keep_all = T)
+# only reads with standard nucleotides
+reads <- reads[which(!grepl("[^ACTGU]", reads[,"seq",drop=T])),]
 # readNames were found to be not unique in any case
 # (same name for reads with different start and different seq)
-reads_raw_6$readName <- make.unique(reads_raw_6$readName)
+reads$readName <- make.unique(reads$readName)
 }
 }

@@ -6,9 +6,9 @@
 \usage{
 feature_correlation(
   SO,
+  features,
   assay = c("RNA", "SCT"),
   method = c("pearson", "spearman", "kendall"),
-  features,
   cells = NULL,
   min_pct = 0.1,
   limit_p = 1e-303,
@@ -23,11 +23,11 @@ feature_correlation(
 \arguments{
 \item{SO}{Seurat object}
 
+\item{features}{which features to calculate correlations for (must be rownames in the selected assay)}
+
 \item{assay}{which assay to obtain expression values from; the data slot will be used in any case}
 
 \item{method}{which metric of correlation to calculate}
-
-\item{features}{which features to calculate correlations for (must be rownames in the selected assay)}
 
 \item{cells}{vector of cell names to consider for correlation anaylsis; if NULL (default) all cells are used}
 

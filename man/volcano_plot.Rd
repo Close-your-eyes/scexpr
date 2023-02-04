@@ -28,7 +28,7 @@ volcano_plot(
   label.neg.pos.sep = T,
   label.col = "black",
   label.face = "italic",
-  font.family = "Courier",
+  font.family = "sans",
   label.size = 4,
   labels.topn = 30,
   label.features = NULL,
@@ -163,7 +163,7 @@ return these values}
 \item{use.limma}{logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
 which relies on values returned from limma}
 
-\item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{2:3}), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc}
+\item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{c(2,3)}), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc}
 }
 \description{
 Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects
