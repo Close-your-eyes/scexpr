@@ -31,7 +31,7 @@
 #' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
 #' for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
 #' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
-#' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())
+#' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData(), MonacoImmune = celldex::MonacoImmuneData())
 #' @param celltype_label list of label names to use from the reference data set (one list entry per celltype_refs; each entry may contain a vector of labels)
 #' @param celltype_ref_clusters use a clustering as basis for grouped celltype annotation with SingleR. This will
 #' fundamentally speed up the calculation!
