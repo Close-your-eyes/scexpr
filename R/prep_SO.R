@@ -244,7 +244,8 @@ prep_SO <- function(SO_unprocessed,
       }
       SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     }
-    SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
+    SO <- suppressWarnings(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed))
+    SO <- suppressWarnings(Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
   }
 
   if (length(SO.list) > 1) {
@@ -285,7 +286,8 @@ prep_SO <- function(SO_unprocessed,
         }
         SO <- Seurat::ScaleData(SO, vars.to.regress = vars.to.regress, verbose = verbose)
       }
-      SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
+      SO <- suppressWarnings(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed))
+      SO <- suppressWarnings(Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
     }
 
     if (batch_corr == "harmony") {
@@ -343,13 +345,15 @@ prep_SO <- function(SO_unprocessed,
       Seurat::DefaultAssay(SO) <- "integrated"
 
       if (normalization == "SCT") {
-        SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
+        SO <- suppressWarnings(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed))
+        SO <- suppressWarnings(Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
         SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
       }
       if (normalization == "LogNormalize") {
         SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
         SO <- Seurat::ScaleData(SO, verbose = verbose)
-        SO <- suppressWarnings(Seurat::ProjectDim(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed), reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
+        SO <- suppressWarnings(Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed))
+        SO <- suppressWarnings(Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose))
       }
     }
   }

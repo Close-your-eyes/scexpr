@@ -45,6 +45,11 @@
 #' @param return_SoupX logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
 #' have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
 #' filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.
+#' @param feature_rm character vector of features to remove from count matrices;
+#' removal is done after aggregation (if feature_aggr is provided)
+#' @param feature_aggr named list of character vectors of features to aggregate;
+#' names of of list entries are names of the aggregated feature; aggregation of counts
+#' is simply done by addition; aggregation is done before feature removal (if feature_rm is provided)
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -65,6 +70,8 @@ qc_diagnostic <- function(data_dirs,
                           return_SoupX = T,
                           cells = NULL,
                           invert_cells = F,
+                          feature_rm = NULL,
+                          feature_aggr = NULL,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -174,7 +181,39 @@ qc_diagnostic <- function(data_dirs,
     }
 
     message("Creating initial Seurat object with ", ncol(filt_data), " cells.")
-    SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
+
+    ## feature_rm, feature_aggr
+    if (!is.null(feature_rm) || !is.null(feature_aggr)) {
+      counts <- as.matrix(filt_data)
+
+      if (!is.null(feature_aggr)) {
+        if (!is.list(feature_aggr) || is.null(names(feature_aggr)) || anyDuplicated(names(feature_aggr))) {
+          stop("feature_aggr has to be a named list. Each list entry should contain features to aggregate, names are new feature names and should be unique")
+        }
+        aggr_rows <- lapply(feature_aggr, function(x) {
+          Matrix::colSums(counts[which(rownames(counts) %in% x),,drop=F])
+        })
+
+        for (x in names(aggr_rows)) {
+          temp <- matrix(aggr_rows[[x]], nrow = 1)
+          rownames(temp) <- x
+          counts <- rbind(counts, temp)
+        }
+      }
+
+      if (!is.null(feature_rm)) {
+        if (!is.character(feature_rm)) {
+          stop("feature_rm has to be a character vector of features to remove.")
+        }
+        counts <- counts[which(!rownames(counts) %in% feature_rm),]
+      }
+
+      SO <- Seurat::CreateSeuratObject(counts = counts)
+    } else {
+      SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
+    }
+
+
     SO@meta.data$orig.ident <- x
 
 

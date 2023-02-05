@@ -74,9 +74,9 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 
 \item{save_path}{folder to save the resulting Seurat object as rds-file to}
 
-\item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData())}
+\item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData(), MonacoImmune = celldex::MonacoImmuneData())}
 
-\item{celltype_label}{label name to use from the reference data set}
+\item{celltype_label}{list of label names to use from the reference data set (one list entry per celltype_refs; each entry may contain a vector of labels)}
 
 \item{celltype_ref_clusters}{use a clustering as basis for grouped celltype annotation with SingleR. This will
 fundamentally speed up the calculation!

@@ -18,6 +18,8 @@ qc_diagnostic(
   return_SoupX = T,
   cells = NULL,
   invert_cells = F,
+  feature_rm = NULL,
+  feature_aggr = NULL,
   ...
 )
 }
@@ -54,6 +56,13 @@ filtered_feature_bc_matrix is supplied. So, only possible when data set are prov
 \item{cells}{vector of cell names to include, consider the trailing '-1' in cell names}
 
 \item{invert_cells}{invert cell selection, if TRUE cell names provides in 'cells' are excluded}
+
+\item{feature_rm}{character vector of features to remove from count matrices;
+removal is done after aggregation (if feature_aggr is provided)}
+
+\item{feature_aggr}{named list of character vectors of features to aggregate;
+names of of list entries are names of the aggregated feature; aggregation of counts
+is simply done by addition; aggregation is done before feature removal (if feature_rm is provided)}
 
 \item{...}{additional arguments to SoupX::autoEstCont}
 }
