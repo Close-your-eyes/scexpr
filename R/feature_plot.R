@@ -451,7 +451,6 @@ feature_plot <- function(SO,
 
 
     # define facets and plot freq.of.expr annotation
-
     wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales, nrow = nrow.inner, ncol = ncol.inner)}
     if (is.null(SO.split) && !is.null(split.by)) {
       plot <- plot + wrap_by(split.by)
@@ -858,6 +857,9 @@ feature_plot <- function(SO,
     data[,"SO.split"] <- y
     return(data)
   }))
+
+  # ensure that facet ordering is accoring to the order of SO objects provided
+  data$SO.split <- factor(data$SO.split, levels = names(SO))
 
   if (!is.null(cells)) {
     data <- data[cells,]

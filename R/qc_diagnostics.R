@@ -184,36 +184,28 @@ qc_diagnostic <- function(data_dirs,
 
     ## feature_rm, feature_aggr
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
-      counts <- as.matrix(filt_data)
-
       if (!is.null(feature_aggr)) {
         if (!is.list(feature_aggr) || is.null(names(feature_aggr)) || anyDuplicated(names(feature_aggr))) {
           stop("feature_aggr has to be a named list. Each list entry should contain features to aggregate, names are new feature names and should be unique")
         }
-        aggr_rows <- lapply(feature_aggr, function(x) {
-          Matrix::colSums(counts[which(rownames(counts) %in% x),,drop=F])
+        aggr_rows <- lapply(names(feature_aggr), function(x) {
+          y <- SeuratObject::as.sparse(matrix(Matrix::colSums(filt_data[which(rownames(filt_data) %in% feature_aggr[[x]]),,drop=F]), nrow = 1))
+          rownames(y) <- x
+          return(y)
         })
-
-        for (x in names(aggr_rows)) {
-          temp <- matrix(aggr_rows[[x]], nrow = 1)
-          rownames(temp) <- x
-          counts <- rbind(counts, temp)
-        }
+        aggr_rows <- Reduce(rbind, aggr_rows)
+        filt_data <- rbind(filt_data, aggr_rows)
       }
 
       if (!is.null(feature_rm)) {
         if (!is.character(feature_rm)) {
           stop("feature_rm has to be a character vector of features to remove.")
         }
-        counts <- counts[which(!rownames(counts) %in% feature_rm),]
+        filt_data <- filt_data[which(!rownames(filt_data) %in% feature_rm),]
       }
-
-      SO <- Seurat::CreateSeuratObject(counts = counts)
-    } else {
-      SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
     }
 
-
+    SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
     SO@meta.data$orig.ident <- x
 
 
