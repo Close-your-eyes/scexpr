@@ -268,6 +268,9 @@ volcano_plot <- function(SO,
                    p.adjust = p.adjust,
                    use.limma = use.limma)
   } else {
+    if(!is.matrix(volcano.data)) {
+      stop("volcano.data has to be a matrix.")
+    }
     vd <- volcano.data
   }
 
@@ -319,11 +322,10 @@ volcano_plot <- function(SO,
       # 2 positive
 
       ### negative/positive volcano not working yet
-
-      vd.gsea1 <- vd[intersect(which(vd$log2.fc <= gsea.param[[1]][1]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][1])),]
-      vd.gsea2 <- vd[intersect(which(vd$log2.fc >= gsea.param[[1]][2]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][2])),]
-      ranks.1 <- sort(stats::setNames(vd.gsea1[,"log2.fc",drop=T],vd.gsea1[,"Feature",drop=T]))
-      ranks.2 <- sort(stats::setNames(vd.gsea2[,"log2.fc",drop=T],vd.gsea2[,"Feature",drop=T]))
+      vd.gsea1 <- vd[intersect(which(vd[,"log2.fc"] <= gsea.param[[1]][1]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][1])),]
+      vd.gsea2 <- vd[intersect(which(vd[,"log2.fc"] >= gsea.param[[1]][2]), which(vd[,p.plot,drop=T] <= gsea.param[[2]][2])),]
+      ranks.1 <- sort(stats::setNames(vd.gsea1[,"log2.fc",drop=T],rownames(vd.gsea1)))
+      ranks.2 <- sort(stats::setNames(vd.gsea2[,"log2.fc",drop=T],rownames(vd.gsea2)))
 
       if (!"maxSize" %in% names(dots)) {
         arg_add <- list(gene.ranks = ranks.1, maxSize = 500)
