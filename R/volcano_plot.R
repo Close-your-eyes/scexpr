@@ -528,7 +528,7 @@ volcano_plot <- function(SO,
                       pt.size = 1,
                       pt.alpha = 0.8,
                       font.size = 14,
-                      font.family = "Courier",
+                      font.family = "sans", # serif = Times New Roman, sans = Arial, mono = Courier New
                       ngn = "negative.group",
                       pgn = "positive.group",
                       x.axis.extension = 0,
@@ -645,12 +645,10 @@ volcano_plot <- function(SO,
 
 
   if (is.null(y_label)) {
-    if (y == "adj.p.val") {
+    if (grepl("adj", y, ignore.case = T) {
       y_label <- "(adj p-val)"
-    } else if (y == "p.val") {
-      y_label <- "(p-val)"
     } else {
-      y_label <- "p"
+      y_label <- "(p-val)"
     }
   }
 
@@ -724,7 +722,7 @@ volcano_plot <- function(SO,
                       label.neg.pos.sep = T,
                       label.col = "black",
                       label.face = "bold",
-                      font.family = "Courier",
+                      font.family = "sans", # serif = Times New Roman, sans = Arial, mono = Courier New
                       max.overlaps = 50,
                       p.signif = 0.001,
                       features.exclude = NULL,

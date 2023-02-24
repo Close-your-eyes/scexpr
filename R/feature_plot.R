@@ -147,6 +147,8 @@ feature_plot <- function(SO,
 
                          plot.labels = NULL,
                          label.size = 12,
+                         na.rm = F,
+                         inf.rm = F,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -159,7 +161,7 @@ feature_plot <- function(SO,
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
   if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
-  if (is.null(order.discrete) || is.na(order.discrete)) {stop("order.discrete should be logical or a vector of factor levels in order.")}
+  if ((length(order.discrete) %in% c(0,1)) && (is.null(order.discrete) || is.na(order.discrete))) {stop("order.discrete should be logical or a vector of factor levels in order.")}
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -218,7 +220,9 @@ feature_plot <- function(SO,
                       order.rev = order.rev,
                       order.abs = order.abs,
                       shuffle = shuffle,
-                      order.discrete = order.discrete)
+                      order.discrete = order.discrete,
+                      na.rm = na.rm,
+                      inf.rm = inf.rm)
 
     # necessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
     # make it after .get.data
@@ -232,13 +236,6 @@ feature_plot <- function(SO,
         scale.min <- 0
         scale.mid <- 0
       } else {
-        if (anyNA(data[,1])) {
-          message(x, ": NA found in data.")
-        }
-        if (any(is.infinite(data[,1]))) {
-          message(x, ": Inf found in data.")
-        }
-
         scale.max <- max(data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(is.finite(data[,1]))), 1], na.rm = T)
         scale.min <- min(data[Reduce(intersect, list(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1))), which(is.finite(data[,1])))),1], na.rm = T) # != 0 for module scores
         scale.mid <- scale.min + ((scale.max - scale.min) / 2)
@@ -317,7 +314,9 @@ feature_plot <- function(SO,
       if (is.logical(order.discrete)) {
         # order.discrete T or F: ordering has been done in .get.data
         # use rownames(data) %in% ... to preserve random order
-        plot <- plot + ggplot2::geom_point(data = data[rownames(data) %in% names(which(cells == 1)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
+        plot <- plot + ggplot2::geom_point(data = data[rownames(data) %in% names(which(cells == 1)),],
+                                           ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by),
+                                           size = pt.size)
       } else {
         if (length(unique(order.discrete)) != length(order.discrete)) {
           order.discrete <- unique(order.discrete)
@@ -448,7 +447,6 @@ feature_plot <- function(SO,
                      legend.key.size = ggplot2::unit(legend.key.size, "cm"),
                      legend.key = ggplot2::element_blank(), ## keeps background of legend symbols transparent
                      ...)
-
 
     # define facets and plot freq.of.expr annotation
     wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales, nrow = nrow.inner, ncol = ncol.inner)}
@@ -815,7 +813,9 @@ feature_plot <- function(SO,
                       order.rev = F,
                       order.abs = T,
                       shuffle = T,
-                      order.discrete = T) {
+                      order.discrete = T,
+                      na.rm = F,
+                      inf.rm = F) {
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -869,6 +869,19 @@ feature_plot <- function(SO,
     message("No expressers found for ", feature, ".")
   }
 
+  if (anyNA(data[,1])) {
+    message(feature, ": NA found in data.")
+    if (na.rm) {
+      data <- data[which(!is.na(data[,1])),]
+    }
+  }
+  if (any(is.infinite(data[,1]))) {
+    message(feature, ": Inf found in data.")
+    if (inf.rm) {
+      data <- data[which(!is.infinite(data[,1])),]
+    }
+  }
+
   # use squishing to dampen extreme values - this will produce actually wrong limits on the legend
   if (is.numeric(data[,1]) && (min.q.cutoff > 0 || max.q.cutoff < 1)) {
     if (all(data[,1] > 0)) {
@@ -900,7 +913,21 @@ feature_plot <- function(SO,
 
   ## this is only for meta features; combine with if else from above??
   if (!is.numeric(data[,1]) && is.logical(order.discrete) && order.discrete) {
-    data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
+    # NA is not considered by split
+    # replace it by a character value just for splitting, undo this afterwards
+    #data[,1] <- factor(data[,1], exclude = c())
+
+    if (anyNA(data[,1])) {
+      na_replace <- "NA"
+      while(na_replace %in% unique(data[,1])) {
+        na_replace <- paste(c(na_replace, na_replace), collapse = "_")
+      }
+      data[which(is.na(data[,1])),1] <- na_replace
+      data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
+      data[which(data[,1] == na_replace),1] <- NA
+    } else {
+      data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
+    }
   } else if (!is.numeric(data[,1]) && is.logical(order.discrete) && !order.discrete) {
     data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
   }
