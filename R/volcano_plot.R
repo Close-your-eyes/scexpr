@@ -296,7 +296,7 @@ volcano_plot <- function(SO,
 
     vp <- .label_vp(vp = vp,
                     vd = vd,
-                    p.plot = p.plot,
+                    y = p.plot,
                     label.features = label.features,
                     labels.topn = labels.topn,
                     label.size = label.size,
@@ -358,7 +358,7 @@ volcano_plot <- function(SO,
                             fc.cut = gsea.param[[1]][1])
       vp_gsea.1 <- .label_vp(vp = vp_gsea.1,
                              vd = vd,
-                             p.plot = p.plot,
+                             y = p.plot,
                              label.features = names(ranks.1),
                              label.size = label.size,
                              features.exclude = features.exclude,
@@ -391,7 +391,7 @@ volcano_plot <- function(SO,
                             fc.cut = gsea.param[[1]][2])
       vp_gsea.2 <- .label_vp(vp = vp_gsea.2,
                              vd = vd,
-                             p.plot = p.plot,
+                             y = p.plot,
                              label.features = names(ranks.2),
                              label.size = label.size,
                              features.exclude = features.exclude,
@@ -513,6 +513,9 @@ volcano_plot <- function(SO,
 .plot_vp <- function (vd,
                       x = "log2.fc",
                       y = "adj.p.val",
+                      minus_log10_y = T,
+                      squish_max_zero_p = 300,
+                      feature_colname = "Feature",
                       x_label = NULL,
                       y_label = NULL,
                       x.axis.symmetric = T,
@@ -545,21 +548,24 @@ volcano_plot <- function(SO,
   col.type <- match.arg(col.type, c("c", "d"))
 
   vd <- as.data.frame(vd)
-  if (!"Feature" %in% names(vd)) {
+
+  if (!feature_colname %in% names(vd)) {
+    message(feature_colname, " not found in vd. Making rownames the ", feature_colname, " column.")
     # also row numbers would become a Feature column, but not relevant
-    vd$Feature <- rownames(vd)
+    vd[,feature_colname] <- rownames(vd)
   }
 
   if (!is.null(features.exclude)) {
-    print(paste0("The following features are excluded from the volcano plot: ", paste(vd[which(grepl(paste(features.exclude, collapse = "|"), vd$Feature)),"Feature"], collapse = ",")))
-    vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd$Feature)),]
+    # grepl(paste(features.exclude, collapse = "|"), vd[,feature_colname])
+    print(paste0("The following features are excluded from the volcano plot: ", paste(grep(paste(features.exclude, collapse = "|"), vd[,feature_colname], value = T), collapse = ",")))
+    vd <- vd[which(!vd[,feature_colname] %in% features.exclude),]
   }
 
   if (!is.null(features.to.color)) {
-    if (any(!features.to.color %in% vd$Feature)) {
-      message("features.to.color: ", paste(features.to.color[which(!features.to.color %in% vd$Feature)], collapse = ", "), " not found.")
+    if (any(!features.to.color %in% vd[,feature_colname])) {
+      message("features.to.color: ", paste(features.to.color[which(!features.to.color %in% vd[,feature_colname])], collapse = ", "), " not found.")
     }
-    features.to.color <- features.to.color[which(features.to.color %in% vd$Feature)]
+    features.to.color <- features.to.color[which(features.to.color %in% vd[,feature_colname])]
     if (length(features.to.color) == 0) {
       features.to.color <- NULL
     }
@@ -588,7 +594,13 @@ volcano_plot <- function(SO,
                 vd[intersect(which(vd[,paste0("pct.", pgn)] >= min.pct), which(vd[,x] > 0)),])
   }
 
-  vp <- ggplot2::ggplot(vd, ggplot2::aes(x = !!rlang::sym(x), y = round(scales::oob_squish_infinite(-log10(!!rlang::sym(y)), range = c(0,300)), 2), label = Feature)) +
+  if (minus_log10_y) {
+    vp <- ggplot2::ggplot(vd, ggplot2::aes(x = !!rlang::sym(x), y = scales::oob_squish_infinite(-log10(!!rlang::sym(y)), range = c(0,squish_max_zero_p)))) # round(,2) ?
+  } else {
+    vp <- ggplot2::ggplot(vd, ggplot2::aes(x = !!rlang::sym(x), y = !!rlang::sym(y)))
+  }
+  vp <-
+    vp +
     ggplot2::geom_point(color = "#999999", alpha = pt.alpha, size = pt.size) +
     ggplot2::geom_point(data = vd[which(vd$infinite.FC == 1),], color = "cornflowerblue", size = pt.size) +
     ggplot2::theme_bw(base_size = font.size, base_family = font.family) +
@@ -603,20 +615,20 @@ volcano_plot <- function(SO,
       }
     } else if (col.type == "d") {
       if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal, reverse = col.pal.rev, n = nlevels(as.factor(vd[which(vd$Feature %in% features.to.color),features.color.by])))
+        col.pal <- col_pal(name = col.pal, reverse = col.pal.rev, n = nlevels(as.factor(vd[which(vd[,feature_colname] %in% features.to.color),features.color.by])))
       }
     }
     if (col.type == "c") {
       vp <-
         vp +
-        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
+        ggplot2::geom_point(data = vd[which(vd[,feature_colname] %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
         ggplot2::scale_color_gradientn(colors = col.pal)
     }
     if (col.type == "d") {
       vd[,features.color.by] <- as.factor(vd[,features.color.by])
       vp <-
         vp +
-        ggplot2::geom_point(data = vd[which(vd$Feature %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
+        ggplot2::geom_point(data = vd[which(vd[,feature_colname] %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by)), size = pt.size) +
         ggplot2::scale_color_manual(values = col.pal)
     }
 
@@ -624,9 +636,9 @@ volcano_plot <- function(SO,
       # checking one of errorbar.up.col, errorbar.low.col is enough
       vp <-
         vp +
-        ggplot2::geom_errorbar(data = vd[which(vd$Feature %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by),
-                                                                                                  xmin = !!rlang::sym(errorbar.low.col),
-                                                                                                  xmax = !!rlang::sym(errorbar.up.col)),
+        ggplot2::geom_errorbar(data = vd[which(vd[,feature_colname] %in% features.to.color),], ggplot2::aes(color = !!rlang::sym(features.color.by),
+                                                                                                            xmin = !!rlang::sym(errorbar.low.col),
+                                                                                                            xmax = !!rlang::sym(errorbar.up.col)),
                                size = errorbar.size, width = errorbar.width)
       ## 95 % conf-interval in case of metavolcanoR
     }
@@ -647,13 +659,8 @@ volcano_plot <- function(SO,
 
 
   if (is.null(y_label)) {
-    if (grepl("adj", y, ignore.case = T) {
-      y_label <- "(adj p-val)"
-    } else {
-      y_label <- "(p-val)"
-    }
+    y_label <- y
   }
-
 
   if (y.axis.pseudo.log) {
     vp <- vp + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10, sigma = pseudo.log.sigma),
@@ -664,15 +671,31 @@ volcano_plot <- function(SO,
 
   if (is.null(ngn) && is.null(pgn)) {
     if (is.null(x_label)) {
-      vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(y_label))))
+      if (minus_log10_y) {
+        vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = bquote(-log[10]~.(rlang::sym(y_label))))
+      } else {
+        vp <- vp + ggplot2::labs(x = bquote("avg" ~ log[2] ~ "FC"), y = y_label)
+      }
     } else {
-      vp <- vp + ggplot2::labs(x = x_label, y = bquote(-log[10]~.(rlang::sym(y_label))))
+      if (minus_log10_y) {
+        vp <- vp + ggplot2::labs(x = x_label, y = bquote(-log[10]~.(rlang::sym(y_label))))
+      } else {
+        vp <- vp + ggplot2::labs(x = x_label, y = y_label)
+      }
     }
   } else {
     if (is.null(x_label)) {
-      vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+      if (minus_log10_y) {
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+      } else {
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = y_label)
+      }
     } else {
-      vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ .(rlang::sym(x_label)) ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+      if (minus_log10_y) {
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ .(rlang::sym(x_label)) ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+      } else {
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ .(rlang::sym(x_label)) ~ "  ====>  " ~ bold(.(pgn))), y = y_label)
+      }
     }
   }
 
@@ -712,7 +735,8 @@ volcano_plot <- function(SO,
 .label_vp <- function(vp,
                       vd,
                       x = "log2.fc",
-                      p.plot = "adj.p.val",
+                      y = "adj.p.val",
+                      feature_colname = "Feature",
                       label.features = NULL,
                       topn.metric = "p.value",
                       labels.topn = 30,
@@ -731,67 +755,69 @@ volcano_plot <- function(SO,
                       plot.label = T) {
 
   vd <- as.data.frame(vd)
-  if (!"Feature" %in% names(vd)) {
+  if (!feature_colname %in% names(vd)) {
     # also row numbers would become a Feature column, but not relevant
-    vd$Feature <- rownames(vd)
+    vd[,feature_colname] <- rownames(vd)
   }
 
   if (!is.null(features.exclude)) {
-    vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd$Feature)),]
+    vd <- vd[which(!grepl(paste0(features.exclude, collapse = "|"), vd[,feature_colname])),]
   }
 
   if (is.null(label.features)) {
     if (topn.metric == "p.value") {
-      f_lab <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
-      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
-      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
+      f_lab <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(y))
+      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(feature_colname)
+      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(feature_colname)
     } else if (topn.metric == "both") {
-      f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(p.plot))
+      f_lab.p.val <- vd %>% dplyr::top_n(-labels.topn, !!rlang::sym(y))
       f_lab.logfc <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, !!rlang::sym(x)), vd %>% dplyr::top_n(-(labels.topn/2), !!rlang::sym(x)))
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) %>% dplyr::distinct()
-      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
-      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
+      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(feature_colname)
+      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(feature_colname)
     } else if (topn.metric == "fc") {
       f_lab <- dplyr::bind_rows(vd %>% dplyr::top_n(labels.topn/2, !!rlang::sym(x)), vd %>% dplyr::top_n(-(labels.topn/2), !!rlang::sym(x)))
-      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(Feature)
-      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(Feature)
+      f_lab.pos <- f_lab %>% dplyr::filter(!!rlang::sym(x) > 0) %>% dplyr::pull(feature_colname)
+      f_lab.neg <- f_lab %>% dplyr::filter(!!rlang::sym(x) < 0) %>% dplyr::pull(feature_colname)
     }
-    vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), colour = dot.color)
+
+    vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab[,feature_colname]), colour = dot.color)
     if (plot.label) {
       if (label.neg.pos.sep) {
-        vp <- vp +
-          ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% f_lab.pos), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-          ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% f_lab.neg), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+        vp <-
+          vp +
+          ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab.pos), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+          ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab.neg), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
       } else {
         vp <- vp +
-          ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% f_lab$Feature), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge.x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+          ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab[,feature_colname]), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge.x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
       }
     }
   } else {
     if (length(label.features) == 1) {
       if (label.features == "significant") {
-        label.features <- vd[which(as.numeric(vd[,p.plot]) < p.signif), "Feature"]
+        label.features <- vd[which(as.numeric(vd[,y]) < p.signif), feature_colname]
       } else {
-        vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = dot.color)
+        vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), colour = dot.color)
         if (plot.label) {
           if (label.neg.pos.sep) {
             vp <- vp +
-              ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-              ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+              ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+              ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
           } else {
-            vp <- vp + ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+            vp <- vp + ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
           }
         }
       }
     } else {
-      vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(Feature %in% label.features), colour = dot.color)
+      vp <- vp + ggplot2::geom_point(data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), colour = dot.color)
       if (plot.label) {
         if (label.neg.pos.sep) {
           vp <- vp +
-            ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-            ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+            ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+            ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
         } else {
-          vp <- vp + ggrepel::geom_text_repel(data = vd %>% dplyr::filter(Feature %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+          vp <- vp + ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
         }
       }
     }
