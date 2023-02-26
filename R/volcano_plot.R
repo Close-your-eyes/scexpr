@@ -550,7 +550,7 @@ volcano_plot <- function(SO,
   vd <- as.data.frame(vd)
 
   if (!feature_colname %in% names(vd)) {
-    message(feature_colname, " not found in vd. Making rownames the ", feature_colname, " column.")
+    #message(feature_colname, " not found in vd. Making rownames the ", feature_colname, " column.")
     # also row numbers would become a Feature column, but not relevant
     vd[,feature_colname] <- rownames(vd)
   }

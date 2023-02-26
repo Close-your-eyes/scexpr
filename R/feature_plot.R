@@ -186,7 +186,7 @@ feature_plot <- function(SO,
     }
   }
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by,shape.by = shape.by)
+  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, shape.by = shape.by)
   reduction <- .check.reduction(SO = SO, reduction = reduction, dims = dims)
   features <- .check.features(SO = SO, features = unique(features))
   cells <- .check.and.get.cells(SO = SO,
@@ -197,7 +197,7 @@ feature_plot <- function(SO,
                                 cutoff.expression = cutoff.expression,
                                 exclusion.feature = exclusion.feature,
                                 downsample = downsample)
-                                #make.cells.unique.warning = 1)
+  #make.cells.unique.warning = 1)
 
   if (length(SO) > 1) {
     SO.split <- "SO.split"
@@ -505,6 +505,7 @@ feature_plot <- function(SO,
                       assay = c("RNA", "SCT"),
                       split.by = NULL,
                       shape.by = NULL,
+                      meta.col = NULL,
                       length = NULL) {
   if (!is.list(SO)) {
     SO <- list(SO)
@@ -516,7 +517,7 @@ feature_plot <- function(SO,
     }
   }
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
+  assay <- match.arg(assay, Reduce(intersect, lapply(SO, function(x) names(x@assays))))
 
   if (is.null(names(SO)) && length(SO) > 1) {
     message("List of SO has no names. Naming them numerically in order as provided.")
@@ -536,6 +537,9 @@ feature_plot <- function(SO,
   }
   if (!is.null(shape.by) && length(.check.features(SO, shape.by, rownames = F)) == 0) {
     stop("shape.by not found in all objects.")
+  }
+  if (!is.null(meta.col) && length(.check.features(SO, meta.col, rownames = F)) == 0) {
+    stop("meta.col not found in all objects.")
   }
 
   SO <- lapply(SO, function(x) {
@@ -632,7 +636,7 @@ feature_plot <- function(SO,
     stop("Selected cells can not be identified unambiguously as they intersect/overlap with duplicate cell names (barcodes) across SOs. Please fix with Seurat::RenameCells and make cell names unique.")
   }
 
-'  if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
+  '  if (length(SO) > 1 && any(duplicated(all.cells)) && !make.cells.unique) {
     if (make.cells.unique.warning == 1) {
       stop("Cell names are not unique across SOs. Please fix that manually with Seurat::RenameCells or pass make.cells.unique = T when calling this function. Cells are then renamed with the prefix SO_i_, where i is the index (starting with 1) of the SO in the list. Consider this way of renaming cells when selecting cells for plotting or other calculations.")
     } else {
@@ -724,7 +728,8 @@ feature_plot <- function(SO,
 .check.features <- function(SO,
                             features,
                             rownames = T,
-                            meta.data = T) {
+                            meta.data = T,
+                            meta.data.numeric = F) {
 
   if (is.null(features)) {return(NULL)}
   if (!rownames && !meta.data) {return((NULL))}
@@ -733,8 +738,18 @@ feature_plot <- function(SO,
   }
   features <- unique(features)
 
-  features.out <- .feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
-  if (length(features.out) == 0) {stop("Non of the provided features has not been found in every SO. No features left to plot.")}
+  features.out <- .feat.check(SO = SO,
+                              features = features,
+                              rownames = rownames,
+                              meta.data = meta.data,
+                              ignore.case = T,
+                              meta.data.numeric = meta.data.numeric)
+
+  if (length(features.out) == 0) {
+    stop("Non of the provided features has not been found in every SO. No features left to plot.")
+  }
+
+  ### TO DO WITH meta.data.numeric
   hits <- .hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
   if (any(hits > 1)) {
     message(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered.")
@@ -783,14 +798,18 @@ feature_plot <- function(SO,
   }
 
 }
-.feat.check <- function(SO, features, rownames, meta.data, ignore.case) {
+
+
+.feat.check <- function(SO, features, rownames, meta.data, ignore.case, meta.data.numeric) {
   unlist(lapply(features, function(x) {
     Reduce(intersect, lapply(SO, function(y) {
-      if (rownames & !meta.data) {
+      if (rownames && !meta.data && !meta.data.numeric) {
         search <- rownames(y)
-      } else if (!rownames & meta.data) {
+      } else if (rownames && !meta.data && meta.data.numeric) {
+        search <- c(rownames(y), unique(c(names(which(sapply(y@meta.data, is.numeric))), names(which(sapply(y@meta.data, is.logical))))))
+      } else if (!rownames && meta.data) {
         search <- names(y@meta.data)
-      } else if (rownames & meta.data) {
+      } else if (rownames && meta.data) {
         search <- c(names(y@meta.data), rownames(y))
       }
       grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
@@ -805,8 +824,8 @@ feature_plot <- function(SO,
                       cells = NULL,
                       split.by = NULL,
                       shape.by = NULL,
-                      reduction = "umap",
                       meta.col = NULL,
+                      reduction = "umap",
                       min.q.cutoff = 0,
                       max.q.cutoff = 1,
                       order = T,
@@ -817,34 +836,71 @@ feature_plot <- function(SO,
                       na.rm = F,
                       inf.rm = F) {
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
+
+  #feature <- c("CX3CR1", "expanded", "SCT_snn_res.0.1", "CD8A")
+  #feature <- c("CX3CR1", "CD8A")
+
+  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, shape.by = shape.by, meta.col = meta.col)
+  assay <- match.arg(assay, names(SO[[1]]@assays))
+
+  if (length(feature) > 1) {
+    # if function is called to get many features
+    # ordering becomes irrelevant
+    # also no values should be removed then (NA or Inf)
+    na.rm <- F
+    inf.rm <- F
+    order <- F
+    order.discrete <- F
+    shuffle <- F
+  }
+
   if (max.q.cutoff > 1) {
-    message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
+    #message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
     max.q.cutoff <- max.q.cutoff/100
     min.q.cutoff <- min.q.cutoff/100
   }
 
+  all_gene_features <- Reduce(intersect, lapply(SOs, rownames))
+  all_meta_features <- Reduce(intersect, lapply(SOs, function(x) names(x@meta.data)))
+
+  if (any(!feature %in% all_gene_features & !feature %in% all_meta_features)) {
+    message("Feature(s) ", paste(feature[which(!feature %in% all_gene_features & !feature %in% all_meta_features)], collapse = ","), " not found.")
+    feature <- feature[which(feature %in% all_gene_features & feature %in% all_meta_features)]
+    if (length(feature) == 0) {
+      stop("No feature left.")
+    }
+  }
+
+  if (any(feature %in% all_gene_features & feature %in% all_meta_features)) {
+    message("Feature(s) ", paste(feature[which(feature %in% all_gene_features & feature %in% all_meta_features)], collapse = ","), " found in expression and meta data. This is not handled at the moment and filtered. Consider renaming the column of meta data.")
+    feature <- feature[which(!(feature %in% all_gene_features & feature %in% all_meta_features))]
+    if (length(feature) == 0) {
+      stop("No feature left.")
+    }
+  }
+
+  gene_features <- feature[which(feature %in% all_gene_features)]
+  meta_features <- feature[which(feature %in% all_meta_features)]
+
   data <- do.call(rbind, lapply(names(SO), function(y) {
 
-    if (feature %in% rownames(SO[[y]]) && !feature %in% names(SO[[y]]@meta.data)) {
+    data <- cbind(data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], slot = slot, assay = assay)[gene_features,,drop = F])), check.names = F),
+                  data.frame(SO[[y]]@meta.data[,meta_features,drop=F], stringsAsFactors = F, check.names = F))
 
-      data <- data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], slot = slot, assay = assay)[feature,,drop = F])), check.names = F)
-
-    } else if (!feature %in% rownames(SO[[y]]) && feature %in% names(SO[[y]]@meta.data)) {
-
-      data <- data.frame(SO[[y]]@meta.data[,feature,drop=F], stringsAsFactors = F, check.names = F)
-
-    } else {
-      stop("Feature found in meta.data and rownames of SO.")
-    }
     if (!is.null(reduction)) {
-      data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[which.min(utils::adist(reduction, names(SO[[y]]@reductions), ignore.case = T))]))
-      #data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = names(SO[[y]]@reductions)[grepl(reduction, names(SO[[y]]@reductions), ignore.case = T)]))
+      reduction <- unique(unlist(lapply(reduction, function(z) {
+        names(SO[[y]]@reductions)[which.min(utils::adist(z, names(SO[[y]]@reductions), ignore.case = T))]
+      })))
+      for (i in reduction) {
+        data <- cbind(data, Seurat::Embeddings(SO[[y]], reduction = i))
+      }
     }
+
+
+    ## check if these exist
     if (!is.null(meta.col)) {
       data <- cbind(data, SO[[y]]@meta.data[,meta.col,drop=F])
     }
-
     if (is.null(split.by)) {
       data[,"split.by"] <- "1"
     } else {
@@ -858,32 +914,46 @@ feature_plot <- function(SO,
     return(data)
   }))
 
-  # ensure that facet ordering is accoring to the order of SO objects provided
+  # ensure that facet ordering is according to the order of SO objects provided
   data$SO.split <- factor(data$SO.split, levels = names(SO))
 
   if (!is.null(cells)) {
     data <- data[cells,]
   }
 
-  if (is.numeric(data[,1]) && all(data[,1] == 0)) {
+  if (length(feature == 1) && is.numeric(data[,1]) && all(data[,1] == 0)) {
     message("No expressers found for ", feature, ".")
   }
 
-  if (anyNA(data[,1])) {
+  if (length(feature == 1) && anyNA(data[,1])) {
     message(feature, ": NA found in data.")
     if (na.rm) {
       data <- data[which(!is.na(data[,1])),]
     }
   }
-  if (any(is.infinite(data[,1]))) {
+  if (length(feature == 1) && any(is.infinite(data[,1]))) {
     message(feature, ": Inf found in data.")
     if (inf.rm) {
       data <- data[which(!is.infinite(data[,1])),]
     }
   }
 
+  if (min.q.cutoff > 0 || max.q.cutoff < 1) {
+    for (i in intersect(names(which(sapply(data, is.numeric))), c(gene_features, meta_features))) {
+      if (all(data[,i] >= 0)) { # > 0 or >= 0 ?!
+        # expression is always greater than 0 and non-expresser are excluded
+        data[,i][which(data[,i] > 0)] <- scales::squish(data[,i][which(data[,i] > 0)], range = c(stats::quantile(data[,i][which(data[,i] > 0)], min.q.cutoff), stats::quantile(data[,i][which(data[,i] > 0)], max.q.cutoff)))
+      } else {
+        # e.g. for module scores below 0
+        data[,i] <- scales::squish(data[,i], range = c(stats::quantile(data[,i], min.q.cutoff), stats::quantile(data[,i], max.q.cutoff)))
+      }
+    }
+  }
+
+
+
   # use squishing to dampen extreme values - this will produce actually wrong limits on the legend
-  if (is.numeric(data[,1]) && (min.q.cutoff > 0 || max.q.cutoff < 1)) {
+  '  if (is.numeric(data[,1]) && (min.q.cutoff > 0 || max.q.cutoff < 1)) {
     if (all(data[,1] > 0)) {
       # expression is always greater than 0 and non-expresser are excluded
       data[,1][which(data[,1] > 0)] <- scales::squish(data[,1][which(data[,1] > 0)], range = c(stats::quantile(data[,1][which(data[,1] > 0)], min.q.cutoff), stats::quantile(data[,1][which(data[,1] > 0)], max.q.cutoff)))
@@ -891,7 +961,7 @@ feature_plot <- function(SO,
       # e.g. for module scores below 0
       data[,1] <- scales::squish(data[,1], range = c(stats::quantile(data[,1], min.q.cutoff), stats::quantile(data[,1], max.q.cutoff)))
     }
-  }
+  }'
 
   ## new params:
   # order.abs = T/F (switch on/off if ordering is done with absolute values)
@@ -934,6 +1004,8 @@ feature_plot <- function(SO,
 
   return(data)
 }
+
+
 
 .get.freqs <- function(data,
                        cells,

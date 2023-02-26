@@ -63,11 +63,15 @@ feature_correlation <- function(SO,
   }
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  features <- .check.features(SO = SO, features = unique(features), meta.data = F)
+  features <- .check.features(SO = SO, features = unique(features), meta.data = F, meta.data.numeric = T)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
 
   ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min_pct, cells = cells), cells, drop=F])
-  mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[features, cells, drop=F])
+
+  # putative dichotomous meta features which are TRUE / FALSE: they are coerced to 1 / 0
+  # applying spearman correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
+  mat <- as.matrix(rbind(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(SO))], cells, drop=F],
+                         t(SO@meta.data[,features[which(features %in% names(SO@meta.data))], drop = F])))
 
   if (!"ci" %in% names(dots)) {
     ci <- F
@@ -82,7 +86,7 @@ feature_correlation <- function(SO,
       SO@meta.data[ ,group_by, drop=F] %>%
       tibble::rownames_to_column("ID") %>%
       dplyr::filter(ID %in% cells)
-    groups <- split(groups$ID, groups$prim_cell_atlas_labels)
+    groups <- split(groups$ID, groups[,group_by,drop=F])
   } else {
     groups <- stats::setNames(list(cells), "all")
   }
@@ -92,10 +96,17 @@ feature_correlation <- function(SO,
     groups <- groups[which(lengths(groups) >= min.group.size)]
   }
 
+  # NAs are removed by psych::corr.test
   out <- lapply(names(groups), function(x) {
-    corr_obj <- do.call(psych::corr.test, args = c(list(x = t(mat[,groups[[x]],drop=F]), y = t(ref_mat[,groups[[x]],drop=F]), ci = ci, method = method), dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
+    corr_obj <- do.call(psych::corr.test, args = c(list(x = t(mat[,groups[[x]],drop=F]),
+                                                        y = t(ref_mat[,groups[[x]],drop=F]),
+                                                        ci = ci,
+                                                        method = method),
+                                                   dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
     #corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
-    corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"), reshape2::melt(t(corr_obj[["p"]]), value.name = "p")), reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
+    corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"),
+                           reshape2::melt(t(corr_obj[["p"]]), value.name = "p")),
+                     reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
 
     if (is.numeric(limit_p)) {
       corr_df$p.adj[which(corr_df$p.adj == 0)] <- limit_p
@@ -107,7 +118,11 @@ feature_correlation <- function(SO,
     names(corr_df)[1:2] <- c("ref_feature", "feature")
     ## add pcts
     corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
-    corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$feature))), c("feature_pct", "feature")), by = "feature")
+    ## handle dichotomous meta col which do not have pct expression
+    pctx <- pct_feature(SO, assay = assay, features = unique(corr_df$feature))
+    if (length(pctx) > 0) {
+      corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pctx), c("feature_pct", "feature")), by = "feature")
+    }
     corr_df <- dplyr::mutate(corr_df, feature = as.character(feature), ref_feature = as.character(ref_feature))
     corr_df[,"group"] <- x
     corr_df_plot <- dplyr::filter(corr_df, feature != ref_feature)
@@ -231,7 +246,10 @@ pct_feature <- function(SO,
   #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first
   assay <- match.arg(assay, c("RNA", "SCT"))
 
-  return(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[features, cells, drop=F] > 0)/length(cells))
+  ## case of dichtomous meta.col
+  features <- features[which(features %in% rownames(Seurat::GetAssayData(SO, assay = assay)))]
+
+  return(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(Seurat::GetAssayData(SO, assay = assay)))], cells, drop=F] > 0)/length(cells))
 }
 
 .reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
