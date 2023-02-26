@@ -83,7 +83,6 @@ feature_plot_stat <- function(SO,
   geom1 <- match.arg(geom1, c("jitter", "point"))
   geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
 
-browser()
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by) # length = 1 only one SO currently
   features <- .check.features(SO = SO, features = unique(features), meta.data = T)
   if (length(meta.col) > 1) {
