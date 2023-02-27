@@ -860,8 +860,8 @@ feature_plot <- function(SO,
     min.q.cutoff <- min.q.cutoff/100
   }
 
-  all_gene_features <- Reduce(intersect, lapply(SOs, rownames))
-  all_meta_features <- Reduce(intersect, lapply(SOs, function(x) names(x@meta.data)))
+  all_gene_features <- Reduce(intersect, lapply(SO, rownames))
+  all_meta_features <- Reduce(intersect, lapply(SO, function(x) names(x@meta.data)))
 
   if (any(!feature %in% all_gene_features & !feature %in% all_meta_features)) {
     message("Feature(s) ", paste(feature[which(!feature %in% all_gene_features & !feature %in% all_meta_features)], collapse = ","), " not found.")
