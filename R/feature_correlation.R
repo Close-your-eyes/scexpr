@@ -147,11 +147,18 @@ feature_correlation <- function(SO,
     corr_df_plot <- corr_df_plot[,which(names(corr_df_plot) != "group")]
   }
 
-  plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, group), fill = !!rlang::sym(bar_fill))) +
-    ggplot2::geom_bar(stat = "identity", color = "black") +
-    theme +
-    .scale_y_reordered() +
-    do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
+  if (is.null(group_by)) {
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
+      ggplot2::geom_bar(stat = "identity", color = "black") +
+      theme +
+      do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
+  } else {
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, group), fill = !!rlang::sym(bar_fill))) +
+      ggplot2::geom_bar(stat = "identity", color = "black") +
+      theme +
+      .scale_y_reordered() +
+      do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
+  }
 
   wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), scales = "free")}
   if (is.null(group_by)) {

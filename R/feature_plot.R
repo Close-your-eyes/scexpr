@@ -149,6 +149,7 @@ feature_plot <- function(SO,
                          label.size = 12,
                          na.rm = F,
                          inf.rm = F,
+                         bury_NA = T,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -221,6 +222,7 @@ feature_plot <- function(SO,
                       order.abs = order.abs,
                       shuffle = shuffle,
                       order.discrete = order.discrete,
+                      bury_NA = bury_NA,
                       na.rm = na.rm,
                       inf.rm = inf.rm)
 
@@ -831,8 +833,9 @@ feature_plot <- function(SO,
                       order = T,
                       order.rev = F,
                       order.abs = T,
-                      shuffle = T,
+                      shuffle = F,
                       order.discrete = T,
+                      bury_NA = T,
                       na.rm = F,
                       inf.rm = F) {
 
@@ -975,11 +978,7 @@ feature_plot <- function(SO,
     } else {
       data <- data[order(data[,1], decreasing = order.rev),]
     }
-  } else if (!order || !is.numeric(data[,1])) {
-    if (shuffle) {
-      data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
-    }
-  }
+  } ## put shuffle here as else if?!
 
   ## this is only for meta features; combine with if else from above??
   if (!is.numeric(data[,1]) && is.logical(order.discrete) && order.discrete) {
@@ -1000,6 +999,14 @@ feature_plot <- function(SO,
     }
   } else if (!is.numeric(data[,1]) && is.logical(order.discrete) && !order.discrete) {
     data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+  }
+
+  if (shuffle) {
+    data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+  }
+
+  if (bury_NA) {
+    data <- rbind(data[which(is.na(data[,1])),], data[which(!is.na(data[,1])),])
   }
 
   return(data)
