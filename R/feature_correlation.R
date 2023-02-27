@@ -35,7 +35,7 @@ feature_correlation <- function(SO,
                                 cells = NULL,
                                 min_pct = 0.1,
                                 limit_p = 1e-303,
-                                bar_fill = c("correlation_sign", "ref_feature_pct"),
+                                bar_fill = c("correlation_sign", "ref_feature_pct", "none"),
                                 theme = ggplot2::theme_bw(),
                                 group_by = NULL,
                                 min.group.size = 20,
@@ -55,7 +55,7 @@ feature_correlation <- function(SO,
   dots <- list(...)
   assay <- match.arg(assay, c("RNA", "SCT"))
   method <- match.arg(method, c("pearson", "spearman", "kendall"))
-  bar_fill <- match.arg(bar_fill, c("correlation_sign", "ref_feature_pct"))
+  bar_fill <- match.arg(bar_fill, c("correlation_sign", "ref_feature_pct", "none"))
 
   if (length(topn) != 2 || !is.numeric(topn)) {
     warning("topn should be a numeric vector of length 2, providing the numbers of lowest ranked features (index 1) and highest ranked features (index 2) with respect to correlation. Will be set to default c(10,10)")
@@ -103,7 +103,7 @@ feature_correlation <- function(SO,
                                                         ci = ci,
                                                         method = method),
                                                    dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
-    #corr_obj <- psych::corr.test(x = t(mat), y = t(ref_mat), ci = F, method = method, ...)
+
     corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"),
                            reshape2::melt(t(corr_obj[["p"]]), value.name = "p")),
                      reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
@@ -118,7 +118,7 @@ feature_correlation <- function(SO,
     names(corr_df)[1:2] <- c("ref_feature", "feature")
     ## add pcts
     corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pct_feature(SO, assay = assay, features = unique(corr_df$ref_feature))), c("ref_feature_pct", "ref_feature")), by = "ref_feature")
-    ## handle dichotomous meta col which do not have pct expression
+    ## handle numeric meta col which do not have pct expression
     pctx <- pct_feature(SO, assay = assay, features = unique(corr_df$feature))
     if (length(pctx) > 0) {
       corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pctx), c("feature_pct", "feature")), by = "feature")
@@ -147,11 +147,10 @@ feature_correlation <- function(SO,
     corr_df_plot <- corr_df_plot[,which(names(corr_df_plot) != "group")]
   }
 
-  #reorder need fixing with groups etc. (use cowplot and lapply over feature and group, omit group if not present)
-
-  plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = stats::reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
+  plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, group), fill = !!rlang::sym(bar_fill))) +
     ggplot2::geom_bar(stat = "identity", color = "black") +
     theme +
+    .scale_y_reordered() +
     do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
 
   wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), scales = "free")}
@@ -255,6 +254,16 @@ pct_feature <- function(SO,
 .reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
   new_x <- paste(x, within, sep = sep)
   stats::reorder(new_x, by, FUN = fun)
+}
+
+.scale_x_reordered <- function(..., sep = "___") {
+  reg <- paste0(sep, ".+$")
+  ggplot2::scale_x_discrete(labels = function(x) gsub(reg, "", x), ...)
+}
+
+.scale_y_reordered <- function(..., sep = "___") {
+  reg <- paste0(sep, ".+$")
+  ggplot2::scale_y_discrete(labels = function(x) gsub(reg, "", x), ...)
 }
 
 # try this:
