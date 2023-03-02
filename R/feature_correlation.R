@@ -48,6 +48,9 @@ feature_correlation <- function(SO,
   if (!requireNamespace("reshape2", quietly = T)) {
     utils::install.packages("reshape2")
   }
+  if (!requireNamespace("Matrix", quietly = T)) {
+    utils::install.packages("Matrix")
+  }
 
   if (missing(features)) {
     stop("Please provide features.")

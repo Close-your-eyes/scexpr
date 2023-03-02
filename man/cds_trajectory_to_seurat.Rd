@@ -18,7 +18,13 @@ cds_trajectory_to_seurat(
 
 \item{SO}{an Seurat object}
 
-\item{name}{}
+\item{x}{column number of reduction_method to use as x-axis}
+
+\item{y}{column number of reduction_method to use as y-axis}
+
+\item{reduction_method}{name of reduction, currently only UMAP allows, according to monocle3}
+
+\item{name}{target slot name in Seurat::Misc; will be overwritten if already existing}
 }
 \description{
 The code lines are copied from monocle3::plot_cells

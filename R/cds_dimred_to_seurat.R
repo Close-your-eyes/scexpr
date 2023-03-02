@@ -18,6 +18,15 @@ cds_dimred_to_seurat <- function(cds,
                                  suffix = "monocle",
                                  assay = "RNA") {
 
+
+  if (!requireNamespace("BiocManager", quietly = T)) {
+    utils::install.packages("BiocManager")
+  }
+
+  if (!requireNamespace("SingleCellExperiment", quietly = T)) {
+    BiocManager::install("SingleCellExperiment")
+  }
+
   if (grepl("_", suffix)) {
     stop("suffix should not contain an underscore.")
   }

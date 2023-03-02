@@ -5,10 +5,10 @@
 #'
 #' @param cds a cell data set
 #' @param SO an Seurat object
-#' @param x
-#' @param y
-#' @param reduction_method
-#' @param name
+#' @param x column number of reduction_method to use as x-axis
+#' @param y column number of reduction_method to use as y-axis
+#' @param reduction_method name of reduction, currently only UMAP allows, according to monocle3
+#' @param name target slot name in Seurat::Misc; will be overwritten if already existing
 #'
 #' @return
 #' @export
@@ -16,6 +16,9 @@
 #' @examples
 cds_trajectory_to_seurat <- function(cds, SO, x = 1, y = 2, reduction_method = "UMAP", name = "trajectory") {
 
+  if (!requireNamespace("igraph", quietly = T)) {
+    utils::install.packages("igraph")
+  }
 
   reduction_method <- match.arg(reduction_method, "UMAP")
 
