@@ -10,7 +10,8 @@ cds_trajectory_to_seurat(
   x = 1,
   y = 2,
   reduction_method = "UMAP",
-  name = "trajectory"
+  name = "trajectory",
+  pseudotime_metacol_name = "pseudotime"
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ cds_trajectory_to_seurat(
 \item{reduction_method}{name of reduction, currently only UMAP allows, according to monocle3}
 
 \item{name}{target slot name in Seurat::Misc; will be overwritten if already existing}
+
+\item{pseudotime_metacol_name}{name of new column in SO@meta.data for pseudotime information}
 }
 \description{
 The code lines are copied from monocle3::plot_cells
