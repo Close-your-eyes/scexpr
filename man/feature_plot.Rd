@@ -70,6 +70,13 @@ feature_plot(
   strip.selection = NA,
   plot.labels = NULL,
   label.size = 12,
+  na.rm = F,
+  inf.rm = F,
+  bury_NA = T,
+  plot.trajectory.slot = NULL,
+  trajectory.color = "grey30",
+  trajectory.size = 0.75,
+  trajectory.linetype = "solid",
   ...
 )
 }
@@ -106,8 +113,6 @@ feature_plot(
 
 \item{split.by}{column in meta data to use to split plots}
 
-\item{split.by.scales}{}
-
 \item{shape.by}{column in meta data to shape dots (cells) b<}
 
 \item{combine}{combine multiple features to one plot (TRUE) or return a list with one entry per feature (FALSE)}
@@ -129,6 +134,10 @@ feature_plot(
 \item{cutoff.feature}{select a feature for cells to consider in plotting}
 
 \item{cutoff.expression}{select the cutoff feature expression levels for filtering}
+
+\item{plot.trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
+
+\item{trajectory.linetype}{}
 }
 \description{
 Plot features of single cell transcriptomes on a dimension reduction map

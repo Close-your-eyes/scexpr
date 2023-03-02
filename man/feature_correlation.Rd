@@ -12,7 +12,7 @@ feature_correlation(
   cells = NULL,
   min_pct = 0.1,
   limit_p = 1e-303,
-  bar_fill = c("correlation_sign", "ref_feature_pct"),
+  bar_fill = c("correlation_sign", "ref_feature_pct", "none"),
   theme = ggplot2::theme_bw(),
   group_by = NULL,
   min.group.size = 20,

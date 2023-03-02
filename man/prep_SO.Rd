@@ -93,7 +93,7 @@ e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]
 
 \item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
 Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
-Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
+Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData, Seurat::SCTransform;
 prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
 for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
 and for EmbedSOM::EmbedSOM with "EmbedSOM__"}

@@ -66,6 +66,13 @@
 #' @param plot.labels
 #' @param label.size
 #' @param split.by.scales
+#' @param na.rm
+#' @param inf.rm
+#' @param bury_NA
+#' @param plot.trajectory.slot name of Misc slot that contains information on how to plot a trajectory
+#' @param trajectory.color
+#' @param trajectory.size
+#' @param trajectory.linetype
 #'
 #' @return
 #' @export
@@ -150,6 +157,11 @@ feature_plot <- function(SO,
                          na.rm = F,
                          inf.rm = F,
                          bury_NA = T,
+
+                         plot.trajectory.slot = NULL,
+                         trajectory.color = "grey30",
+                         trajectory.size = 0.75,
+                         trajectory.linetype = "solid",
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -410,6 +422,20 @@ feature_plot <- function(SO,
       }
       plot <- plot + ggplot2::theme(legend.justification = c(legend.position[1], legend.position[2]), legend.position = c(legend.position[1], legend.position[2]))
     }
+
+
+    if (plot.trajectory.slot) {
+      if (plot.trajectory.slot %in% names(Seurat::Misc(SO))) {
+        plot <- plot + ggplot2::geom_segment(data = as.data.frame(Seurat::Misc(SO, plot.trajectory.slot)), ggplot2::aes(x = from_x, y = from_y, xend = to_x, yend = to_y),
+                                             size = trajectory.size,
+                                             color = trajectory.color,
+                                             linetype = trajectory.linetype,
+                                             na.rm = TRUE)
+      } else {
+        message("Trajectory slot not found in Seurat::Misc(SO).")
+      }
+    }
+
 
     # theme_get()[["text"]][["family"]]
     plot <-
