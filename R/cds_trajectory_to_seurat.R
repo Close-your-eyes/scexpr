@@ -9,12 +9,19 @@
 #' @param y column number of reduction_method to use as y-axis
 #' @param reduction_method name of reduction, currently only UMAP allows, according to monocle3
 #' @param name target slot name in Seurat::Misc; will be overwritten if already existing
+#' @param pseudotime_metacol_name name of new column in SO@meta.data for pseudotime information
 #'
 #' @return
 #' @export
 #'
 #' @examples
-cds_trajectory_to_seurat <- function(cds, SO, x = 1, y = 2, reduction_method = "UMAP", name = "trajectory") {
+cds_trajectory_to_seurat <- function(cds,
+                                     SO,
+                                     x = 1,
+                                     y = 2,
+                                     reduction_method = "UMAP",
+                                     name = "trajectory",
+                                     pseudotime_metacol_name = "pseudotime") {
 
   if (!requireNamespace("igraph", quietly = T)) {
     utils::install.packages("igraph")
@@ -50,6 +57,12 @@ cds_trajectory_to_seurat <- function(cds, SO, x = 1, y = 2, reduction_method = "
                          to_x="prin_graph_dim_1",
                          to_y="prin_graph_dim_2"),
                      by = "to")
+
+  pt <- stack(cds@principal_graph_aux@listData[["UMAP"]][["pseudotime"]])
+  rownames(pt) <- pt[,2]
+  pt <- pt[,-2,drop=F]
+  names(pt) <- pseudotime_metacol_name
+  SO <- Seurat::AddMetaData(SO, pt)
 
   # add trajectory to ggplot with:
   #g <- g + geom_segment(aes(x = from_x, y = from_y, xend = to_x, yend = to_y), size=trajectory_graph_segment_size, color=I(trajectory_graph_color), linetype="solid", na.rm=TRUE, data=as.data.frame(Seurat::Misc(SO, slot = name)))
