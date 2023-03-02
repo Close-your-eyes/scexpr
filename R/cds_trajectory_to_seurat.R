@@ -58,11 +58,13 @@ cds_trajectory_to_seurat <- function(cds,
                          to_y="prin_graph_dim_2"),
                      by = "to")
 
-  pt <- stack(cds@principal_graph_aux@listData[["UMAP"]][["pseudotime"]])
-  rownames(pt) <- pt[,2]
-  pt <- pt[,-2,drop=F]
-  names(pt) <- pseudotime_metacol_name
-  SO <- Seurat::AddMetaData(SO, pt)
+  if ("pseudotime" %in% names(cds@principal_graph_aux@listData[["UMAP"]])) {
+    pt <- stack(cds@principal_graph_aux@listData[["UMAP"]][["pseudotime"]])
+    rownames(pt) <- pt[,2]
+    pt <- pt[,-2,drop=F]
+    names(pt) <- pseudotime_metacol_name
+    SO <- Seurat::AddMetaData(SO, pt)
+  }
 
   # add trajectory to ggplot with:
   #g <- g + geom_segment(aes(x = from_x, y = from_y, xend = to_x, yend = to_y), size=trajectory_graph_segment_size, color=I(trajectory_graph_color), linetype="solid", na.rm=TRUE, data=as.data.frame(Seurat::Misc(SO, slot = name)))
