@@ -69,7 +69,7 @@
 #' @param na.rm
 #' @param inf.rm
 #' @param bury_NA
-#' @param plot.trajectory.slot name of Misc slot that contains information on how to plot a trajectory
+#' @param trajectory.slot name of Misc slot that contains information on how to plot a trajectory
 #' @param trajectory.color
 #' @param trajectory.size
 #' @param trajectory.linetype
@@ -158,7 +158,7 @@ feature_plot <- function(SO,
                          inf.rm = F,
                          bury_NA = T,
 
-                         plot.trajectory.slot = NULL,
+                         trajectory.slot = NULL,
                          trajectory.color = "grey30",
                          trajectory.size = 0.75,
                          trajectory.linetype = "solid",
@@ -178,7 +178,7 @@ feature_plot <- function(SO,
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
-    message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
+    #message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
     max.q.cutoff <- max.q.cutoff/100
     min.q.cutoff <- min.q.cutoff/100
   }
@@ -236,7 +236,17 @@ feature_plot <- function(SO,
                       order.discrete = order.discrete,
                       bury_NA = bury_NA,
                       na.rm = na.rm,
-                      inf.rm = inf.rm)
+                      inf.rm = inf.rm,
+                      trajectory.slot = trajectory.slot)
+
+    if (!is.data.frame(data)) {
+      ## when !is.null(trajectory.slot) and the slot has been found
+      data_traj <- data[["data_traj"]]
+      data <- data[["data"]]
+      plot_traj <- T
+    } else {
+      plot_traj <- F
+    }
 
     # necessary to make sym(shape.by) here, for !!shape.by to work; not possible within ggplot2::aes()
     # make it after .get.data
@@ -424,16 +434,12 @@ feature_plot <- function(SO,
     }
 
 
-    if (plot.trajectory.slot) {
-      if (plot.trajectory.slot %in% names(Seurat::Misc(SO))) {
-        plot <- plot + ggplot2::geom_segment(data = as.data.frame(Seurat::Misc(SO, plot.trajectory.slot)), ggplot2::aes(x = from_x, y = from_y, xend = to_x, yend = to_y),
-                                             size = trajectory.size,
-                                             color = trajectory.color,
-                                             linetype = trajectory.linetype,
-                                             na.rm = TRUE)
-      } else {
-        message("Trajectory slot not found in Seurat::Misc(SO).")
-      }
+    if (plot_traj) {
+      plot <- plot + ggplot2::geom_segment(data = data_traj, ggplot2::aes(x = from_x, y = from_y, xend = to_x, yend = to_y),
+                                           linewidth = trajectory.size,
+                                           color = trajectory.color,
+                                           linetype = trajectory.linetype,
+                                           na.rm = TRUE)
     }
 
 
@@ -863,7 +869,8 @@ feature_plot <- function(SO,
                       order.discrete = T,
                       bury_NA = T,
                       na.rm = F,
-                      inf.rm = F) {
+                      inf.rm = F,
+                      trajectory.slot = NULL) {
 
 
   #feature <- c("CX3CR1", "expanded", "SCT_snn_res.0.1", "CD8A")
@@ -967,6 +974,7 @@ feature_plot <- function(SO,
     }
   }
 
+
   if (min.q.cutoff > 0 || max.q.cutoff < 1) {
     for (i in intersect(names(which(sapply(data, is.numeric))), c(gene_features, meta_features))) {
       if (all(data[,i] >= 0)) { # > 0 or >= 0 ?!
@@ -1033,6 +1041,21 @@ feature_plot <- function(SO,
 
   if (bury_NA) {
     data <- rbind(data[which(is.na(data[,1])),], data[which(!is.na(data[,1])),])
+  }
+
+  if (!is.null(trajectory.slot)) {
+    data_traj <- do.call(rbind, lapply(names(SO), function(y) {
+      # rbind will throw error if column names to not match
+      data <- NULL
+      if (trajectory.slot %in% names(Seurat::Misc(SO[[y]]))) {
+        data <- as.data.frame(Seurat::Misc(SO[[y]], trajectory.slot))
+        data[,"SO.split"] <- y
+      } else {
+        message("Trajectory slot not found in Seurat::Misc.")
+      }
+      return(data)
+    }))
+    return(list(data = data, data_traj = data_traj))
   }
 
   return(data)
