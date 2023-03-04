@@ -9,7 +9,7 @@
 #' @param y column number of reduction_method to use as y-axis
 #' @param reduction_method name of reduction, currently only UMAP allows, according to monocle3
 #' @param name target slot name in Seurat::Misc; will be overwritten if already existing
-#' @param pseudotime_metacol_name name of new column in SO@meta.data for pseudotime information
+#' @param pseudotime_metacol_name name of new column in SO@meta.data for pseudotime information; set to NULL to not add a column to meta.data of SO
 #'
 #' @return
 #' @export
@@ -23,6 +23,13 @@ cds_trajectory_to_seurat <- function(cds,
                                      name = "trajectory",
                                      pseudotime_metacol_name = "pseudotime") {
 
+  if (!methods::is(cds, "cell_data_set")) {
+    stop("cds has to be an cell_data_set object.")
+  }
+  if (!methods::is(SO, "Seurat")) {
+    stop("SO has to be a Seurat object.")
+  }
+
   if (!requireNamespace("igraph", quietly = T)) {
     utils::install.packages("igraph")
   }
@@ -33,38 +40,39 @@ cds_trajectory_to_seurat <- function(cds,
     stop("cds@principal_graph_aux[[reduction_method]]$dp_mst does not have sufficient columns for x/y selection.")
   }
 
-  ### these lines are taken from moncole3::plot_cells
+  ### these lines have been taken (and adjusted) from moncole3::plot_cells
+  ## prepare data frame for plotting with geom_segment
+  ## plotting with ggraph should also be possible though; or not? maybe ggraph on top of ggplot object is not possible
 
-  ica_space_df <- t(cds@principal_graph_aux[[reduction_method]]$dp_mst) %>%
+  ica_space_df <-
+    t(monocle3::principal_graph_aux(cds)[[reduction_method]]$dp_mst) %>%
     as.data.frame() %>%
-    dplyr::select(prin_graph_dim_1 = x, prin_graph_dim_2 = y) %>%
-    dplyr::mutate(sample_name = rownames(.),
-                  sample_state = rownames(.))
+    dplyr::select(dplyr::all_of(c(x,y))) %>%
+    dplyr::mutate(sample_name = rownames(.))
 
-  Seurat::Misc(SO, slot = name) <-
-    cds@principal_graph[[reduction_method]] %>%
+  df <-
+    monocle3::principal_graph(cds)[[reduction_method]] %>%
     igraph::as_data_frame() %>%
     dplyr::select(from, to) %>%
-    dplyr::left_join(ica_space_df %>%
-                       dplyr::select(
-                         from="sample_name",
-                         from_x="prin_graph_dim_1",
-                         from_y="prin_graph_dim_2"),
-                     by = "from") %>%
-    dplyr::left_join(ica_space_df %>%
-                       dplyr::select(
-                         to="sample_name",
-                         to_x="prin_graph_dim_1",
-                         to_y="prin_graph_dim_2"),
-                     by = "to")
+    dplyr::left_join(ica_space_df %>% dplyr::select(sample_name, V1, V2), by = c("from" = "sample_name")) %>%
+    dplyr::rename("from_x" = V1, "from_y" = V2) %>%
+    dplyr::left_join(ica_space_df %>% dplyr::select(sample_name, V1, V2), by = c("to" = "sample_name")) %>%
+    dplyr::rename("to_x" = V1, "to_y" = V2)
 
-  if ("pseudotime" %in% names(cds@principal_graph_aux@listData[["UMAP"]])) {
-    pt <- stack(cds@principal_graph_aux@listData[["UMAP"]][["pseudotime"]])
-    rownames(pt) <- pt[,2]
-    pt <- pt[,-2,drop=F]
-    names(pt) <- pseudotime_metacol_name
-    SO <- Seurat::AddMetaData(SO, pt)
+
+  if (!is.null(pseudotime_metacol_name)) {
+    if ("pseudotime" %in% names(monocle3::principal_graph_aux(cds)[[reduction_method]])) {
+      pt <- stack(monocle3::principal_graph_aux(cds)[[reduction_method]][["pseudotime"]])
+      rownames(pt) <- pt[,2]
+      pt <- pt[,-2,drop=F]
+      names(pt) <- pseudotime_metacol_name
+      SO <- Seurat::AddMetaData(SO, pt)
+    }
   }
+
+  Seurat::Misc(SO, slot = name) <- list(df = df,
+                                        principle_graph = monocle3::principal_graph(cds)[[reduction_method]],
+                                        principle_graph_aux = monocle3::principal_graph_aux(cds)[[reduction_method]])
 
   # add trajectory to ggplot with:
   #g <- g + geom_segment(aes(x = from_x, y = from_y, xend = to_x, yend = to_y), size=trajectory_graph_segment_size, color=I(trajectory_graph_color), linetype="solid", na.rm=TRUE, data=as.data.frame(Seurat::Misc(SO, slot = name)))
