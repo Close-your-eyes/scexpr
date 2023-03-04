@@ -45,7 +45,7 @@ cds_trajectory_to_seurat <- function(cds,
   ## plotting with ggraph should also be possible though; or not? maybe ggraph on top of ggplot object is not possible
 
   ica_space_df <-
-    t(monocle3::principal_graph_aux(cds)[[reduction_method]]$dp_mst) %>%
+    t(monocle3::principal_graph_aux(cds)[[reduction_method]][["dp_mst"]]) %>%
     as.data.frame() %>%
     dplyr::select(dplyr::all_of(c(x,y))) %>%
     dplyr::mutate(sample_name = rownames(.))
@@ -70,7 +70,25 @@ cds_trajectory_to_seurat <- function(cds,
     }
   }
 
+  mapping_cells_to_vertices <-
+    as.data.frame(t(monocle3::principal_graph_aux(cds)[[reduction_method]][["dp_mst"]])) %>%
+    dplyr::mutate(vertex = rownames(.)) %>%
+    dplyr::left_join(as.data.frame(monocle3::principal_graph_aux(cds)[[reduction_method]][["pr_graph_cell_proj_closest_vertex"]]) %>%
+                       dplyr::rename("vertex" = 1) %>%
+                       dplyr::mutate(vertex = paste0("Y_", vertex), ID = rownames(.)),
+                     by = "vertex",
+                     multiple = "all") %>%
+    dplyr::left_join(as.data.frame(SingleCellExperiment::reducedDims(cds)[["UMAP"]]) %>% dplyr::mutate(ID = rownames(.)) %>% dplyr::rename("from_x" = V1, "from_y" = V2), by = "ID") %>%
+    dplyr::rename("to_x" = V1, "to_y" = V2)
+
+  vertices <-
+    mapping_cells_to_vertices %>%
+    dplyr::distinct(vertex, to_x, to_y) %>%
+    dplyr::rename("UMAP_1" = to_x, "UMAP_2" = to_y)
+
   Seurat::Misc(SO, slot = name) <- list(df = df,
+                                        vertices_df = vertices,
+                                        mapping_cells_to_vertices_df = mapping_cells_to_vertices,
                                         principle_graph = monocle3::principal_graph(cds)[[reduction_method]],
                                         principle_graph_aux = monocle3::principal_graph_aux(cds)[[reduction_method]])
 

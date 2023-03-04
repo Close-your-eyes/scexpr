@@ -1048,7 +1048,7 @@ feature_plot <- function(SO,
       # rbind will throw error if column names to not match
       data <- NULL
       if (trajectory.slot %in% names(Seurat::Misc(SO[[y]]))) {
-        data <- Seurat::Misc(SO[[y]], trajectory.slot[["df"]])
+        data <- Seurat::Misc(SO[[y]], trajectory.slot)[["df"]]
         data[,"SO.split"] <- y
       } else {
         message("Trajectory slot not found in Seurat::Misc.")
