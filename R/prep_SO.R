@@ -215,7 +215,7 @@ prep_SO <- function(SO_unprocessed,
   if (length(SO.list) == 1) {
     SO <- SO.list[[1]]
     if (normalization == "SCT") {
-      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = verbose, assay = "RNA", seed.use = seeed, ...))
+      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, verbose = verbose, assay = "RNA", seed.use = seeed))
 
       # remove var features which are to filter
       if (!is.null(var_feature_filter)) {
@@ -257,7 +257,7 @@ prep_SO <- function(SO_unprocessed,
         message("vars.to.regress set to NULL as batch_corr %in% c(none, harmony).")
       }'
       if (normalization == "SCT") {
-        SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose, ...))
+        SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf, vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose))
 
         # remove var features which are to filter
         if (!is.null(var_feature_filter)) {
@@ -306,7 +306,7 @@ prep_SO <- function(SO_unprocessed,
       k.score <- as.integer(min(30, min(sapply(SO.list, ncol))/6))
 
       if (normalization == "SCT") {
-        SO.list <- lapply(SO.list, FUN = Seurat::SCTransform, verbose = verbose, ...)
+        SO.list <- lapply(SO.list, FUN = Seurat::SCTransform, verbose = verbose)
 
         # remove var features which are to filter
         if (!is.null(var_feature_filter)) {
@@ -520,7 +520,7 @@ prep_SO <- function(SO_unprocessed,
     message(sum(Seurat::VariableFeatures(SO) %in% var_feature_filter), " of var_feature_filter found in Variable Features. Round ", n, " of increasing nhvf to ", nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), " so that var_feature_filter can be removed while nhvf = " , nhvf, " is met.")
 
     if (normalization == "SCT") {
-      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose, ...))
+      SO <- suppressWarnings(Seurat::SCTransform(SO, variable.features.n = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose))
     }
     if (normalization == "LogNormalize") {
       SO <- Seurat::FindVariableFeatures(SO, selection.method = "vst", nfeatures = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), verbose = verbose, assay = "RNA")

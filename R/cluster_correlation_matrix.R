@@ -6,7 +6,7 @@
 #' Seurat::AverageExpression is used to derive average gene expressions per cluster. Selected gene (features) are then used
 #' for correlation calculation.
 #'
-#' @param SO named list of exactly 2 Seurat objects
+#' @param SO named list of exactly 2 Seurat objects; you may also pass the same object twice to have an intra-comparison
 #' @param meta.cols character vector of length 2, indicating the column names of meta.data in SO[[1]] and SO[[2]] to use for comparison,
 #' e.g. the clustering columns in both SOs
 #' @param features features to use for correlation calculation; will always be reduced to intersecting features between SOs;
