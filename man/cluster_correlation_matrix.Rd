@@ -20,7 +20,7 @@ cluster_correlation_matrix(
 )
 }
 \arguments{
-\item{SO}{named list of exactly 2 Seurat objects}
+\item{SO}{named list of exactly 2 Seurat objects; you may also pass the same object twice to have an intra-comparison}
 
 \item{meta.cols}{character vector of length 2, indicating the column names of meta.data in SO[\link{1}] and SO[\link{2}] to use for comparison,
 e.g. the clustering columns in both SOs}

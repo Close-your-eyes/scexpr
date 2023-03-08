@@ -17,7 +17,8 @@ prep_SO(
   npcs = 20,
   nintdims = 30,
   normalization = c("SCT", "LogNormalize"),
-  batch_corr = c("harmony", "integration", "regression", "none"),
+  hvf_determination_before_merge = T,
+  batch_corr = c("harmony", "integration", "none"),
   ref_sample = NULL,
   integr_reduction = c("rpca", "cca", "rlsi"),
   vars.to.regress = NULL,
@@ -26,7 +27,7 @@ prep_SO(
   celltype_refs = NULL,
   celltype_label = "label.main",
   celltype_ref_clusters = NULL,
-  diet_seurat = T,
+  diet_seurat = F,
   var_feature_filter = NULL,
   verbose = F,
   ...
@@ -60,7 +61,10 @@ consider for downstream functions like tSNE or UMAP}
 
 \item{normalization}{algorithm for normalization of UMIs}
 
-\item{batch_corr}{algorithm for batch correction between samples in SO_unprocessed;
+\item{hvf_determination_before_merge}{determine variable features before or after merging multiple samples;
+either by the standard LogNormalize workflow or by SCTransform function}
+
+\item{batch_corr}{procedure for batch correction between samples in SO_unprocessed;
 only relevant if more than 1 sample is passed}
 
 \item{ref_sample}{optional names of the reference sample in SO_unprocessed for
@@ -68,7 +72,11 @@ Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is
 
 \item{integr_reduction}{reduction method for Seurat::FindIntegrationAnchors; rpca is quicker than cca}
 
-\item{vars.to.regress}{passed to Seurat::SCTransform or Seurat::ScaleData, applied if batch_corr == "regression"}
+\item{vars.to.regress}{passed to Seurat::SCTransform or Seurat::ScaleData; will be applied
+independent of what is set for batch_corr; if batch_corr is set to 'none', then only vars.to.regress is
+used to regress out a variable in meta.data which may be sample-specific; other then that
+it may not be meaningful to regress a sample-specific variable and perform batch_corr;
+rather vars.to.regress may be used in combination with batch_corr to regress percent_mito or so}
 
 \item{seeed}{seed passed to several methods}
 

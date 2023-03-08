@@ -27,7 +27,7 @@ cds_trajectory_to_seurat(
 
 \item{name}{target slot name in Seurat::Misc; will be overwritten if already existing}
 
-\item{pseudotime_metacol_name}{name of new column in SO@meta.data for pseudotime information}
+\item{pseudotime_metacol_name}{name of new column in SO@meta.data for pseudotime information; set to NULL to not add a column to meta.data of SO}
 }
 \description{
 The code lines are copied from monocle3::plot_cells

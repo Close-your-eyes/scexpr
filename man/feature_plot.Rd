@@ -73,7 +73,7 @@ feature_plot(
   na.rm = F,
   inf.rm = F,
   bury_NA = T,
-  plot.trajectory.slot = NULL,
+  trajectory.slot = NULL,
   trajectory.color = "grey30",
   trajectory.size = 0.75,
   trajectory.linetype = "solid",
@@ -135,7 +135,7 @@ feature_plot(
 
 \item{cutoff.expression}{select the cutoff feature expression levels for filtering}
 
-\item{plot.trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
+\item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
 
 \item{trajectory.linetype}{}
 }

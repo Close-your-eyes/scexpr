@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Lots of helpers and wrappers to analyze scRNAseq data sets
-Version: 0.0.0.905
+Version: 0.0.0.906
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -76,4 +76,6 @@ Suggests:
     remotes,
     farver,
     SingleCellExperiment,
-    igraph
+    igraph,
+    glmGamPoi,
+    Gmisc

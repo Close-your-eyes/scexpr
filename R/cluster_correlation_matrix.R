@@ -59,6 +59,9 @@ cluster_correlation_matrix <- function(SO,
       stop("meta.cols has to be of length 2.")
     }
   }
+  if (!meta.cols[1] %in% names(SO[[1]]@meta.data) || !meta.cols[2] %in% names(SO[[2]]@meta.data)) {
+    stop("One of meta.cols not found in SOs.")
+  }
   if (!missing(avg.expr)) {
     if (!is.list(avg.expr)) {
       stop("avg.expr has to be a list of matrices.")
@@ -137,18 +140,6 @@ cluster_correlation_matrix <- function(SO,
     message("These elements are excluded from correlation analysis due to low n_cells below ", min.cells, ".")
     print(n_cell_df[which(n_cell_df[,"n_cells",drop=T] < min.cells),])
   }
-
-'    SO_blood@meta.data <-
-    SO_blood@meta.data %>%
-    tidyr::separate(orig.ident, into = c("Pat", "rep", "body_fluid"), remove = F)
-  SO_urine@meta.data <-
-    SO_urine@meta.data %>%
-    tidyr::separate(orig.ident, into = c("Pat", "rep", "body_fluid"), remove = F)
-SO <- list(SO_blood, SO_urine)
-
-SO_blood_split <- Seurat::SplitObject(SO_blood, split.by = "orig.ident")
-SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
-'
 
   ## works
   #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
@@ -252,5 +243,5 @@ SO_urine_split <- Seurat::SplitObject(SO_urine, split.by = "orig.ident")
     scale_y_log10() +
     facet_grid(rows = vars(cluster.x), cols = vars(cluster.y), scales = "free")'
 
-  return(list(cm.plot = cm.plot, cm.melt = cm.melt, avg.expr = avg.expr))
+  return(list(plot = cm.plot, data = cm.melt, avg.expr = avg.expr))
 }
