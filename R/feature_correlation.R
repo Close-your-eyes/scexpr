@@ -37,7 +37,7 @@ feature_correlation <- function(SO,
                                 limit_p = 1e-303,
                                 bar_fill = c("correlation_sign", "ref_feature_pct", "none"),
                                 theme = ggplot2::theme_bw(),
-                                group_by = NULL,
+                                group_by = NULL, # renames to split.by ?!
                                 min.group.size = 20,
                                 topn = c(10,10), # n for min and max
                                 ...) {
@@ -126,8 +126,8 @@ feature_correlation <- function(SO,
     if (length(pctx) > 0) {
       corr_df <- dplyr::left_join(corr_df, stats::setNames(utils::stack(pctx), c("feature_pct", "feature")), by = "feature")
     }
+
     corr_df <- dplyr::mutate(corr_df, feature = as.character(feature), ref_feature = as.character(ref_feature))
-    corr_df[,"group"] <- x
     corr_df_plot <- dplyr::filter(corr_df, feature != ref_feature)
 
     corr_df_plot <- rbind(corr_df_plot %>%
@@ -140,23 +140,23 @@ feature_correlation <- function(SO,
                             dplyr::ungroup())
     corr_df_plot <- dplyr::mutate(corr_df_plot, correlation_sign = factor(ifelse(r > 0, "+", "-"), levels = c("+", "-")))
     corr_df_plot[,"group"] <- x
+    corr_df_plot[,"feature_group"] <- paste0(corr_df_plot[,"feature", drop = T], "_", x)
+    corr_df[,"group"] <- x
+    corr_df[,"feature_group"] <- paste0(corr_df[,"feature"], "_", x)
+
     return(list(corr_df, corr_df_plot))
   })
+
   corr_df <- do.call(rbind, sapply(out, "[", 1))
   corr_df_plot <- do.call(rbind, sapply(out, "[", 2))
 
-  if (is.null(group_by)) {
-    corr_df <- corr_df[,which(names(corr_df) != "group")]
-    corr_df_plot <- corr_df_plot[,which(names(corr_df_plot) != "group")]
-  }
-
-  if (is.null(group_by)) {
+  if (is.null(group_by) && length(features) == 1) {
     plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
       ggplot2::geom_bar(stat = "identity", color = "black") +
       theme +
       do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
   } else {
-    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, group), fill = !!rlang::sym(bar_fill))) +
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, feature_group), fill = !!rlang::sym(bar_fill))) +
       ggplot2::geom_bar(stat = "identity", color = "black") +
       theme +
       .scale_y_reordered() +
@@ -183,7 +183,7 @@ feature_correlation <- function(SO,
     plot <- plot + ggplot2::scale_fill_viridis_c() + ggplot2::labs(y = "Feature", x = xlabel, fill = "pct")
   }
 
-  return(list(plot = plot, df = corr_df))
+  return(list(plot = plot, data = corr_df))
 
   # lm dist or dist from corr-line (which goes through 0 by definition, so only has slope)
   # only for pearson
