@@ -67,7 +67,7 @@ prep_SO <- function(SO_unprocessed,
                     npcs = 20,
                     nintdims = 30,
                     normalization = c("SCT", "LogNormalize"),
-                    hvf_determination_before_merge = T,
+                    hvf_determination_before_merge = F,
                     batch_corr = c("harmony", "integration", "none"),
                     ref_sample = NULL,
                     integr_reduction = c("rpca", "cca", "rlsi"),
@@ -624,8 +624,9 @@ prep_SO <- function(SO_unprocessed,
   if (!is.null(save_path)) {
     dir.create(save_path, showWarnings = F, recursive = T)
     save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
-    saveRDS(SO, compress = T, file = file.path(save_path, paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")))
-    message(paste0("SO saved to: ", save_path))
+    save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")
+    saveRDS(SO, compress = T, file = file.path(save_path, save.name))
+    message(paste0("SO saved to: ", save_path, " as ", save.name, "."))
   }
 
   return(SO)
@@ -664,7 +665,6 @@ prep_SO <- function(SO_unprocessed,
     if (normalization == "SCT") {
       SO <- suppressWarnings(Seurat::SCTransform(SO,
                                                  assay = "RNA",
-                                                 vars.to.regress = vars.to.regress,
                                                  vst.flavor = "v2",
                                                  method = "glmGamPoi",
                                                  variable.features.n = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)),

@@ -1025,9 +1025,17 @@ feature_plot <- function(SO,
       while(na_replace %in% unique(data[,1])) {
         na_replace <- paste(c(na_replace, na_replace), collapse = "_")
       }
+      level_order <- NULL
+      if (is.factor(data[,1])) {
+        level_order <- levels(data[,1])
+        data[,1] <- as.character(data[,1])
+      }
       data[which(is.na(data[,1])),1] <- na_replace
       data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
       data[which(data[,1] == na_replace),1] <- NA
+      if (!is.null(level_order)) {
+        data[,1] <- factor(data[,1], levels = level_order)
+      }
     } else {
       data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
     }

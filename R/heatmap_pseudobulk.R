@@ -160,6 +160,19 @@ heatmap_pseudobulk <- function(SO,
     SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels.calc),,drop=F]))
   }
 
+
+  # this problem was discovered by chance (":" are replaced by Seurat::AverageExpression by "_"); maybe other symbols will also cause problems.
+  if (any(grepl(":", unique(SO@meta.data[,meta.col])))) {
+    message("Found colon (:) in factor levels of meta.col. Will replace those with underscores (_).")
+    SO@meta.data[,meta.col] <- gsub(":", "_", SO@meta.data[,meta.col])
+    if (!is.null(levels.plot)) {
+      levels.plot <- gsub(":", "_", levels.plot)
+    }
+    if (!is.null(levels.calc)) {
+      levels.calc <- gsub(":", "_", levels.calc)
+    }
+  }
+
   ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
   ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
   wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
@@ -184,6 +197,7 @@ heatmap_pseudobulk <- function(SO,
   }
   #wil_auc <- wil_auc[which(wil_auc$feature %in% features),]
 
+  make.names(SO@meta.data$prim_cell_atlas__label.fine)
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
   if ((methods::is(normalization, "character")) && normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
