@@ -89,7 +89,6 @@ feature_plot_stat <- function(SO,
     stop("Please provide only one meta.col.")
   }
 
-
   ## procedure to allow subsetting by SOs
   if (length(SO) > 1) {
     if (!is.null(meta.col.levels)) {
@@ -103,6 +102,7 @@ feature_plot_stat <- function(SO,
     } else {
       meta.col.levels <- lapply(SO, function(x) unique(x@meta.data[,meta.col]))
       meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(meta.col.levels[[x]], "__", x), simplify = F)
+      meta.col.levels <- unname(unlist(meta.col.levels))
     }
   } else {
     meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
@@ -116,6 +116,7 @@ feature_plot_stat <- function(SO,
                                 exclusion.feature = exclusion.feature,
                                 downsample = downsample,
                                 return.included.cells.only = T)
+
 
   # get data with SO being no list does not work
   data <- .get.data(SO, #stats::setNames(list(SO), "1")
@@ -156,7 +157,15 @@ feature_plot_stat <- function(SO,
   }
 
   data <- as.data.frame(data)
-  data[,meta.col] <- factor(data[,meta.col], levels = meta.col.levels)
+
+  if (length(SO) == 1) {
+    ## unsatisfying for now; meta.col.levels will here be different from data[,meta.col]
+    ## when length(SO) > 1. how to handle that differently?
+    data[,meta.col] <- factor(data[,meta.col], levels = meta.col.levels)
+  }
+
+
+
   my_geom2 <- switch(geom2,
                      "violin" = ggplot2::geom_violin,
                      "boxplot" = ggplot2::geom_boxplot,

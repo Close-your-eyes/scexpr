@@ -1,7 +1,6 @@
 #' Title
 #'
 #' @param SO Seurat object
-#' @param assay which assay to obtain expression values from
 #' @param meta.col which column from meta.data of SO to use as x-axis; if NULL current Idents(SO) are used
 #' @param levels.calc which levels in meta.col to include in calculation;
 #' all levels if NULL; the order provided defines order on x-axis; level selection
@@ -10,6 +9,7 @@
 #' if NULL this equals to levels.calc; must be subset of levels.calc;
 #' the order provided defines order on x-axis; this will not affect scaling
 #' calculation but only select levels for plotting
+#' @param assay which assay to obtain expression values from
 #' @param features optionally choose which features to plot (supervised)
 #' @param normalization how to scale expression values; may be "scale" to
 #' use base::scale and transform average expression value to a standardized
@@ -60,10 +60,10 @@
 #'
 #' @examples
 heatmap_pseudobulk <- function(SO,
-                               assay = c("RNA", "SCT"),
                                meta.col = NULL,
                                levels.calc = NULL,
                                levels.plot = NULL,
+                               assay = c("RNA", "SCT"),
                                features = NULL,
                                normalization = "scale", # scale
                                topn.features = 10,

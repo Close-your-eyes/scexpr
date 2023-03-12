@@ -47,7 +47,10 @@
 #' this will affect downstream PCA, dimension reduction and clustering;
 #' e.g.: var_feature_filter = grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T)
 #' @param hvf_determination_before_merge determine variable features before or after merging multiple samples;
-#' either by the standard LogNormalize workflow or by SCTransform function
+#' either by the standard LogNormalize workflow or by SCTransform function; this is most important for
+#' deciding whether SCtransform is run on mulitple samples separately before merging (set to TRUE) or
+#' after merging (set to FALSE); in my experience and when the integration procedure is set to harmony setting
+#' it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
