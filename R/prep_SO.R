@@ -621,10 +621,12 @@ prep_SO <- function(SO_unprocessed,
     SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   }
 
+  save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
+  save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")
+  Seurat::Misc(SO, "object_name") <- save.name
+
   if (!is.null(save_path)) {
     dir.create(save_path, showWarnings = F, recursive = T)
-    save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d-%H%M%S")
-    save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")
     saveRDS(SO, compress = T, file = file.path(save_path, save.name))
     message(paste0("SO saved to: ", save_path, " as ", save.name, "."))
   }
