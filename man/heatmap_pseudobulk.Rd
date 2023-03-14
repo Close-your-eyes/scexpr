@@ -6,10 +6,10 @@
 \usage{
 heatmap_pseudobulk(
   SO,
-  assay = c("RNA", "SCT"),
   meta.col = NULL,
   levels.calc = NULL,
   levels.plot = NULL,
+  assay = c("RNA", "SCT"),
   features = NULL,
   normalization = "scale",
   topn.features = 10,
@@ -43,8 +43,6 @@ heatmap_pseudobulk(
 \arguments{
 \item{SO}{Seurat object}
 
-\item{assay}{which assay to obtain expression values from}
-
 \item{meta.col}{which column from meta.data of SO to use as x-axis; if NULL current Idents(SO) are used}
 
 \item{levels.calc}{which levels in meta.col to include in calculation;
@@ -55,6 +53,8 @@ will affect scaling calculations}
 if NULL this equals to levels.calc; must be subset of levels.calc;
 the order provided defines order on x-axis; this will not affect scaling
 calculation but only select levels for plotting}
+
+\item{assay}{which assay to obtain expression values from}
 
 \item{features}{optionally choose which features to plot (supervised)}
 

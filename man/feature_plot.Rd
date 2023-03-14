@@ -77,6 +77,10 @@ feature_plot(
   trajectory.color = "grey30",
   trajectory.size = 0.75,
   trajectory.linetype = "solid",
+  contour_feature = NULL,
+  col.pal.contour = "custom",
+  contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
+  plot.expr.freq.by.contour.group = F,
   ...
 )
 }

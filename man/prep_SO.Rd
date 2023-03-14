@@ -11,13 +11,12 @@ prep_SO(
   min_cells = 50,
   downsample = 1,
   export_prefix = NULL,
-  cluster_resolutions = 0.8,
   reductions = c("umap", "som", "gqtsom", "tsne"),
   nhvf = 800,
   npcs = 20,
   nintdims = 30,
   normalization = c("SCT", "LogNormalize"),
-  hvf_determination_before_merge = T,
+  hvf_determination_before_merge = F,
   batch_corr = c("harmony", "integration", "none"),
   ref_sample = NULL,
   integr_reduction = c("rpca", "cca", "rlsi"),
@@ -30,6 +29,13 @@ prep_SO(
   diet_seurat = F,
   var_feature_filter = NULL,
   verbose = F,
+  FindVariableFeatures_args = list(),
+  SCtransform_args = list(),
+  RunUMAP_args = list(),
+  RunTSNE_args = list(),
+  FindNeighbors_args = list(),
+  FindClusters_args = list(),
+  RunHarmony_args = list(),
   ...
 )
 }
@@ -47,12 +53,10 @@ or an absolute number of cells per object (downsample > 1 & downsample >= min_ce
 
 \item{export_prefix}{prefix to the output rds file}
 
-\item{cluster_resolutions}{vector of resolutions to compute by Seurat::FindClusters}
-
 \item{reductions}{which reduction to calculate, tsne --> Seurat::RunTSNE, umap --> Seurat::RunUMAP}
 
 \item{nhvf}{number high variables features, passed to Seurat::SCTransform
-or Seurat::FindVariableFeatures}
+or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures}
 
 \item{npcs}{number of principle components in calculate in pca and to
 consider for downstream functions like tSNE or UMAP}
@@ -62,13 +66,16 @@ consider for downstream functions like tSNE or UMAP}
 \item{normalization}{algorithm for normalization of UMIs}
 
 \item{hvf_determination_before_merge}{determine variable features before or after merging multiple samples;
-either by the standard LogNormalize workflow or by SCTransform function}
+either by the standard LogNormalize workflow or by SCTransform function; this is most important for
+deciding whether SCtransform is run on mulitple samples separately before merging (set to TRUE) or
+after merging (set to FALSE); in my experience and when the integration procedure is set to harmony setting
+it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links}
 
 \item{batch_corr}{procedure for batch correction between samples in SO_unprocessed;
 only relevant if more than 1 sample is passed}
 
 \item{ref_sample}{optional names of the reference sample in SO_unprocessed for
-Seurat::FindIntegrationAnchors or RunHarmony; reference; if NULL no reference is used}
+Seurat::FindIntegrationAnchors}
 
 \item{integr_reduction}{reduction method for Seurat::FindIntegrationAnchors; rpca is quicker than cca}
 
@@ -99,9 +106,7 @@ e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]
 
 \item{verbose}{print messages and progress bars from functions}
 
-\item{...}{additional arguments passed to harmony::RunHarmony, Seurat::RunUMAP,
-Seurat::RunTSNE, Seurat::FindNeighbors, Seurat::FindClusters,
-Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData, Seurat::SCTransform;
+\item{...}{additional arguments passed to Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
 prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
 for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
 and for EmbedSOM::EmbedSOM with "EmbedSOM__"}

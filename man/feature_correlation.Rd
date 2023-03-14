@@ -10,11 +10,11 @@ feature_correlation(
   assay = c("RNA", "SCT"),
   method = c("pearson", "spearman", "kendall"),
   cells = NULL,
-  min_pct = 0.1,
+  min.pct = 0.1,
   limit_p = 1e-303,
-  bar_fill = c("correlation_sign", "ref_feature_pct", "none"),
+  bar.fill = c("correlation_sign", "ref_feature_pct", "none"),
   theme = ggplot2::theme_bw(),
-  group_by = NULL,
+  split.by = NULL,
   min.group.size = 20,
   topn = c(10, 10),
   ...
@@ -31,15 +31,15 @@ feature_correlation(
 
 \item{cells}{vector of cell names to consider for correlation anaylsis; if NULL (default) all cells are used}
 
-\item{min_pct}{minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis}
+\item{min.pct}{minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis}
 
 \item{limit_p}{p-value which p-values of 0 will be set to; this avoids obtaining INF when deriving -log10(p-val)}
 
-\item{bar_fill}{which bar fill to apply}
+\item{bar.fill}{which bar fill to apply}
 
 \item{theme}{which ggplot theme to set as basis}
 
-\item{group_by}{groups for correlation analysis; must be a categorical column in meta.data of SO}
+\item{split.by}{groups for correlation analysis; must be a categorical column in meta.data of SO}
 
 \item{min.group.size}{required number of cell in one group to be considered in analysis}
 

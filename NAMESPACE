@@ -2,7 +2,7 @@
 
 export(cds_dimred_to_seurat)
 export(cds_trajectory_to_seurat)
-export(cluster_correlation_matrix)
+export(cluster_correlation)
 export(clustering_volcanos)
 export(coalesce_join)
 export(col_pal)

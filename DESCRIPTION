@@ -79,5 +79,4 @@ Suggests:
     farver,
     SingleCellExperiment,
     igraph,
-    glmGamPoi,
-    Gmisc
+    glmGamPoi
