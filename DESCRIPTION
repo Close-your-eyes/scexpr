@@ -36,7 +36,9 @@ Imports:
     ggrepel,
     cowplot,
     MASS,
-    methods
+    methods,
+    Gmisc,
+    ggnewscale
 Suggests: 
     presto,
     patchwork,

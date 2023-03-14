@@ -31,18 +31,18 @@
 #' @export
 #'
 #' @examples
-cluster_correlation_matrix <- function(SO,
-                                       meta.cols,
-                                       features = c("all", "pca"),
-                                       assay = c("RNA", "SCT"),
-                                       levels = NULL, # NA possible
-                                       complement.levels = F,
-                                       split.by = NULL,
-                                       avg.expr,
-                                       method = c("pearson", "kendall", "spearman"),
-                                       corr.in.percent = FALSE,
-                                       min.cells = 20,
-                                       round.corr = 2) {
+cluster_correlation <- function(SO,
+                                meta.cols,
+                                features = c("all", "pca"),
+                                assay = c("RNA", "SCT"),
+                                levels = NULL, # NA possible
+                                complement.levels = F,
+                                split.by = NULL,
+                                avg.expr,
+                                method = c("pearson", "kendall", "spearman"),
+                                corr.in.percent = FALSE,
+                                min.cells = 20,
+                                round.corr = 2) {
 
   if (!requireNamespace("reshape2", quietly = T)) {
     utils::install.packages("reshape2")

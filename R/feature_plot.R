@@ -162,6 +162,10 @@ feature_plot <- function(SO,
                          trajectory.color = "grey30",
                          trajectory.size = 0.75,
                          trajectory.linetype = "solid",
+
+                         contour_feature = NULL,
+                         col.pal.contour = "custom",
+                         contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -175,6 +179,7 @@ feature_plot <- function(SO,
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
   if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
   if ((length(order.discrete) %in% c(0,1)) && (is.null(order.discrete) || is.na(order.discrete))) {stop("order.discrete should be logical or a vector of factor levels in order.")}
+  if (length(contour_feature) > 1) {stop("Only provide one contour_feature.")}
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -202,6 +207,7 @@ feature_plot <- function(SO,
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, shape.by = shape.by)
   reduction <- .check.reduction(SO = SO, reduction = reduction, dims = dims)
   features <- .check.features(SO = SO, features = unique(features))
+  contour_feature <- .check.features(SO = SO, unique(contour_feature), rownames = F)
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
                                 cells = cells,
@@ -481,6 +487,33 @@ feature_plot <- function(SO,
                      legend.key.size = ggplot2::unit(legend.key.size, "cm"),
                      legend.key = ggplot2::element_blank(), ## keeps background of legend symbols transparent
                      ...)
+
+
+    # plot contours, optionally
+    if (!is.null(contour_feature)) {
+      contour_data <- .get.data(SO, contour_feature)
+      if (length(col.pal.contour) == 1 && !col.pal.contour %in% grDevices::colors()) {
+        col.pal.contour <- col_pal(name = col.pal.contour, reverse = col.pal.rev, n = nlevels(as.factor(contour_data[,1])))
+      }
+
+      contour_args <- contour_args[which(!names(contour_args) %in% c("data", "mapping"))]
+      if (!"contour_var" %in% names(contour_args)) {
+        contour_args <- c(contour_var = "ndensity", contour_args)
+      }
+      if (!"breaks" %in% names(contour_args)) {
+        contour_args <- c(breaks = 0.3, contour_args)
+      }
+      if (!"linewidth" %in% names(contour_args)) {
+        contour_args <- c(linewidth = 1, contour_args)
+      }
+
+      plot <-
+        plot +
+        ggnewscale::new_scale_color() +
+        Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = contour_data, mapping = ggplot2::aes(color = !!rlang::sym(contour_feature))))) +
+        #ggplot2::geom_density2d(data = contour_data, contour_var = "ndensity", breaks = contour_level, linewidth = 2, ggplot2::aes(color = !!rlang::sym(contour_feature))) +
+        ggplot2::scale_color_manual(values = col.pal.contour)
+    }
 
     # define facets and plot freq.of.expr annotation
     wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales, nrow = nrow.inner, ncol = ncol.inner)}
@@ -975,6 +1008,7 @@ feature_plot <- function(SO,
   }
 
 
+  # use squishing to dampen extreme values - this will produce actually wrong limits on the legend
   if (min.q.cutoff > 0 || max.q.cutoff < 1) {
     for (i in intersect(names(which(sapply(data, is.numeric))), c(gene_features, meta_features))) {
       if (all(data[,i] >= 0)) { # > 0 or >= 0 ?!
@@ -987,36 +1021,27 @@ feature_plot <- function(SO,
     }
   }
 
-
-
-  # use squishing to dampen extreme values - this will produce actually wrong limits on the legend
-  '  if (is.numeric(data[,1]) && (min.q.cutoff > 0 || max.q.cutoff < 1)) {
-    if (all(data[,1] > 0)) {
-      # expression is always greater than 0 and non-expresser are excluded
-      data[,1][which(data[,1] > 0)] <- scales::squish(data[,1][which(data[,1] > 0)], range = c(stats::quantile(data[,1][which(data[,1] > 0)], min.q.cutoff), stats::quantile(data[,1][which(data[,1] > 0)], max.q.cutoff)))
-    } else {
-      # e.g. for module scores below 0
-      data[,1] <- scales::squish(data[,1], range = c(stats::quantile(data[,1], min.q.cutoff), stats::quantile(data[,1], max.q.cutoff)))
-    }
-  }'
-
-  ## new params:
-  # order.abs = T/F (switch on/off if ordering is done with absolute values)
-  # shuffle = T/F (allow to provide a defined order which is not altered)
-  # order.rev = T/F (reverse the order so that lowest values (or zeros if order.abs = T) are on top)
+  ## params:
+  # order = T --> ordering by values (lowest are negative values, then 0, then positive ones)
+  # order.abs T --> absolute values far away from zero are plotted on top
+  # shuffle = T --> only considered when !order; will shuffle the data data.frame; if !order and !shuffle a custom order can be provided from outside
+  # order.rev = T --> reverse the order so that lowest values (or zeros if order.abs = T) are on top
 
   if (order && is.numeric(data[,1])) {
+    # per default order will put NAs on top
     # abs: in case negative values are contained in meta.col, any extreme away from 0 will be plotted on top
     if (order.abs) {
-      data <- data[order(abs(data[,1]), decreasing = order.rev),]
+      data <- data[order(abs(data[,1]), decreasing = order.rev, na.last = !bury_NA),]
     } else {
-      data <- data[order(data[,1], decreasing = order.rev),]
+      data <- data[order(data[,1], decreasing = order.rev, na.last = !bury_NA),]
     }
-  } ## put shuffle here as else if?!
+  } else if (shuffle) {
+    data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
+  }
 
   ## this is only for meta features; combine with if else from above??
   if (!is.numeric(data[,1]) && is.logical(order.discrete) && order.discrete) {
-    # NA is not considered by split
+    # NA is not considered by split()
     # replace it by a character value just for splitting, undo this afterwards
     #data[,1] <- factor(data[,1], exclude = c())
 
@@ -1033,22 +1058,17 @@ feature_plot <- function(SO,
       data[which(is.na(data[,1])),1] <- na_replace
       data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
       data[which(data[,1] == na_replace),1] <- NA
+      if (bury_NA) {
+        data <- rbind(data[which(is.na(data[,1])),], data[which(!is.na(data[,1])),])
+      }
       if (!is.null(level_order)) {
         data[,1] <- factor(data[,1], levels = level_order)
       }
     } else {
       data <- dplyr::bind_rows(split(data, data[,1])[names(sort(table(data[,1]), decreasing = T))])
     }
-  } else if (!is.numeric(data[,1]) && is.logical(order.discrete) && !order.discrete) {
+  } else if (!is.numeric(data[,1]) && is.logical(order.discrete) && shuffle) {
     data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
-  }
-
-  if (shuffle) {
-    data <- data[sample(x = 1:nrow(data), size = nrow(data), replace = F),]
-  }
-
-  if (bury_NA) {
-    data <- rbind(data[which(is.na(data[,1])),], data[which(!is.na(data[,1])),])
   }
 
   if (!is.null(trajectory.slot)) {
