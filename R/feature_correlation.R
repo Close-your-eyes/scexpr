@@ -10,12 +10,12 @@
 #' @param features which features to calculate correlations for (must be rownames in the selected assay)
 #' @param assay which assay to obtain expression values from; the data slot will be used in any case
 #' @param cells vector of cell names to consider for correlation anaylsis; if NULL (default) all cells are used
-#' @param min_pct minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis
+#' @param min.pct minimum percentage of expressing cells (> 0 UMIs) to include a feature in correlation analysis
 #' @param limit_p p-value which p-values of 0 will be set to; this avoids obtaining INF when deriving -log10(p-val)
 #' @param method which metric of correlation to calculate
-#' @param bar_fill which bar fill to apply
+#' @param bar.fill which bar fill to apply
 #' @param theme which ggplot theme to set as basis
-#' @param group_by groups for correlation analysis; must be a categorical column in meta.data of SO
+#' @param split.by groups for correlation analysis; must be a categorical column in meta.data of SO
 #' @param min.group.size required number of cell in one group to be considered in analysis
 #' @param topn numeric vector of length two; number of top anti-correlated and correlated features, respectively
 #' @param ... additional arguments to psych::corr.test and to ggplot2::theme
@@ -33,11 +33,11 @@ feature_correlation <- function(SO,
                                 assay = c("RNA", "SCT"),
                                 method = c("pearson", "spearman", "kendall"),
                                 cells = NULL,
-                                min_pct = 0.1,
+                                min.pct = 0.1,
                                 limit_p = 1e-303,
-                                bar_fill = c("correlation_sign", "ref_feature_pct", "none"),
+                                bar.fill = c("correlation_sign", "ref_feature_pct", "none"),
                                 theme = ggplot2::theme_bw(),
-                                group_by = NULL, # renames to split.by ?!
+                                split.by = NULL,
                                 min.group.size = 20,
                                 topn = c(10,10), # n for min and max
                                 ...) {
@@ -58,7 +58,7 @@ feature_correlation <- function(SO,
   dots <- list(...)
   assay <- match.arg(assay, c("RNA", "SCT"))
   method <- match.arg(method, c("pearson", "spearman", "kendall"))
-  bar_fill <- match.arg(bar_fill, c("correlation_sign", "ref_feature_pct", "none"))
+  bar.fill <- match.arg(bar.fill, c("correlation_sign", "ref_feature_pct", "none"))
 
   if (length(topn) != 2 || !is.numeric(topn)) {
     warning("topn should be a numeric vector of length 2, providing the numbers of lowest ranked features (index 1) and highest ranked features (index 2) with respect to correlation. Will be set to default c(10,10)")
@@ -69,7 +69,7 @@ feature_correlation <- function(SO,
   features <- .check.features(SO = SO, features = unique(features), meta.data = F, meta.data.numeric = T)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
 
-  ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min_pct, cells = cells), cells, drop=F])
+  ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min.pct, cells = cells), cells, drop=F])
 
   # putative dichotomous meta features which are TRUE / FALSE: they are coerced to 1 / 0
   # applying spearman correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
@@ -84,12 +84,12 @@ feature_correlation <- function(SO,
   }
 
   ## do all the checking
-  if (!is.null(group_by)) {
+  if (!is.null(split.by)) {
     groups <-
-      SO@meta.data[ ,group_by, drop=F] %>%
+      SO@meta.data[ ,split.by, drop=F] %>%
       tibble::rownames_to_column("ID") %>%
       dplyr::filter(ID %in% cells)
-    groups <- split(groups$ID, groups[,group_by,drop=F])
+    groups <- split(groups$ID, groups[,split.by,drop=F])
   } else {
     groups <- stats::setNames(list(cells), "all")
   }
@@ -150,13 +150,13 @@ feature_correlation <- function(SO,
   corr_df <- do.call(rbind, sapply(out, "[", 1))
   corr_df_plot <- do.call(rbind, sapply(out, "[", 2))
 
-  if (is.null(group_by) && length(features) == 1) {
-    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar_fill))) +
+  if (is.null(split.by) && length(features) == 1) {
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar.fill))) +
       ggplot2::geom_bar(stat = "identity", color = "black") +
       theme +
       do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
   } else {
-    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, feature_group), fill = !!rlang::sym(bar_fill))) +
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, feature_group), fill = !!rlang::sym(bar.fill))) +
       ggplot2::geom_bar(stat = "identity", color = "black") +
       theme +
       .scale_y_reordered() +
@@ -164,7 +164,7 @@ feature_correlation <- function(SO,
   }
 
   wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), scales = "free")}
-  if (is.null(group_by)) {
+  if (is.null(split.by)) {
     plot <- plot + wrap_by(feature)
   } else {
     plot <- plot + wrap_by(feature, group)
@@ -177,9 +177,9 @@ feature_correlation <- function(SO,
                    "spearman" = paste0("spearman ", "\u03C1"),
                    "kendall" = paste0("kendall ", "\u03C4 "))
 
-  if (bar_fill == "correlation_sign") {
+  if (bar.fill == "correlation_sign") {
     plot <- plot + ggplot2::scale_fill_manual(values = c("forestgreen", "tomato2")) + ggplot2::labs(y = "Feature", x = xlabel, fill = "direction")
-  } else if (bar_fill == "ref_feature_pct") {
+  } else if (bar.fill == "ref_feature_pct") {
     plot <- plot + ggplot2::scale_fill_viridis_c() + ggplot2::labs(y = "Feature", x = xlabel, fill = "pct")
   }
 
@@ -206,7 +206,7 @@ feature_correlation <- function(SO,
   ref_mat2 <- reshape2::melt(ref_mat)
   groups <-
     corr_df %>%
-    dplyr::group_by(feature, ref_feature) %>%
+    dplyr::split.by(feature, ref_feature) %>%
     tidyr::nest()'
 
 
@@ -230,7 +230,7 @@ feature_correlation <- function(SO,
 filter_feature <- function(SO,
                            assay = c("RNA", "SCT"),
                            cells = NULL,
-                           min_pct = 0.1) {
+                           min.pct = 0.1) {
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
@@ -238,8 +238,8 @@ filter_feature <- function(SO,
 
   # filter non expressed features first
   f1 <- names(which(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[,cells]) > 0))
-  # get those above min_pct
-  f2 <- names(which(pct_feature(SO = SO, assay = assay, features = f1, cells = cells) >= min_pct))
+  # get those above min.pct
+  f2 <- names(which(pct_feature(SO = SO, assay = assay, features = f1, cells = cells) >= min.pct))
 
   return(f2)
 }

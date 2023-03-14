@@ -166,6 +166,7 @@ feature_plot <- function(SO,
                          contour_feature = NULL,
                          col.pal.contour = "custom",
                          contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
+                         plot.expr.freq.by.contour.group = F,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -491,10 +492,12 @@ feature_plot <- function(SO,
 
     # plot contours, optionally
     if (!is.null(contour_feature)) {
-      contour_data <- .get.data(SO, contour_feature)
+      ## cells currently not considered
+      contour_data <- .get.data(SO, feature = contour_feature, reduction = names(reduction))
       if (length(col.pal.contour) == 1 && !col.pal.contour %in% grDevices::colors()) {
         col.pal.contour <- col_pal(name = col.pal.contour, reverse = col.pal.rev, n = nlevels(as.factor(contour_data[,1])))
       }
+
 
       contour_args <- contour_args[which(!names(contour_args) %in% c("data", "mapping"))]
       if (!"contour_var" %in% names(contour_args)) {
@@ -513,6 +516,22 @@ feature_plot <- function(SO,
         Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = contour_data, mapping = ggplot2::aes(color = !!rlang::sym(contour_feature))))) +
         #ggplot2::geom_density2d(data = contour_data, contour_var = "ndensity", breaks = contour_level, linewidth = 2, ggplot2::aes(color = !!rlang::sym(contour_feature))) +
         ggplot2::scale_color_manual(values = col.pal.contour)
+
+      if (plot.expr.freq.by.contour.group) {
+        group_labels <-
+          dplyr::left_join(data %>% dplyr::mutate(ID = rownames(.)), contour_data %>% dplyr::mutate(ID = rownames(.)) %>% dplyr::select(dplyr::all_of(c("ID", contour_feature))), by = "ID") %>%
+          dplyr::group_by(!!rlang::sym(contour_feature)) %>%
+          dplyr::summarise(dr1_avg = mean(!!rlang::sym(paste0(reduction, "_", dims[1]))),
+                           dr2_avg = mean(!!rlang::sym(paste0(reduction, "_", dims[2]))),
+                           pct = (sum(!!rlang::sym(colnames(.)[1]) > 0)/dplyr::n())*100) %>%
+          dplyr::mutate(pct = ifelse(pct < 1, "< 1 %", paste0(round(pct,0), " %")))
+
+        plot <-
+          plot +
+          ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
+                              show.legend = F)
+      }
+
     }
 
     # define facets and plot freq.of.expr annotation
