@@ -143,7 +143,6 @@ prep_SO <- function(SO_unprocessed,
   reductions <- match.arg(tolower(reductions), c("tsne", "umap", "som", "gqtsom"), several.ok = T)
   normalization <- match.arg(normalization, c("SCT", "LogNormalize"))
   batch_corr <- match.arg(batch_corr, c("harmony", "integration", "none"))
-  integr_reduction <- match.arg(integr_reduction, c("rpca", "cca", "rlsi"))
 
   if (!is.null(celltype_ref_clusters)) {
     #check if celltype_ref_clusters can exist

@@ -88,6 +88,9 @@ cluster_correlation <- function(SO,
   ## names for SO are very important below. missing names will cause errors.
   assay <- match.arg(assay, c("RNA", "SCT"))
   method <- match.arg(method, c("pearson", "kendall", "spearman"))
+  if (!is.null(split.by) && method != "pearson") {
+    warning("Averaging correlation values may only be valid for pearson. See https://stats.stackexchange.com/questions/8019/averaging-correlation-values?noredirect=1&lq=1 .")
+  }
   meta.cols[1] <- .check.features(SO[[1]], features = meta.cols[1], rownames = F)
   meta.cols[2] <- .check.features(SO[[2]], features = meta.cols[2], rownames = F)
 
