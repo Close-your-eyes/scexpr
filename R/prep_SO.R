@@ -24,10 +24,6 @@
 #' rather vars.to.regress may be used in combination with batch_corr to regress percent_mito or so
 #' @param seeed seed passed to several methods
 #' @param save_path folder to save the resulting Seurat object as rds-file to
-#' @param ... additional arguments passed to Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
-#' prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
-#' for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
-#' and for EmbedSOM::EmbedSOM with "EmbedSOM__"
 #' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData(), MonacoImmune = celldex::MonacoImmuneData())
 #' @param celltype_label list of label names to use from the reference data set (one list entry per celltype_refs; each entry may contain a vector of labels)
 #' @param celltype_ref_clusters use a clustering as basis for grouped celltype annotation with SingleR. This will
@@ -97,11 +93,6 @@ prep_SO <- function(SO_unprocessed,
                     FindIntegrationAnchors_args = list(reduction = "rpca"),
                     IntegrateData_args = list(),
                     ...) {
-
-
-  ## use Gmisc::fastDoCall to call all functions
-  ## allow to pass individual lists with arguments; e.g. RunHarmony = list()
-
 
   if (!requireNamespace("BiocManager", quietly = TRUE)) {
     utils::install.packages("BiocManager")
@@ -484,12 +475,10 @@ prep_SO <- function(SO_unprocessed,
 
         anchor_features <- Seurat::SelectIntegrationFeatures(SO.list,
                                                              verbose = verbose,
-                                                             nfeatures = nhvf,
-                                                             ...)
+                                                             nfeatures = nhvf)
         SO.list <- Seurat::PrepSCTIntegration(object.list = SO.list,
                                               anchor.features = anchor_features,
-                                              verbose = verbose,
-                                              ...) # error by wrong argument
+                                              verbose = verbose)
       } else {
         SO.list <- lapply(SO.list,
                           FUN = Seurat::NormalizeData,
@@ -504,8 +493,7 @@ prep_SO <- function(SO_unprocessed,
         #SO.list <- lapply(SO.list, FUN = Seurat::FindVariableFeatures, assay = "RNA", selection.method = "vst", nfeatures = nhvf, verbose = verbose)
         anchor_features <- Seurat::SelectIntegrationFeatures(SO.list,
                                                              nfeatures = nhvf,
-                                                             verbose = verbose,
-                                                             ...)
+                                                             verbose = verbose)
       }
 
       FindIntegrationAnchors_args <- FindIntegrationAnchors[which(!names(FindIntegrationAnchors) %in% c("object.list", "normalization.method", "verbose"))]
