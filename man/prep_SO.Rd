@@ -14,12 +14,9 @@ prep_SO(
   reductions = c("umap", "som", "gqtsom", "tsne"),
   nhvf = 800,
   npcs = 20,
-  nintdims = 30,
   normalization = c("SCT", "LogNormalize"),
   hvf_determination_before_merge = F,
   batch_corr = c("harmony", "integration", "none"),
-  ref_sample = NULL,
-  integr_reduction = c("rpca", "cca", "rlsi"),
   vars.to.regress = NULL,
   seeed = 42,
   save_path = NULL,
@@ -30,12 +27,17 @@ prep_SO(
   var_feature_filter = NULL,
   verbose = F,
   FindVariableFeatures_args = list(),
-  SCtransform_args = list(),
+  SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
   RunUMAP_args = list(),
-  RunTSNE_args = list(),
+  RunTSNE_args = list(theta = 0),
   FindNeighbors_args = list(),
-  FindClusters_args = list(),
+  FindClusters_args = list(resolution = seq(0.1, 1, 0.1)),
   RunHarmony_args = list(),
+  SOM_args = list(),
+  GQTSOM_args = list(),
+  EmbedSOM_args = list(),
+  FindIntegrationAnchors_args = list(reduction = "rpca"),
+  IntegrateData_args = list(),
   ...
 )
 }
@@ -61,8 +63,6 @@ or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures}
 \item{npcs}{number of principle components in calculate in pca and to
 consider for downstream functions like tSNE or UMAP}
 
-\item{nintdims}{number of integration dimension, when batch_corr = "integration"}
-
 \item{normalization}{algorithm for normalization of UMIs}
 
 \item{hvf_determination_before_merge}{determine variable features before or after merging multiple samples;
@@ -73,11 +73,6 @@ it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq
 
 \item{batch_corr}{procedure for batch correction between samples in SO_unprocessed;
 only relevant if more than 1 sample is passed}
-
-\item{ref_sample}{optional names of the reference sample in SO_unprocessed for
-Seurat::FindIntegrationAnchors}
-
-\item{integr_reduction}{reduction method for Seurat::FindIntegrationAnchors; rpca is quicker than cca}
 
 \item{vars.to.regress}{passed to Seurat::SCTransform or Seurat::ScaleData; will be applied
 independent of what is set for batch_corr; if batch_corr is set to 'none', then only vars.to.regress is
@@ -106,10 +101,7 @@ e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]
 
 \item{verbose}{print messages and progress bars from functions}
 
-\item{...}{additional arguments passed to Seurat::PrepSCTIntegration, Seurat::FindIntegrationAnchors, Seurat::IntegrateData;
-prefix arguments for RunHarmony by "RunHarmony__"; so e.g. RunHarmony__theta, prefix arguments
-for EmbedSOM::SOM with "SOM__" (e.g. SOM__batch = T or SOM__rlen = 20,), for EmbedSOM::GQTSOM with "GQTSOM__" (e.g. GQTSOM__distf = 4)
-and for EmbedSOM::EmbedSOM with "EmbedSOM__"}
+\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO.list[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file
