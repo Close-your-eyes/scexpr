@@ -305,7 +305,8 @@ qc_diagnostic <- function(data_dirs,
                          reductions = "umap",
                          nhvf = nhvf,
                          npcs = npcs,
-                         cluster_resolutions = resolution,
+                         RunHarmony_args = list(group.by.vars = "orig.ident"),
+                         FindClusters_args = list(resolution = resolution),
                          normalization = "LogNormalize",
                          diet_seurat = F)
 
