@@ -246,8 +246,8 @@ qc_diagnostic <- function(data_dirs,
                 nhvf = nhvf,
                 npcs = npcs,
                 batch_corr = "harmony",
-                RunHarmony__group.by.vars = "orig.ident",
-                cluster_resolutions = resolution,
+                RunHarmony_args = list(group.by.vars = "orig.ident"),
+                FindClusters_args = list(resolution = resolution),
                 normalization = "LogNormalize",
                 diet_seurat = F)
 
