@@ -30,7 +30,7 @@
 #' @param exclusion.feature
 #' @param binary
 #' @param col.expresser
-#' @param legend.position
+#' @param legend.position # values between 0 and -1
 #' @param legend.title.text.size
 #' @param legend.text.size
 #' @param legend.barheight
@@ -73,6 +73,12 @@
 #' @param trajectory.color
 #' @param trajectory.size
 #' @param trajectory.linetype
+#' @param contour_feature
+#' @param col.pal.contour
+#' @param contour_args
+#' @param plot.expr.freq.by.contour.group
+#' @param use_ggnewscale_for_contour_colors
+#' @param expand_limits
 #'
 #' @return
 #' @export
@@ -165,8 +171,10 @@ feature_plot <- function(SO,
 
                          contour_feature = NULL,
                          col.pal.contour = "custom",
-                         contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
+                         contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1), # arguments to geom_density_2d
                          plot.expr.freq.by.contour.group = F,
+                         use_ggnewscale_for_contour_colors = T, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
+                         expand_limits = list(), # arguments to ggplot2::expand_limits
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -181,6 +189,7 @@ feature_plot <- function(SO,
   if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
   if ((length(order.discrete) %in% c(0,1)) && (is.null(order.discrete) || is.na(order.discrete))) {stop("order.discrete should be logical or a vector of factor levels in order.")}
   if (length(contour_feature) > 1) {stop("Only provide one contour_feature.")}
+  if (length(legend.position) > 2) {stop("legend.position should have length 1 being top, bottom, left, right; or length 2 indicating the corner where legend is to place.")}
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -437,6 +446,9 @@ feature_plot <- function(SO,
       if (length(SO) > 1 || !is.null(split.by)) {
         message("You may set the legend.position to left, right, bottom or top to indicate it is valid for every facet.")
       }
+      if (any(legend.position < 0) | any(legend.position > 1)) {
+        message("legend.position should have values between 0 and 1 indicating left/right and bottom/top corners")
+      }
       plot <- plot + ggplot2::theme(legend.justification = c(legend.position[1], legend.position[2]), legend.position = c(legend.position[1], legend.position[2]))
     }
 
@@ -498,6 +510,7 @@ feature_plot <- function(SO,
         col.pal.contour <- col_pal(name = col.pal.contour, reverse = col.pal.rev, n = nlevels(as.factor(contour_data[,1])))
       }
 
+      # order of col.pal.contour in case it has names??
 
       contour_args <- contour_args[which(!names(contour_args) %in% c("data", "mapping"))]
       if (!"contour_var" %in% names(contour_args)) {
@@ -510,12 +523,21 @@ feature_plot <- function(SO,
         contour_args <- c(linewidth = 1, contour_args)
       }
 
-      plot <-
-        plot +
-        ggnewscale::new_scale_color() +
-        Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = contour_data, mapping = ggplot2::aes(color = !!rlang::sym(contour_feature))))) +
-        #ggplot2::geom_density2d(data = contour_data, contour_var = "ndensity", breaks = contour_level, linewidth = 2, ggplot2::aes(color = !!rlang::sym(contour_feature))) +
-        ggplot2::scale_color_manual(values = col.pal.contour)
+      if (use_ggnewscale_for_contour_colors) {
+        plot <-
+          plot +
+          ggnewscale::new_scale_color() +
+          Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = contour_data, mapping = ggplot2::aes(color = !!rlang::sym(contour_feature))))) +
+          ggplot2::scale_color_manual(values = col.pal.contour)
+      } else {
+        for (i in 1:length(unique(contour_data[,contour_feature]))) {
+          plot <-
+            plot +
+            Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = contour_data[which(contour_data[,contour_feature] == unique(contour_data[,contour_feature])[i]),], color = col.pal.contour[i])))
+        }
+      }
+
+
 
       if (plot.expr.freq.by.contour.group) {
         group_labels <-
@@ -531,7 +553,12 @@ feature_plot <- function(SO,
           ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
                               show.legend = F)
       }
+    }
 
+    if (length(expand_limits) > 0) {
+      plot <-
+        plot +
+        Gmisc::fastDoCall(ggplot2::expand_limits, args = expand_limits)
     }
 
     # define facets and plot freq.of.expr annotation
