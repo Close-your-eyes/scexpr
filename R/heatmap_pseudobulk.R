@@ -52,6 +52,8 @@
 #' @param feature.labels.nudge_x
 #' @param feature.labels.axis.width
 #' @param ...
+#' @param order_features when features are provided should they be ordered automatrically to generate a pretty heatmap;
+#' not relevant when is.null(features)
 #'
 #' @importFrom magrittr %>%
 #'
@@ -65,6 +67,7 @@ heatmap_pseudobulk <- function(SO,
                                levels.plot = NULL,
                                assay = c("RNA", "SCT"),
                                features = NULL,
+                               order_features = F,
                                normalization = "scale", # scale
                                topn.features = 10,
                                topn.metric = c("logFC", "auc", "padj"),
@@ -104,7 +107,11 @@ heatmap_pseudobulk <- function(SO,
     devtools::install_github("immunogenomics/presto")
   }
   assay <- match.arg(assay, c("RNA", "SCT"))
-
+  topn.metric <- match.arg(topn.metric, c("logFC", "auc", "padj"))
+  if (topn.features < 1) {
+    message("topn.features has to be minimum 1.")
+    topn.features <- 1
+  }
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   if (methods::is(normalization, "numeric")) {
@@ -131,8 +138,6 @@ heatmap_pseudobulk <- function(SO,
     }
   }
 
-
-
   legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
   if (legend.direction == "horizontal") {
     temp <- legend.barwidth
@@ -140,37 +145,30 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-  levels.calc <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.calc, append_by_missing = F)
+  ## fix levels.calc and levels.plot logic
 
-  if (is.null(levels.plot)) {
-    levels.plot <- levels.calc
-  } else {
-    if (any(!levels.plot %in% unique(SO@meta.data[,meta.col,drop=T]))) {
-      print(paste0("levels.plot not found in meta.col: ", paste(levels.plot[which(!levels.plot %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
-    }
-    levels.plot <- as.character(unique(levels.plot[which(levels.plot %in% unique(SO@meta.data[,meta.col,drop=T]))]))
+  if (!is.null(levels.plot) && !is.null(levels.calc)) {
     if (any(!levels.plot %in% levels.calc)) {
       print("levels.plot has more levels than levels.calc. levels.plot is reduced to levels.calc.")
       levels.plot <- levels.plot[which(levels.plot %in% levels.calc)]
     }
   }
 
+  # this will replace NULL with all available levels
+  levels.calc <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.calc, append_by_missing = F)
+  levels.plot <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.plot, append_by_missing = F)
+
   # subset levels for calculation
   if (length(levels.calc) < length(unique(SO@meta.data[,meta.col,drop=T]))) {
     SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels.calc),,drop=F]))
   }
 
-
   # this problem was discovered by chance (":" are replaced by Seurat::AverageExpression by "_"); maybe other symbols will also cause problems.
   if (any(grepl(":", unique(SO@meta.data[,meta.col])))) {
     message("Found colon (:) in factor levels of meta.col. Will replace those with underscores (_).")
     SO@meta.data[,meta.col] <- gsub(":", "_", SO@meta.data[,meta.col])
-    if (!is.null(levels.plot)) {
-      levels.plot <- gsub(":", "_", levels.plot)
-    }
-    if (!is.null(levels.calc)) {
-      levels.calc <- gsub(":", "_", levels.calc)
-    }
+    levels.plot <- gsub(":", "_", levels.plot)
+    levels.calc <- gsub(":", "_", levels.calc)
   }
 
   ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
@@ -178,7 +176,6 @@ heatmap_pseudobulk <- function(SO,
   wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
 
   if (is.null(features)) {
-    topn.metric <- match.arg(topn.metric, c("logFC", "auc", "padj"))
     features <-
       wil_auc %>%
       dplyr::group_by(feature) %>%
@@ -186,20 +183,40 @@ heatmap_pseudobulk <- function(SO,
       dplyr::ungroup() %>%
       dplyr::filter(pct_in >= min.pct) %>%
       dplyr::filter(padj <= max.padj) %>%
-      dplyr::mutate(group = factor(group, levels = levels.calc)) %>%
+      dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
       dplyr::group_by(group) %>%
       dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
+      dplyr::ungroup() %>%
       dplyr::arrange(group, avgExpr) %>%
       dplyr::pull(feature)
   } else {
     features <- .check.features(SO = SO, features = unique(features), meta.data = F)
-    #features <- sapply(features, function(x) grep(x, rownames(Seurat::GetAssayData(SO, assay = assay, slot = "data")), ignore.case = T, value = T))
+    if (order_features) {
+      features <-
+        wil_auc %>%
+        dplyr::filter(feature %in% features) %>%
+        dplyr::group_by(feature) %>%
+        dplyr::slice_max(order_by = avgExpr, n = 1) %>%
+        dplyr::ungroup() %>%
+        dplyr::filter(pct_in >= min.pct) %>%
+        dplyr::filter(padj <= max.padj) %>%
+        dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
+        dplyr::group_by(group) %>%
+        dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
+        dplyr::ungroup() %>%
+        dplyr::arrange(as.numeric(group), avgExpr) %>%
+        dplyr::pull(feature)
+    }
   }
-  #wil_auc <- wil_auc[which(wil_auc$feature %in% features),]
 
-  make.names(SO@meta.data$prim_cell_atlas__label.fine)
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
-  if ((methods::is(normalization, "character")) && normalization == "scale") {
+  zero_expr <- names(which(Matrix::rowSums(raw_tab) == 0))
+  if (length(zero_expr)) {
+    message("No expressers found for: ", paste(zero_expr, collapse = ","), ". Will not be plotted.")
+    raw_tab <- raw_tab[which(!rownames(raw_tab) %in% zero_expr),]
+  }
+
+  if (methods::is(normalization, "character") && normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
   } else if (methods::is(normalization, "numeric")) {
     tab <- scale_min_max(raw_tab, min = min(normalization), max = max(normalization), margin = 1)
