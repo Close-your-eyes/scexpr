@@ -54,6 +54,7 @@
 #' @param ...
 #' @param order_features when features are provided should they be ordered automatrically to generate a pretty heatmap;
 #' not relevant when is.null(features)
+#' @param plot_hlines_between_groups
 #'
 #' @importFrom magrittr %>%
 #'
@@ -96,6 +97,7 @@ heatmap_pseudobulk <- function(SO,
                                feature.labels = NULL,
                                feature.labels.nudge_x = -0.1,
                                feature.labels.axis.width = 0.2,
+                               plot_hlines_between_groups = F,
                                ...) {
 
   # ... arguments to ggrepel, like nudge_y and scexpr::convert_gene_identifier
@@ -173,11 +175,27 @@ heatmap_pseudobulk <- function(SO,
 
   ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
   ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
-  wil_auc <- presto::wilcoxauc(SO, meta.col, seurat_assay = assay)
+  ## filter all features with zero expression across the data set
+  wil_auc <-
+    presto::wilcoxauc(SO, meta.col, seurat_assay = assay) %>%
+    dplyr::group_by(feature) %>%
+    dplyr::filter(sum(pct_in) > 0) %>%
+    dplyr::ungroup()
+  # prep to have one common pipeline below
+  if (!is.null(features)) {
+    features <- .check.features(SO = SO, features = unique(features), meta.data = F)
+    if (any(!features %in% wil_auc$feature)) {
+      message("No expressers found for: ", paste(features[which(!features %in% wil_auc$feature)], collapse = ","), ". Will not be plotted.")
+    }
+  } else {
+    order_features <- T
+    features <- wil_auc$feature
+  }
 
-  if (is.null(features)) {
+  if (order_features) {
     features <-
       wil_auc %>%
+      dplyr::filter(feature %in% features) %>%
       dplyr::group_by(feature) %>%
       dplyr::slice_max(order_by = avgExpr, n = 1) %>%
       dplyr::ungroup() %>%
@@ -187,34 +205,19 @@ heatmap_pseudobulk <- function(SO,
       dplyr::group_by(group) %>%
       dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
       dplyr::ungroup() %>%
-      dplyr::arrange(group, avgExpr) %>%
+      dplyr::arrange(group, avgExpr)
+    hlines <- cumsum(rle(as.character(features$group))[["lengths"]]) + 0.5
+    features <-
+      features %>%
       dplyr::pull(feature)
-  } else {
-    features <- .check.features(SO = SO, features = unique(features), meta.data = F)
-    if (order_features) {
-      features <-
-        wil_auc %>%
-        dplyr::filter(feature %in% features) %>%
-        dplyr::group_by(feature) %>%
-        dplyr::slice_max(order_by = avgExpr, n = 1) %>%
-        dplyr::ungroup() %>%
-        dplyr::filter(pct_in >= min.pct) %>%
-        dplyr::filter(padj <= max.padj) %>%
-        dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
-        dplyr::group_by(group) %>%
-        dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
-        dplyr::ungroup() %>%
-        dplyr::arrange(as.numeric(group), avgExpr) %>%
-        dplyr::pull(feature)
-    }
   }
 
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
-  zero_expr <- names(which(Matrix::rowSums(raw_tab) == 0))
+'  zero_expr <- names(which(Matrix::rowSums(raw_tab) == 0))
   if (length(zero_expr)) {
     message("No expressers found for: ", paste(zero_expr, collapse = ","), ". Will not be plotted.")
     raw_tab <- raw_tab[which(!rownames(raw_tab) %in% zero_expr),]
-  }
+  }'
 
   if (methods::is(normalization, "character") && normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
@@ -249,6 +252,7 @@ heatmap_pseudobulk <- function(SO,
     ggplot2::theme_classic() +
     ggplot2::ggtitle(title) +
     ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family), axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_text(family = font.family), axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family), legend.position = legend.position, legend.direction = legend.direction)
+
 
   if (dotplot) {
     heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21)
@@ -286,6 +290,12 @@ heatmap_pseudobulk <- function(SO,
       ggplot2::scale_y_continuous(limits = c(0.4, length(levels(htp$Feature)) + 0.4), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme(panel.background = ggplot2::element_blank(), plot.margin = ggplot2::margin(0, 0, 0, 0, "pt"), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
     heatmap.plot <- cowplot::plot_grid(heatmap.plot + ggplot2::theme(plot.margin = ggplot2::margin(0, 0, 0, 0, "pt")), axis, align = "h", axis = "tb", nrow = 1, rel_widths = c(0.6,0.4))
+  }
+
+  if (plot_hlines_between_groups) {
+    heatmap.plot <-
+      heatmap.plot +
+      ggplot2::geom_hline(yintercept = hlines[-length(hlines)])
   }
 
 

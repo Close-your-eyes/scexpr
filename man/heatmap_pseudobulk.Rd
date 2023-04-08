@@ -11,6 +11,7 @@ heatmap_pseudobulk(
   levels.plot = NULL,
   assay = c("RNA", "SCT"),
   features = NULL,
+  order_features = F,
   normalization = "scale",
   topn.features = 10,
   topn.metric = c("logFC", "auc", "padj"),
@@ -37,6 +38,7 @@ heatmap_pseudobulk(
   feature.labels = NULL,
   feature.labels.nudge_x = -0.1,
   feature.labels.axis.width = 0.2,
+  plot_hlines_between_groups = F,
   ...
 )
 }
@@ -57,6 +59,9 @@ calculation but only select levels for plotting}
 \item{assay}{which assay to obtain expression values from}
 
 \item{features}{optionally choose which features to plot (supervised)}
+
+\item{order_features}{when features are provided should they be ordered automatrically to generate a pretty heatmap;
+not relevant when is.null(features)}
 
 \item{normalization}{how to scale expression values; may be "scale" to
 use base::scale and transform average expression value to a standardized
@@ -94,7 +99,7 @@ features only}
 \item{dotplot}{plot heatmap as a dotplot which will also reveal the fraction
 of expressing cells by dot sizes}
 
-\item{...}{}
+\item{plot_hlines_between_groups}{}
 }
 \description{
 Title

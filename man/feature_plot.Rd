@@ -81,6 +81,8 @@ feature_plot(
   col.pal.contour = "custom",
   contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
   plot.expr.freq.by.contour.group = F,
+  use_ggnewscale_for_contour_colors = T,
+  expand_limits = list(),
   ...
 )
 }
@@ -139,9 +141,11 @@ feature_plot(
 
 \item{cutoff.expression}{select the cutoff feature expression levels for filtering}
 
+\item{legend.position}{values between 0 and -1}
+
 \item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
 
-\item{trajectory.linetype}{}
+\item{expand_limits}{}
 }
 \description{
 Plot features of single cell transcriptomes on a dimension reduction map

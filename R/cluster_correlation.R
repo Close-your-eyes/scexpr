@@ -26,6 +26,11 @@
 #' transformed back (tanh)
 #' @param min.cells minimum number of cells per group in meta.cols (and if provided split.by)
 #' to calculate and return a correlation coefficient
+#' @param lower.triangle.only return the lower triangle of correlation matrix which will contain
+#' unique values only
+#' @param aspect.ratio aspect ratio of matrix plot
+#' @param return_ranks_or_residuals return ranks or residuals to see which features are most distinct between groups;
+#' only for ranks right now and only for split.by = NULL
 #'
 #' @return list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
@@ -42,7 +47,10 @@ cluster_correlation <- function(SO,
                                 method = c("pearson", "kendall", "spearman"),
                                 corr.in.percent = FALSE,
                                 min.cells = 20,
-                                round.corr = 2) {
+                                round.corr = 2,
+                                lower.triangle.only = T,
+                                aspect.ratio = 1,
+                                return_ranks_or_residuals = F) {
 
   if (!requireNamespace("reshape2", quietly = T)) {
     utils::install.packages("reshape2")
@@ -210,8 +218,33 @@ cluster_correlation <- function(SO,
 
     # calculate correlations
     cm <- stats::cor(x = avg.expr[[1]], y = avg.expr[[2]], method = method)
+    if (lower.triangle.only) {
+      cm[which(!lower.tri(cm))] <- NA
+    }
     cm.melt <- reshape2::melt(cm)
+    cm.melt <- cm.melt[which(!is.na(cm.melt$value)),]
+
+    if (return_ranks_or_residuals) {
+      ranks_list <- lapply(1:nrow(cm.melt), function(x) {
+        cm.melt[x, "Var2"]
+        ranks <- data.frame(avg.expr[[1]][,cm.melt[x, "Var1"]], avg.expr[[2]][,cm.melt[x, "Var2"]])
+        names(ranks) <- c(cm.melt[x, "Var1"], cm.melt[x, "Var2"])
+        ranks <-
+          ranks %>%
+          dplyr::mutate(rank1 = dplyr::dense_rank(!!rlang::sym(as.character(cm.melt[x, "Var1"]))),
+                        rank2 = dplyr::dense_rank(!!rlang::sym(as.character(cm.melt[x, "Var2"])))) %>%
+          dplyr::mutate(rank_diff = rank1 - rank2) %>%
+          dplyr::mutate(abs_rank_diff = abs(rank_diff)) %>%
+          dplyr::arrange(rank_diff)
+        names(ranks)[3:4] <- paste0(c(cm.melt[x, "Var1"], cm.melt[x, "Var2"]), "_rank")
+        return(ranks)
+      })
+      names(ranks_list) <- paste0(cm.melt[1:nrow(cm.melt),"Var1"], "___", cm.melt[1:nrow(cm.melt),"Var2"])
+    } else {
+      ranks_list <- NULL
+    }
   }
+
 
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
   cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
@@ -223,7 +256,8 @@ cluster_correlation <- function(SO,
     #ggplot2::scale_fill_gradient2(high = "#BC3F2B", low = "#4C6CA6", mid = "#edf9ff", midpoint = median(cm.melt$value)) +
     ggplot2::scale_fill_gradientn(colors = pp) +
     ggplot2::labs(x = paste0(names(SO)[1], " ", meta.cols[1]), y = paste0(names(SO)[2], " ", meta.cols[2])) +
-    ggplot2::theme_classic()
+    ggplot2::theme_classic() +
+    ggplot2::coord_fixed(ratio = aspect.ratio)
 
   if (corr.in.percent) {
     cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = paste0(round(value*100, 0), " %")))
