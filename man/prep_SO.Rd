@@ -28,6 +28,7 @@ prep_SO(
   verbose = F,
   FindVariableFeatures_args = list(),
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
+  RunPCA_args = list(),
   RunUMAP_args = list(),
   RunTSNE_args = list(theta = 0),
   FindNeighbors_args = list(),
@@ -102,6 +103,8 @@ e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]
 \item{verbose}{print messages and progress bars from functions}
 
 \item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO.list[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
+
+\item{...}{}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file

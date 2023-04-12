@@ -52,6 +52,8 @@
 #' @param EmbedSOM_args
 #' @param FindIntegrationAnchors_args
 #' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(SO.list[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
+#' @param RunPCA_args
+#' @param ...
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -331,7 +333,7 @@ prep_SO <- function(SO_unprocessed,
     }
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
                                                           npcs = npcs,
-                                                          seed.use = seeed
+                                                          seed.use = seeed,
                                                           verbose = verbose),
                                                      RunPCA_args))
     SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
@@ -458,7 +460,7 @@ prep_SO <- function(SO_unprocessed,
 
       SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
                                                             npcs = npcs,
-                                                            seed.use = seeed
+                                                            seed.use = seeed,
                                                             verbose = verbose),
                                                        RunPCA_args))
       SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
@@ -545,7 +547,7 @@ prep_SO <- function(SO_unprocessed,
                             FUN = Seurat::RunPCA,
                             assay = "SCT",
                             npcs = npcs,
-                            seed.use = seeed
+                            seed.use = seeed,
                             features = anchor_features,
                             verbose = verbose,
                             unlist(RunPCA_args))
@@ -555,7 +557,7 @@ prep_SO <- function(SO_unprocessed,
           x <- Seurat::ScaleData(x, features = anchor_features, verbose = verbose)
           x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
                                                                npcs = npcs,
-                                                               seed.use = seeed
+                                                               seed.use = seeed,
                                                                verbose = verbose),
                                                           RunPCA_args))
           return(x)
@@ -596,7 +598,7 @@ prep_SO <- function(SO_unprocessed,
 
       SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
                                                             npcs = npcs,
-                                                            seed.use = seeed
+                                                            seed.use = seeed,
                                                             verbose = verbose),
                                                        RunPCA_args))
       SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
