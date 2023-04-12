@@ -82,6 +82,7 @@ prep_SO <- function(SO_unprocessed,
                     verbose = F,
                     FindVariableFeatures_args = list(),
                     SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
+                    RunPCA_args = list(),
                     RunUMAP_args = list(),
                     RunTSNE_args = list(theta = 0),
                     FindNeighbors_args = list(),
@@ -143,6 +144,26 @@ prep_SO <- function(SO_unprocessed,
   reductions <- match.arg(tolower(reductions), c("tsne", "umap", "som", "gqtsom"), several.ok = T)
   normalization <- match.arg(normalization, c("SCT", "LogNormalize"))
   batch_corr <- match.arg(batch_corr, c("harmony", "integration", "none"))
+
+  # actually only very few arguments are allowed to be passed by RunPCA_args. Otherwise the function would break.
+  if ("npcs" %in% names(RunPCA_args)) {
+    stop("Please do not pass npcs in RunPCA_args. Use the npcs argument.")
+  }
+  if ("seed.use" %in% names(RunPCA_args)) {
+    stop("Please do not pass seed.use in RunPCA_args. Use the seeed argument.")
+  }
+  if ("verbose" %in% names(RunPCA_args)) {
+    stop("Please do not pass verbose in RunPCA_args. Use the verbose argument.")
+  }
+  if ("reduction.name" %in% names(RunPCA_args)) {
+    stop("Please do not pass reduction.name in RunPCA_args.")
+  }
+  if ("reduction.key" %in% names(RunPCA_args)) {
+    stop("Please do not pass reduction.key in RunPCA_args.")
+  }
+  if ("assay" %in% names(RunPCA_args)) {
+    stop("Please do not pass assay in RunPCA_args.")
+  }
 
   if (!is.null(celltype_ref_clusters)) {
     #check if celltype_ref_clusters can exist
@@ -308,7 +329,11 @@ prep_SO <- function(SO_unprocessed,
       }
       SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     }
-    SO <- Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed)
+    SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
+                                                          npcs = npcs,
+                                                          seed.use = seeed
+                                                          verbose = verbose),
+                                                     RunPCA_args))
     SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
   }
 
@@ -431,7 +456,11 @@ prep_SO <- function(SO_unprocessed,
         SO <- Seurat::ScaleData(SO, vars.to.regress = vars.to.regress, verbose = verbose)
       }
 
-      SO <- Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed)
+      SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
+                                                            npcs = npcs,
+                                                            seed.use = seeed
+                                                            verbose = verbose),
+                                                       RunPCA_args))
       SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
 
       if (batch_corr == "harmony") {
@@ -511,16 +540,24 @@ prep_SO <- function(SO_unprocessed,
 
       if (FindIntegrationAnchors_args[["reduction"]] == "rpca") {
         if (normalization == "SCT") {
+          ## does passing RunPCA_args like this cause an error?
           SO.list <- lapply(SO.list,
                             FUN = Seurat::RunPCA,
                             assay = "SCT",
+                            npcs = npcs,
+                            seed.use = seeed
                             features = anchor_features,
-                            verbose = verbose)
+                            verbose = verbose,
+                            unlist(RunPCA_args))
         }
       } else {
         SO.list <- lapply(SO.list, function(x) {
           x <- Seurat::ScaleData(x, features = anchor_features, verbose = verbose)
-          x <- Seurat::RunPCA(x, features = anchor_features, verbose = verbose)
+          x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
+                                                               npcs = npcs,
+                                                               seed.use = seeed
+                                                               verbose = verbose),
+                                                          RunPCA_args))
           return(x)
         })
       }
@@ -557,7 +594,11 @@ prep_SO <- function(SO_unprocessed,
       SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose) # just for completeness
       SO <- Seurat::ScaleData(SO, assay = "integrated", verbose = verbose) # see https://satijalab.org/seurat/articles/integration_introduction.html
 
-      SO <- Seurat::RunPCA(object = SO, npcs = npcs, verbose = verbose, seed.use = seeed)
+      SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
+                                                            npcs = npcs,
+                                                            seed.use = seeed
+                                                            verbose = verbose),
+                                                       RunPCA_args))
       SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
     }
   }
