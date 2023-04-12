@@ -686,15 +686,15 @@ volcano_plot <- function(SO,
   } else {
     if (is.null(x_label)) {
       if (minus_log10_y) {
-        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
       } else {
-        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ log[2] ~ "FC" ~ "  ====>  " ~ bold(.(pgn))), y = y_label)
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(pgn))), y = y_label)
       }
     } else {
       if (minus_log10_y) {
-        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ .(rlang::sym(x_label)) ~ "  ====>  " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ " <-- " ~ .(rlang::sym(x_label)) ~ " --> " ~ bold(.(pgn))), y = bquote(-log[10]~.(rlang::sym(y_label))))
       } else {
-        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ "  <====  " ~ .(rlang::sym(x_label)) ~ "  ====>  " ~ bold(.(pgn))), y = y_label)
+        vp <- vp + ggplot2::labs(x = bquote(bold(.(ngn)) ~ " <-- " ~ .(rlang::sym(x_label)) ~ " --> " ~ bold(.(pgn))), y = y_label)
       }
     }
   }
