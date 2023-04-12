@@ -115,6 +115,12 @@ heatmap_pseudobulk <- function(SO,
     topn.features <- 1
   }
 
+  if (plot_hlines_between_groups && !is.null(features) && !order_features) {
+    message("horizontal lines between group (hlines) can be plotted if order_features is set to TRUE.
+            Will set plot_hlines_between_groups to FALSE now.")
+    plot_hlines_between_groups <- F
+  }
+
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   if (methods::is(normalization, "numeric")) {
     if (length(normalization) != 2) {

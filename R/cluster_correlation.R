@@ -267,7 +267,7 @@ cluster_correlation <- function(SO,
 
     if (method != "pearson") {
       lms_or_ranks <- lapply(1:nrow(cm.melt), function(x) {
-        ranks <- data.frame(avg.expr[[2]][,cm.melt[x, "Var1"]], avg.expr[[1]][,cm.melt[x, "Var2"]])
+        ranks <- data.frame(avg.expr[[1]][,as.character(cm.melt[x, "Var1"])], avg.expr[[2]][,as.character(cm.melt[x, "Var2"])])
         names(ranks) <- c(cm.melt[x, "Var1"], cm.melt[x, "Var2"])
         ranks <-
           ranks %>%

@@ -548,10 +548,17 @@ feature_plot <- function(SO,
                            pct = (sum(!!rlang::sym(colnames(.)[1]) > 0)/dplyr::n())*100) %>%
           dplyr::mutate(pct = ifelse(pct < 1, "< 1 %", paste0(round(pct,0), " %")))
 
-        plot <-
-          plot +
-          ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
-                              show.legend = F)
+        if (use_ggnewscale_for_contour_colors) {
+          plot <-
+            plot +
+            ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
+                                show.legend = F)
+        } else {
+          plot <-
+            plot +
+            ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct))
+        }
+
       }
     }
 
