@@ -18,8 +18,7 @@ cluster_correlation(
   min.cells = 20,
   round.corr = 2,
   lower.triangle.only = T,
-  aspect.ratio = 1,
-  return_ranks_or_residuals = F
+  aspect.ratio = 1
 )
 }
 \arguments{
@@ -59,9 +58,6 @@ to calculate and return a correlation coefficient}
 unique values only}
 
 \item{aspect.ratio}{aspect ratio of matrix plot}
-
-\item{return_ranks_or_residuals}{return ranks or residuals to see which features are most distinct between groups;
-only for ranks right now and only for split.by = NULL}
 }
 \value{
 list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression

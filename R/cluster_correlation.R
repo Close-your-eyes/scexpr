@@ -29,8 +29,6 @@
 #' @param lower.triangle.only return the lower triangle of correlation matrix which will contain
 #' unique values only
 #' @param aspect.ratio aspect ratio of matrix plot
-#' @param return_ranks_or_residuals return ranks or residuals to see which features are most distinct between groups;
-#' only for ranks right now and only for split.by = NULL
 #'
 #' @return list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
@@ -49,8 +47,7 @@ cluster_correlation <- function(SO,
                                 min.cells = 20,
                                 round.corr = 2,
                                 lower.triangle.only = T,
-                                aspect.ratio = 1,
-                                return_ranks_or_residuals = F) {
+                                aspect.ratio = 1) {
 
   if (!requireNamespace("reshape2", quietly = T)) {
     utils::install.packages("reshape2")
@@ -156,22 +153,20 @@ cluster_correlation <- function(SO,
   #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
   #identical(Seurat::AverageExpression(SO[[1]][[1]], assays = assay, group.by = meta.cols[[1]], slot = "data", verbose = F)[[assay]], avg.expr2[[1]][[1]])
 
-  # for pearson correlation, also a linear correlation would be feasable
-  # conduct linear model in case of pearson
-  # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
-
   if (missing(avg.expr)) {
     avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, slot = "data", verbose = F)[[assay]]))
-    # avg.expr <- lapply(seq_along(SO), function(x) Seurat::AverageExpression(SO[[x]], assays = assay, features = features, group.by = meta.cols[[x]], slot = "data", verbose = F)[[assay]])
   } else {
     avg.expr <- purrr::map(.x = avg.expr, .f = ~ purrr::map(.x = .x, .f = ~ .x[features,,drop=F]))
-    #avg.expr <- lapply(avg.expr, function(x) x[features,,drop=F])
   }
 
   # filter for levels
   avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) {purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F])})
 
   if (!is.null(split.by)) {
+
+    # currently not implemented for splitted corr analyses
+    lms_or_ranks <- NULL
+
     n_cell_df_nest <-
       n_cell_df %>%
       dplyr::filter(n_cells >= min.cells) %>%
@@ -217,17 +212,62 @@ cluster_correlation <- function(SO,
     }
 
     # calculate correlations
-    cm <- stats::cor(x = avg.expr[[1]], y = avg.expr[[2]], method = method)
+    if (method == "pearson") {
+      # for pearson correlation, also a linear correlation is feasible
+      # this also allows for analysis of residuals
+      # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
+
+      # replace mathematical operators and special characters from level names to allow passing formula to lm
+      if (any(c(!identical(make.names(colnames(avg.expr[[1]])), colnames(avg.expr[[1]])),
+                !identical(make.names(colnames(avg.expr[[2]])), colnames(avg.expr[[2]]))))) {
+        message("Mathematical operators of special characters found in factor levels. Those are replace by dots in linear model formulae.")
+      }
+      # run the make.names thing to have a common command below
+      orig_colnames_1 <- setNames(colnames(avg.expr[[1]]), nm = make.names(colnames(avg.expr[[1]])))
+      orig_colnames_2 <- setNames(colnames(avg.expr[[2]]), nm = make.names(colnames(avg.expr[[2]])))
+      colnames(avg.expr[[1]]) <- make.names(colnames(avg.expr[[1]]))
+      colnames(avg.expr[[2]]) <- make.names(colnames(avg.expr[[2]]))
+
+      combs_raw <- expand.grid(colnames(avg.expr[[1]]), colnames(avg.expr[[2]]))
+      combs_raw <- combs_raw[which(as.character(combs_raw[,1]) != as.character(combs_raw[,2])),]
+      #orders <- apply(combs_raw, 1, function(x) order(c(x[1], x[2])), simplify = F)
+      #combs <- split(combs_raw, 1:nrow(combs_raw))
+      #combs_helper <- dplyr::bind_rows(mapply(x = combs, y = orders, function(x,y) x[y], SIMPLIFY = F))
+      #names(combs) <- apply(combs_raw, 1, function(x) paste0(x[1], "___", x[2]))
+
+      ## use reformulate to have the correct var names in lms
+      lms_or_ranks <- purrr::map2(.x = as.character(combs_raw$Var1), .y = as.character(combs_raw$Var2), .f = function(x,y) {
+        lm(formula = reformulate(x, y), data = data.frame(scale(avg.expr[[1]][,x,drop=F]), y = scale(avg.expr[[2]][,y,drop=F])))
+      })
+
+      names(lms_or_ranks) <- paste0(orig_colnames_2[sapply(purrr::map(purrr::map(lms_or_ranks, purrr::chuck, "model"), colnames), "[", 1)], "___",
+                                    orig_colnames_1[sapply(purrr::map(purrr::map(lms_or_ranks, purrr::chuck, "model"), colnames), "[", 2)])
+
+      # matrix was found to be correct, like when stats::cor produces it
+      cm <- purrr::map(lms_or_ranks, purrr::chuck, "coefficients", 2)
+      cm <- matrix(unlist(cm), nrow = ncol(avg.expr[[1]]))
+      rownames(cm) <- orig_colnames_1[colnames(avg.expr[[1]])]
+      colnames(cm) <- orig_colnames_2[colnames(avg.expr[[2]])]
+    } else {
+      cm <- stats::cor(x = avg.expr[[1]], y = avg.expr[[2]], method = method)
+    }
+
+    # order columns and rows to get the right elements filtered in case of lower.triangle.only
+    cm <- cm[levels[[1]], levels[[2]]]
     if (lower.triangle.only) {
       cm[which(!lower.tri(cm))] <- NA
     }
+
     cm.melt <- reshape2::melt(cm)
     cm.melt <- cm.melt[which(!is.na(cm.melt$value)),]
 
-    if (return_ranks_or_residuals) {
-      ranks_list <- lapply(1:nrow(cm.melt), function(x) {
-        cm.melt[x, "Var2"]
-        ranks <- data.frame(avg.expr[[1]][,cm.melt[x, "Var1"]], avg.expr[[2]][,cm.melt[x, "Var2"]])
+    # switch Var1 and Var2 to make it consistent with pearson case above (lm) where the formula is y~x (y in front stemming from avg.expr[[2]])
+    # names(cm.melt)[1:2] <- c("Var2", "Var1")
+    # why? or transpose cm?
+
+    if (method != "pearson") {
+      lms_or_ranks <- lapply(1:nrow(cm.melt), function(x) {
+        ranks <- data.frame(avg.expr[[2]][,cm.melt[x, "Var1"]], avg.expr[[1]][,cm.melt[x, "Var2"]])
         names(ranks) <- c(cm.melt[x, "Var1"], cm.melt[x, "Var2"])
         ranks <-
           ranks %>%
@@ -239,12 +279,9 @@ cluster_correlation <- function(SO,
         names(ranks)[3:4] <- paste0(c(cm.melt[x, "Var1"], cm.melt[x, "Var2"]), "_rank")
         return(ranks)
       })
-      names(ranks_list) <- paste0(cm.melt[1:nrow(cm.melt),"Var1"], "___", cm.melt[1:nrow(cm.melt),"Var2"])
-    } else {
-      ranks_list <- NULL
+      names(lms_or_ranks) <- paste0(cm.melt[1:nrow(cm.melt),"Var1"], "___", cm.melt[1:nrow(cm.melt),"Var2"])
     }
   }
-
 
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
   cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
@@ -280,5 +317,10 @@ cluster_correlation <- function(SO,
     scale_y_log10() +
     facet_grid(rows = vars(cluster.x), cols = vars(cluster.y), scales = "free")'
 
-  return(list(plot = cm.plot, data = cm.melt, avg.expr = avg.expr))
+  if (method == "pearson") {
+    return(list(plot = cm.plot, data = cm.melt, avg.expr = avg.expr, lms = lms_or_ranks))
+  } else {
+    return(list(plot = cm.plot, data = cm.melt, avg.expr = avg.expr, ranks = lms_or_ranks))
+  }
+
 }
