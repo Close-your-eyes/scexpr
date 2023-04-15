@@ -52,9 +52,18 @@
 #' @param feature.labels.nudge_x
 #' @param feature.labels.axis.width
 #' @param ...
-#' @param order_features when features are provided should they be ordered automatrically to generate a pretty heatmap;
+#' @param order_features when features are provided should they be ordered automatically to generate a pretty heatmap;
 #' not relevant when is.null(features)
-#' @param plot_hlines_between_groups
+#' @param plot_hlines_between_groups plot horizontal lines to separate groups of genes that are
+#' differentially expressed by a group on the x-axis; if hlines is NULL the breaks are
+#' determined automatically
+#' @param topn.ties passed as 'with_ties' to dplyr::slice_min or dplyr::slice_max;
+#' if set to FALSE exactly topn.features are returned even if there are rank-ties
+#' @param hlines provide manual breaks of where to plot horizontal lines;
+#' even though the y-axis is discrete, a numeric vector works here:
+#' hlines = c(1.5, 3.5) will plot lines between the first and second, and, third and fourth
+#' entry on the y-axis, respectively
+#' @param hlines_args arguments to geom_hline like linewidth or linetype
 #'
 #' @importFrom magrittr %>%
 #'
@@ -71,7 +80,8 @@ heatmap_pseudobulk <- function(SO,
                                order_features = F,
                                normalization = "scale", # scale
                                topn.features = 10,
-                               topn.metric = c("logFC", "auc", "padj"),
+                               topn.ties = F,
+                               topn.metric = c("padj", "auc", "logFC"),
                                min.pct = 0.1,
                                max.padj = 0.05,
                                title = NULL,
@@ -98,6 +108,8 @@ heatmap_pseudobulk <- function(SO,
                                feature.labels.nudge_x = -0.1,
                                feature.labels.axis.width = 0.2,
                                plot_hlines_between_groups = F,
+                               hlines = NULL,
+                               hlines_args = list(),
                                ...) {
 
   # ... arguments to ggrepel, like nudge_y and scexpr::convert_gene_identifier
@@ -108,17 +120,23 @@ heatmap_pseudobulk <- function(SO,
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }
+
   assay <- match.arg(assay, c("RNA", "SCT"))
-  topn.metric <- match.arg(topn.metric, c("logFC", "auc", "padj"))
+  topn.metric <- match.arg(topn.metric, c("padj", "auc", "logFC"))
   if (topn.features < 1) {
     message("topn.features has to be minimum 1.")
     topn.features <- 1
   }
 
-  if (plot_hlines_between_groups && !is.null(features) && !order_features) {
-    message("horizontal lines between group (hlines) can be plotted if order_features is set to TRUE.
-            Will set plot_hlines_between_groups to FALSE now.")
+  if (plot_hlines_between_groups && !is.null(features) && !order_features && is.null(hlines)) {
+    message("horizontal lines between group (hlines) can only be inferred automatically if order_features is set to TRUE.
+            Will set plot_hlines_between_groups to FALSE now.
+            Alternatively provide them with the hlines argument manually")
     plot_hlines_between_groups <- F
+  }
+
+  if (!plot_hlines_between_groups && !is.null(hlines)) {
+    message("hlines provided but plot_hlines_between_groups is FALSE.")
   }
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
@@ -153,8 +171,6 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-  ## fix levels.calc and levels.plot logic
-
   if (!is.null(levels.plot) && !is.null(levels.calc)) {
     if (any(!levels.plot %in% levels.calc)) {
       print("levels.plot has more levels than levels.calc. levels.plot is reduced to levels.calc.")
@@ -180,12 +196,12 @@ heatmap_pseudobulk <- function(SO,
   }
 
   ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
-  ## nevertheless, in order to select marker genes by logFC or other statistics the presto output is useful
+  ## nevertheless, in order to select marker genes by logFC or other statistics fast perfromance of presto is useful
   ## filter all features with zero expression across the data set
   wil_auc <-
     presto::wilcoxauc(SO, meta.col, seurat_assay = assay) %>%
     dplyr::group_by(feature) %>%
-    dplyr::filter(sum(pct_in) > 0) %>%
+    dplyr::filter(sum(pct_in) > 0) %>% # filter non-expressed features
     dplyr::ungroup()
   # prep to have one common pipeline below
   if (!is.null(features)) {
@@ -199,6 +215,12 @@ heatmap_pseudobulk <- function(SO,
   }
 
   if (order_features) {
+    if (topn.metric == "padj") {
+      slice_fun <- dplyr::slice_min
+    } else {
+      slice_fun <- dplyr::slice_max
+    }
+
     features <-
       wil_auc %>%
       dplyr::filter(feature %in% features) %>%
@@ -209,21 +231,19 @@ heatmap_pseudobulk <- function(SO,
       dplyr::filter(padj <= max.padj) %>%
       dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
       dplyr::group_by(group) %>%
-      dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features) %>%
+      slice_fun(order_by = !!rlang::sym(topn.metric), n = topn.features, with_ties = topn.ties) %>%
       dplyr::ungroup() %>%
       dplyr::arrange(group, avgExpr)
-    hlines <- cumsum(rle(as.character(features$group))[["lengths"]]) + 0.5
+    if (is.null(hlines)) {
+      hlines <- cumsum(rle(as.character(features$group))[["lengths"]]) + 0.5
+      hlines <- hlines[-length(hlines)]
+    }
     features <-
       features %>%
       dplyr::pull(feature)
   }
 
   raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
-'  zero_expr <- names(which(Matrix::rowSums(raw_tab) == 0))
-  if (length(zero_expr)) {
-    message("No expressers found for: ", paste(zero_expr, collapse = ","), ". Will not be plotted.")
-    raw_tab <- raw_tab[which(!rownames(raw_tab) %in% zero_expr),]
-  }'
 
   if (methods::is(normalization, "character") && normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
@@ -301,7 +321,9 @@ heatmap_pseudobulk <- function(SO,
   if (plot_hlines_between_groups) {
     heatmap.plot <-
       heatmap.plot +
-      ggplot2::geom_hline(yintercept = hlines[-length(hlines)])
+      Gmisc::fastDoCall(ggplot2::geom_hline, args = c(list(yintercept = hlines), hlines_args))
+  } else {
+    hlines = NULL
   }
 
 
@@ -313,7 +335,7 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- heatmap.plot + ggplot2::theme(axis.text.y = ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank())
   }
 
-  return(list(plot = heatmap.plot, data = htp, complete_data = wil_auc))
+  return(list(plot = heatmap.plot, data = htp, complete_data = wil_auc, hlines = hlines))
 }
 
 .check.levels <- function(SO, meta.col, levels = NULL, append_by_missing = F) {

@@ -69,6 +69,7 @@ feature_plot(
   strip.font.size = 14,
   strip.selection = NA,
   plot.labels = NULL,
+  label.feature = NULL,
   label.size = 12,
   na.rm = F,
   inf.rm = F,
@@ -143,9 +144,10 @@ feature_plot(
 
 \item{legend.position}{values between 0 and -1}
 
-\item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
+\item{label.feature}{provide a column in meta.data of SO which should be used for labels
+(e.g. a short form that does not disturb the plot so much)}
 
-\item{expand_limits}{}
+\item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
 }
 \description{
 Plot features of single cell transcriptomes on a dimension reduction map

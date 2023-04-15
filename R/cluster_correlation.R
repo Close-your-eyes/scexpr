@@ -42,12 +42,13 @@ cluster_correlation <- function(SO,
                                 complement.levels = F,
                                 split.by = NULL,
                                 avg.expr,
-                                method = c("pearson", "kendall", "spearman"),
+                                method = c("pearson","spearman", "kendall"),
                                 corr.in.percent = FALSE,
                                 min.cells = 20,
                                 round.corr = 2,
                                 lower.triangle.only = T,
-                                aspect.ratio = 1) {
+                                aspect.ratio = 1,
+                                mid.white.strech.length = 4) {
 
   if (!requireNamespace("reshape2", quietly = T)) {
     utils::install.packages("reshape2")
@@ -286,7 +287,9 @@ cluster_correlation <- function(SO,
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
   cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
 
-  pp <- c(col_pal("RdBu", n = 11, reverse = T)[2:5], rep(col_pal("RdBu", n = 11, reverse = T)[6], 6), col_pal("RdBu", n = 11, reverse = T)[7:10])
+  pp <- c(col_pal("RdBu", n = 11, reverse = T)[2:5],
+          rep(col_pal("RdBu", n = 11, reverse = T)[6], mid.white.strech.length),
+          col_pal("RdBu", n = 11, reverse = T)[7:10])
 
   cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
     ggplot2::geom_tile(colour = "black") +

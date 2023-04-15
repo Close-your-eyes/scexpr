@@ -13,12 +13,13 @@ cluster_correlation(
   complement.levels = F,
   split.by = NULL,
   avg.expr,
-  method = c("pearson", "kendall", "spearman"),
+  method = c("pearson", "spearman", "kendall"),
   corr.in.percent = FALSE,
   min.cells = 20,
   round.corr = 2,
   lower.triangle.only = T,
-  aspect.ratio = 1
+  aspect.ratio = 1,
+  mid.white.strech.length = 4
 )
 }
 \arguments{

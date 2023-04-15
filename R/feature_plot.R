@@ -79,6 +79,8 @@
 #' @param plot.expr.freq.by.contour.group
 #' @param use_ggnewscale_for_contour_colors
 #' @param expand_limits
+#' @param label.feature provide a column in meta.data of SO which should be used for labels
+#' (e.g. a short form that does not disturb the plot so much)
 #'
 #' @return
 #' @export
@@ -159,6 +161,7 @@ feature_plot <- function(SO,
                          strip.selection = NA,
 
                          plot.labels = NULL,
+                         label.feature = NULL,
                          label.size = 12,
                          na.rm = F,
                          inf.rm = F,
@@ -182,6 +185,7 @@ feature_plot <- function(SO,
 
   if (missing(SO)) {stop("Seurat object list or feature vector is missing.")}
   if (length(features) == 1) {combine <- F}
+  if (!is.null(label.feature) && length(label.feature) != 1) {stop("label.feature must have length 1.")}
   if (combine && (!is.null(ncol.combine) && !is.null(nrow.combine))) {stop("Please only select one, ncol.combine or nrow.combine. Leave the other NULL.")}
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
@@ -217,6 +221,7 @@ feature_plot <- function(SO,
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, shape.by = shape.by)
   reduction <- .check.reduction(SO = SO, reduction = reduction, dims = dims)
   features <- .check.features(SO = SO, features = unique(features))
+  label.feature <- .check.features(SO = SO, features = label.feature, rownames = F)
   contour_feature <- .check.features(SO = SO, unique(contour_feature), rownames = F)
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
@@ -243,6 +248,7 @@ feature_plot <- function(SO,
                       shape.by = shape.by,
                       reduction = names(reduction),
                       feature = x,
+                      label.feature = label.feature,
                       min.q.cutoff = min.q.cutoff,
                       max.q.cutoff = max.q.cutoff,
                       order = order,
@@ -388,10 +394,20 @@ feature_plot <- function(SO,
         if (is.numeric(data[,1])) {
           message("Labels not plotted as ", x, " is numeric.")
         } else {
-          label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z, avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]), avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+          # potentially: use mclust, densityMclust(), (mixed gaussian model) to find multimodal clusters; x,y separately
+          label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z,
+                                                                                     avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
+                                                                                     avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+
+          label_column <- if (!is.null(label.feature)) {
+            temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
+            label_df[,1] <- as.character(label_df[,1])
+            label_df[,1] <- stats::setNames(temp[,2,drop=T], temp[,1,drop=T])[label_df[,1]]
+          }
+
           names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
           if (plot.labels == "text") {
-            plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family,) #...
+            plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
           }
           if (plot.labels == "label") {
             plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
@@ -939,6 +955,7 @@ feature_plot <- function(SO,
 
 .get.data <- function(SO,
                       feature,
+                      label.feature = NULL,
                       assay = c("RNA", "SCT"),
                       slot = "data",
                       cells = NULL,
@@ -1035,6 +1052,16 @@ feature_plot <- function(SO,
     data[,"SO.split"] <- y
     return(data)
   }))
+
+  if (!is.null(label.feature)) {
+    data <- cbind(data, do.call(rbind, lapply(names(SO), function(y) {
+      data.frame(label.feature = SO[[y]]@meta.data[,label.feature,drop=T], stringsAsFactors = F, check.names = F)
+    })))
+    if (nrow(unique(data[,which(colnames(data) %in% c(feature, "label.feature"))])) !=
+        nrow(unique(data[,which(colnames(data) %in% c(feature)), drop=F]))) {
+      stop("label.feature entries do not exactly one feature entry each. This must be the case though.")
+    }
+  }
 
   # ensure that facet ordering is according to the order of SO objects provided
   data$SO.split <- factor(data$SO.split, levels = names(SO))

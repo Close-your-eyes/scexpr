@@ -9,13 +9,17 @@ composition_barplot(
   x_cat,
   fill_cat,
   col_pal = scexpr::col_pal("custom"),
-  plot_labels = F
+  border_color = "black",
+  labels = F,
+  min_label = 0.05,
+  in_percent = T,
+  label_decimals = 2
 )
 }
 \arguments{
 \item{SO}{Seurat object or data frame}
 
-\item{plot_labels}{}
+\item{col_pal}{}
 }
 \description{
 Plot composition of one category by another

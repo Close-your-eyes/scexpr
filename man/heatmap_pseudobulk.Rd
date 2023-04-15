@@ -14,7 +14,8 @@ heatmap_pseudobulk(
   order_features = F,
   normalization = "scale",
   topn.features = 10,
-  topn.metric = c("logFC", "auc", "padj"),
+  topn.ties = F,
+  topn.metric = c("padj", "auc", "logFC"),
   min.pct = 0.1,
   max.padj = 0.05,
   title = NULL,
@@ -39,6 +40,8 @@ heatmap_pseudobulk(
   feature.labels.nudge_x = -0.1,
   feature.labels.axis.width = 0.2,
   plot_hlines_between_groups = F,
+  hlines = NULL,
+  hlines_args = list(),
   ...
 )
 }
@@ -60,7 +63,7 @@ calculation but only select levels for plotting}
 
 \item{features}{optionally choose which features to plot (supervised)}
 
-\item{order_features}{when features are provided should they be ordered automatrically to generate a pretty heatmap;
+\item{order_features}{when features are provided should they be ordered automatically to generate a pretty heatmap;
 not relevant when is.null(features)}
 
 \item{normalization}{how to scale expression values; may be "scale" to
@@ -73,6 +76,9 @@ c(-1,1) is most meaningful}
 features to plot per level in meta.col; selection is done based on the metric
 selected in topn.metric; respective features with greatest difference between
 meta.col levels are selected (best DE features so to say)}
+
+\item{topn.ties}{passed as 'with_ties' to dplyr::slice_min or dplyr::slice_max;
+if set to FALSE exactly topn.features are returned even if there are rank-ties}
 
 \item{topn.metric}{which differential expression metric to apply for feature
 selection}
@@ -99,7 +105,16 @@ features only}
 \item{dotplot}{plot heatmap as a dotplot which will also reveal the fraction
 of expressing cells by dot sizes}
 
-\item{plot_hlines_between_groups}{}
+\item{plot_hlines_between_groups}{plot horizontal lines to separate groups of genes that are
+differentially expressed by a group on the x-axis; if hlines is NULL the breaks are
+determined automatically}
+
+\item{hlines}{provide manual breaks of where to plot horizontal lines;
+even though the y-axis is discrete, a numeric vector works here:
+hlines = c(1.5, 3.5) will plot lines between the first and second, and, third and fourth
+entry on the y-axis, respectively}
+
+\item{hlines_args}{arguments to geom_hline like linewidth or linetype}
 }
 \description{
 Title

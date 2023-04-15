@@ -34,6 +34,9 @@ freq_pie_chart <- function(SO,
   # https://stackoverflow.com/questions/16184188/ggplot-facet-piechart-placing-text-in-the-middle-of-pie-chart-slices (ggforce)
   tab <- table(SO[,meta.col], exclude = c())
   tab <- data.frame(frac = as.numeric(tab/sum(tab)), cluster = factor(names(tab), levels = names(tab)))
+  tab <- cbind(tab, utils::stack(table(SO[,meta.col], exclude = c())))
+  tab <- tab[-4]
+  names(tab)[3] <- "abs"
   if (order_pieces) {
     tab <- tab[order(tab$frac, decreasing = T), ]
   }
