@@ -46,7 +46,7 @@ cluster_correlation <- function(SO,
                                 corr.in.percent = FALSE,
                                 min.cells = 20,
                                 round.corr = 2,
-                                lower.triangle.only = T,
+                                lower.triangle.only = F,
                                 aspect.ratio = 1,
                                 mid.white.strech.length = 4) {
 
@@ -163,6 +163,7 @@ cluster_correlation <- function(SO,
   # filter for levels
   avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) {purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F])})
 
+
   if (!is.null(split.by)) {
 
     # currently not implemented for splitted corr analyses
@@ -255,7 +256,11 @@ cluster_correlation <- function(SO,
 
     # order columns and rows to get the right elements filtered in case of lower.triangle.only
     cm <- cm[levels[[1]], levels[[2]]]
+
     if (lower.triangle.only) {
+      if (ncol(cm) != nrow(cm)) {
+        message("Correlation matrix is not quadratic. Returning the lower triangle may not yield intended results.")
+      }
       cm[which(!lower.tri(cm))] <- NA
     }
 
