@@ -30,7 +30,7 @@ row_scale = function(x,
 
   rm = Matrix::rowMeans(x, na.rm = TRUE)
   if (scale) {
-    csd = apply(x, 1, sd)
+    csd = apply(x, 1, stats::sd)
     #csd = matrixStats::rowSds(x, center = rm)
   } else {
     csd = rep(1, length = length(rm))

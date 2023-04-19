@@ -786,11 +786,11 @@ volcano_plot <- function(SO,
       if (label.neg.pos.sep) {
         vp <-
           vp +
-          ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab.pos), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-          ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab.neg), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+          ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab.pos), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+          ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab.neg), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
       } else {
         vp <- vp +
-          ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab[,feature_colname]), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge.x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+          ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% f_lab[,feature_colname]), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge.x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
       }
     }
   } else {
@@ -802,10 +802,10 @@ volcano_plot <- function(SO,
         if (plot.label) {
           if (label.neg.pos.sep) {
             vp <- vp +
-              ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-              ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+              ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+              ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
           } else {
-            vp <- vp + ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+            vp <- vp + ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
           }
         }
       }
@@ -814,10 +814,10 @@ volcano_plot <- function(SO,
       if (plot.label) {
         if (label.neg.pos.sep) {
           vp <- vp +
-            ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
-            ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+            ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) > 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps) +
+            ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features & !!rlang::sym(x) < 0), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
         } else {
-          vp <- vp + ggrepel::geom_text_repel(aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
+          vp <- vp + ggrepel::geom_text_repel(ggplot2::aes(label = !!rlang::sym(feature_colname)),data = vd %>% dplyr::filter(!!rlang::sym(feature_colname) %in% label.features), family = font.family, color = label.col, fontface = label.face, size = label.size, max.iter = max.iter, nudge_x = -nudge.x, nudge_y = nudge.y, max.overlaps = max.overlaps)
         }
       }
     }

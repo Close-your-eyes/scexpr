@@ -69,7 +69,7 @@ feature_correlation <- function(SO,
   features <- .check.features(SO = SO, features = unique(features), meta.data = F, meta.data.numeric = T)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
 
-  ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min_pct = min.pct, cells = cells), cells, drop=F])
+  ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min.pct = min.pct, cells = cells), cells, drop=F])
 
   # putative dichotomous meta features which are TRUE / FALSE: they are coerced to 1 / 0
   # applying spearman correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
@@ -151,7 +151,7 @@ feature_correlation <- function(SO,
   corr_df_plot <- do.call(rbind, sapply(out, "[", 2))
 
   if (is.null(split.by) && length(features) == 1) {
-    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = reorder(ref_feature, r), fill = !!rlang::sym(bar.fill))) +
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = stats::reorder(ref_feature, r), fill = !!rlang::sym(bar.fill))) +
       ggplot2::geom_bar(stat = "identity", color = "black") +
       theme +
       do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])

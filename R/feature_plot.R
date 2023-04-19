@@ -567,12 +567,12 @@ feature_plot <- function(SO,
         if (use_ggnewscale_for_contour_colors) {
           plot <-
             plot +
-            ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
+            ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
                                 show.legend = F)
         } else {
           plot <-
             plot +
-            ggplot2::geom_label(data = group_labels, aes(x = dr1_avg, y = dr2_avg, label = pct))
+            ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))
         }
 
       }

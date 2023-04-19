@@ -17,7 +17,7 @@ cluster_correlation(
   corr.in.percent = FALSE,
   min.cells = 20,
   round.corr = 2,
-  lower.triangle.only = T,
+  lower.triangle.only = F,
   aspect.ratio = 1,
   mid.white.strech.length = 4
 )

@@ -225,8 +225,8 @@ cluster_correlation <- function(SO,
         message("Mathematical operators of special characters found in factor levels. Those are replace by dots in linear model formulae.")
       }
       # run the make.names thing to have a common command below
-      orig_colnames_1 <- setNames(colnames(avg.expr[[1]]), nm = make.names(colnames(avg.expr[[1]])))
-      orig_colnames_2 <- setNames(colnames(avg.expr[[2]]), nm = make.names(colnames(avg.expr[[2]])))
+      orig_colnames_1 <- stats::setNames(colnames(avg.expr[[1]]), nm = make.names(colnames(avg.expr[[1]])))
+      orig_colnames_2 <- stats::setNames(colnames(avg.expr[[2]]), nm = make.names(colnames(avg.expr[[2]])))
       colnames(avg.expr[[1]]) <- make.names(colnames(avg.expr[[1]]))
       colnames(avg.expr[[2]]) <- make.names(colnames(avg.expr[[2]]))
 
@@ -239,7 +239,7 @@ cluster_correlation <- function(SO,
 
       ## use reformulate to have the correct var names in lms
       lms_or_ranks <- purrr::map2(.x = as.character(combs_raw$Var1), .y = as.character(combs_raw$Var2), .f = function(x,y) {
-        lm(formula = reformulate(x, y), data = data.frame(scale(avg.expr[[1]][,x,drop=F]), y = scale(avg.expr[[2]][,y,drop=F])))
+        stats::lm(formula = stats::reformulate(x, y), data = data.frame(scale(avg.expr[[1]][,x,drop=F]), y = scale(avg.expr[[2]][,y,drop=F])))
       })
 
       names(lms_or_ranks) <- paste0(orig_colnames_2[sapply(purrr::map(purrr::map(lms_or_ranks, purrr::chuck, "model"), colnames), "[", 1)], "___",

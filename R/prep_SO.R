@@ -526,7 +526,7 @@ prep_SO <- function(SO_unprocessed,
                                                              verbose = verbose)
       }
 
-      FindIntegrationAnchors_args <- FindIntegrationAnchors[which(!names(FindIntegrationAnchors) %in% c("object.list", "normalization.method", "verbose"))]
+      FindIntegrationAnchors_args <- FindIntegrationAnchors_args[which(!names(FindIntegrationAnchors_args) %in% c("object.list", "normalization.method", "verbose"))]
       if (!"anchor.features" %in% names(FindIntegrationAnchors_args)) {
         FindIntegrationAnchors_args <- c(list(anchor_features = anchor_features), FindIntegrationAnchors_args)
       }
@@ -569,7 +569,7 @@ prep_SO <- function(SO_unprocessed,
                                                                                    verbose = verbose),
                                                                               FindIntegrationAnchors_args))
 
-      IntegrateData_args <- IntegrateData[which(!names(IntegrateData) %in% c("anchorset", "new.assay.name", "normalization.method", "verbose"))]
+      IntegrateData_args <- IntegrateData_args[which(!names(IntegrateData_args) %in% c("anchorset", "new.assay.name", "normalization.method", "verbose"))]
       if (!"features.to.integrate" %in% names(IntegrateData_args)) {
         IntegrateData_args <- c(list(features.to.integrate = rownames(Seurat::GetAssayData(SO.list[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))), IntegrateData_args)
       }
@@ -653,7 +653,7 @@ prep_SO <- function(SO_unprocessed,
     SOM_args <- SOM_args[which(!names(SOM_args) %in% c("data"))]
     map <- Gmisc::fastDoCall(EmbedSOM::SOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings)), SOM_args)
     EmbedSOM_args <- EmbedSOM_args[which(!names(EmbedSOM_args) %in% c("data", "map"))]
-    ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM_args, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
+    ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
     SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = list(SOM_args, EmbedSOM_args))
   }
 
@@ -668,7 +668,7 @@ prep_SO <- function(SO_unprocessed,
     GQTSOM_args <- GQTSOM_args[which(!names(GQTSOM_args) %in% c("data"))]
     map <- Gmisc::fastDoCall(EmbedSOM::GQTSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings)), GQTSOM_args)
     EmbedSOM_args <- EmbedSOM_args[which(!names(EmbedSOM_args) %in% c("data", "map"))]
-    ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM_args, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
+    ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
     SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = list(GQTSOM_args, EmbedSOM_args))
   }
 
