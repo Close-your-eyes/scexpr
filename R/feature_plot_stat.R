@@ -81,7 +81,7 @@ feature_plot_stat <- function(SO,
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   geom1 <- match.arg(geom1, c("jitter", "point"))
-  geom2 <- match.arg(geom2, c("violin", "boxplot", "none"))
+  geom2 <- match.arg(geom2, c("boxplot", "violin", "none"))
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by) # length = 1 only one SO currently
   features <- .check.features(SO = SO, features = unique(features), meta.data = T)
