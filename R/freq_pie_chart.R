@@ -9,6 +9,9 @@
 #' @param order_pieces
 #' @param avoid_label_overlap strategy to elegantly avoid label overlap
 #' @param ... arguments to ggplot2::theme()
+#' @param border_color color of borders of pie pieces
+#' @param outside_radius when avoid_label_overlap is outside; the radius where to place label;
+#' 1 roughly equals the outer radius of the circle
 #'
 #' @return
 #' @export
@@ -23,6 +26,7 @@ freq_pie_chart <- function(SO,
                            border_color = "white",
                            order_pieces = T,
                            avoid_label_overlap = c("alternating_shift", "outside"),
+                           outside_radius = 1.1,
                            ...) {
 
   if (!requireNamespace("ggforce", quietly = T)) {
@@ -72,7 +76,7 @@ freq_pie_chart <- function(SO,
              tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] - 0.1,
              tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] + 0.1)
   } else if (avoid_label_overlap == "outside") {
-    tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] <- 1.1
+    tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] <- outside_radius
   }
 
 
