@@ -8,7 +8,6 @@
 #' @param jitterwidth
 #' @param label.size
 #' @param meta.col
-#' @param meta.col.levels
 #' @param plot.expr.freq
 #' @param filter.non.expr
 #' @param cells
@@ -43,7 +42,7 @@ feature_plot_stat <- function(SO,
                               geom2 = c("boxplot", "violin", "none"),
                               jitterwidth = 0.2,
                               label.size = 4,
-                              meta.col.levels = NULL,
+                              #meta.col.levels = NULL,
                               plot.expr.freq = F,
                               expr.freq.hjust = 0.3,
                               filter.non.expr = F,
@@ -90,7 +89,8 @@ feature_plot_stat <- function(SO,
   }
 
   ## procedure to allow subsetting by SOs
-  if (length(SO) > 1) {
+  ## this has to be done outside the function
+'  if (length(SO) > 1) {
     if (!is.null(meta.col.levels)) {
       if (!is.list(meta.col.levels) || length(meta.col.levels) != length(SO)) {
         stop("meta.col.levels has to be list of same length as SO.")
@@ -106,7 +106,8 @@ feature_plot_stat <- function(SO,
     }
   } else {
     meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
-  }
+  }'
+
   meta.col <- .check.features(SO = SO, features = meta.col, rownames = F)
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
@@ -116,7 +117,6 @@ feature_plot_stat <- function(SO,
                                 exclusion.feature = exclusion.feature,
                                 downsample = downsample,
                                 return.included.cells.only = T)
-
 
   # get data with SO being no list does not work
   data <- .get.data(SO, #stats::setNames(list(SO), "1")
@@ -129,12 +129,12 @@ feature_plot_stat <- function(SO,
                     meta.col = meta.col)
 
 
-  if (length(SO) > 1) {
+  # this destroys factor order
+  'if (length(SO) > 1) {
     data[,meta.col] <- paste0(data[,meta.col], "__", data[,"SO.split"])
   }
-
   data <- data[which(data[,meta.col] %in% unlist(meta.col.levels)),]
-  data[,meta.col] <- stringr::str_replace(data[,meta.col], paste0("__",data[,"SO.split"]), "")
+  data[,meta.col] <- stringr::str_replace(data[,meta.col], paste0("__",data[,"SO.split"]), "")'
 
 
   # split.by requires testing - include in pivoting etc and geom_text
@@ -161,7 +161,7 @@ feature_plot_stat <- function(SO,
   if (length(SO) == 1) {
     ## unsatisfying for now; meta.col.levels will here be different from data[,meta.col]
     ## when length(SO) > 1. how to handle that differently?
-    data[,meta.col] <- factor(data[,meta.col], levels = meta.col.levels)
+    #data[,meta.col] <- factor(data[,meta.col], levels = meta.col.levels)
   }
 
 
