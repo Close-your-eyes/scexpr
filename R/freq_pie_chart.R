@@ -27,6 +27,7 @@ freq_pie_chart <- function(SO,
                            order_pieces = T,
                            avoid_label_overlap = c("alternating_shift", "outside"),
                            outside_radius = 1.1,
+                           avoid_overlap_min_frac = 0.05,
                            ...) {
 
   if (!requireNamespace("ggforce", quietly = T)) {
@@ -67,9 +68,9 @@ freq_pie_chart <- function(SO,
   tab$frac_lag_diff <- tab$frac - tab$frac_lag
 
   ## not used yet
-  tab$frac_lag_diff_series <- cumsum(abs(tab$frac_lag_diff) < 0.05)
+  tab$frac_lag_diff_series <- cumsum(abs(tab$frac_lag_diff) <= avoid_overlap_min_frac)
 
-  rel_series <- rle(abs(tab$frac_lag_diff) < 0.05)
+  rel_series <- rle(abs(tab$frac_lag_diff) <= avoid_overlap_min_frac)
   if (avoid_label_overlap == "alternating_shift") {
     tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] <-
       ifelse(lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1] %% 2 == 0,
