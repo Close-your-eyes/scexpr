@@ -57,8 +57,10 @@
 #' @param plot_hlines_between_groups plot horizontal lines to separate groups of genes that are
 #' differentially expressed by a group on the x-axis; if hlines is NULL the breaks are
 #' determined automatically
-#' @param topn.ties passed as 'with_ties' to dplyr::slice_min or dplyr::slice_max;
-#' if set to FALSE exactly topn.features are returned even if there are rank-ties
+#' @param break.ties strategy to break ties of topn.metric; if 'second_metric' then a secondary metric from
+#' c("padj", "logFC", "auc") is used (if topn.metric is 'padj', then 'logFC' is secondary which is the most relevant case
+#' and auc is tertiary; if topn.metric is 'logFC' then 'padj' is second followed by auc); if break.ties is logical
+#' (TRUE or FALSE) it is passed to 'with_ties' to dplyr::slice_max and only topn.metric is considered
 #' @param hlines provide manual breaks of where to plot horizontal lines;
 #' even though the y-axis is discrete, a numeric vector works here:
 #' hlines = c(1.5, 3.5) will plot lines between the first and second, and, third and fourth
@@ -80,8 +82,8 @@ heatmap_pseudobulk <- function(SO,
                                order_features = F,
                                normalization = "scale", # scale
                                topn.features = 10,
-                               topn.ties = F,
-                               topn.metric = c("padj", "auc", "logFC"),
+                               break.ties = c("second_metric", T, F),
+                               topn.metric = c("padj", "logFC", "auc"),
                                min.pct = 0.1,
                                max.padj = 0.05,
                                title = NULL,
@@ -122,7 +124,9 @@ heatmap_pseudobulk <- function(SO,
   }
 
   assay <- match.arg(assay, c("RNA", "SCT"))
-  topn.metric <- match.arg(topn.metric, c("padj", "auc", "logFC"))
+  topn.metric <- match.arg(topn.metric, c("padj", "logFC", "auc"))
+  break.ties <- match.arg(break.ties, c("second_metric", T, F))
+
   if (topn.features < 1) {
     message("topn.features has to be minimum 1.")
     topn.features <- 1
@@ -215,14 +219,29 @@ heatmap_pseudobulk <- function(SO,
   }
 
   if (order_features) {
-    if (topn.metric == "padj") {
+
+'    if (topn.metric == "padj") {
       slice_fun <- dplyr::slice_min
     } else {
       slice_fun <- dplyr::slice_max
+    }'
+
+    if (topn.metric == "padj") {
+      wil_auc_temp <-
+        wil_auc %>%
+        dplyr::mutate(padj = -padj)
+    } else {
+      wil_auc_temp <- wil_auc
     }
 
+    # select multiple columns for ordering, in order to break ties; especially if padj is used as primary element to order
+    if (is.character(break.ties) && break.ties == "second_metric") {
+      all_metrics <- c("padj", "logFC", "auc")
+      second_metric <- all_metrics[which(!all_metrics %in% topn.metric)][1]
+      third_metric <- all_metrics[which(!all_metrics %in% topn.metric)][2]
+    }
     features <-
-      wil_auc %>%
+      wil_auc_temp %>%
       dplyr::filter(feature %in% features) %>%
       dplyr::group_by(feature) %>%
       dplyr::slice_max(order_by = avgExpr, n = 1) %>%
@@ -230,10 +249,21 @@ heatmap_pseudobulk <- function(SO,
       dplyr::filter(pct_in >= min.pct) %>%
       dplyr::filter(padj <= max.padj) %>%
       dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
-      dplyr::group_by(group) %>%
-      slice_fun(order_by = !!rlang::sym(topn.metric), n = topn.features, with_ties = topn.ties) %>%
+      dplyr::group_by(group)
+    if (is.character(break.ties) && break.ties == "second_metric") {
+      features <-
+        features %>%
+        dplyr::slice_max(order_by = tibble::tibble(!!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric)), n = topn.features)
+    } else {
+      features <-
+        features %>%
+        dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features, with_ties = break.ties)
+    }
+    features <-
+      features %>%
       dplyr::ungroup() %>%
-      dplyr::arrange(group, avgExpr)
+      dplyr::arrange(group, !!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric))
+      #dplyr::arrange(group, avgExpr)
     if (is.null(hlines)) {
       hlines <- cumsum(rle(as.character(features$group))[["lengths"]]) + 0.5
       hlines <- hlines[-length(hlines)]
