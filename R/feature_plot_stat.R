@@ -8,8 +8,8 @@
 #' @param jitterwidth
 #' @param label.size
 #' @param meta.col
-#' @param plot.expr.freq
-#' @param filter.non.expr
+#' @param plot.expr.freq to plot labels of expression frequencies
+#' @param plot.non.expr do plot dots of non-expressers (0 UMIs)
 #' @param cells
 #' @param downsample
 #' @param split.by
@@ -18,9 +18,7 @@
 #' @param cutoff.feature
 #' @param cutoff.expression
 #' @param exclusion.feature
-#' @param plot.panel.grid
 #' @param font.family
-#' @param make.cells.unique
 #' @param theme
 #' @param ...
 #' @param expr.freq.hjust
@@ -29,6 +27,8 @@
 #' @param col.pal.rev
 #' @param nrow
 #' @param ncol
+#' @param expr.freq.decimals decimal precision of frequency labels
+#' @param expr.freq.pct plot expression frequency in percent?
 #'
 #' @return
 #' @export
@@ -42,10 +42,12 @@ feature_plot_stat <- function(SO,
                               geom2 = c("boxplot", "violin", "none"),
                               jitterwidth = 0.2,
                               label.size = 4,
-                              #meta.col.levels = NULL,
                               plot.expr.freq = F,
+                              expr.freq.decimals = 2,
+                              expr.freq.pct = F,
                               expr.freq.hjust = 0.3,
-                              filter.non.expr = F,
+                              plot.non.expr = T,
+                              plot.strip = T,
                               cells = NULL,
                               downsample = 1,
                               legend.title = "SO.split",
@@ -59,9 +61,7 @@ feature_plot_stat <- function(SO,
                               cutoff.feature = NULL,
                               cutoff.expression = 0,
                               exclusion.feature = NULL,
-                              plot.panel.grid = F,
                               font.family = "sans",
-                              make.cells.unique = F,
                               theme = ggplot2::theme_bw(),
                               ...) {
 
@@ -88,26 +88,6 @@ feature_plot_stat <- function(SO,
     stop("Please provide only one meta.col.")
   }
 
-  ## procedure to allow subsetting by SOs
-  ## this has to be done outside the function
-'  if (length(SO) > 1) {
-    if (!is.null(meta.col.levels)) {
-      if (!is.list(meta.col.levels) || length(meta.col.levels) != length(SO)) {
-        stop("meta.col.levels has to be list of same length as SO.")
-      }
-      if (is.null(names(meta.col.levels)) || length(intersect(names(meta.col.levels), names(SO))) < length(meta.col.levels)) {
-        stop("meta.col.levels has to have names which match names of SO.")
-      }
-      meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(.check.levels(SO = SO[[x]], meta.col = meta.col, levels = meta.col.levels[[x]], append_by_missing = F), "__", x), simplify = F)
-    } else {
-      meta.col.levels <- lapply(SO, function(x) unique(x@meta.data[,meta.col]))
-      meta.col.levels <- sapply(names(meta.col.levels), function(x) paste0(meta.col.levels[[x]], "__", x), simplify = F)
-      meta.col.levels <- unname(unlist(meta.col.levels))
-    }
-  } else {
-    meta.col.levels <- .check.levels(SO = SO[[1]], meta.col = meta.col, levels = meta.col.levels, append_by_missing = F)
-  }'
-
   meta.col <- .check.features(SO = SO, features = meta.col, rownames = F)
   cells <- .check.and.get.cells(SO = SO,
                                 assay = assay,
@@ -129,14 +109,6 @@ feature_plot_stat <- function(SO,
                     meta.col = meta.col)
 
 
-  # this destroys factor order
-  'if (length(SO) > 1) {
-    data[,meta.col] <- paste0(data[,meta.col], "__", data[,"SO.split"])
-  }
-  data <- data[which(data[,meta.col] %in% unlist(meta.col.levels)),]
-  data[,meta.col] <- stringr::str_replace(data[,meta.col], paste0("__",data[,"SO.split"]), "")'
-
-
   # split.by requires testing - include in pivoting etc and geom_text
   data <- tidyr::pivot_longer(data, dplyr::all_of(features), names_to = "Feature", values_to = "expr")
 
@@ -146,26 +118,23 @@ feature_plot_stat <- function(SO,
       dplyr::group_by(Feature) %>%
       dplyr::mutate(max.feat.expr = max(expr)) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("Feature", meta.col, "SO.split", "max.feat.expr")))) %>%
-      dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop")
+      dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop") %>%
+      dplyr::mutate(pct.expr.adjust.pct = dplyr::case_when(pct.expr == 0 ~ "0 %",
+                                                           pct.expr > 0 & pct.expr < 0.01 ~ "> 1 %",
+                                                           pct.expr >= 0.01 ~ paste0(round(pct.expr*100, expr.freq.decimals), " %"))) %>%
+      dplyr::mutate(pct.expr.adjust = dplyr::case_when(pct.expr == 0 ~ "0",
+                                                       pct.expr > 0 & pct.expr < 0.01 ~ "> 0.01",
+                                                       pct.expr >= 0.01 ~ as.character(round(pct.expr, expr.freq.decimals))))
     names(stat)[which(names(stat) == "SO.split")] <- legend.title
   }
   names(data)[which(names(data) == "SO.split")] <- legend.title
 
 
-  if (filter.non.expr) {
+  if (!plot.non.expr) {
     data <- dplyr::filter(data, expr > 0)
   }
 
   data <- as.data.frame(data)
-
-  if (length(SO) == 1) {
-    ## unsatisfying for now; meta.col.levels will here be different from data[,meta.col]
-    ## when length(SO) > 1. how to handle that differently?
-    #data[,meta.col] <- factor(data[,meta.col], levels = meta.col.levels)
-  }
-
-
-
   my_geom2 <- switch(geom2,
                      "violin" = ggplot2::geom_violin,
                      "boxplot" = ggplot2::geom_boxplot,
@@ -190,7 +159,17 @@ feature_plot_stat <- function(SO,
   #plot <- plot + ggplot2::geom_dotplot(binaxis = "y", binwidth = (max(data$expr) - min(data$expr))/40, stackdir = "center", fill = "black", stackratio = 0.7)
 
   if (plot.expr.freq) {
-    plot <- plot + ggplot2::geom_text(data = stat, ggplot2::aes(label = round(pct.expr, 2), y = max.feat.expr + expr.freq.hjust), position = ggplot2::position_dodge(width = 0.75), size = label.size, family = font.family, show.legend = F)
+    if (expr.freq.pct) {
+      label_col <- "pct.expr.adjust.pct"
+    } else {
+      label_col <- "pct.expr.adjust"
+    }
+    plot <- plot + ggplot2::geom_text(data = stat,
+                                      ggplot2::aes(label = !!rlang::sym(label_col),
+                                                   y = max.feat.expr + expr.freq.hjust),
+                                      position = ggplot2::position_dodge(width = 0.75),
+                                      size = label.size,
+                                      family = font.family, show.legend = F)
     #expand_limits
   }
 
@@ -203,10 +182,13 @@ feature_plot_stat <- function(SO,
     plot <- plot + ggplot2::theme(legend.position = "none")
   }
 
-  if (!plot.panel.grid) {plot <- plot + ggplot2::theme(panel.grid = ggplot2::element_blank())}
   plot <- plot + ggplot2::theme(...)
   plot <- plot + ggplot2::scale_color_manual(values = col.pal)
   plot <- plot + ggplot2::facet_wrap(ggplot2::vars(Feature), scales = "free_y", nrow = nrow, ncol = ncol)
+
+  if (!plot.strip) {
+    plot <- plot + theme(strip.background = element_blank(), strip.text.x = element_blank())
+  }
 
   return(plot)
 }
