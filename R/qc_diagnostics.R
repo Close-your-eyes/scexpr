@@ -532,7 +532,7 @@ qc_plots <- function(SO,
                                              pt.size = 0.5,
                                              legend.position = "none",
                                              label.size = 6, plot.labels = "text", plot.title = F),
-                                suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])),
+                                suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])[["plot"]]),
                                 ncol = 1)
 
   p3_2 <- feature_plot_stat(SO,

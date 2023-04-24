@@ -70,18 +70,20 @@ freq_pie_chart <- function(SO,
   ## not used yet
   tab$frac_lag_diff_series <- cumsum(abs(tab$frac_lag_diff) <= 0.05)
 
+  seq2 <- Vectorize(seq.default, vectorize.args = c("from", "to"))
   rel_series <- rle(abs(tab$frac_lag_diff) <= 0.05)
   if (avoid_label_overlap == "alternating_shift") {
-    tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] <-
-      ifelse(lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1] %% 2 == 0,
-             tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] - 0.1,
-             tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] + 0.1)
+    tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] <-
+      ifelse(unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1])) %% 2 == 0,
+             tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] - 0.1,
+             tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] + 0.1)
   } else if (avoid_label_overlap == "outside") {
-    tab$text_radius[lag(cumsum(rel_series$lengths)+1)[-1]:cumsum(rel_series$lengths)[-1]] <- outside_radius
+    tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] <- outside_radius
   }
 
 
   if (length(col_pal) != length(unique(tab[,"cluster"]))) {
+
     if (is.null(names(col_pal))) {
       if (length(col_pal) < length(unique(tab[,"cluster"]))) {
         col_pal <- scales::hue_pal()(length(unique(tab[,"cluster"])))
@@ -89,20 +91,27 @@ freq_pie_chart <- function(SO,
       } else {
         col_pal <- col_pal[1:length(unique(tab[,"cluster"]))]
       }
+      names(col_pal) <- tab$cluster_cols
     } else {
       if (length(col_pal) > length(unique(tab[,"cluster"])) && all(names(col_pal) %in% unique(tab[,"cluster"]))) {
         col_pal <- col_pal[unique(tab[,"cluster"])]
+        tab$cluster_cols <- col_pal[tab$cluster]
       } else {
         warning("Number of colors provided not matching the number of factor levels in meta.col. Falling back to scales::hue_pal().")
         col_pal <- scales::hue_pal()(length(unique(tab[,"cluster"])))
+        names(col_pal) <- tab$cluster_cols
       }
     }
+
   } else {
     if (!is.null(names(col_pal)) && !all(names(col_pal) %in% unique(tab[,"cluster"]))) {
       warning("Not all names of col_pal found in factor levels of meta.col. Falling back to scales::hue_pal().")
       col_pal <- scales::hue_pal()(length(unique(tab[,"cluster"])))
+      names(col_pal) <- tab$cluster_cols
     }
   }
+  tab$cluster_cols <- col_pal[tab$cluster]
+
   plot <- ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = border_color) +
     ggplot2::theme_bw() +
@@ -118,9 +127,8 @@ freq_pie_chart <- function(SO,
 
 
   # in case label are outside of the circle, adjust their color (black or white) to the panel.background
-  tab$text_color <- ifelse(farver::decode_colour(col_pal, to = "hcl")[, "l"] > 50, "black", "white")
+  tab$text_color <- ifelse(farver::decode_colour(tab$cluster_cols, to = "hcl")[, "l"] > 50, "black", "white")
   tab[which(tab$text_radius >= 1), "text_color"] <- ifelse(farver::decode_colour(plot[["theme"]][["panel.background"]][["fill"]], to = "hcl")[,"l"] > 50, "black", "white")
-
   plot <-
     plot +
     ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color),
