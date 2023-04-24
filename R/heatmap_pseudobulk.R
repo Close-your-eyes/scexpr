@@ -240,12 +240,6 @@ heatmap_pseudobulk <- function(SO,
 
   if (order_features) {
 
-'    if (topn.metric == "padj") {
-      slice_fun <- dplyr::slice_min
-    } else {
-      slice_fun <- dplyr::slice_max
-    }'
-
     # select multiple columns for ordering, in order to break ties; especially if padj is used as primary element to order
     if (break.ties) {
       all_metrics <- c("padj", "logFC", "auc")
@@ -254,6 +248,7 @@ heatmap_pseudobulk <- function(SO,
     }
 
     if (feature_selection_strategy == "2") {
+      # this is better for when features are provided; yields better order on y-axis
       features2 <-
         wil_auc %>%
         dplyr::filter(feature %in% features) %>%
