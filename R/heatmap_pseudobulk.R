@@ -66,7 +66,9 @@
 #' @param hlines_args arguments to geom_hline like linewidth or linetype
 #' @param feature_selection_strategy different strategies to auto-select features; rule-of-thumb:
 #' for large overview heatmap (100s of features per group) choose 2, for small detailed heatmap (10 per group) choose 1;
-#' the choice may also slighty affect the automatic order when order.features = TRUE
+#' when a selection of features is provided by the 'feature' argument and order.features is TURE, feature_selection_strategy will be set to 2
+#' by default if no choice is made as this gives a better order of features on the y-axis; in general choices 1 and 2 may yield different
+#' features on the y-axis; choice 1 is slighly preferred
 #'
 #' @importFrom magrittr %>%
 #'
@@ -125,6 +127,13 @@ heatmap_pseudobulk <- function(SO,
     devtools::install_github("immunogenomics/presto")
   }
 
+
+  # set to 2 when features are provided
+  # this was found to reliably yield a beautiful order
+  if (!is.null(features) && length(feature_selection_strategy) == 2) {
+    feature_selection_strategy <- 2
+  }
+
   assay <- match.arg(assay, c("RNA", "SCT"))
   topn.metric <- match.arg(topn.metric, c("padj", "logFC", "auc"))
   feature_selection_strategy <- match.arg(as.character(feature_selection_strategy), c("1","2"))
@@ -132,12 +141,15 @@ heatmap_pseudobulk <- function(SO,
   if (!is.logical(break.ties)) {
     stop("break.ties must be logical.")
   }
-
+  break.ties <- match.arg(as.character(break.ties), c("TRUE", "FALSE"))
+  break.ties <- as.logical(break.ties)
 
   if (topn.features < 1) {
     message("topn.features has to be minimum 1.")
     topn.features <- 1
   }
+
+
 
   if (plot_hlines_between_groups && !is.null(features) && !order_features && is.null(hlines)) {
     message("horizontal lines between group (hlines) can only be inferred automatically if order_features is set to TRUE.
@@ -265,7 +277,7 @@ heatmap_pseudobulk <- function(SO,
       features3 <-
         features3 %>%
         dplyr::ungroup() %>%
-        dplyr::arrange(group, !!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric))
+        dplyr::arrange(group, avgExpr) #!!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric)
 
       ## and maybe add additional ones, but how?
       features_check <-
@@ -333,7 +345,7 @@ heatmap_pseudobulk <- function(SO,
         }
         features3 <-
           features3 %>%
-          dplyr::arrange(group, -!!rlang::sym(topn.metric), -!!rlang::sym(second_metric), -!!rlang::sym(third_metric)) # avgExpr instead of metric?!
+          dplyr::arrange(group, avgExpr) # avgExpr instead of metric?! # -!!rlang::sym(topn.metric), -!!rlang::sym(second_metric), -!!rlang::sym(third_metric)
 
       } else {
 
