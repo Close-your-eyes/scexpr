@@ -207,7 +207,8 @@ heatmap_pseudobulk <- function(SO,
     dplyr::group_by(feature) %>%
     dplyr::filter(sum(pct_in) > 0) %>% # filter non-expressed features
     dplyr::ungroup()
-  # prep to have one common pipeline below
+
+  # prep features variable here to have one common pipeline below
   if (!is.null(features)) {
     features <- .check.features(SO = SO, features = unique(features), meta.data = F)
     if (any(!features %in% wil_auc$feature)) {
@@ -226,28 +227,22 @@ heatmap_pseudobulk <- function(SO,
       slice_fun <- dplyr::slice_max
     }'
 
-    if (topn.metric == "padj") {
-      wil_auc_temp <-
-        wil_auc %>%
-        dplyr::mutate(padj = -padj)
-    } else {
-      wil_auc_temp <- wil_auc
-    }
-
     # select multiple columns for ordering, in order to break ties; especially if padj is used as primary element to order
     if (is.character(break.ties) && break.ties == "second_metric") {
       all_metrics <- c("padj", "logFC", "auc")
       second_metric <- all_metrics[which(!all_metrics %in% topn.metric)][1]
       third_metric <- all_metrics[which(!all_metrics %in% topn.metric)][2]
     }
+
     features <-
-      wil_auc_temp %>%
+      wil_auc %>%
       dplyr::filter(feature %in% features) %>%
+      dplyr::filter(pct_in >= min.pct) %>%
+      dplyr::filter(padj <= max.padj) %>%
+      dplyr::mutate(padj = -padj) %>% # make negative so that slice_max works equally for all three metrics (c("padj", "logFC", "auc"))
       dplyr::group_by(feature) %>%
       dplyr::slice_max(order_by = avgExpr, n = 1) %>%
       dplyr::ungroup() %>%
-      dplyr::filter(pct_in >= min.pct) %>%
-      dplyr::filter(padj <= max.padj) %>%
       dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
       dplyr::group_by(group)
     if (is.character(break.ties) && break.ties == "second_metric") {
@@ -263,7 +258,48 @@ heatmap_pseudobulk <- function(SO,
       features %>%
       dplyr::ungroup() %>%
       dplyr::arrange(group, !!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric))
-      #dplyr::arrange(group, avgExpr)
+
+'
+    ## alternative feature selection:
+    features <-
+      wil_auc %>%
+      dplyr::filter(feature %in% features) %>%
+      dplyr::filter(pct_in >= min.pct) %>%
+      dplyr::filter(padj <= max.padj) %>%
+      dplyr::mutate(padj = -padj) %>% # make negative so that slice_max works equally for all three metrics (c("padj", "logFC", "auc"))
+      dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
+      dplyr::group_by(group)
+    if (is.character(break.ties) && break.ties == "second_metric") {
+      features <-
+        features %>%
+        dplyr::slice_max(order_by = tibble::tibble(!!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric)), n = topn.features)
+    } else {
+      features <-
+        features %>%
+        dplyr::slice_max(order_by = !!rlang::sym(topn.metric), n = topn.features, with_ties = break.ties)
+    }
+
+    features <-
+      features %>%
+      dplyr::ungroup() %>%
+      dplyr::arrange(group, !!rlang::sym(topn.metric), !!rlang::sym(second_metric), !!rlang::sym(third_metric))
+
+
+    ## check for number of features per group
+    ## and maybe add additional ones, but how?
+    features_check <-
+      features %>%
+      dplyr::group_by(group) %>%
+      dplyr::slice_max(order_by = avgExpr, n = 1) %>%
+      dplyr::ungroup() %>%
+      dplyr::filter(padj <= max.padj) %>%
+      dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
+      dplyr::group_by(group)
+'
+
+
+
+    ## continue
     if (is.null(hlines)) {
       hlines <- cumsum(rle(as.character(features$group))[["lengths"]]) + 0.5
       hlines <- hlines[-length(hlines)]
