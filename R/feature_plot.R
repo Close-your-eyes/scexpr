@@ -194,6 +194,9 @@ feature_plot <- function(SO,
   if ((length(order.discrete) %in% c(0,1)) && (is.null(order.discrete) || is.na(order.discrete))) {stop("order.discrete should be logical or a vector of factor levels in order.")}
   if (length(contour_feature) > 1) {stop("Only provide one contour_feature.")}
   if (length(legend.position) > 2) {stop("legend.position should have length 1 being top, bottom, left, right; or length 2 indicating the corner where legend is to place.")}
+  if (list_depth(contour_args) > 1 && use_ggnewscale_for_contour_colors) {
+    stop("Different setting for contour_args cannot be passed when use_ggnewscale_for_contour_colors=T. Set it to FALSE or only pass one setting for contour_args.")
+  }
 
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
@@ -390,7 +393,7 @@ feature_plot <- function(SO,
         }
       }
 
-      if (!is.null(plot.labels)) {
+'      if (!is.null(plot.labels)) {
         if (is.numeric(data[,1])) {
           message("Labels not plotted as ", x, " is numeric.")
         } else {
@@ -413,7 +416,8 @@ feature_plot <- function(SO,
             plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
           }
         }
-      }
+      }'
+
       plot.colorbar <- is.numeric(data[,1])
       make.italic <- F
     }
@@ -528,15 +532,31 @@ feature_plot <- function(SO,
 
       # order of col.pal.contour in case it has names??
 
-      contour_args <- contour_args[which(!names(contour_args) %in% c("data", "mapping"))]
-      if (!"contour_var" %in% names(contour_args)) {
-        contour_args <- c(contour_var = "ndensity", contour_args)
-      }
-      if (!"breaks" %in% names(contour_args)) {
-        contour_args <- c(breaks = 0.3, contour_args)
-      }
-      if (!"linewidth" %in% names(contour_args)) {
-        contour_args <- c(linewidth = 1, contour_args)
+      # more than one list to contour_args? (different settings for different contour for factor levels of contour_feature)
+      # only when use_ggnewscale_for_contour_colors is FALSE
+      if (list_depth(contour_args) == 1 && !use_ggnewscale_for_contour_colors) {
+        contour_args <- rep(list(contour_args), length(unique(contour_data[,contour_feature])))
+
+        for (i in 1:length(lengths(contour_args))) {
+          contour_args[[i]] <- contour_args[[i]][which(!names(contour_args[[i]]) %in% c("data", "mapping"))]
+          if (!"contour_var" %in% names(contour_args[[i]])) {
+            contour_args[[i]] <- c(contour_var = "ndensity", contour_args[[i]])
+          }
+          if (!"breaks" %in% names(contour_args[[i]])) {
+            contour_args[[i]] <- c(breaks = 0.3, contour_args[[i]])
+          }
+          if (!"linewidth" %in% names(contour_args[[i]])) {
+            contour_args[[i]] <- c(linewidth = 1, contour_args[[i]])
+          }
+        }
+        names(contour_args) <- unique(contour_data[,contour_feature])
+
+      } else if (length(lengths(contour_args)) != length(unique(contour_data[,contour_feature])) && !use_ggnewscale_for_contour_colors) {
+        stop("Length of list of contour_args lists does not match length of factor levels of contour_feature.")
+      } else {
+        if (is.null(names(contour_args))) {
+          stop("list of contour_args has to have names of factor levels of contour_feature.")
+        }
       }
 
       if (use_ggnewscale_for_contour_colors) {
@@ -549,7 +569,7 @@ feature_plot <- function(SO,
         for (i in 1:length(unique(contour_data[,contour_feature]))) {
           plot <-
             plot +
-            Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = contour_data[which(contour_data[,contour_feature] == unique(contour_data[,contour_feature])[i]),], color = col.pal.contour[i])))
+            Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args[[unique(contour_data[,contour_feature])[i]]], list(data = contour_data[which(contour_data[,contour_feature] == unique(contour_data[,contour_feature])[i]),], color = col.pal.contour[i])))
         }
       }
 
@@ -575,6 +595,31 @@ feature_plot <- function(SO,
             ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))
         }
 
+      }
+    }
+
+    if (!is.null(plot.labels)) {
+      if (is.numeric(data[,1])) {
+        message("Labels not plotted as ", x, " is numeric.")
+      } else {
+        # potentially: use mclust, densityMclust(), (mixed gaussian model) to find multimodal clusters; x,y separately
+        label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z,
+                                                                                   avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
+                                                                                   avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+
+        label_column <- if (!is.null(label.feature)) {
+          temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
+          label_df[,1] <- as.character(label_df[,1])
+          label_df[,1] <- stats::setNames(temp[,2,drop=T], temp[,1,drop=T])[label_df[,1]]
+        }
+
+        names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
+        if (plot.labels == "text") {
+          plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
+        }
+        if (plot.labels == "label") {
+          plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
+        }
       }
     }
 
@@ -1363,3 +1408,11 @@ feature_plot <- function(SO,
 ceiling_any = function(x, accuracy, f = ceiling){f(x/ accuracy) * accuracy}
 
 floor_any = function(x, accuracy, f = floor){f(x/ accuracy) * accuracy}
+
+list_depth <- function(this,thisdepth=0){
+  if(!is.list(this)){
+    return(thisdepth)
+  }else{
+    return(max(unlist(lapply(this,list_depth,thisdepth=thisdepth+1))))
+  }
+}

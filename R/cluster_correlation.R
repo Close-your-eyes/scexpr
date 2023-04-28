@@ -274,14 +274,18 @@ cluster_correlation <- function(SO,
     if (method != "pearson") {
       lms_or_ranks <- lapply(1:nrow(cm.melt), function(x) {
         ranks <- data.frame(avg.expr[[1]][,as.character(cm.melt[x, "Var1"])], avg.expr[[2]][,as.character(cm.melt[x, "Var2"])])
-        names(ranks) <- c(cm.melt[x, "Var1"], cm.melt[x, "Var2"])
+        names(ranks) <- c(paste0(names(SO)[1], "___", cm.melt[x, "Var1"]), paste0(names(SO)[2], "___", cm.melt[x, "Var2"]))
+        name1 <- paste0(names(SO)[1], "___", cm.melt[x, "Var1"], "_", "rank")
+        name2 <- paste0(names(SO)[2], "___", cm.melt[x, "Var2"], "_", "rank")
+
         ranks <-
           ranks %>%
-          dplyr::mutate(rank1 = dplyr::dense_rank(!!rlang::sym(as.character(cm.melt[x, "Var1"]))),
-                        rank2 = dplyr::dense_rank(!!rlang::sym(as.character(cm.melt[x, "Var2"])))) %>%
-          dplyr::mutate(rank_diff = rank1 - rank2) %>%
+          dplyr::mutate({{name1}} := dplyr::dense_rank(!!rlang::sym(paste0(names(SO)[1], "___", as.character(cm.melt[x, "Var1"])))),
+                        {{name2}} := dplyr::dense_rank(!!rlang::sym(paste0(names(SO)[2], "___", as.character(cm.melt[x, "Var2"]))))) %>%
+          dplyr::mutate(rank_diff = !!rlang::sym(name1) - !!rlang::sym(name2)) %>%
           dplyr::mutate(abs_rank_diff = abs(rank_diff)) %>%
           dplyr::arrange(rank_diff)
+
         names(ranks)[3:4] <- paste0(c(cm.melt[x, "Var1"], cm.melt[x, "Var2"]), "_rank")
         return(ranks)
       })
