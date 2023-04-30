@@ -166,6 +166,7 @@ feature_plot <- function(SO,
                          na.rm = F,
                          inf.rm = F,
                          bury_NA = T,
+                         na.value = "grey50",
 
                          trajectory.slot = NULL,
                          trajectory.color = "grey30",
@@ -178,6 +179,7 @@ feature_plot <- function(SO,
                          plot.expr.freq.by.contour.group = F,
                          use_ggnewscale_for_contour_colors = T, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
                          expand_limits = list(), # arguments to ggplot2::expand_limits
+                         color.scale.labels = NULL,
                          ...) {
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -393,6 +395,7 @@ feature_plot <- function(SO,
         }
       }
 
+      # put this below contour plotting so that labels are on top (see below)
 '      if (!is.null(plot.labels)) {
         if (is.numeric(data[,1])) {
           message("Labels not plotted as ", x, " is numeric.")
@@ -427,13 +430,21 @@ feature_plot <- function(SO,
         if (min.q.cutoff > 0) {min.lab <- paste0(scale.min, " (q", round(min.q.cutoff*100, 0), ")")} else {min.lab <- scale.min}
         if (max.q.cutoff < 1) {max.lab <- paste0(scale.max, " (q", round(max.q.cutoff*100, 0), ")")} else {max.lab <- scale.max}
         if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
-          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal, limits = c(scale.min, scale.max), breaks = c(scale.min, scale.mid, scale.max), labels = c(min.lab,  scale.mid, max.lab))
+          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
+                                                        limits = c(scale.min, scale.max),
+                                                        breaks = c(scale.min, scale.mid, scale.max),
+                                                        labels = if (is.null(color.scale.labels)) {c(min.lab, scale.mid, max.lab)} else {color.scale.labels},
+                                                        na.value = na.value)
         } else {
           # if no expressers are found: breaks and labels would be of different lengths
-          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal, limits = c(scale.min, scale.max), breaks = c(scale.min, scale.mid, scale.max))
+          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
+                                                        limits = c(scale.min, scale.max),
+                                                        breaks = c(scale.min, scale.mid, scale.max),
+                                                        na.value = na.value)
         }
       } else {
-        plot <- plot + ggplot2::scale_color_manual(values = col.pal)
+        plot <- plot + ggplot2::scale_color_manual(values = col.pal,
+                                                   na.value = na.value)
       }
     }
 
