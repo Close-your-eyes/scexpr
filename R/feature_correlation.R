@@ -73,8 +73,8 @@ feature_correlation <- function(SO,
 
   # putative dichotomous meta features which are TRUE / FALSE: they are coerced to 1 / 0
   # applying spearman correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
-  mat <- as.matrix(rbind(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(SO))], cells, drop=F],
-                         t(SO@meta.data[,features[which(features %in% names(SO@meta.data))], drop = F])))
+  mat <- rbind(as.matrix(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(SO))], cells, drop=F]),
+                         as.matrix(t(SO@meta.data[cells,features[which(features %in% names(SO@meta.data))], drop = F])))
 
   if (!"ci" %in% names(dots)) {
     ci <- F
@@ -98,6 +98,7 @@ feature_correlation <- function(SO,
     print(paste0("These groups are not considered due to having less cells than min.group.size: ", paste(names(which(lengths(groups) < min.group.size)), collapse = ", ")))
     groups <- groups[which(lengths(groups) >= min.group.size)]
   }
+
 
   # NAs are removed by psych::corr.test
   out <- lapply(names(groups), function(x) {
