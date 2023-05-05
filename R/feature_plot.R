@@ -163,6 +163,8 @@ feature_plot <- function(SO,
                          plot.labels = NULL,
                          label.feature = NULL,
                          label.size = 12,
+                         label.center.fun = c("median", "mean"),
+                         label.nugde = c(0,0), # nudging in x and y direction
                          na.rm = F,
                          inf.rm = F,
                          bury_NA = T,
@@ -198,6 +200,7 @@ feature_plot <- function(SO,
     stop("Different setting for contour_args cannot be passed when use_ggnewscale_for_contour_colors=T. Set it to FALSE or only pass one setting for contour_args.")
   }
 
+  label.center.fun <- match.arg(label.center.fun, c("median", "mean"))
   assay <- match.arg(assay, c("RNA", "SCT"))
   if (max.q.cutoff > 1) {
     #message("max.q.cutoff and min.q.cutoff are divided by 100. Please provide values between 0 and 1.")
@@ -602,10 +605,14 @@ feature_plot <- function(SO,
       if (is.numeric(data[,1])) {
         message("Labels not plotted as ", x, " is numeric.")
       } else {
+        label.center.fun <- match.fun(label.center.fun)
         # potentially: use mclust, densityMclust(), (mixed gaussian model) to find multimodal clusters; x,y separately
         label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z,
-                                                                                   avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
-                                                                                   avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+                                                                                   avg1 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
+                                                                                   avg2 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+
+        label_df[,"avg1"] <- label_df[,"avg1"] + label.nugde[1]
+        label_df[,"avg2"] <- label_df[,"avg2"] + label.nugde[2]
 
         label_column <- if (!is.null(label.feature)) {
           temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
