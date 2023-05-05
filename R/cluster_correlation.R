@@ -105,7 +105,7 @@ cluster_correlation <- function(SO,
   } else if (length(features) == 1 && features == "pca") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x@reductions[["pca"]]@feature.loadings)))
   } else {
-    features <- .check.features(SO, features, meta.data = F)
+    #features <- .check.features(SO, features, meta.data = F)
   }
 
   ### add option to split comparison by another covariate and then use the average correlation coeff:
