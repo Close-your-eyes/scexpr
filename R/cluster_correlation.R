@@ -66,7 +66,7 @@ cluster_correlation <- function(SO,
     }
   }
   if (!meta.cols[1] %in% names(SO[[1]]@meta.data) || !meta.cols[2] %in% names(SO[[2]]@meta.data)) {
-    stop("One of meta.cols not found in SOs.")
+    stop("One of meta.cols not found in respective SO.")
   }
   if (!missing(avg.expr)) {
     if (!is.list(avg.expr)) {
@@ -90,9 +90,10 @@ cluster_correlation <- function(SO,
     levels <- lapply(seq_along(SO), function(x) .check.levels(SO[[x]], meta.cols[x], levels = levels, append_by_missing = F))
   }
 
-  SO <- .check.SO(SO, assay = assay, length = 2)
+
   ## names for SO are very important below. missing names will cause errors.
-  assay <- match.arg(assay, c("RNA", "SCT"))
+  SO <- .check.SO(SO, assay = assay, length = 2)
+  assay <- match.arg(assay, Reduce(intersect, lapply(SO, function(x) names(x@assays))))
   method <- match.arg(method, c("pearson", "kendall", "spearman"))
   if (!is.null(split.by) && method != "pearson") {
     warning("Averaging correlation values may only be valid for pearson. See https://stats.stackexchange.com/questions/8019/averaging-correlation-values?noredirect=1&lq=1 .")

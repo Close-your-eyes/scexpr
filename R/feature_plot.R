@@ -701,7 +701,7 @@ feature_plot <- function(SO,
 
 
 .check.SO <- function(SO,
-                      assay = c("RNA", "SCT"),
+                      assay,
                       split.by = NULL,
                       shape.by = NULL,
                       meta.col = NULL,
@@ -711,7 +711,7 @@ feature_plot <- function(SO,
   }
 
   if (!is.null(length)) {
-    if (length(SO) > length) {
+    if (length(SO) != length) {
       stop("Please provide exactly ", length, " SO.")
     }
   }

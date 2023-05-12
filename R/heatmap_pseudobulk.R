@@ -8,7 +8,9 @@
 #' @param levels.plot which levels in meta.col to include in platting;
 #' if NULL this equals to levels.calc; must be subset of levels.calc;
 #' the order provided defines order on x-axis; this will not affect scaling
-#' calculation but only select levels for plotting
+#' calculation but only select levels for plotting;
+#' defining ordering will not work perfectly when more than 1 SO is provided and factor levels
+#' in meta.cols are not unique
 #' @param assay which assay to obtain expression values from
 #' @param features optionally choose which features to plot (supervised)
 #' @param normalization how to scale expression values; may be "scale" to
@@ -68,7 +70,7 @@
 #' for large overview heatmap (100s of features per group) choose 2, for small detailed heatmap (10 per group) choose 1;
 #' when a selection of features is provided by the 'feature' argument and order.features is TURE, feature_selection_strategy will be set to 2
 #' by default if no choice is made as this gives a better order of features on the y-axis; in general choices 1 and 2 may yield different
-#' features on the y-axis; choice 1 is slighly preferred
+#' features on the y-axis; choice 1 is slightly preferred
 #'
 #' @importFrom magrittr %>%
 #'
@@ -127,14 +129,12 @@ heatmap_pseudobulk <- function(SO,
     devtools::install_github("immunogenomics/presto")
   }
 
-
   # set to 2 when features are provided
   # this was found to reliably yield a beautiful order
   if (!is.null(features) && length(feature_selection_strategy) == 2) {
     feature_selection_strategy <- 2
   }
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
   topn.metric <- match.arg(topn.metric, c("padj", "logFC", "auc"))
   feature_selection_strategy <- match.arg(as.character(feature_selection_strategy), c("1","2"))
 
@@ -150,7 +150,6 @@ heatmap_pseudobulk <- function(SO,
   }
 
 
-
   if (plot_hlines_between_groups && !is.null(features) && !order_features && is.null(hlines)) {
     message("horizontal lines between group (hlines) can only be inferred automatically if order_features is set to TRUE.
             Will set plot_hlines_between_groups to FALSE now.
@@ -162,7 +161,10 @@ heatmap_pseudobulk <- function(SO,
     message("hlines provided but plot_hlines_between_groups is FALSE.")
   }
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
+
+  SO <- .check.SO(SO = SO, assay = assay) #length = 1
+  assay <- match.arg(assay, Reduce(intersect, lapply(SO, function(x) names(x@assays))))
+
   if (methods::is(normalization, "numeric")) {
     if (length(normalization) != 2) {
       stop("Please set normalization to 'scale' or a numeric vector of length 2 (e.g. c(-1,1)).")
@@ -177,15 +179,113 @@ heatmap_pseudobulk <- function(SO,
     normalization <- match.arg(normalization, choices = c("scale"))
   }
 
+
+  ## checking meta.col, levels.plot and levels.calc
   if (is.null(meta.col)) {
-    SO@meta.data$idents <- Seurat::Idents(SO)
-    meta.col <- "idents"
+    SO <- lapply(SO, function(x) {
+      x@meta.data$idents <- Seurat::Idents(x)
+      return(x)
+    })
+    meta.col <- rep("idents", length(SO))
   } else {
-    meta.col <- match.arg(meta.col, names(SO@meta.data))
-    if (is.numeric(SO@meta.data[,meta.col])) {
-      stop("meta.col is numeric. Please make it factor or character.")
+    if (length(meta.col) != length(SO)) {
+      stop("meta.col has to have same length as SO. (One column name in meta.data for each Seurat object.)")
+    }
+    if (any(unlist(mapply(x = SO, y = meta.col, function(x,y) {
+      !y %in% names(x@meta.data)
+    }, SIMPLIFY = F)))) {
+      stop("One of meta.col not found in respective SO.")
+    }
+    if (any(unlist(mapply(x = SO, y = meta.col, function(x,y) {
+      is.numeric(x@meta.data[,y,drop=T])
+    }, SIMPLIFY = F)))) {
+      stop("One of meta.col is numeric. Please make it factor or character.")
     }
   }
+
+
+  # this will only apply if length(SO)==1 and levels.plot and levels.calc are vectors
+  if (!is.null(levels.plot) && !is.list(levels.plot)) {
+    levels.plot <- list(levels.plot)
+  }
+  if (!is.null(levels.calc) && !is.list(levels.calc)) {
+    levels.calc <- list(levels.calc)
+  }
+
+
+  if (!is.null(levels.plot) && !is.null(levels.calc)) {
+    levels.plot <- mapply(x = levels.plot, y = levels.calc, function(x,y) {
+      if (any(!x %in% y)) {
+        print("levels.plot has more levels than levels.calc. levels.plot is reduced to levels.calc.")
+        x <- x[which(x %in% y)]
+      }
+      return(x)
+    }, SIMPLIFY = F)
+  }
+
+  if (!is.null(levels.calc)) {
+    if (length(levels.calc) != length(SO)) {
+      stop("levels.calc has to have same length as SO.")
+    }
+  } else {
+    levels.calc <- rep(NA, length(SO))
+  }
+  if (!is.null(levels.plot)) {
+    if (length(levels.plot) != length(SO)) {
+      stop("levels.plot has to have same length as SO.")
+    }
+  } else {
+    levels.plot <- rep(NA, length(SO))
+  }
+
+  # this will replace NULL with all available levels
+  levels.calc <- purrr::pmap(list(x = SO, y = levels.calc, z = meta.col), function(x,y,z) {
+    .check.levels(SO = x, meta.col = z, levels = y, append_by_missing = F)
+  })
+  levels.plot <- purrr::pmap(list(x = SO, y = levels.plot, z = meta.col), function(x,y,z) {
+    .check.levels(SO = x, meta.col = z, levels = y, append_by_missing = F)
+  })
+  #levels.calc <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.calc, append_by_missing = F)
+  #levels.plot <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.plot, append_by_missing = F)
+
+  # subset levels for calculation
+  SO <- purrr::pmap(list(x = SO, y = levels.calc, z = meta.col), function(x,y,z) {
+    if (length(y) < length(unique(x@meta.data[,z,drop=T]))) {
+      x <- subset(x, cells = rownames(x@meta.data[,z,drop=F][which(x@meta.data[,z] %in% y),,drop=F]))
+    }
+    return(x)
+  })
+
+  #SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels.calc),,drop=F]))
+
+  # this problem was discovered by chance (":" are replaced by Seurat::AverageExpression by "_"); maybe other symbols will also cause problems.
+  for (i in length(SO)) {
+    if (any(grepl(":", unique(SO[[i]]@meta.data[,meta.col[[i]]])))) {
+      message("Found colon (:) in factor levels of meta.col. Will replace those with underscores (_).")
+      SO[[i]]@meta.data[,meta.col[[i]]] <- gsub(":", "_", SO[[i]]@meta.data[,meta.col[[i]]])
+      levels.plot[[i]] <- gsub(":", "_", levels.plot[[i]])
+      levels.calc[[i]] <- gsub(":", "_", levels.calc[[i]])
+    }
+  }
+
+  # make cluster names unique if there is intersection
+  ## this will prohibit to define cluster order
+  if (length(SO) > 1) {
+    if (length(Reduce(intersect, levels.plot)) > 1 || length(Reduce(intersect, levels.calc)) > 1) {
+      SO <- purrr::pmap(list(x = SO, y = meta.col, z = names(SO)), function(x,y,z) {
+        x@meta.data[,y] <- paste0(z, "___", x@meta.data[,y,drop=T])
+        return(x)
+      })
+    }
+    if (length(Reduce(intersect, levels.plot)) > 1) {
+      levels.plot <- mapply(x = names(SO), y = levels.plot, function(x,y) paste0(x, "___", y), SIMPLIFY = F)
+    }
+    if (length(Reduce(intersect, levels.calc)) > 1) {
+      levels.calc <- mapply(x = names(SO), y = levels.calc, function(x,y) paste0(x, "___", y), SIMPLIFY = F)
+    }
+  }
+
+  ###
 
   legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
   if (legend.direction == "horizontal") {
@@ -194,35 +294,15 @@ heatmap_pseudobulk <- function(SO,
     legend.barheight <- temp
   }
 
-  if (!is.null(levels.plot) && !is.null(levels.calc)) {
-    if (any(!levels.plot %in% levels.calc)) {
-      print("levels.plot has more levels than levels.calc. levels.plot is reduced to levels.calc.")
-      levels.plot <- levels.plot[which(levels.plot %in% levels.calc)]
-    }
-  }
-
-  # this will replace NULL with all available levels
-  levels.calc <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.calc, append_by_missing = F)
-  levels.plot <- .check.levels(SO = SO, meta.col = meta.col, levels = levels.plot, append_by_missing = F)
-
-  # subset levels for calculation
-  if (length(levels.calc) < length(unique(SO@meta.data[,meta.col,drop=T]))) {
-    SO <- subset(SO, cells = rownames(SO@meta.data[,meta.col,drop=F][which(SO@meta.data[,meta.col] %in% levels.calc),,drop=F]))
-  }
-
-  # this problem was discovered by chance (":" are replaced by Seurat::AverageExpression by "_"); maybe other symbols will also cause problems.
-  if (any(grepl(":", unique(SO@meta.data[,meta.col])))) {
-    message("Found colon (:) in factor levels of meta.col. Will replace those with underscores (_).")
-    SO@meta.data[,meta.col] <- gsub(":", "_", SO@meta.data[,meta.col])
-    levels.plot <- gsub(":", "_", levels.plot)
-    levels.calc <- gsub(":", "_", levels.calc)
-  }
-
   ## presto gives deviating results with respect to avgExpr and logFC (maybe due to approximation which makes calculation faster)
-  ## nevertheless, in order to select marker genes by logFC or other statistics fast perfromance of presto is useful
+  ## nevertheless, in order to select marker genes by logFC or other statistics fast performance of presto is useful
   ## filter all features with zero expression across the data set
+
+  #expr_mat <- do.call(cbind, lapply(SO, function(x) {Seurat::GetAssayData(x, slot = "data", assay = assay)}))
+  #unlist(purrr::pmap(list(x = SO, y = meta.col, z = names(SO)), function(x,y,z) {paste0(z, "___", x@meta.data[,y,drop=T])})) ~ SO@meta.data[,meta.col,drop=T]
   wil_auc <-
-    presto::wilcoxauc(SO, meta.col, seurat_assay = assay) %>%
+    presto::wilcoxauc(X = do.call(cbind, lapply(SO, function(x) {Seurat::GetAssayData(x, slot = "data", assay = assay)})),
+                      y = unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) {x@meta.data[,y,drop=T]}))) %>%
     dplyr::group_by(feature) %>%
     dplyr::filter(sum(pct_in) > 0) %>% # filter non-expressed features
     dplyr::ungroup()
@@ -247,6 +327,7 @@ heatmap_pseudobulk <- function(SO,
       third_metric <- all_metrics[which(!all_metrics %in% topn.metric)][2]
     }
 
+
     if (feature_selection_strategy == "2") {
       # this is better for when features are provided; yields better order on y-axis
       features2 <-
@@ -258,7 +339,7 @@ heatmap_pseudobulk <- function(SO,
         dplyr::group_by(feature) %>%
         dplyr::slice_max(order_by = avgExpr, n = 1) %>%
         dplyr::ungroup() %>%
-        dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
+        dplyr::mutate(group = factor(group, levels = unlist(levels.plot))) %>%
         dplyr::group_by(group)
       if (break.ties) {
         features3 <-
@@ -294,7 +375,7 @@ heatmap_pseudobulk <- function(SO,
         dplyr::filter(pct_in >= min.pct) %>%
         dplyr::filter(padj <= max.padj) %>%
         dplyr::mutate(padj = -padj) %>% # make negative so that slice_max works equally for all three metrics (c("padj", "logFC", "auc"))
-        dplyr::mutate(group = factor(group, levels = levels.plot)) %>%
+        dplyr::mutate(group = factor(group, levels = unlist(levels.plot))) %>%
         dplyr::group_by(group)
 
       if (break.ties) {
@@ -307,18 +388,23 @@ heatmap_pseudobulk <- function(SO,
         ## and maybe add additional ones, but how?
         features_check <-
           features3 %>%
-          dplyr::group_by(feature) %>%
+          dplyr::group_by(feature, .drop = F) %>%
           dplyr::slice_max(order_by = avgExpr, n = 1) %>%
           dplyr::ungroup() %>%
           dplyr::group_by(group) %>%
           dplyr::count()
 
-        # make sure topn.features is reach for every group
+        # try to make sure topn.features is reach for every group
         max_round <- min(topn.features, 20)
         n <- 1
         while(any(features_check$n < topn.features) && n <= max_round) {
           for (i in features_check[which(features_check$n<topn.features),"group",drop=T]) {
             nplus <- topn.features - features_check[which(features_check$group == i),"n",drop=T]
+            # in case factor level i is missing in features_check
+            if (length(nplus) == 0) {
+              nplus <- topn.features
+            }
+            #browser()
             features_plus <-
               dplyr::anti_join(features2, features3, by = dplyr::join_by(feature, group, avgExpr, logFC, statistic, auc, pval, padj, pct_in, pct_out)) %>%
               dplyr::filter(group == i) %>%
@@ -360,8 +446,7 @@ heatmap_pseudobulk <- function(SO,
       }
     }
 
-
-    print(features_check)
+    print(as.data.frame(features_check))
 
     ## continue
     if (is.null(hlines)) {
@@ -374,7 +459,10 @@ heatmap_pseudobulk <- function(SO,
       dplyr::pull(feature)
   }
 
-  raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
+  raw_tab <- do.call(cbind, mapply(x = SO, y = meta.col, function(x,y) {
+    Seurat::AverageExpression(x, assays = assay, group.by = y, slot = "data", verbose = F)[[1]][features,,drop=F]
+  }, SIMPLIFY = F))
+  #raw_tab <- Seurat::AverageExpression(SO, assays = assay, group.by = meta.col, slot = "data", verbose = F)[[1]][features,,drop=F]
 
   if (methods::is(normalization, "character") && normalization == "scale") {
     tab <- row_scale(raw_tab, add_attr = F)
@@ -387,9 +475,9 @@ heatmap_pseudobulk <- function(SO,
     tibble::rownames_to_column("Feature") %>%
     dplyr::filter(Feature %in% features) %>%
     tidyr::pivot_longer(cols = -Feature, names_to = "cluster", values_to = "norm_avgexpr") %>%
-    dplyr::filter(cluster %in% levels.plot) %>%
+    dplyr::filter(cluster %in% unlist(levels.plot)) %>%
     dplyr::left_join(wil_auc[,c(which(names(wil_auc) %in% c("feature", "group", "pct_in")))], by = c("Feature" = "feature", "cluster" = "group")) %>%
-    dplyr::mutate(cluster = factor(cluster, levels = levels.plot)) %>%
+    dplyr::mutate(cluster = factor(cluster, levels = unlist(levels.plot))) %>%
     dplyr::mutate(Feature = factor(Feature, levels = unique(features)))
 
   scale.max <- as.numeric(format(floor_any(max(htp$norm_avgexpr), 0.1), nsmall = 1))
