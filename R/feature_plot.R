@@ -618,7 +618,7 @@ feature_plot <- function(SO,
 
     if (!is.null(plot.labels)) {
 
-      ## make this facetted
+      ## make this facetted; but only do it by different SOs
 
       if (is.numeric(data[,1])) {
         message("Labels not plotted as ", x, " is numeric.")
