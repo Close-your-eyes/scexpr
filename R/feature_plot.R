@@ -184,6 +184,9 @@ feature_plot <- function(SO,
                          color.scale.labels = NULL,
                          ...) {
 
+
+  ## label position calculation is not facetted!!
+
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
 
@@ -612,7 +615,11 @@ feature_plot <- function(SO,
       }
     }
 
+
     if (!is.null(plot.labels)) {
+
+      ## make this facetted
+
       if (is.numeric(data[,1])) {
         message("Labels not plotted as ", x, " is numeric.")
       } else {
