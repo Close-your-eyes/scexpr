@@ -2,11 +2,11 @@
 #'
 #' @param SO Seurat object or data frame
 #' @param meta.col
-#' @param inset.text.size
-#' @param inset.text.radius
+#' @param label_size can one number or a vector for each label
+#' @param label_inside_radius
 #' @param legend.position
 #' @param col_pal
-#' @param order_pieces
+#' @param order_pieces NULL to not change order, T for decreasing order of F for increasing order (with respect to size of pieces)
 #' @param avoid_label_overlap strategy to elegantly avoid label overlap
 #' @param ... arguments to ggplot2::theme()
 #' @param border_color color of borders of pie pieces
@@ -19,16 +19,31 @@
 #' @examples
 freq_pie_chart <- function(SO,
                            meta.col,
-                           inset.text.size = 5,
-                           inset.text.radius = 0.75,
+                           label_outside = c("none", "abs", "rel"),
+                           label_inside = c("rel", "abs", "none"),
+                           label_size = 5,
+                           label_inside_radius = 0.75,
+                           label_outside_radius = 1.1,
+                           label_angle = "circle", # circle or numeric
                            legend.position = "right",
                            col_pal = scexpr::col_pal("custom"),
                            border_color = "white",
                            order_pieces = T,
-                           avoid_label_overlap = c("alternating_shift", "outside"),
+                           avoid_label_overlap = c("not", "alternating_shift", "outside"),
                            outside_radius = 1.1,
-                           #avoid_overlap_min_frac = 0.05,
-                           ...) {
+                           label_rel_percent = F,
+                           label_decimals = 2,
+                           legend_title = NULL,
+                           theme = ggplot2::theme_bw(),
+                           theme_args = list(legend.background = ggplot2::element_blank(),
+                                             legend.key.size = ggplot2::unit(0.3, "cm"),
+                                             legend.key = ggplot2::element_blank(), ## keeps background of legend symbols transparent
+                                             panel.grid = ggplot2::element_blank(),
+                                             axis.title = ggplot2::element_blank(),
+                                             axis.text = ggplot2::element_blank(),
+                                             axis.ticks = ggplot2::element_blank())
+                           #avoid_overlap_min_frac = 0.05
+                           ) {
 
   if (!requireNamespace("ggforce", quietly = T)) {
     utils::install.packages("ggforce")
@@ -36,53 +51,68 @@ freq_pie_chart <- function(SO,
   if (!requireNamespace("farver", quietly = T)) {
     utils::install.packages("farver")
   }
-
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data
   }
 
-  ## ... make that a list and check for default elements (see below)
-  ## them call theme with Gmisc::fastdocall
+  if (length(legend.position) > 2) {stop("legend.position should have length 1 being top, bottom, left, right; or length 2 indicating the corner where legend is to place.")}
 
-  avoid_label_overlap <- match.arg(avoid_label_overlap, c("alternating_shift", "outside"))
+  ## ... make that a list and check for default elements (see below)
+  ## them call theme with Gmisc::fastDoCall
+
+  avoid_label_overlap <- match.arg(avoid_label_overlap, c("not", "alternating_shift", "outside"))
+  label_outside <- match.arg(label_outside, c("none", "abs", "rel"))
+  label_inside <- match.arg(label_inside, c("rel", "abs", "none"))
+
+  if (label_angle != "circle") {
+    if (!is.numeric(label_angle)) {
+      stop("label_angle has to be 'circle' or numeric.")
+    }
+  }
 
   # https://stackoverflow.com/questions/16184188/ggplot-facet-piechart-placing-text-in-the-middle-of-pie-chart-slices (ggforce)
-  tab <- table(SO[,meta.col], exclude = c())
-  tab <- data.frame(frac = as.numeric(tab/sum(tab)), cluster = factor(names(tab), levels = names(tab)))
-  tab <- cbind(tab, utils::stack(table(SO[,meta.col], exclude = c())))
-  tab <- tab[-4]
-  names(tab)[3] <- "abs"
-  if (order_pieces) {
-    tab <- tab[order(tab$frac, decreasing = T), ]
+  tab <- table(SO[,meta.col,drop=T], exclude = c())
+  tab <- stats::setNames(as.numeric(tab), names(tab))
+  tab <- data.frame(abs = unname(tab), rel = as.numeric(tab/sum(tab)), cluster = factor(names(tab), levels = names(tab)))
+  if (!is.null(order_pieces)) {
+    tab <- tab[order(tab[,"rel"], decreasing = order_pieces), ]
   }
-  tab$start_angle <- c(0,cumsum(tab$frac))[-(length(tab$frac) + 1)]*pi*2
-  tab$end_angle <- c(cumsum(tab$frac))*pi*2
-  tab$mid_angle <-  0.5*(tab$start_angle + tab$end_angle)
+  tab$start_angle <- c(0,cumsum(tab[,"rel"]))[-(length(tab[,"rel"]) + 1)]*pi*2
+  tab$end_angle <- c(cumsum(tab[,"rel"]))*pi*2
+  tab$mid_angle <-  0.5*(tab[,"start_angle"] + tab[,"end_angle"])
 
   # text angle equal to angle of circle but readable
-  tab$text_angle <- ifelse(tab$mid_angle > pi, 270 - tab$mid_angle*180/pi, 90 - tab$mid_angle*180/pi)
-
-  # optional: adjust position of text labels
-  tab$text_radius <- inset.text.radius
-  tab$frac_lag <- lag(tab$frac, default = 0)
-  tab$frac_lag_diff <- tab$frac - tab$frac_lag
-
-  ## not used yet
-  tab$frac_lag_diff_series <- cumsum(abs(tab$frac_lag_diff) <= 0.05)
-
-  seq2 <- Vectorize(seq.default, vectorize.args = c("from", "to"))
-  rel_series <- rle(abs(tab$frac_lag_diff) <= 0.05)
-  if (avoid_label_overlap == "alternating_shift") {
-    tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] <-
-      ifelse(unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1])) %% 2 == 0,
-             tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] - 0.1,
-             tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] + 0.1)
-  } else if (avoid_label_overlap == "outside") {
-    tab$text_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] <- outside_radius
+  if (label_angle == "circle") {
+    # relevant if order_pieces = T or order_pieces = F ??
+    tab$text_angle <- ifelse(tab$mid_angle > pi, 270 - tab$mid_angle*180/pi, 90 - tab$mid_angle*180/pi)
+  } else {
+    tab$text_angle <- label_angle
   }
 
 
-  if (length(col_pal) != length(unique(tab[,"cluster"]))) {
+
+
+  # optional: adjust position of text labels
+  tab$label_inside_radius <- label_inside_radius
+  tab$label_outside_radius <- label_outside_radius
+  tab[,"frac_lag"] <- lag(tab[,"rel"], default = 0)
+  tab[,"frac_lag_diff"] <- tab[,"rel"] - tab[,"frac_lag"]
+
+  ## not used yet
+  tab[,"frac_lag_diff_series"] <- cumsum(abs(tab[,"frac_lag_diff",drop=T]) <= 0.05)
+
+  seq2 <- Vectorize(seq.default, vectorize.args = c("from", "to"))
+  rel_series <- rle(abs(tab[,"frac_lag_diff"]) <= 0.05)
+  if (avoid_label_overlap == "alternating_shift") {
+    tab$label_inside_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] <-
+      ifelse(unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1])) %% 2 == 0,
+             tab$label_inside_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] - 0.1,
+             tab$label_inside_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] + 0.1)
+  } else if (avoid_label_overlap == "outside") {
+    tab$label_inside_radius[unlist(seq2(lag(cumsum(rel_series$lengths)+1)[-1], cumsum(rel_series$lengths)[-1]))] <- outside_radius
+  }
+
+  if (length(col_pal) != nlevels(tab[,"cluster"])) {
 
     if (is.null(names(col_pal))) {
       if (length(col_pal) < length(unique(tab[,"cluster"]))) {
@@ -112,31 +142,94 @@ freq_pie_chart <- function(SO,
   }
   tab$cluster_cols <- col_pal[tab$cluster]
 
-  plot <- ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
+  plot <-
+    ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = border_color) +
-    ggplot2::theme_bw() +
-    ggplot2::theme(legend.title = ggplot2::element_blank(),
-                   legend.position = legend.position,
-                   panel.grid = ggplot2::element_blank(),
-                   axis.title = ggplot2::element_blank(),
-                   axis.text = ggplot2::element_blank(),
-                   axis.ticks = ggplot2::element_blank(),
-                   ...) +
+    theme +
+    labs(fill = legend_title) +
     ggplot2::scale_fill_manual(values = col_pal) +
     ggplot2::coord_fixed(ratio = 1)
 
+  if (length(legend.position) == 1) {
+    plot <-
+      plot +
+      Gmisc::fastDoCall(ggplot2::theme, args = c(theme_args, list(legend.position = legend.position)))
+  } else {
+    plot <-
+      plot +
+      Gmisc::fastDoCall(ggplot2::theme, args = c(theme_args, list(legend.justification = c(legend.position[1], legend.position[2]),
+                                                 legend.position = c(legend.position[1], legend.position[2]))))
+  }
 
   # in case label are outside of the circle, adjust their color (black or white) to the panel.background
   tab$text_color <- ifelse(farver::decode_colour(tab$cluster_cols, to = "hcl")[, "l"] > 50, "black", "white")
-  tab[which(tab$text_radius >= 1), "text_color"] <- ifelse(farver::decode_colour(plot[["theme"]][["panel.background"]][["fill"]], to = "hcl")[,"l"] > 50, "black", "white")
-  plot <-
-    plot +
-    ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color),
-                                                x = text_radius*sin(mid_angle),
-                                                y = text_radius*cos(mid_angle),
-                                                angle = text_angle,
-                                                label = format(round(frac, 2), nsmall = 2)),
-                       size = inset.text.size)
+  tab[which(tab$label_inside_radius >= 1), "text_color"] <- ifelse(farver::decode_colour(plot[["theme"]][["panel.background"]][["fill"]], to = "hcl")[,"l"] > 50, "black", "white")
+
+  if (label_inside == "rel") {
+    if (label_rel_percent) {
+      ## problem with decimals and > 1 % may arise
+      tab$label_inside_text <- format(round(tab[,"rel"]*100, label_decimals), nsmall = label_decimals)
+      for (i in 1:length(tab$label_inside_text)) {
+        if (tab$label_inside_text[i] < 1 & tab$label_inside_text[i] > 0) {
+          tab$label_inside_text[i] <- "< 1 %"
+        } else if (tab$label_inside_text[i] > 1 & tab$label_inside_text[i] < 99) {
+          tab$label_inside_text[i] <- paste0(tab$label_inside_text[i] , " %")
+        } else if (tab$label_inside_text[i] > 99 & tab$label_inside_text[i] < 100) {
+          tab$label_inside_text[i] <- "> 99 %"
+        } else {
+          tab$label_inside_text[i] <- paste0(tab$label_inside_text[i], " %")
+        }
+      }
+    } else {
+      tab$label_inside_text <- format(round(tab[,"rel"], label_decimals), nsmall = label_decimals)
+    }
+  } else if (label_inside == "abs") {
+    tab$label_inside_text <- tab[,"abs"]
+  }
+  if (label_outside == "rel") {
+    if (label_rel_percent) {
+      ## problem with decimals and > 1 % may arise
+      tab$label_outside_text <- format(round(tab[,"rel"]*100, label_decimals), nsmall = label_decimals)
+      for (i in 1:length(tab$label_outside_text)) {
+        if (tab$label_outside_text[i] < 1 & tab$label_outside_text[i] > 0) {
+          tab$label_outside_text[i] <- "< 1 %"
+        } else if (tab$label_outside_text[i] > 1 & tab$label_outside_text[i] < 99) {
+          tab$label_outside_text[i] <- paste0(tab$label_outside_text[i] , " %")
+        } else if (tab$label_outside_text[i] > 99 & tab$label_outside_text[i] < 100) {
+          tab$label_outside_text[i] <- "> 99 %"
+        } else {
+          tab$label_outside_text[i] <- paste0(tab$label_outside_text[i], " %")
+        }
+      }
+    } else {
+      tab$label_outside_text <- format(round(tab[,"rel"], label_decimals), nsmall = label_decimals)
+    }
+  } else if (label_outside == "abs") {
+    tab$label_outside_text <- tab[,"abs"]
+  }
+
+  if (label_inside != "none") {
+    plot <-
+      plot +
+      ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color),
+                                                  x = label_inside_radius*sin(mid_angle),
+                                                  y = label_inside_radius*cos(mid_angle),
+                                                  angle = text_angle,
+                                                  label = label_inside_text),
+                         size = label_size)
+  }
+
+  if (label_outside != "none") {
+    plot <-
+      plot +
+      ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color),
+                                                  x = label_outside_radius*sin(mid_angle),
+                                                  y = label_outside_radius*cos(mid_angle),
+                                                  angle = text_angle,
+                                                  label = label_outside_text),
+                         size = label_size)
+  }
+
 
   return(list(plot = plot, data = tab))
 }
