@@ -185,6 +185,11 @@ feature_plot <- function(SO,
                          ...) {
 
 
+  ## add axis arrows, shortened:
+  #p_blood <- p_blood + guides(x = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])))/4 ),
+    #                          y = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])))/4 ))
+
+
   ## label position calculation is not facetted!!
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
@@ -1413,7 +1418,7 @@ feature_plot <- function(SO,
   return(kk)
 }
 
-.prep.contour.cells <- function(SO, reduction, x) {
+'.prep.contour.cells <- function(SO, reduction, x) {
   #multiple SO - how to?
 
   x<-"all"
@@ -1429,7 +1434,7 @@ feature_plot <- function(SO,
   data <- cbind(Seurat::FetchData(SO, "SCT_snn_res.0.4"), Seurat::Embeddings(SO, reduction = "tsne"))
 
 }
-
+'
 ceiling_any = function(x, accuracy, f = ceiling){f(x/ accuracy) * accuracy}
 
 floor_any = function(x, accuracy, f = floor){f(x/ accuracy) * accuracy}
