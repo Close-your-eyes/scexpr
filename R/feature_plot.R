@@ -164,7 +164,7 @@ feature_plot <- function(SO,
                          label.feature = NULL,
                          label.size = 12,
                          label.center.fun = c("median", "mean"),
-                         label.nugde = c(0,0), # nudging in x and y direction
+                         label.nudge = c(0,0), # nudging in x and y direction
                          na.rm = F,
                          inf.rm = F,
                          bury_NA = T,
@@ -178,6 +178,7 @@ feature_plot <- function(SO,
                          contour_feature = NULL,
                          col.pal.contour = "custom",
                          contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1), # arguments to geom_density_2d
+                         contour.label.nudge = c(0,0),
                          plot.expr.freq.by.contour.group = F,
                          use_ggnewscale_for_contour_colors = T, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
                          expand_limits = list(), # arguments to ggplot2::expand_limits
@@ -606,6 +607,11 @@ feature_plot <- function(SO,
                            pct = (sum(!!rlang::sym(colnames(.)[1]) > 0)/dplyr::n())*100) %>%
           dplyr::mutate(pct = ifelse(pct < 1, "< 1 %", paste0(round(pct,0), " %")))
 
+
+        group_labels[,"dr1_avg"] <- group_labels[,"dr1_avg"] + contour.label.nudge[1]
+        group_labels[,"dr2_avg"] <- group_labels[,"dr2_avg"] + contour.label.nudge[2]
+
+
         if (use_ggnewscale_for_contour_colors) {
           plot <-
             plot +
@@ -634,8 +640,8 @@ feature_plot <- function(SO,
                                                                                    avg1 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
                                                                                    avg2 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
 
-        label_df[,"avg1"] <- label_df[,"avg1"] + label.nugde[1]
-        label_df[,"avg2"] <- label_df[,"avg2"] + label.nugde[2]
+        label_df[,"avg1"] <- label_df[,"avg1"] + label.nudge[1]
+        label_df[,"avg2"] <- label_df[,"avg2"] + label.nudge[2]
 
         label_column <- if (!is.null(label.feature)) {
           temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
