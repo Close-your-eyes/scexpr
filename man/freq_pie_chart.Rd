@@ -7,17 +7,43 @@
 freq_pie_chart(
   SO,
   meta.col,
-  inset.text.size = 5,
-  inset.text.radius = 0.75,
+  label_outside = c("none", "abs", "rel"),
+  label_inside = c("rel", "abs", "none"),
+  label_size = 5,
+  label_inside_radius = 0.75,
+  label_outside_radius = 1.1,
+  label_angle = "circle",
   legend.position = "right",
   col_pal = scexpr::col_pal("custom"),
-  order_pieces = T
+  border_color = "white",
+  order_pieces = T,
+  avoid_label_overlap = c("not", "alternating_shift", "outside"),
+  outside_radius = 1.1,
+  label_rel_percent = F,
+  label_decimals = 2,
+  legend_title = NULL,
+  theme = ggplot2::theme_bw(),
+  theme_args = list(legend.background = ggplot2::element_blank(), legend.key.size =
+    ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank(), panel.grid =
+    ggplot2::element_blank(), axis.title = ggplot2::element_blank(), axis.text =
+    ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
 )
 }
 \arguments{
 \item{SO}{Seurat object or data frame}
 
-\item{order_pieces}{}
+\item{label_size}{can one number or a vector for each label}
+
+\item{border_color}{color of borders of pie pieces}
+
+\item{order_pieces}{NULL to not change order, T for decreasing order of F for increasing order (with respect to size of pieces)}
+
+\item{avoid_label_overlap}{strategy to elegantly avoid label overlap}
+
+\item{outside_radius}{when avoid_label_overlap is outside; the radius where to place label;
+1 roughly equals the outer radius of the circle}
+
+\item{...}{arguments to ggplot2::theme()}
 }
 \description{
 Title

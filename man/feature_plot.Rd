@@ -71,9 +71,12 @@ feature_plot(
   plot.labels = NULL,
   label.feature = NULL,
   label.size = 12,
+  label.center.fun = c("median", "mean"),
+  label.nudge = c(0, 0),
   na.rm = F,
   inf.rm = F,
   bury_NA = T,
+  na.value = "grey50",
   trajectory.slot = NULL,
   trajectory.color = "grey30",
   trajectory.size = 0.75,
@@ -81,9 +84,11 @@ feature_plot(
   contour_feature = NULL,
   col.pal.contour = "custom",
   contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
+  contour.label.nudge = c(0, 0),
   plot.expr.freq.by.contour.group = F,
   use_ggnewscale_for_contour_colors = T,
   expand_limits = list(),
+  color.scale.labels = NULL,
   ...
 )
 }

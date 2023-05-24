@@ -11,11 +11,12 @@ heatmap_pseudobulk(
   levels.plot = NULL,
   assay = c("RNA", "SCT"),
   features = NULL,
+  feature_selection_strategy = c(1, 2),
   order_features = F,
   normalization = "scale",
   topn.features = 10,
-  topn.ties = F,
-  topn.metric = c("padj", "auc", "logFC"),
+  break.ties = c(T, F),
+  topn.metric = c("padj", "logFC", "auc"),
   min.pct = 0.1,
   max.padj = 0.05,
   title = NULL,
@@ -57,11 +58,19 @@ will affect scaling calculations}
 \item{levels.plot}{which levels in meta.col to include in platting;
 if NULL this equals to levels.calc; must be subset of levels.calc;
 the order provided defines order on x-axis; this will not affect scaling
-calculation but only select levels for plotting}
+calculation but only select levels for plotting;
+defining ordering will not work perfectly when more than 1 SO is provided and factor levels
+in meta.cols are not unique}
 
 \item{assay}{which assay to obtain expression values from}
 
 \item{features}{optionally choose which features to plot (supervised)}
+
+\item{feature_selection_strategy}{different strategies to auto-select features; rule-of-thumb:
+for large overview heatmap (100s of features per group) choose 2, for small detailed heatmap (10 per group) choose 1;
+when a selection of features is provided by the 'feature' argument and order.features is TURE, feature_selection_strategy will be set to 2
+by default if no choice is made as this gives a better order of features on the y-axis; in general choices 1 and 2 may yield different
+features on the y-axis; choice 1 is slightly preferred}
 
 \item{order_features}{when features are provided should they be ordered automatically to generate a pretty heatmap;
 not relevant when is.null(features)}
@@ -77,8 +86,8 @@ features to plot per level in meta.col; selection is done based on the metric
 selected in topn.metric; respective features with greatest difference between
 meta.col levels are selected (best DE features so to say)}
 
-\item{topn.ties}{passed as 'with_ties' to dplyr::slice_min or dplyr::slice_max;
-if set to FALSE exactly topn.features are returned even if there are rank-ties}
+\item{break.ties}{if FALSE, ties are not broken; if TRUE a second and third metric
+beside topn.metric from c("padj", "logFC", "auc") are used}
 
 \item{topn.metric}{which differential expression metric to apply for feature
 selection}
