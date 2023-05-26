@@ -605,7 +605,7 @@ feature_plot <- function(SO,
           dplyr::summarise(dr1_avg = mean(!!rlang::sym(paste0(reduction, "_", dims[1]))),
                            dr2_avg = mean(!!rlang::sym(paste0(reduction, "_", dims[2]))),
                            pct = (sum(!!rlang::sym(colnames(.)[1]) > 0)/dplyr::n())*100) %>%
-          dplyr::mutate(pct = ifelse(pct < 1, "< 1 %", paste0(round(pct,0), " %")))
+          dplyr::mutate(pct = ifelse(pct < 1, ifelse(pct == 0, "0 %", "< 1 %"), paste0(round(pct,0), " %")))
 
 
         group_labels[,"dr1_avg"] <- group_labels[,"dr1_avg"] + contour.label.nudge[1]
