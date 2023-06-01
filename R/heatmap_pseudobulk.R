@@ -84,7 +84,7 @@ heatmap_pseudobulk <- function(SO,
                                levels.plot = NULL,
                                assay = c("RNA", "SCT"),
                                features = NULL,
-                               feature_selection_strategy = c(1,2),
+                               feature_selection_strategy = c(2,1),
                                order_features = F,
                                normalization = "scale", # scale
                                topn.features = 10,
@@ -136,7 +136,7 @@ heatmap_pseudobulk <- function(SO,
   }
 
   topn.metric <- match.arg(topn.metric, c("padj", "logFC", "auc"))
-  feature_selection_strategy <- match.arg(as.character(feature_selection_strategy), c("1","2"))
+  feature_selection_strategy <- match.arg(as.character(feature_selection_strategy), c("2","1"))
 
   if (!is.logical(break.ties)) {
     stop("break.ties must be logical.")
