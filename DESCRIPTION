@@ -38,7 +38,8 @@ Imports:
     MASS,
     methods,
     Gmisc,
-    ggnewscale
+    ggnewscale,
+    ggtext
 Suggests: 
     presto,
     patchwork,
