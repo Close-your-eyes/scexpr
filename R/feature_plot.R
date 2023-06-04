@@ -506,6 +506,7 @@ feature_plot <- function(SO,
 
 
     # theme_get()[["text"]][["family"]]
+
     plot <-
       plot +
       ggplot2::guides(
@@ -515,24 +516,27 @@ feature_plot <- function(SO,
           ggplot2::guide_legend(override.aes = list(size = legend.shape.size),
                                 nrow = legend.nrow,
                                 ncol = legend.ncol,
-                                label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
+                                title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                 title = switch(plot.legend.title, legend.title, NULL))
         },
         color = if (plot.colorbar) {
           ggplot2::guide_colorbar(barwidth = legend.barwidth,
                                   barheight = legend.barheight,
-                                  label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                  title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                  label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
+                                  title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                   title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
                                 nrow = legend.nrow,
                                 ncol = legend.ncol,
-                                label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
+                                title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                 title = switch(plot.legend.title, legend.title, NULL))
         })
+
+    #ggplot2::element_text
+    #ggtext::element_markdown ## this allows to pass italics in the legend text with e.g. *CCR7* or <i>CCR7</i>
 
     plot <-
       plot +

@@ -30,7 +30,7 @@ fgsea_on_msigdbr <- function(gene.ranks,
   }
 
   if (!is.null(gene.sets)) {
-    if (!is.list(gene.sets) || is.null(names(list))) {
+    if (!is.list(gene.sets) || is.null(names(gene.sets))) {
       stop("gene.sets has to be a named list of gene sets. See examples as returned from msigdbr::msigdbr splitted to list by gene_symbol and gs_name.")
     }
   }
