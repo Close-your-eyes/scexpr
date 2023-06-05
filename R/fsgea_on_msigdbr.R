@@ -1,4 +1,4 @@
-#' Title
+#' Convenient wrapper around fgsea function
 #'
 #' @param gene.ranks
 #' @param gene.sets
@@ -7,15 +7,22 @@
 #' @param msigdbr_args
 #' @param fgsea_fun
 #' @param fgsea_args
+#' @param return.gene.sets set to FALSE in order to save memory when always the same external set of gene sets is used
 #'
 #' @return
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' # get gene sets from msigdbr, split to a named list
+#' gene.sets <- scexpr:::.get.split.msigdbr()
+#' # provide gene.sets manually and leave use.msigdbr = F in case fgsea_on_msigdbr is called many times with the same gene.sets
+#' }
 fgsea_on_msigdbr <- function(gene.ranks = NULL,
                              gene.sets = NULL,
+                             return.gene.sets = T,
                              min.padj = 0.001, # which plots to generate
-                             use.msigdbr = T,
+                             use.msigdbr = F,
                              msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL),
                              fgsea_fun = fgsea::fgseaMultilevel,
                              fgsea_args = list(stats = gene.ranks, pathways = gene.sets)) {
@@ -46,6 +53,9 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
     }
     gene.sets <- c(gene.sets, .get.split.msigdbr(msigdbr_args = msigdbr_args))
   }
+  if (length(gene.sets) == 0) {
+    stop("No gene.sets provided and use.msigdbr=F. Either manually provide gene.sets or set use.msigdbr=T to select sets from their.")
+  }
   names(gene.sets) <- make.unique(names(gene.sets))
 
 
@@ -64,7 +74,7 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
 
   return(list(fgsea_table = results,
               fgsea_plots = gsea_plots,
-              gene.sets = gene.sets,
+              gene.sets = if (return.gene.sets) {gene.sets} else {NULL},
               gene.ranks = gene.ranks))
 }
 
