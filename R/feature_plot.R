@@ -188,13 +188,15 @@ feature_plot <- function(SO,
 
   ## add axis arrows, shortened:
   #p_blood <- p_blood + guides(x = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])))/4 ),
-    #                          y = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])))/4 ))
+  #                          y = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])))/4 ))
 
 
   ## label position calculation is not facetted!!
 
   # tidy eval syntax: https://rlang.r-lib.org/reference/nse-force.html https://ggplot2.tidyverse.org/reference/aes.html#quasiquotation
   # numeric but discrete data columns from meta.data - how to tell that it is not continuous
+
+  # no axis extension: # https://stackoverflow.com/questions/48255449/how-can-i-set-exactly-the-limits-for-axes-in-ggplot2-r-plots
 
   if (missing(SO)) {stop("Seurat object list or feature vector is missing.")}
   if (length(features) == 1) {combine <- F}
@@ -408,7 +410,7 @@ feature_plot <- function(SO,
       }
 
       # put this below contour plotting so that labels are on top (see below)
-'      if (!is.null(plot.labels)) {
+      '      if (!is.null(plot.labels)) {
         if (is.numeric(data[,1])) {
           message("Labels not plotted as ", x, " is numeric.")
         } else {
@@ -628,28 +630,32 @@ feature_plot <- function(SO,
 
 
     if (!is.null(plot.labels)) {
-
-      ## make this facetted; but only do it by different SOs
-
       if (is.numeric(data[,1])) {
         message("Labels not plotted as ", x, " is numeric.")
       } else {
         label.center.fun <- match.fun(label.center.fun)
         # potentially: use mclust, densityMclust(), (mixed gaussian model) to find multimodal clusters; x,y separately
-        label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z,
+        '        label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z,
                                                                                    avg1 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
-                                                                                   avg2 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
+                                                                                   avg2 = label.center.fun(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))'
 
-        label_df[,"avg1"] <- label_df[,"avg1"] + label.nudge[1]
-        label_df[,"avg2"] <- label_df[,"avg2"] + label.nudge[2]
+        dimcol1 <- paste0(reduction, "_", dims[1])
+        dimcol2 <- paste0(reduction, "_", dims[2])
+        label_df <-
+          data %>%
+          dplyr::group_by(!!sym(x), SO.split) %>%
+          dplyr::summarise(!!dimcol1 := label.center.fun(!!sym(dimcol1)) + label.nudge[1],
+                           !!dimcol2 := label.center.fun(!!sym(dimcol2)) + label.nudge[2],
+                           .groups = "drop") %>%
+          dplyr::rename("label" = !!sym(x)) %>%
+          as.data.frame()
 
-        label_column <- if (!is.null(label.feature)) {
+        if (!is.null(label.feature)) {
           temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
           label_df[,1] <- as.character(label_df[,1])
           label_df[,1] <- stats::setNames(temp[,2,drop=T], temp[,1,drop=T])[label_df[,1]]
         }
 
-        names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
         if (plot.labels == "text") {
           plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
         }
@@ -1056,9 +1062,6 @@ feature_plot <- function(SO,
                       inf.rm = F,
                       trajectory.slot = NULL) {
 
-
-  #feature <- c("CX3CR1", "expanded", "SCT_snn_res.0.1", "CD8A")
-  #feature <- c("CX3CR1", "CD8A")
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, shape.by = shape.by, meta.col = meta.col)
   assay <- match.arg(assay, names(SO[[1]]@assays))
