@@ -13,10 +13,12 @@ feature_plot_stat(
   geom2 = c("boxplot", "violin", "none"),
   jitterwidth = 0.2,
   label.size = 4,
-  meta.col.levels = NULL,
   plot.expr.freq = F,
+  expr.freq.decimals = 2,
+  expr.freq.pct = F,
   expr.freq.hjust = 0.3,
-  filter.non.expr = F,
+  plot.non.expr = T,
+  plot.strip = T,
   cells = NULL,
   downsample = 1,
   legend.title = "SO.split",
@@ -30,15 +32,19 @@ feature_plot_stat(
   cutoff.feature = NULL,
   cutoff.expression = 0,
   exclusion.feature = NULL,
-  plot.panel.grid = F,
   font.family = "sans",
-  make.cells.unique = F,
   theme = ggplot2::theme_bw(),
   ...
 )
 }
 \arguments{
-\item{ncol}{}
+\item{plot.expr.freq}{to plot labels of expression frequencies}
+
+\item{expr.freq.decimals}{decimal precision of frequency labels}
+
+\item{expr.freq.pct}{plot expression frequency in percent?}
+
+\item{plot.non.expr}{do plot dots of non-expressers (0 UMIs)}
 }
 \description{
 Title
