@@ -71,7 +71,7 @@ composition_barplot <- function(SO,
     dplyr::mutate(rel_x = rel_x*fctr) %>%
     tibble::as_tibble()
 
-  if (!is.null(names(col_pal)) && all(!names(col_pal) %in% unique(table[,fill_cat,drop=F]))) {
+  if (!is.null(names(col_pal)) && any(!unique(table[,fill_cat,drop=T]) %in% names(col_pal))) {
     col_pal <- unname(col_pal)
   }
 
