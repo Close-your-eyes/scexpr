@@ -161,9 +161,16 @@ freq_pie_chart <- function(SO,
                                                  legend.position = c(legend.position[1], legend.position[2]))))
   }
 
+  if (is.na(plot[["theme"]][["panel.background"]][["fill"]])) {
+    plot <- plot + theme(panel.background = element_rect(fill = "white"))
+  }
+
   # in case label are outside of the circle, adjust their color (black or white) to the panel.background
-  tab$text_color <- ifelse(farver::decode_colour(tab$cluster_cols, to = "hcl")[, "l"] > 50, "black", "white")
-  tab[which(tab$label_inside_radius >= 1), "text_color"] <- ifelse(farver::decode_colour(plot[["theme"]][["panel.background"]][["fill"]], to = "hcl")[,"l"] > 50, "black", "white")
+  tab$text_color_inside <- ifelse(farver::decode_colour(tab$cluster_cols, to = "hcl")[, "l"] > 50, "black", "white")
+  tab[which(tab$label_inside_radius >= 1), "text_color_inside"] <- ifelse(farver::decode_colour(plot[["theme"]][["panel.background"]][["fill"]], to = "hcl")[,"l"] > 50, "black", "white")
+
+  tab$text_color_outside <- ifelse(farver::decode_colour(tab$cluster_cols, to = "hcl")[, "l"] > 50, "black", "white")
+  tab[which(tab$label_outside_radius >= 1), "text_color_outside"] <- ifelse(farver::decode_colour(plot[["theme"]][["panel.background"]][["fill"]], to = "hcl")[,"l"] > 50, "black", "white")
 
   if (label_inside == "rel") {
     if (label_rel_percent) {
@@ -186,10 +193,12 @@ freq_pie_chart <- function(SO,
   } else if (label_inside == "abs") {
     tab$label_inside_text <- tab[,"abs"]
   }
+
   if (label_outside == "rel") {
     if (label_rel_percent) {
       ## problem with decimals and > 1 % may arise
-      tab$label_outside_text <- format(round(tab[,"rel"]*100, label_decimals), nsmall = label_decimals)
+      #tab$label_outside_text <- format(round(tab[,"rel",drop=T]*100, label_decimals), nsmall = label_decimals)
+      tab$label_outside_text <- round(tab[,"rel",drop=T]*100, label_decimals)
       for (i in 1:length(tab$label_outside_text)) {
         if (tab$label_outside_text[i] < 1 & tab$label_outside_text[i] > 0) {
           tab$label_outside_text[i] <- "< 1 %"
@@ -211,7 +220,7 @@ freq_pie_chart <- function(SO,
   if (label_inside != "none") {
     plot <-
       plot +
-      ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color),
+      ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color_inside),
                                                   x = label_inside_radius*sin(mid_angle),
                                                   y = label_inside_radius*cos(mid_angle),
                                                   angle = text_angle,
@@ -222,14 +231,13 @@ freq_pie_chart <- function(SO,
   if (label_outside != "none") {
     plot <-
       plot +
-      ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color),
+      ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color_outside),
                                                   x = label_outside_radius*sin(mid_angle),
                                                   y = label_outside_radius*cos(mid_angle),
                                                   angle = text_angle,
                                                   label = label_outside_text),
                          size = label_size)
   }
-
 
   return(list(plot = plot, data = tab))
 }
