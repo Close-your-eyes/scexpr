@@ -95,7 +95,7 @@ freq_pie_chart <- function(SO,
   # optional: adjust position of text labels
   tab$label_inside_radius <- label_inside_radius
   tab$label_outside_radius <- label_outside_radius
-  tab[,"frac_lag"] <- lag(tab[,"rel"], default = 0)
+  tab[,"frac_lag"] <- as.numeric(lag(tab[,"rel"], default = 0)) # drop attributes; for rle below
   tab[,"frac_lag_diff"] <- tab[,"rel"] - tab[,"frac_lag"]
 
   ## not used yet
