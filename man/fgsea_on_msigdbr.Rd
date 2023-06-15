@@ -2,19 +2,29 @@
 % Please edit documentation in R/fsgea_on_msigdbr.R
 \name{fgsea_on_msigdbr}
 \alias{fgsea_on_msigdbr}
-\title{Title}
+\title{Convenient wrapper around fgsea function}
 \usage{
 fgsea_on_msigdbr(
-  gene.ranks,
-  use.msigdbr = T,
+  gene.ranks = NULL,
   gene.sets = NULL,
+  return.gene.sets = T,
   min.padj = 0.001,
-  ...
+  use.msigdbr = F,
+  msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL),
+  fgsea_fun = fgsea::fgseaMultilevel,
+  fgsea_args = list(stats = gene.ranks, pathways = gene.sets)
 )
 }
 \arguments{
-\item{...}{}
+\item{return.gene.sets}{set to FALSE in order to save memory when always the same external set of gene sets is used}
 }
 \description{
-Title
+Convenient wrapper around fgsea function
+}
+\examples{
+\dontrun{
+# get gene sets from msigdbr, split to a named list
+gene.sets <- scexpr:::.get.split.msigdbr()
+# provide gene.sets manually and leave use.msigdbr = F in case fgsea_on_msigdbr is called many times with the same gene.sets
+}
 }

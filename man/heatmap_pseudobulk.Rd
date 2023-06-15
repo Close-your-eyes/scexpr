@@ -11,7 +11,7 @@ heatmap_pseudobulk(
   levels.plot = NULL,
   assay = c("RNA", "SCT"),
   features = NULL,
-  feature_selection_strategy = c(1, 2),
+  feature_selection_strategy = c(2, 1),
   order_features = F,
   normalization = "scale",
   topn.features = 10,
@@ -23,7 +23,8 @@ heatmap_pseudobulk(
   title.font.size = 14,
   font.family = "sans",
   y.font.size = 10,
-  tile.borders = T,
+  color = "NA",
+  fill = scexpr::col_pal(name = "RdBu", nbrew = 9, reverse = T),
   dotplot = F,
   plot.feature.breaks = T,
   plot.sec.axis = F,
@@ -107,9 +108,8 @@ e.g. mono or sans}
 
 \item{y.font.size}{font size of features names on y-axis}
 
-\item{tile.borders}{plot black tile border (TRUE) or not (FALSE);
-better set to FALSE for may features and optionally set to TRUE for few
-features only}
+\item{color}{color of stroke (border) around tiles or dots; "NA" means no stroke is plotted;
+other choices may be black, white or any other color code}
 
 \item{dotplot}{plot heatmap as a dotplot which will also reveal the fraction
 of expressing cells by dot sizes}

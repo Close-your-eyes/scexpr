@@ -8,10 +8,19 @@
 #' @param col_pal
 #' @param order_pieces NULL to not change order, T for decreasing order of F for increasing order (with respect to size of pieces)
 #' @param avoid_label_overlap strategy to elegantly avoid label overlap
-#' @param ... arguments to ggplot2::theme()
 #' @param border_color color of borders of pie pieces
 #' @param outside_radius when avoid_label_overlap is outside; the radius where to place label;
 #' 1 roughly equals the outer radius of the circle
+#' @param label_outside
+#' @param label_inside
+#' @param label_outside_radius
+#' @param label_angle
+#' @param label_rel_percent
+#' @param print_pct_sign
+#' @param label_decimals
+#' @param legend_title
+#' @param theme
+#' @param theme_args
 #'
 #' @return
 #' @export
@@ -32,6 +41,7 @@ freq_pie_chart <- function(SO,
                            avoid_label_overlap = c("not", "alternating_shift", "outside"),
                            outside_radius = 1.1,
                            label_rel_percent = F,
+                           print_pct_sign = T,
                            label_decimals = 2,
                            legend_title = NULL,
                            theme = ggplot2::theme_bw(),
@@ -176,15 +186,17 @@ freq_pie_chart <- function(SO,
     if (label_rel_percent) {
       ## problem with decimals and > 1 % may arise
       tab$label_inside_text <- format(round(tab[,"rel"]*100, label_decimals), nsmall = label_decimals)
-      for (i in 1:length(tab$label_inside_text)) {
-        if (tab$label_inside_text[i] < 1 & tab$label_inside_text[i] > 0) {
-          tab$label_inside_text[i] <- "< 1 %"
-        } else if (tab$label_inside_text[i] > 1 & tab$label_inside_text[i] < 99) {
-          tab$label_inside_text[i] <- paste0(tab$label_inside_text[i] , " %")
-        } else if (tab$label_inside_text[i] > 99 & tab$label_inside_text[i] < 100) {
-          tab$label_inside_text[i] <- "> 99 %"
-        } else {
-          tab$label_inside_text[i] <- paste0(tab$label_inside_text[i], " %")
+      if (print_pct_sign) {
+        for (i in 1:length(tab$label_inside_text)) {
+          if (tab$label_inside_text[i] < 1 & tab$label_inside_text[i] > 0) {
+            tab$label_inside_text[i] <- "< 1 %"
+          } else if (tab$label_inside_text[i] > 1 & tab$label_inside_text[i] < 99) {
+            tab$label_inside_text[i] <- paste0(tab$label_inside_text[i] , " %")
+          } else if (tab$label_inside_text[i] > 99 & tab$label_inside_text[i] < 100) {
+            tab$label_inside_text[i] <- "> 99 %"
+          } else {
+            tab$label_inside_text[i] <- paste0(tab$label_inside_text[i], " %")
+          }
         }
       }
     } else {
@@ -199,15 +211,17 @@ freq_pie_chart <- function(SO,
       ## problem with decimals and > 1 % may arise
       #tab$label_outside_text <- format(round(tab[,"rel",drop=T]*100, label_decimals), nsmall = label_decimals)
       tab$label_outside_text <- round(tab[,"rel",drop=T]*100, label_decimals)
-      for (i in 1:length(tab$label_outside_text)) {
-        if (tab$label_outside_text[i] < 1 & tab$label_outside_text[i] > 0) {
-          tab$label_outside_text[i] <- "< 1 %"
-        } else if (tab$label_outside_text[i] > 1 & tab$label_outside_text[i] < 99) {
-          tab$label_outside_text[i] <- paste0(tab$label_outside_text[i] , " %")
-        } else if (tab$label_outside_text[i] > 99 & tab$label_outside_text[i] < 100) {
-          tab$label_outside_text[i] <- "> 99 %"
-        } else {
-          tab$label_outside_text[i] <- paste0(tab$label_outside_text[i], " %")
+      if (print_pct_sign) {
+        for (i in 1:length(tab$label_outside_text)) {
+          if (tab$label_outside_text[i] < 1 & tab$label_outside_text[i] > 0) {
+            tab$label_outside_text[i] <- "< 1 %"
+          } else if (tab$label_outside_text[i] > 1 & tab$label_outside_text[i] < 99) {
+            tab$label_outside_text[i] <- paste0(tab$label_outside_text[i] , " %")
+          } else if (tab$label_outside_text[i] > 99 & tab$label_outside_text[i] < 100) {
+            tab$label_outside_text[i] <- "> 99 %"
+          } else {
+            tab$label_outside_text[i] <- paste0(tab$label_outside_text[i], " %")
+          }
         }
       }
     } else {

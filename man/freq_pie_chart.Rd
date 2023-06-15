@@ -20,6 +20,7 @@ freq_pie_chart(
   avoid_label_overlap = c("not", "alternating_shift", "outside"),
   outside_radius = 1.1,
   label_rel_percent = F,
+  print_pct_sign = T,
   label_decimals = 2,
   legend_title = NULL,
   theme = ggplot2::theme_bw(),
@@ -43,7 +44,7 @@ freq_pie_chart(
 \item{outside_radius}{when avoid_label_overlap is outside; the radius where to place label;
 1 roughly equals the outer radius of the circle}
 
-\item{...}{arguments to ggplot2::theme()}
+\item{theme_args}{}
 }
 \description{
 Title
