@@ -81,6 +81,12 @@
 #' @param expand_limits
 #' @param label.feature provide a column in meta.data of SO which should be used for labels
 #' (e.g. a short form that does not disturb the plot so much)
+#' @param legend.label.position
+#' @param label.center.fun
+#' @param label.nudge
+#' @param na.value
+#' @param contour.label.nudge
+#' @param color.scale.labels
 #'
 #' @return
 #' @export
@@ -130,6 +136,7 @@ feature_plot <- function(SO,
                          legend.key.size = 0.3,
                          legend.shape.size = 3,
                          legend.col.size = 3,
+                         legend.label.position = "right",
                          hide.shape.legend = F,
 
                          font.family = "sans",
@@ -520,6 +527,7 @@ feature_plot <- function(SO,
                                 ncol = legend.ncol,
                                 label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
                                 title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
+                                label.position = legend.label.position,
                                 title = switch(plot.legend.title, legend.title, NULL))
         },
         color = if (plot.colorbar) {
@@ -527,6 +535,7 @@ feature_plot <- function(SO,
                                   barheight = legend.barheight,
                                   label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
                                   title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
+                                  label.position = legend.label.position,
                                   title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
@@ -534,6 +543,7 @@ feature_plot <- function(SO,
                                 ncol = legend.ncol,
                                 label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
                                 title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
+                                label.position = legend.label.position,
                                 title = switch(plot.legend.title, legend.title, NULL))
         })
 

@@ -70,6 +70,8 @@
 #' when a selection of features is provided by the 'feature' argument and order.features is TURE, feature_selection_strategy will be set to 2
 #' by default if no choice is made as this gives a better order of features on the y-axis; in general choices 1 and 2 may yield different
 #' features on the y-axis; choice 1 is slightly preferred
+#' @param fill
+#' @param flip.axes
 #'
 #' @importFrom magrittr %>%
 #'
@@ -101,6 +103,8 @@ heatmap_pseudobulk <- function(SO,
                                dotplot = F,
                                plot.feature.breaks = T,
                                plot.sec.axis = F,
+
+                               flip.axes = F,
 
                                legend.position = "right",
                                legend.direction = "vertical",
@@ -490,13 +494,32 @@ heatmap_pseudobulk <- function(SO,
     labels <- c(scale.min, scale.mid, scale.max)
   }
 
-  heatmap.plot <-
-    ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = norm_avgexpr)) +
-    ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colors = fill, breaks = c(scale.min, scale.mid, scale.max), labels = labels) +
-    ggplot2::theme_classic() +
-    ggplot2::ggtitle(title) +
-    ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family), axis.title = ggplot2::element_blank(), axis.text.x = ggplot2::element_text(family = font.family), axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family), legend.position = legend.position, legend.direction = legend.direction)
 
+
+  if (flip.axes) {
+    heatmap.plot <-
+      ggplot2::ggplot(htp, ggplot2::aes(y = cluster, x = Feature, fill = norm_avgexpr)) +
+      ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colors = fill, breaks = c(scale.min, scale.mid, scale.max), labels = labels) +
+      ggplot2::theme_classic() +
+      ggplot2::ggtitle(title) +
+      ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
+                     axis.title = ggplot2::element_blank(),
+                     axis.text.y = ggplot2::element_text(family = font.family),
+                     axis.text.x = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family),
+                     legend.position = legend.position, legend.direction = legend.direction)
+
+  } else {
+    heatmap.plot <-
+      ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = norm_avgexpr)) +
+      ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colors = fill, breaks = c(scale.min, scale.mid, scale.max), labels = labels) +
+      ggplot2::theme_classic() +
+      ggplot2::ggtitle(title) +
+      ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
+                     axis.title = ggplot2::element_blank(),
+                     axis.text.x = ggplot2::element_text(family = font.family),
+                     axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family),
+                     legend.position = legend.position, legend.direction = legend.direction)
+  }
 
   if (dotplot) {
     heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21, color = color)
@@ -545,9 +568,16 @@ heatmap_pseudobulk <- function(SO,
   }
 
   if (plot_hlines_between_groups) {
-    heatmap.plot <-
-      heatmap.plot +
-      Gmisc::fastDoCall(ggplot2::geom_hline, args = c(list(yintercept = hlines), hlines_args))
+    if (flip.axes) {
+      heatmap.plot <-
+        heatmap.plot +
+        Gmisc::fastDoCall(geom_vline, args = c(list(xintercept = hlines), hlines_args))
+    } else {
+      heatmap.plot <-
+        heatmap.plot +
+        Gmisc::fastDoCall(geom_hline, args = c(list(yintercept = hlines), hlines_args))
+    }
+
   } else {
     hlines = NULL
   }

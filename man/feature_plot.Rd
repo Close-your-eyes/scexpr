@@ -45,6 +45,7 @@ feature_plot(
   legend.key.size = 0.3,
   legend.shape.size = 3,
   legend.col.size = 3,
+  legend.label.position = "right",
   hide.shape.legend = F,
   font.family = "sans",
   col.pal.c = "spectral",
@@ -153,6 +154,8 @@ feature_plot(
 (e.g. a short form that does not disturb the plot so much)}
 
 \item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
+
+\item{color.scale.labels}{}
 }
 \description{
 Plot features of single cell transcriptomes on a dimension reduction map

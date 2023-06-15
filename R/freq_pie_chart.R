@@ -100,8 +100,6 @@ freq_pie_chart <- function(SO,
   }
 
 
-
-
   # optional: adjust position of text labels
   tab$label_inside_radius <- label_inside_radius
   tab$label_outside_radius <- label_outside_radius
