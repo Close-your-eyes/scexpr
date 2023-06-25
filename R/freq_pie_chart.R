@@ -53,7 +53,7 @@ freq_pie_chart <- function(SO,
                                              axis.text = ggplot2::element_blank(),
                                              axis.ticks = ggplot2::element_blank())
                            #avoid_overlap_min_frac = 0.05
-                           ) {
+) {
 
   if (!requireNamespace("ggforce", quietly = T)) {
     utils::install.packages("ggforce")
@@ -99,7 +99,14 @@ freq_pie_chart <- function(SO,
     tab$text_angle <- label_angle
   }
 
-
+  if (length(label_outside_radius) > nrow(tab) || nrow(tab) %% length(label_outside_radius) != 0) {
+    message("label_outside_radius has incompatible length. Will be set to 1.1.")
+    label_outside_radius <- 1.1
+  }
+  if (length(label_inside_radius) > nrow(tab) || nrow(tab) %% length(label_inside_radius) != 0) {
+    message("label_inside_radius has incompatible length. Will be set to 0.75.")
+    label_inside_radius <- 0.75
+  }
   # optional: adjust position of text labels
   tab$label_inside_radius <- label_inside_radius
   tab$label_outside_radius <- label_outside_radius
@@ -132,7 +139,7 @@ freq_pie_chart <- function(SO,
       names(col_pal) <- tab$cluster_cols
     } else {
       if (length(col_pal) > length(unique(tab[,"cluster"])) && all(names(col_pal) %in% unique(tab[,"cluster"]))) {
-        col_pal <- col_pal[unique(tab[,"cluster"])]
+        col_pal <- col_pal[unique(as.character(tab[,"cluster"]))]
         tab$cluster_cols <- col_pal[tab$cluster]
       } else {
         warning("Number of colors provided not matching the number of factor levels in meta.col. Falling back to scales::hue_pal().")
@@ -148,7 +155,7 @@ freq_pie_chart <- function(SO,
       names(col_pal) <- tab$cluster_cols
     }
   }
-  tab$cluster_cols <- col_pal[tab$cluster]
+  tab$cluster_cols <- col_pal[as.character(tab[,"cluster"])]
 
   plot <-
     ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
@@ -166,7 +173,7 @@ freq_pie_chart <- function(SO,
     plot <-
       plot +
       Gmisc::fastDoCall(ggplot2::theme, args = c(theme_args, list(legend.justification = c(legend.position[1], legend.position[2]),
-                                                 legend.position = c(legend.position[1], legend.position[2]))))
+                                                                  legend.position = c(legend.position[1], legend.position[2]))))
   }
 
   if (is.na(plot[["theme"]][["panel.background"]][["fill"]])) {

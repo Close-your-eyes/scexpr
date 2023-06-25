@@ -72,6 +72,7 @@
 #' features on the y-axis; choice 1 is slightly preferred
 #' @param fill
 #' @param flip.axes
+#' @param legend.title.hjust
 #'
 #' @importFrom magrittr %>%
 #'
@@ -115,6 +116,7 @@ heatmap_pseudobulk <- function(SO,
                                legend.title.fill = NULL,
                                legend.title.size = NULL,
                                legend.title.position = "top",
+                               legend.title.hjust = 0.5,
                                legend.labels = c("min", "", "max"),
                                feature.labels = NULL,
                                feature.labels.nudge_x = -0.1,
@@ -527,20 +529,22 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- heatmap.plot + ggplot2::geom_tile(color = color)
   }
 
-  #draw.ulim = FALSE,
-  #draw.llim = FALSE
   heatmap.plot <-
     heatmap.plot +
     ggplot2::guides(fill = ggplot2::guide_colourbar(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
                                                     title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
                                                     title.position = legend.title.position,
                                                     title = legend.title.fill,
+                                                    title.hjust = legend.title.hjust,
                                                     barwidth = legend.barwidth,
-                                                    barheight = legend.barheight),
+                                                    barheight = legend.barheight,
+                                                    order = 1),
                     size = ggplot2::guide_legend(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
                                                  title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
                                                  title.position = legend.title.position,
                                                  title = legend.title.size,
+                                                 title.hjust = legend.title.hjust,
+                                                 order = 2,
                                                  override.aes = list(color = "black")))
 
 

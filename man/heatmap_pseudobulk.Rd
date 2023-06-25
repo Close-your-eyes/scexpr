@@ -38,6 +38,7 @@ heatmap_pseudobulk(
   legend.title.fill = NULL,
   legend.title.size = NULL,
   legend.title.position = "top",
+  legend.title.hjust = 0.5,
   legend.labels = c("min", "", "max"),
   feature.labels = NULL,
   feature.labels.nudge_x = -0.1,
@@ -115,7 +116,7 @@ other choices may be black, white or any other color code}
 \item{dotplot}{plot heatmap as a dotplot which will also reveal the fraction
 of expressing cells by dot sizes}
 
-\item{flip.axes}{}
+\item{legend.title.hjust}{}
 
 \item{plot_hlines_between_groups}{plot horizontal lines to separate groups of genes that are
 differentially expressed by a group on the x-axis; if hlines is NULL the breaks are

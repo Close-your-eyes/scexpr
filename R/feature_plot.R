@@ -386,6 +386,7 @@ feature_plot <- function(SO,
       if (is.logical(order.discrete)) {
         # order.discrete T or F: ordering has been done in .get.data
         # use rownames(data) %in% ... to preserve random order
+
         plot <- plot + ggplot2::geom_point(data = data[rownames(data) %in% names(which(cells == 1)),],
                                            ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by),
                                            size = pt.size)
