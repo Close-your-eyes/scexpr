@@ -30,6 +30,7 @@ freq_pie_chart <- function(SO,
                            meta.col,
                            label_outside = c("none", "abs", "rel"),
                            label_inside = c("rel", "abs", "none"),
+                           label_rel_cutoff = 0,
                            label_size = 5,
                            label_inside_radius = 0.75,
                            label_outside_radius = 1.1,
@@ -190,19 +191,27 @@ freq_pie_chart <- function(SO,
   if (label_inside == "rel") {
     if (label_rel_percent) {
       ## problem with decimals and > 1 % may arise
-      tab$label_inside_text <- format(round(tab[,"rel"]*100, label_decimals), nsmall = label_decimals)
+      temp_labels <- round(tab[,"rel"]*100, label_decimals)
+      temp_labels[which(temp_labels == 0 & tab[,"rel"] > 0)] <- "< 1"
+      tab$label_inside_text <- temp_labels
+      tab$label_inside_text[which(tab$rel < label_rel_cutoff)] <- ""
       if (print_pct_sign) {
         for (i in 1:length(tab$label_inside_text)) {
-          if (tab$label_inside_text[i] < 1 & tab$label_inside_text[i] > 0) {
-            tab$label_inside_text[i] <- "< 1 %"
-          } else if (tab$label_inside_text[i] > 1 & tab$label_inside_text[i] < 99) {
-            tab$label_inside_text[i] <- paste0(tab$label_inside_text[i] , " %")
-          } else if (tab$label_inside_text[i] > 99 & tab$label_inside_text[i] < 100) {
-            tab$label_inside_text[i] <- "> 99 %"
-          } else {
-            tab$label_inside_text[i] <- paste0(tab$label_inside_text[i], " %")
+          if (tab$label_inside_text[i] != "") {
+            if (tab$rel[i] < 0.01 & tab$rel[i] > 0) {
+              tab$label_inside_text[i] <- "< 1 %"
+            } else if (tab$rel[i] > 0.01 & tab$rel[i] < 0.99) {
+              tab$label_inside_text[i] <- paste0(tab$label_inside_text[i] , " %")
+            } else if (tab$rel[i] > 0.99 & tab$rel[i] < 1) {
+              tab$label_inside_text[i] <- "> 99 %"
+            } else {
+              tab$label_inside_text[i] <- paste0(tab$label_inside_text[i], " %")
+            }
           }
         }
+      } else {
+        # or use sprinf fun
+        tab$label_inside_text <- format(tab$label_inside_text, nsmall = label_decimals)
       }
     } else {
       tab$label_inside_text <- format(round(tab[,"rel"], label_decimals), nsmall = label_decimals)
@@ -215,19 +224,25 @@ freq_pie_chart <- function(SO,
     if (label_rel_percent) {
       ## problem with decimals and > 1 % may arise
       #tab$label_outside_text <- format(round(tab[,"rel",drop=T]*100, label_decimals), nsmall = label_decimals)
-      tab$label_outside_text <- round(tab[,"rel",drop=T]*100, label_decimals)
+      temp_labels <- round(tab[,"rel"]*100, label_decimals)
+      temp_labels[which(temp_labels == 0 & tab[,"rel"] > 0)] <- "< 1"
+      tab$label_outside_text[which(tab$rel < label_rel_cutoff)] <- ""
       if (print_pct_sign) {
         for (i in 1:length(tab$label_outside_text)) {
-          if (tab$label_outside_text[i] < 1 & tab$label_outside_text[i] > 0) {
-            tab$label_outside_text[i] <- "< 1 %"
-          } else if (tab$label_outside_text[i] > 1 & tab$label_outside_text[i] < 99) {
-            tab$label_outside_text[i] <- paste0(tab$label_outside_text[i] , " %")
-          } else if (tab$label_outside_text[i] > 99 & tab$label_outside_text[i] < 100) {
-            tab$label_outside_text[i] <- "> 99 %"
-          } else {
-            tab$label_outside_text[i] <- paste0(tab$label_outside_text[i], " %")
+          if (tab$label_outside_text[i] != "") {
+            if (tab$rel[i] < 0.01 & tab$rel[i] > 0) {
+              tab$label_outside_text[i] <- "< 1 %"
+            } else if (tab$rel[i] > 0.01 & tab$rel[i] < 0.99) {
+              tab$label_outside_text[i] <- paste0(tab$label_outside_text[i] , " %")
+            } else if (tab$rel[i] > 0.99 & tab$rel[i] < 1) {
+              tab$label_outside_text[i] <- "> 99 %"
+            } else {
+              tab$label_outside_text[i] <- paste0(tab$label_outside_text[i], " %")
+            }
           }
         }
+      } else {
+        tab$label_outside_text <- format(tab$label_outside_text, nsmall = label_decimals)
       }
     } else {
       tab$label_outside_text <- format(round(tab[,"rel"], label_decimals), nsmall = label_decimals)
