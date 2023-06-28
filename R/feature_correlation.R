@@ -72,7 +72,7 @@ feature_correlation <- function(SO,
   ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min.pct = min.pct, cells = cells), cells, drop=F])
 
   # putative dichotomous meta features which are TRUE / FALSE: they are coerced to 1 / 0
-  # applying spearman correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
+  # applying pearson correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
   mat <- rbind(as.matrix(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(SO))], cells, drop=F]),
                          as.matrix(t(SO@meta.data[cells,features[which(features %in% names(SO@meta.data))], drop = F])))
 
