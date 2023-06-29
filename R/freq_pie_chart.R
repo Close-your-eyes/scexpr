@@ -194,7 +194,9 @@ freq_pie_chart <- function(SO,
       temp_labels <- round(tab[,"rel"]*100, label_decimals)
       temp_labels[which(temp_labels == 0 & tab[,"rel"] > 0)] <- "< 1"
       tab$label_inside_text <- temp_labels
-      tab$label_inside_text[which(tab$rel < label_rel_cutoff)] <- ""
+      if (any(tab$rel < label_rel_cutoff)) {
+        tab$label_inside_text[which(tab$rel < label_rel_cutoff)] <- ""
+      }
       if (print_pct_sign) {
         for (i in 1:length(tab$label_inside_text)) {
           if (tab$label_inside_text[i] != "") {
@@ -226,7 +228,10 @@ freq_pie_chart <- function(SO,
       #tab$label_outside_text <- format(round(tab[,"rel",drop=T]*100, label_decimals), nsmall = label_decimals)
       temp_labels <- round(tab[,"rel"]*100, label_decimals)
       temp_labels[which(temp_labels == 0 & tab[,"rel"] > 0)] <- "< 1"
-      tab$label_outside_text[which(tab$rel < label_rel_cutoff)] <- ""
+      tab$label_outside_text <- temp_labels
+      if (any(tab$rel < label_rel_cutoff)) {
+        tab$label_outside_text[which(tab$rel < label_rel_cutoff)] <- ""
+      }
       if (print_pct_sign) {
         for (i in 1:length(tab$label_outside_text)) {
           if (tab$label_outside_text[i] != "") {
