@@ -9,6 +9,7 @@ freq_pie_chart(
   meta.col,
   label_outside = c("none", "abs", "rel"),
   label_inside = c("rel", "abs", "none"),
+  label_rel_cutoff = 0,
   label_size = 5,
   label_inside_radius = 0.75,
   label_outside_radius = 1.1,
