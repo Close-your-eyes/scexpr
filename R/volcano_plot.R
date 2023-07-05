@@ -241,6 +241,7 @@ volcano_plot <- function(SO,
   }
 
   # exclude features which are below min.pct.set in both populations
+  # = only continue with those which are "> min.pct" in at least one of them
   SO <- Seurat::DietSeurat(SO, assays = assay, features = unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
                                                                    names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct)))), counts = F)
 

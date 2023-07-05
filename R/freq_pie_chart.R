@@ -28,6 +28,7 @@
 #' @examples
 freq_pie_chart <- function(SO,
                            meta.col,
+                           pie_inside_radius = 0.3,
                            label_outside = c("none", "abs", "rel"),
                            label_inside = c("rel", "abs", "none"),
                            label_rel_cutoff = 0,
@@ -159,7 +160,7 @@ freq_pie_chart <- function(SO,
   tab$cluster_cols <- col_pal[as.character(tab[,"cluster"])]
 
   plot <-
-    ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = 0.3, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
+    ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = pie_inside_radius, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = border_color) +
     theme +
     labs(fill = legend_title) +

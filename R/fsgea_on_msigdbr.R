@@ -72,8 +72,8 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
       labs(title = x, subtitle = paste0("p = ", signif(results[which(results$pathway == x), "padj"], 2)))
   })
 
-  return(list(fgsea_table = results,
-              fgsea_plots = gsea_plots,
+  return(list(data = results,
+              plots = gsea_plots,
               gene.sets = if (return.gene.sets) {gene.sets} else {NULL},
               gene.ranks = gene.ranks))
 }
