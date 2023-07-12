@@ -808,10 +808,17 @@ feature_plot <- function(SO,
   if (!is.list(SO)) {
     SO <- list(SO)
   }
-  common_red <- Reduce(intersect, lapply(SO, function(x) names(x@reductions)))
+
+  red_list <- lapply(SO, function(x) names(x@reductions))
+  if (any(lengths(red_list) == 0)) {
+    stop("At least one SO has no reduction.")
+  }
+
+  common_red <- Reduce(intersect, red_list)
   if (length(common_red) == 0) {
     stop("No common reduction found in SOs.")
   }
+
   red <- grep(reduction, common_red, ignore.case = T, value = T)
   if (length(red) == 0) {
     message("reduction not found in SOs., Changing to an arbitrary common one in SOs.")
