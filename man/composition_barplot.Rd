@@ -10,16 +10,26 @@ composition_barplot(
   fill_cat,
   col_pal = scexpr::col_pal("custom"),
   border_color = "black",
-  labels = F,
-  min_label = 0.05,
-  in_percent = T,
-  label_decimals = 2
+  plot_rel_labels = F,
+  plot_abs_labels = F,
+  plot_total_labels = F,
+  total_labels_ypos = 1.05,
+  plot_sigma = F,
+  sigma_just = ifelse(flip, 2, -1),
+  min_label_freq = 0.05,
+  label_rel_pct = T,
+  label_rel_pct_decimals = 2,
+  summarize_all_x = F,
+  label_rel_nudge = c(0, 0),
+  label_abs_nudge = c(0, 0),
+  label_size = 4,
+  flip = F
 )
 }
 \arguments{
 \item{SO}{Seurat object or data frame}
 
-\item{col_pal}{}
+\item{plot_sigma}{}
 }
 \description{
 Plot composition of one category by another
