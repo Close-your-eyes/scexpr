@@ -757,6 +757,11 @@ feature_plot <- function(SO,
 
   assay <- match.arg(assay, Reduce(intersect, lapply(SO, function(x) names(x@assays))))
 
+  SO <- lapply(SO, function(x) {
+    Seurat::DefaultAssay(x) <- assay
+    return(x)
+  })
+
   if (is.null(names(SO)) && length(SO) > 1) {
     message("List of SO has no names. Naming them numerically in order as provided.")
     names(SO) <- as.character(seq_along(SO))
@@ -769,7 +774,6 @@ feature_plot <- function(SO,
   if (!any(unlist(lapply(SO, class)) == "Seurat")) {
     stop("All SO have to be Seurat objects (class == Seurat).")
   }
-
   if (!is.null(split.by) && length(.check.features(SO, split.by, rownames = F)) == 0) {
     stop("split.by not found in all objects.")
   }
@@ -779,14 +783,6 @@ feature_plot <- function(SO,
   if (!is.null(meta.col) && length(.check.features(SO, meta.col, rownames = F)) == 0) {
     stop("meta.col not found in all objects.")
   }
-
-  SO <- lapply(SO, function(x) {
-    if (!assay %in% Seurat::Assays(x)) {
-      stop("Assay not found in every SO.")
-    }
-    Seurat::DefaultAssay(x) <- assay
-    return(x)
-  })
 
   ## check if data has been scaled (compare to counts)
   check <- unlist(lapply(SO, function(x) identical(Seurat::GetAssayData(x, assay = assay, slot = "data"), Seurat::GetAssayData(x, assay = assay, slot = "counts"))))
@@ -832,16 +828,16 @@ feature_plot <- function(SO,
   return(red)
 }
 
-.check.and.get.cells <- function (SO,
-                                  assay = c("RNA", "SCT"),
-                                  #make.cells.unique = F,
-                                  cells = NULL,
-                                  cutoff.feature = NULL,
-                                  cutoff.expression = NULL,
-                                  exclusion.feature  = NULL,
-                                  downsample = 1,
-                                  #make.cells.unique.warning = 1,
-                                  return.included.cells.only = F) {
+.check.and.get.cells <- function(SO,
+                                 assay = c("RNA", "SCT"),
+                                 #make.cells.unique = F,
+                                 cells = NULL,
+                                 cutoff.feature = NULL,
+                                 cutoff.expression = NULL,
+                                 exclusion.feature  = NULL,
+                                 downsample = 1,
+                                 #make.cells.unique.warning = 1,
+                                 return.included.cells.only = F) {
 
   if (!is.list(SO)) {
     SO <- list(SO)

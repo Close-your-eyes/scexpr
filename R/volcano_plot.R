@@ -149,11 +149,12 @@ volcano_plot <- function(SO,
     }
   }
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
+
   p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
   p.adjust <- match.arg(p.adjust, c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none"))
   topn.metric <- match.arg(topn.metric, c("p.value", "fc", "both"))
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL)
+  assay <- Seurat::DefaultAssay(SO[[1]])
 
   dots <- list(...)
 
@@ -165,16 +166,14 @@ volcano_plot <- function(SO,
     stop("Same cell names (barcodes) found in positive.group.cells and negative.group.cells. Please change selection or fix SOs with Seurat::RenameCells first.")
   }
 
-  #temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
   # done like this as cell names in SOs may be subject to prefixing when there are duplicates and .check.and.get.cells is called once
   temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
-  #pgc <- do.call(.check.and.get.cells, args = c(list(SO = SO, assay = assay, cells = positive.group.cells, return.included.cells.only = T), dots[which(names(dots) %in% names(formals(.check.and.get.cells)))]))
 
   ## slow procedure; how to speed up? why needed actually? 2022 11 07
   # https://stackoverflow.com/questions/35726028/understanding-grep-with-fixed-t-in-r
   # https://stackoverflow.com/questions/10128617/test-if-characters-are-in-a-string
 
-  if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
+  'if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
     pgc <- purrr::map_chr(positive.group.cells, function(x) {
       m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
       if (length(m) > 1) {
@@ -191,7 +190,6 @@ volcano_plot <- function(SO,
     })
   } else {
     pgc <- purrr::map_chr(positive.group.cells, function(x) {
-      #m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
       m <- grep(pattern = x, x = temp, value = T, fixed = T)
       if (length(m) > 1) {
         stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
@@ -199,14 +197,17 @@ volcano_plot <- function(SO,
       return(m)
     })
     ngc <- purrr::map_chr(negative.group.cells, function(x) {
-      #m <- grep(pattern = paste0(x, "$"), x = temp, value = T)
       m <- grep(pattern = x, x = temp, value = T, fixed = T)
       if (length(m) > 1) {
         stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in negative.group.cells is a substring of another cells barcode.")
       }
       return(m)
     })
-  }
+  }'
+
+  pgc <- positive.group.cells
+  ngc <- negative.group.cells
+
 
   # make meta data column in SOs to identify ngc and pgc
   colname <- paste0("cellident_", format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d%H%M%S"))
@@ -218,6 +219,7 @@ volcano_plot <- function(SO,
                                            negative.group.name))
     return(x)
   })
+
   # call here as DietSO happens below
   if (!interactive.only) {
     feat_plots <- tryCatch({
@@ -232,6 +234,8 @@ volcano_plot <- function(SO,
     warning("Different features across SOs detected. Will carry on with common ones only.")
   }
 
+  # DietSeurat is slow ?!
+  # Seurat::DietSeurat(, assays = assay, counts = F)
   SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(x, features = intersect(rownames(x), intersect_features), cells = intersect(colnames(x), c(ngc, pgc))), assays = assay, counts = F))
   if (length(SO) > 1) {
     # this restores the counts matrix
@@ -250,15 +254,13 @@ volcano_plot <- function(SO,
   Seurat::Misc(SO, "volcano.group.col") <- colname
   SO@meta.data[,colname] <- factor(SO@meta.data[,colname], levels = c(negative.group.name, positive.group.name))
 
-  # get Assay data, overwrite SO to save memory
-  # Diet Seurat
-  # subset Seurat, keeping ngc, pgc and additional cols if needed, assing meta.data cols for pgn, ngn
-  #SO <- lapply(SO, function(x) Seurat::GetAssayData(x, assay = assay, slot = "data")[,intersect(colnames(Seurat::GetAssayData(x, assay = assay)), c(ngc, pgc))])
-  #SO <- lapply(SO, function(x) x[intersect_features,])
-  #SO <- do.call(cbind, SO)
-
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   if (is.null(volcano.data)) {
+    ## allow to Seurat assay
+    ## then use FindMarker function with cells.1 and cells.2 arguments
+    ## then process the output to fit the current output
+    # see https://www.bioconductor.org/packages/release/bioc/vignettes/MAST/inst/doc/MAITAnalysis.html
+
     vd <- .calc_vd(assay_data = Seurat::GetAssayData(SO, slot = "data"),
                    ngc = ngc,
                    pgc = pgc,
@@ -501,8 +503,6 @@ volcano_plot <- function(SO,
                      infinite.FC = ifelse(is.infinite(log2(apm) - log2(anm)), 1, 0),
                      check.names = F)
   }
-
-
 
   vd$log2.fc <- scales::oob_squish_infinite(vd$log2.fc, range = c(min(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) - inf.fc.shift,
                                                                   max(vd$log2.fc[!is.infinite(vd$log2.fc)], na.rm = T) + inf.fc.shift))
