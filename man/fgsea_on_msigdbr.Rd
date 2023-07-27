@@ -7,6 +7,7 @@
 fgsea_on_msigdbr(
   gene.ranks = NULL,
   gene.sets = NULL,
+  return.subset.gene.sets = T,
   return.gene.sets = T,
   min.padj = 0.001,
   use.msigdbr = F,
@@ -16,7 +17,13 @@ fgsea_on_msigdbr(
 )
 }
 \arguments{
-\item{return.gene.sets}{set to FALSE in order to save memory when always the same external set of gene sets is used}
+\item{gene.ranks}{this becomes stats in fgsea_fun}
+
+\item{gene.sets}{this becomes pathways in fgsea_fun}
+
+\item{return.subset.gene.sets}{return the subset of each gene set that is actually found in gene.ranks}
+
+\item{return.gene.sets}{set to FALSE in order to save memory when the same gene sets are used mulitple times}
 }
 \description{
 Convenient wrapper around fgsea function

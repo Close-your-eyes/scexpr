@@ -97,7 +97,7 @@ size argument and how theme does it)}
 in the linear space (not -log10); e.g.: pval.tick = 0.01 will plot an axis-tick at p = 0.01}
 
 \item{min.pct}{numeric; only consider genes for the volcano plot which are expressed at least by this
-fraction of cells in both groups (negative.group.cells, positive.group.cells)}
+fraction of cells at least one group (negative.group.cells or positive.group.cells)}
 
 \item{max.iter}{max.iter passed to ggrepel::geom_text_repel}
 
