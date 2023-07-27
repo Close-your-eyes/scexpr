@@ -1,13 +1,14 @@
 #' Convenient wrapper around fgsea function
 #'
-#' @param gene.ranks
-#' @param gene.sets
+#' @param gene.ranks this becomes stats in fgsea_fun
+#' @param gene.sets this becomes pathways in fgsea_fun
 #' @param min.padj
 #' @param use.msigdbr
 #' @param msigdbr_args
 #' @param fgsea_fun
 #' @param fgsea_args
-#' @param return.gene.sets set to FALSE in order to save memory when always the same external set of gene sets is used
+#' @param return.gene.sets set to FALSE in order to save memory when the same gene sets are used mulitple times
+#' @param return.subset.gene.sets return the subset of each gene set that is actually found in gene.ranks
 #'
 #' @return
 #' @export
@@ -20,6 +21,7 @@
 #' }
 fgsea_on_msigdbr <- function(gene.ranks = NULL,
                              gene.sets = NULL,
+                             return.subset.gene.sets = T,
                              return.gene.sets = T,
                              min.padj = 0.001, # which plots to generate
                              use.msigdbr = F,
@@ -72,9 +74,11 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
       labs(title = x, subtitle = paste0("p = ", signif(results[which(results$pathway == x), "padj"], 2)))
   })
 
+
   return(list(data = results,
               plots = gsea_plots,
               gene.sets = if (return.gene.sets) {gene.sets} else {NULL},
+              gene.sets.subset = if(return.subset.gene.sets) {lapply(gene.sets, function(x) intersect(x, names(gene.ranks)))} else {NULL},
               gene.ranks = gene.ranks))
 }
 

@@ -32,7 +32,7 @@
 #' @param pval.tick NULL or numeric, if not NULL: plot an extra y-axis-tick to indicate a significance level
 #' in the linear space (not -log10); e.g.: pval.tick = 0.01 will plot an axis-tick at p = 0.01
 #' @param min.pct numeric; only consider genes for the volcano plot which are expressed at least by this
-#' fraction of cells in both groups (negative.group.cells, positive.group.cells)
+#' fraction of cells at least one group (negative.group.cells or positive.group.cells)
 #' @param max.iter max.iter passed to ggrepel::geom_text_repel
 #' @param max.overlaps max.overlaps passed to ggrepel::geom_text_repel
 #' @param label.neg.pos.sep logical whether to label genes with negative and positive fold change separately;
@@ -125,6 +125,9 @@ volcano_plot <- function(SO,
                          interactive.only = F,
                          use.limma = F,
                          ...) {
+
+  default_warn <- getOption("warn")
+  options(warn = 1)
 
   ### add option to only label positive or negative features
   ### attach attributes to vd; like the ngc, pgc, min.pct, assay, p.adjust, use.limma, and so on, this can then be tested for, when volcano.data as input
@@ -230,9 +233,11 @@ volcano_plot <- function(SO,
   }
 
   intersect_features <- Reduce(intersect, lapply(SO, rownames))
+  nonintersect_features <- lapply(SO, function(x) setdiff(rownames(x), intersect_features))
   if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
     warning("Different features across SOs detected. Will carry on with common ones only.")
   }
+
 
   # DietSeurat is slow ?!
   # Seurat::DietSeurat(, assays = assay, counts = F)
@@ -245,9 +250,18 @@ volcano_plot <- function(SO,
   }
 
   # exclude features which are below min.pct.set in both populations
-  # = only continue with those which are "> min.pct" in at least one of them
-  SO <- Seurat::DietSeurat(SO, assays = assay, features = unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
-                                                                   names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct)))), counts = F)
+  # = only continue with those which are ">= min.pct" in at least one of them
+  if (min.pct > 0) {
+    min.pct_features <- unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) >= min.pct)),
+                                 names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) >= min.pct))))
+  } else if (min.pct == 0) {
+    min.pct_features <- unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
+                                 names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct))))
+  } else {
+    stop("min.pct has to be 0 or greater.")
+  }
+  min.pct_features_removed <- setdiff(intersect_features, min.pct_features)
+  SO <- Seurat::DietSeurat(SO, assays = assay, features = min.pct_features, counts = F)
 
   # filter meta.col
   SO@meta.data <- SO@meta.data[,c(colname, meta.cols),drop=F]
@@ -432,10 +446,15 @@ volcano_plot <- function(SO,
     saveRDS(stats::setNames(list(stats::setNames(list(list(Seurat_object = Seurat::DietSeurat(SO, assays = assay, features = rownames(vd))), reduction_plot = feat_plots), c("1", "reduction_plot"))), "1"), file = file.path(save.path.interactive, "data.rds"))
   }
 
+  options(warn = default_warn)
   return(list(plot = vp,
               data = vd,
               feat.plots = feat_plots,
               gsea = gsea,
+              intersect_features = intersect_features,
+              nonintersect_features = nonintersect_features,
+              min.pct_features = min.pct_features,
+              min.pct_features_removed = min.pct_features_removed,
               interactive.data = stats::setNames(list(stats::setNames(list(list(Seurat_object = Seurat::DietSeurat(SO, assays = assay, features = rownames(vd))), reduction_plot = feat_plots), c("1", "reduction_plot"))), "1")))
 }
 
