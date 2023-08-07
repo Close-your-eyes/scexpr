@@ -146,6 +146,7 @@ feature_plot <- function(SO,
                          col.non.expresser = "grey85",
                          col.expresser = "tomato2",
                          col.pal.rev = F,
+                         n.colorsteps = NULL,
 
                          theme = ggplot2::theme_bw(),
                          plot.axis.labels = F,
@@ -451,12 +452,21 @@ feature_plot <- function(SO,
       if (is.numeric(data[,1])) {
         if (min.q.cutoff > 0) {min.lab <- paste0(scale.min, " (q", round(min.q.cutoff*100, 0), ")")} else {min.lab <- scale.min}
         if (max.q.cutoff < 1) {max.lab <- paste0(scale.max, " (q", round(max.q.cutoff*100, 0), ")")} else {max.lab <- scale.max}
+
         if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
-          plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
+
+          if (!is.null(n.colorsteps)) {
+            plot <- plot + ggplot2::scale_colour_stepsn(colors = col.pal,
+                                                        n.breaks = n.colorsteps,
                                                         limits = c(scale.min, scale.max),
-                                                        breaks = c(scale.min, scale.mid, scale.max),
-                                                        labels = if (is.null(color.scale.labels)) {c(min.lab, scale.mid, max.lab)} else {color.scale.labels},
                                                         na.value = na.value)
+          } else {
+            plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
+                                                          limits = c(scale.min, scale.max),
+                                                          breaks = c(scale.min, scale.mid, scale.max),
+                                                          labels = if (is.null(color.scale.labels)) {c(min.lab, scale.mid, max.lab)} else {color.scale.labels},
+                                                          na.value = na.value)
+          }
         } else {
           # if no expressers are found: breaks and labels would be of different lengths
           plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
@@ -464,6 +474,7 @@ feature_plot <- function(SO,
                                                         breaks = c(scale.min, scale.mid, scale.max),
                                                         na.value = na.value)
         }
+
       } else {
         plot <- plot + ggplot2::scale_color_manual(values = col.pal,
                                                    na.value = na.value)
