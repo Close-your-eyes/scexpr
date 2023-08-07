@@ -35,8 +35,6 @@
 #' @param y.font.size font size of features names on y-axis
 #' @param color color of stroke (border) around tiles or dots; "NA" means no stroke is plotted;
 #' other choices may be black, white or any other color code
-#' @param dotplot plot heatmap as a dotplot which will also reveal the fraction
-#' of expressing cells by dot sizes
 #' @param plot.feature.breaks
 #' @param plot.sec.axis
 #' @param legend.position
@@ -73,6 +71,12 @@
 #' @param fill
 #' @param flip.axes
 #' @param legend.title.hjust
+#' @param n.colorsteps number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
+#' if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn
+#' @param nice.breaks passed to scale_fill_stepsn if length(n.colorsteps) == 1
+#' @param show.limits passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
+#' @param dotplot
+#' @param legend.decimals passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
 #'
 #' @importFrom magrittr %>%
 #'
@@ -101,6 +105,10 @@ heatmap_pseudobulk <- function(SO,
                                y.font.size = 10,
                                color = "NA",
                                fill = scexpr::col_pal(name = "RdBu", nbrew = 9, reverse = T),
+                               n.colorsteps = NULL,
+                               nice.breaks = F,
+                               show.limits = T,
+                               legend.decimals = 1,
                                dotplot = F,
                                plot.feature.breaks = T,
                                plot.sec.axis = F,
@@ -501,27 +509,23 @@ heatmap_pseudobulk <- function(SO,
   if (flip.axes) {
     heatmap.plot <-
       ggplot2::ggplot(htp, ggplot2::aes(y = cluster, x = Feature, fill = norm_avgexpr)) +
-      ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colors = fill, breaks = c(scale.min, scale.mid, scale.max), labels = labels) +
-      ggplot2::theme_classic() +
-      ggplot2::ggtitle(title) +
-      ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
-                     axis.title = ggplot2::element_blank(),
-                     axis.text.y = ggplot2::element_text(family = font.family),
-                     axis.text.x = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family),
-                     legend.position = legend.position, legend.direction = legend.direction)
+      ggplot2::theme(axis.text.y = ggplot2::element_text(family = font.family),
+                     axis.text.x = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family))
 
   } else {
     heatmap.plot <-
       ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = norm_avgexpr)) +
-      ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)), colors = fill, breaks = c(scale.min, scale.mid, scale.max), labels = labels) +
-      ggplot2::theme_classic() +
-      ggplot2::ggtitle(title) +
-      ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
-                     axis.title = ggplot2::element_blank(),
-                     axis.text.x = ggplot2::element_text(family = font.family),
-                     axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family),
-                     legend.position = legend.position, legend.direction = legend.direction)
+      ggplot2::theme(axis.text.x = ggplot2::element_text(family = font.family),
+                     axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family))
   }
+
+  heatmap.plot <-
+    heatmap.plot +
+    ggplot2::theme_classic() +
+    ggplot2::ggtitle(title) +
+    ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
+                   axis.title = ggplot2::element_blank(),
+                   legend.position = legend.position, legend.direction = legend.direction)
 
   if (dotplot) {
     heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21, color = color)
@@ -529,16 +533,41 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- heatmap.plot + ggplot2::geom_tile(color = color)
   }
 
+  if (!is.null(n.colorsteps)) {
+    if (length(n.colorsteps) == 1) {
+      heatmap.plot <-
+        heatmap.plot +
+        ggplot2::scale_fill_stepsn(colors = fill,
+                                   n.breaks = n.colorsteps,
+                                   nice.breaks = nice.breaks)
+    } else {
+      heatmap.plot <-
+        heatmap.plot +
+        ggplot2::scale_fill_stepsn(colors = fill,
+                                   breaks = n.colorsteps,
+                                   show.limits = T,
+                                   labels = function(x) round(x,legend.decimals))
+    }
+    guide_fun <- ggplot2::guide_colorsteps
+  } else {
+    heatmap.plot <-
+      heatmap.plot +
+      ggplot2::scale_fill_gradientn(values = scales::rescale(c(scale.min, scale.mid, scale.max)),
+                                    colors = fill,
+                                    breaks = c(scale.min, scale.mid, scale.max), labels = labels)
+    guide_fun <- ggplot2::guide_colourbar
+  }
+
   heatmap.plot <-
     heatmap.plot +
-    ggplot2::guides(fill = ggplot2::guide_colourbar(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                                    title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
-                                                    title.position = legend.title.position,
-                                                    title = legend.title.fill,
-                                                    title.hjust = legend.title.hjust,
-                                                    barwidth = legend.barwidth,
-                                                    barheight = legend.barheight,
-                                                    order = 1),
+    ggplot2::guides(fill = guide_fun(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
+                                     title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
+                                     title.position = legend.title.position,
+                                     title = legend.title.fill,
+                                     title.hjust = legend.title.hjust,
+                                     barwidth = legend.barwidth,
+                                     barheight = legend.barheight,
+                                     order = 1),
                     size = ggplot2::guide_legend(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
                                                  title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
                                                  title.position = legend.title.position,

@@ -54,6 +54,10 @@ feature_plot(
   col.non.expresser = "grey85",
   col.expresser = "tomato2",
   col.pal.rev = F,
+  n.colorsteps = NULL,
+  nice.breaks = F,
+  show.limits = T,
+  legend.decimals = 1,
   theme = ggplot2::theme_bw(),
   plot.axis.labels = F,
   plot.panel.grid = F,
@@ -150,12 +154,19 @@ feature_plot(
 
 \item{legend.position}{values between 0 and -1}
 
+\item{n.colorsteps}{number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
+if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn}
+
+\item{nice.breaks}{passed to scale_fill_stepsn if length(n.colorsteps) == 1}
+
+\item{show.limits}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend}
+
+\item{legend.decimals}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to}
+
 \item{label.feature}{provide a column in meta.data of SO which should be used for labels
 (e.g. a short form that does not disturb the plot so much)}
 
 \item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
-
-\item{color.scale.labels}{}
 }
 \description{
 Plot features of single cell transcriptomes on a dimension reduction map

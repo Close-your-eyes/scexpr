@@ -87,6 +87,12 @@
 #' @param na.value
 #' @param contour.label.nudge
 #' @param color.scale.labels
+#' @param n.colorsteps number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
+#' if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn
+#' @param nice.breaks passed to scale_fill_stepsn if length(n.colorsteps) == 1
+#' @param show.limits passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
+#' @param dotplot
+#' @param legend.decimals passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
 #'
 #' @return
 #' @export
@@ -147,6 +153,9 @@ feature_plot <- function(SO,
                          col.expresser = "tomato2",
                          col.pal.rev = F,
                          n.colorsteps = NULL,
+                         nice.breaks = F,
+                         show.limits = T,
+                         legend.decimals = 1,
 
                          theme = ggplot2::theme_bw(),
                          plot.axis.labels = F,
@@ -456,10 +465,22 @@ feature_plot <- function(SO,
         if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
 
           if (!is.null(n.colorsteps)) {
-            plot <- plot + ggplot2::scale_colour_stepsn(colors = col.pal,
-                                                        n.breaks = n.colorsteps,
-                                                        limits = c(scale.min, scale.max),
-                                                        na.value = na.value)
+            if (length(n.colorsteps) == 1) {
+              heatmap.plot <-
+                heatmap.plot +
+                ggplot2::scale_fill_stepsn(colors = col.pal,
+                                           n.breaks = n.colorsteps,
+                                           nice.breaks = nice.breaks,
+                                           na.value = na.value)
+            } else {
+              heatmap.plot <-
+                heatmap.plot +
+                ggplot2::scale_fill_stepsn(colors = col.pal,
+                                           breaks = n.colorsteps,
+                                           show.limits = T,
+                                           na.value = na.value,
+                                           labels = function(x) round(x,legend.decimals))
+            }
           } else {
             plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
                                                           limits = c(scale.min, scale.max),

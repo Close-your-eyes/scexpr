@@ -25,6 +25,10 @@ heatmap_pseudobulk(
   y.font.size = 10,
   color = "NA",
   fill = scexpr::col_pal(name = "RdBu", nbrew = 9, reverse = T),
+  n.colorsteps = NULL,
+  nice.breaks = F,
+  show.limits = T,
+  legend.decimals = 1,
   dotplot = F,
   plot.feature.breaks = T,
   plot.sec.axis = F,
@@ -113,10 +117,14 @@ e.g. mono or sans}
 \item{color}{color of stroke (border) around tiles or dots; "NA" means no stroke is plotted;
 other choices may be black, white or any other color code}
 
-\item{dotplot}{plot heatmap as a dotplot which will also reveal the fraction
-of expressing cells by dot sizes}
+\item{n.colorsteps}{number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
+if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn}
 
-\item{legend.title.hjust}{}
+\item{nice.breaks}{passed to scale_fill_stepsn if length(n.colorsteps) == 1}
+
+\item{show.limits}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend}
+
+\item{legend.decimals}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to}
 
 \item{plot_hlines_between_groups}{plot horizontal lines to separate groups of genes that are
 differentially expressed by a group on the x-axis; if hlines is NULL the breaks are
