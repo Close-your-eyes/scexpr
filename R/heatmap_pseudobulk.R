@@ -545,8 +545,8 @@ heatmap_pseudobulk <- function(SO,
         heatmap.plot +
         ggplot2::scale_fill_stepsn(colors = fill,
                                    breaks = n.colorsteps,
-                                   show.limits = T,
-                                   labels = function(x) round(x,legend.decimals))
+                                   show.limits = show.limits,
+                                   labels = function(x) round(x, legend.decimals))
     }
     guide_fun <- ggplot2::guide_colorsteps
   } else {
