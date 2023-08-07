@@ -504,24 +504,24 @@ heatmap_pseudobulk <- function(SO,
     labels <- c(scale.min, scale.mid, scale.max)
   }
 
-
-
   if (flip.axes) {
     heatmap.plot <-
       ggplot2::ggplot(htp, ggplot2::aes(y = cluster, x = Feature, fill = norm_avgexpr)) +
+      ggplot2::theme_classic() +
       ggplot2::theme(axis.text.y = ggplot2::element_text(family = font.family),
                      axis.text.x = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family))
 
   } else {
     heatmap.plot <-
+      ggplot2::theme_classic() +
       ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = norm_avgexpr)) +
+      ggplot2::theme_classic() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(family = font.family),
                      axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family))
   }
 
   heatmap.plot <-
     heatmap.plot +
-    ggplot2::theme_classic() +
     ggplot2::ggtitle(title) +
     ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
                    axis.title = ggplot2::element_blank(),
