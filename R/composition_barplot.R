@@ -83,10 +83,11 @@ composition_barplot <- function(SO,
   if (plot_total_labels) {
     table0 <-
       SO %>%
-      dplyr::count(!!rlang::sym(x_cat))
+      dplyr::count(!!rlang::sym(x_cat)) %>%
+      dplyr::mutate(pct = n/sum(n))
 
     if (summarize_all_x) {
-      temp <- data.frame(x_cat = "all", n = nrow(SO))
+      temp <- data.frame(x_cat = "all", n = nrow(SO), pct = 1)
       names(temp)[1] <- x_cat
       table0 <- dplyr::bind_rows(table0, temp)
       table0$label_ypos <- total_labels_ypos
@@ -148,11 +149,22 @@ composition_barplot <- function(SO,
   }
 
   if (plot_total_labels) {
-    plot <-
-      plot +
-      ggplot2::geom_text(data = table0,
-                         ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = label_ypos*fctr),
-                         size = label_size, inherit.aes = F) #
+    if (plot_rel_labels) {
+      plot <-
+        plot +
+        ggplot2::geom_text(data = table0,
+                           ggplot2::aes(color = I(label_color), label = paste0(round(pct*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
+                           nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
+                           size = label_size, inherit.aes = F)
+    }
+    if (plot_abs_labels) {
+      plot <-
+        plot +
+        ggplot2::geom_text(data = table0,
+                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = label_ypos*fctr),
+                           nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
+                           size = label_size, inherit.aes = F)
+    }
   }
 
   if (flip) {
