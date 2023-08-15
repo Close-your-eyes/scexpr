@@ -573,6 +573,7 @@ heatmap_pseudobulk <- function(SO,
                                                  title.position = legend.title.position,
                                                  title = legend.title.size,
                                                  title.hjust = legend.title.hjust,
+                                                 label.position = "bottom",
                                                  order = 2,
                                                  override.aes = list(color = "black")))
 
