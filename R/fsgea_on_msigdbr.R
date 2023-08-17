@@ -78,19 +78,19 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
   results$leadingEdge_sorted_chr <- purrr::map_chr(purrr::map(results$leadingEdge, sort), paste, collapse = ",")
   results$leadingEdge_size <- lengths(results$leadingEdge)
   results$leadingEdge_size_rel <- results$leadingEdge_size/results$size
-  results$leadingEdge_rank <- purrr::map_int(results$pathway, function(x) max(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene.ranks)))))
-
+  results$leadingEdge_rank <- purrr::map_int(results$pathway, function(x) ifelse(results[["ES"]][[which(results[["pathway"]] == x)]] > 0,
+                                                                                 max(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene.ranks)))),
+                                                                                 min(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene.ranks))))))
   gsea_plots <- lapply(.self_naming(results[which(results$padj <= min.padj),"pathway",drop=T]), function(x) {
-    .plotEnrichment(pathway = gene.sets[[x]],
-                    pathway_name = x,
-                    p_val = signif(results[which(results$pathway == x), "padj"], 2),
-                    ES = signif(results[which(results$pathway == x), "ES"], 2),
-                    NES = signif(results[which(results$pathway == x), "NES"], 2),
-                    stats = gene.ranks,
-                    color_ES_line = "black",
-                    color_min_max_ES_line = "black",
-                    leadingEdge_rank = results[which(results$pathway == x), "leadingEdge_rank"],
-                    ...)
+    gsea_data <- prep_gsea(name = x,
+                           gene.set = gene.sets[[x]],
+                           gene.ranks = gene.ranks,
+                           gseaParam = 1,
+                           pval = signif(results[which(results$pathway == x), "padj"], 2),
+                           NES = signif(results[which(results$pathway == x), "NES"], 2))
+    # leadingEdge_rank differs by 1 between methods ?!
+    # leadingEdge_rank = results[which(results$pathway == x), "leadingEdge_rank"]
+    plot_gsea(data = gsea_data)
   })
 
 
@@ -117,52 +117,53 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
   return(stats::setNames(x, x))
 }
 
+prep_gsea <- function(name,
+                      gene.set,
+                      gene.ranks,
+                      gseaParam = 1,
+                      pval,
+                      NES) {
+  data <- fgsea::plotEnrichmentData(pathway = gene.set,
+                                    stats = gene.ranks,
+                                    gseaParam = gseaParam)
+
+  colorbar_df <- .prep_gsea_colorbar(x = as.data.frame(data[["stats"]]))
+  rank_df <- data.frame(gene = names(rev(gene.ranks)[data[["ticks"]][["rank"]]]), rank = data[["ticks"]][["rank"]])
+
+  leadingEdge_rank <- as.numeric(data[["curve"]][which(data[["curve"]]$ES == c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))]), "rank"])
+  if (abs(data[["posES"]]) > abs(data[["negES"]])) {
+    rank_df$leadingEdge <- rank_df$rank <= leadingEdge_rank
+  } else if (abs(data[["posES"]]) < abs(data[["negES"]])) {
+    rank_df$leadingEdge <- rank_df$rank >= leadingEdge_rank
+  } else {
+    stop("posES equal to negES. What now?")
+  }
+  leadingEdge_size = sum(rank_df$leadingEdge)
 
 
-.plotEnrichment <- function(pathway,
-                            pathway_name = NULL,
-                            p_val = "",
-                            ES = "",
-                            NES = "",
-                            stats,
-                            gseaParam=1,
-                            ticksSize=0.2,
-                            color_ES_line = "black",
-                            color_min_max_ES_line = "black",
-                            color_leadingEdge = "hotpink2",
-                            leadingEdge_rank = NULL,
-                            leadingEdge_size = T,
-                            label_genes = NULL, # leave NULL be default because it may take some time in case many gene sets are tested
-                            theme = ggplot2::theme_bw()) {
 
-  pd <- .plotEnrichmentData(
-    pathway = pathway,
-    stats = stats,
-    gseaParam = gseaParam)
+  data <- c(data, list(name = name,
+                       rank_df = rank_df,
+                       colorbar_df = colorbar_df,
+                       leadingEdge_rank = leadingEdge_rank,
+                       leadingEdge_size = leadingEdge_size,
+                       pval = pval,
+                       ES = c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))],
+                       NES = NES))
+  return(data)
+}
 
+plot_gsea <- function(data,
+                      ticksSize=0.2,
+                      color_ES_line = "black",
+                      color_min_max_ES_line = "black",
+                      color_leadingEdge = "hotpink2",
+                      label_genes = NULL, # leave NULL be default because it may take some time in case many gene sets are tested
+                      theme = ggplot2::theme_bw(),
+                      plot_leadingEdge_rank = T,
+                      plot_leadingEdge_size = T) {
 
-  stats_df <-
-    dplyr::bind_rows(list(as.data.frame(pd[["stats"]]) %>%
-                            dplyr::filter(stat > 0) %>%
-                            dplyr::mutate(group = as.numeric(as.factor(cut(rank,4)))),
-                          as.data.frame(pd[["stats"]]) %>%
-                            dplyr::filter(stat < 0) %>%
-                            dplyr::mutate(group = -as.numeric(as.factor(cut(rank,4)))),
-                          as.data.frame(pd[["stats"]]) %>%
-                            dplyr::filter(stat == 0) %>%
-                            dplyr::mutate(group = 0))) %>%
-    dplyr::group_by(group) %>%
-    dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
-  stats_df$group <- factor(stats_df$group, levels = stats_df %>% dplyr::arrange(min_rank) %>% dplyr::pull(group))
-  stats_df <- dplyr::arrange(stats_df, group)
-  stats_df$fill_col <- RColorBrewer::brewer.pal(nrow(stats_df), "RdBu")
-
-  p2 <- ggplot2::ggplot(as.data.frame(pd[["stats"]]), ggplot2::aes(x = rank, y = stat)) +
-    ggplot2::geom_col() +
-    theme +
-    ggplot2::labs(x="gene rank", y="ranking metric")
-
-  p <- with(pd,
+  p <- with(data,
             p <- ggplot2::ggplot(data=curve) +
               ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
               ggplot2::geom_segment(data=ticks,
@@ -175,83 +176,68 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
               theme +
               ggplot2::labs(x="gene rank", y="enrichment score (ES)")
   )
-  p <- p + ggplot2::geom_rect(data = stats_df, aes(xmin = min_rank, xmax = max_rank, fill = I(fill_col)), ymin = -pd[["spreadES"]]/16, ymax = pd[["spreadES"]]/16, alpha = 0.8)
+  p <- p + ggplot2::geom_rect(data = data[["colorbar_df"]], aes(xmin = min_rank,
+                                                   xmax = max_rank,
+                                                   fill = I(fill_col)),
+                              ymin = -data[["spreadES"]]/16,
+                              ymax = data[["spreadES"]]/16, alpha = 0.8)
 
-  le_ranks <- pd[["ticks"]][["rank"]][which(pd[["ticks"]][["rank"]] <= leadingEdge_rank)]
-  le_gene_df <- data.frame(gene = names(rev(stats)[le_ranks]), x = le_ranks)
 
-  all_ranks <- pd[["ticks"]][["rank"]]
-  all_gene_df <- data.frame(gene = names(rev(stats)[all_ranks]), x = all_ranks)
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
-                                      max.overlaps = length(le_ranks), max.time = 5, nudge_y = pd[["spreadES"]]/2.5, nudge_x = leadingEdge_rank*6,
-                                      segment.size = 0.2, segment.color = "grey80")
+                                      max.overlaps = length(le_ranks),
+                                      max.time = 5,
+                                      nudge_y = data[["spreadES"]]/2.5,
+                                      nudge_x = data[["leadingEdge_rank"]]*6,
+                                      segment.size = 0.2,
+                                      segment.color = "grey80")
   }
 
-  if (!is.null(leadingEdge_rank)) {
-    p <- p + ggplot2::geom_segment(x = leadingEdge_rank,
-                                   xend = leadingEdge_rank,
+  if (plot_leadingEdge_rank) {
+    p <- p + ggplot2::geom_segment(x = data[["leadingEdge_rank"]],
+                                   xend = data[["leadingEdge_rank"]],
                                    y = 0,
-                                   yend = pd[["posES"]],
+                                   yend = c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))],
                                    color = color_leadingEdge,
                                    linetype="dashed")
-    if (leadingEdge_size) {
+    if (plot_leadingEdge_size) {
       p <- p + ggplot2::annotate("text",
-                                 label = paste0("n = ", which(pd[["ticks"]]$rank == leadingEdge_rank)),
+                                 label = paste0("n = ", data[["leadingEdge_size"]]), #  which(data[["ticks"]]$rank == data[["leadingEdge_rank"]])
                                  color = color_leadingEdge,
-                                 y = pd[["spreadES"]]/12,
-                                 x = leadingEdge_rank*1.1,
-                                 hjust = 0)
+                                 y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["spreadES"]]/8, -data[["spreadES"]]/8),
+                                 x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["leadingEdge_rank"]]*1.1, data[["leadingEdge_rank"]]*0.98),
+                                 hjust = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), 0, 1))
     }
   }
+  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (n = ", nrow(data[["ticks"]]), ")"), subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
 
-  p <- p + ggplot2::labs(title = paste0(pathway_name, " (n = ", nrow(pd[["ticks"]]), ")"), subtitle = paste0("p = ", p_val, "\nES = ", ES, "\nNES = ", NES))
-
-  return(list(plot = p, metric_plot = p2, data = c(pd, list(pathway_name = pathway_name, ES = ES, NES = NES, p_val = p_val,
-                                                            leadingEdge_rank = leadingEdge_rank,
-                                                            leadingEdge_size = which(pd[["ticks"]]$rank == leadingEdge_rank),
-                                                            leadingEdge_genes = le_gene_df,
-                                                            geneSet_genes = all_gene_df,
-                                                            color_stats_df = stats_df))))
+  p_metric <- ggplot2::ggplot(as.data.frame(data[["stats"]]),
+                              ggplot2::aes(x = rank, y = stat)) +
+    ggplot2::geom_col() +
+    theme +
+    ggplot2::labs(x="gene rank", y="ranking metric")
+  return(list(plot = p, metric_plot = p_metric))
 }
 
-.plotEnrichmentData <- function(pathway, stats,
-                                gseaParam=1) {
+.prep_gsea_colorbar <- function(x,
+                                cut_level_pos_stat = 4,
+                                cut_level_neg_stat = 4) {
+  data <-
+    dplyr::bind_rows(list(x %>%
+                            dplyr::filter(stat > 0) %>%
+                            dplyr::mutate(group = as.numeric(as.factor(cut(rank,cut_level_pos_stat)))),
+                          x %>%
+                            dplyr::filter(stat < 0) %>%
+                            dplyr::mutate(group = -as.numeric(as.factor(cut(rank,cut_level_neg_stat)))),
+                          x %>%
+                            dplyr::filter(stat == 0) %>%
+                            dplyr::mutate(group = 0))) %>%
+    dplyr::group_by(group) %>%
+    dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
+  data$group <- factor(data$group, levels = data %>% dplyr::arrange(min_rank) %>% dplyr::pull(group))
+  data <- dplyr::arrange(data, group)
 
-  if (any(!is.finite(stats))){
-    stop("Not all stats values are finite numbers")
-  }
-
-  rnk <- rank(-stats)
-  ord <- order(rnk)
-
-  statsAdj <- stats[ord]
-  statsAdj <- sign(statsAdj) * (abs(statsAdj) ^ gseaParam)
-
-  pathway <- unname(as.vector(na.omit(match(pathway, names(statsAdj)))))
-  pathway <- sort(pathway)
-  pathway <- unique(pathway)
-
-  gseaRes <- fgsea::calcGseaStat(statsAdj, selectedStats = pathway,
-                                 returnAllExtremes = TRUE)
-
-  bottoms <- gseaRes$bottoms
-  tops <- gseaRes$tops
-
-  n <- length(statsAdj)
-  xs <- as.vector(rbind(pathway - 1, pathway))
-  ys <- as.vector(rbind(bottoms, tops))
-  toPlot <- data.table::data.table(rank=c(0, xs, n + 1), ES=c(0, ys, 0))
-  ticks <- data.table::data.table(rank=pathway, stat=statsAdj[pathway])
-  stats <- data.table::data.table(rank=seq_along(stats), stat=statsAdj)
-
-  res <- list(
-    curve=toPlot,
-    ticks=ticks,
-    stats=stats,
-    posES=max(tops),
-    negES=min(bottoms),
-    spreadES=max(tops)-min(bottoms),
-    maxAbsStat=max(abs(statsAdj)))
+  ## add interpolation in case more levels than colors in brewer.pal
+  data$fill_col <- RColorBrewer::brewer.pal(nrow(data), "RdBu")
+  return(data)
 }
-
