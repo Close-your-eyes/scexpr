@@ -184,7 +184,7 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
   all_gene_df <- data.frame(gene = names(rev(stats)[all_ranks]), x = all_ranks)
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
-                                      max.overlaps = length(le_ranks), max.time = 5, nudge_y = pd[["spreadES"]]/3, nudge_x = leadingEdge_rank*6,
+                                      max.overlaps = length(le_ranks), max.time = 5, nudge_y = pd[["spreadES"]]/2.5, nudge_x = leadingEdge_rank*6,
                                       segment.size = 0.2, segment.color = "grey80")
   }
 
