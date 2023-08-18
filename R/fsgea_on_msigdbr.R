@@ -90,7 +90,8 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
                            NES = signif(results[which(results$pathway == x), "NES"], 2))
     # leadingEdge_rank differs by 1 between methods ?!
     # leadingEdge_rank = results[which(results$pathway == x), "leadingEdge_rank"]
-    plot_gsea(data = gsea_data)
+
+    return(list(plot = plot_gsea(data = gsea_data), data = gsea_data))
   })
 
 
@@ -123,9 +124,9 @@ prep_gsea <- function(name,
                       gseaParam = 1,
                       pval,
                       NES) {
-  data <- fgsea::plotEnrichmentData(pathway = gene.set,
-                                    stats = gene.ranks,
-                                    gseaParam = gseaParam)
+  data <- .plotEnrichmentData(pathway = gene.set,
+                              stats = gene.ranks,
+                              gseaParam = gseaParam)
 
   colorbar_df <- .prep_gsea_colorbar(x = as.data.frame(data[["stats"]]))
   rank_df <- data.frame(gene = names(rev(gene.ranks)[data[["ticks"]][["rank"]]]), rank = data[["ticks"]][["rank"]])
@@ -177,8 +178,8 @@ plot_gsea <- function(data,
               ggplot2::labs(x="gene rank", y="enrichment score (ES)")
   )
   p <- p + ggplot2::geom_rect(data = data[["colorbar_df"]], aes(xmin = min_rank,
-                                                   xmax = max_rank,
-                                                   fill = I(fill_col)),
+                                                                xmax = max_rank,
+                                                                fill = I(fill_col)),
                               ymin = -data[["spreadES"]]/16,
                               ymax = data[["spreadES"]]/16, alpha = 0.8)
 
@@ -205,8 +206,9 @@ plot_gsea <- function(data,
                                  label = paste0("n = ", data[["leadingEdge_size"]]), #  which(data[["ticks"]]$rank == data[["leadingEdge_rank"]])
                                  color = color_leadingEdge,
                                  y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["spreadES"]]/8, -data[["spreadES"]]/8),
-                                 x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["leadingEdge_rank"]]*1.1, data[["leadingEdge_rank"]]*0.98),
-                                 hjust = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), 0, 1))
+                                 x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["leadingEdge_rank"]]/2, data[["leadingEdge_rank"]] + (nrow(data[["stats"]]) - data[["leadingEdge_rank"]])/2 ))
+      #hjust = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), 0, 1)
+      # data[["leadingEdge_rank"]]*1.1, data[["leadingEdge_rank"]]*0.98
     }
   }
   p <- p + ggplot2::labs(title = paste0(data[["name"]], " (n = ", nrow(data[["ticks"]]), ")"), subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
@@ -240,4 +242,46 @@ plot_gsea <- function(data,
   ## add interpolation in case more levels than colors in brewer.pal
   data$fill_col <- RColorBrewer::brewer.pal(nrow(data), "RdBu")
   return(data)
+}
+
+.plotEnrichmentData <- function(pathway,
+                                stats,
+                                gseaParam=1) {
+  # copied from fgsea pkg
+
+  if (any(!is.finite(stats))){
+    stop("Not all stats values are finite numbers")
+  }
+
+  rnk <- rank(-stats)
+  ord <- order(rnk)
+
+  statsAdj <- stats[ord]
+  statsAdj <- sign(statsAdj) * (abs(statsAdj) ^ gseaParam)
+
+  pathway <- unname(as.vector(na.omit(match(pathway, names(statsAdj)))))
+  pathway <- sort(pathway)
+  pathway <- unique(pathway)
+
+  gseaRes <- fgsea::calcGseaStat(statsAdj, selectedStats = pathway,
+                                 returnAllExtremes = TRUE)
+
+  bottoms <- gseaRes$bottoms
+  tops <- gseaRes$tops
+
+  n <- length(statsAdj)
+  xs <- as.vector(rbind(pathway - 1, pathway))
+  ys <- as.vector(rbind(bottoms, tops))
+  toPlot <- data.table::data.table(rank=c(0, xs, n + 1), ES=c(0, ys, 0))
+  ticks <- data.table::data.table(rank=pathway, stat=statsAdj[pathway])
+  stats <- data.table::data.table(rank=seq_along(stats), stat=statsAdj)
+
+  res <- list(
+    curve=toPlot,
+    ticks=ticks,
+    stats=stats,
+    posES=max(tops),
+    negES=min(bottoms),
+    spreadES=max(tops)-min(bottoms),
+    maxAbsStat=max(abs(statsAdj)))
 }
