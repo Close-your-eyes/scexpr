@@ -513,7 +513,6 @@ heatmap_pseudobulk <- function(SO,
 
   } else {
     heatmap.plot <-
-      ggplot2::theme_classic() +
       ggplot2::ggplot(htp, ggplot2::aes(x = cluster, y = Feature, fill = norm_avgexpr)) +
       ggplot2::theme_classic() +
       ggplot2::theme(axis.text.x = ggplot2::element_text(family = font.family),
@@ -530,6 +529,7 @@ heatmap_pseudobulk <- function(SO,
   if (dotplot) {
     heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21, color = color)
   } else {
+
     heatmap.plot <- heatmap.plot + ggplot2::geom_tile(color = color)
   }
 
