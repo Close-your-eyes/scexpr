@@ -89,10 +89,10 @@
 #' @param color.scale.labels
 #' @param n.colorsteps number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
 #' if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn
-#' @param nice.breaks passed to scale_fill_stepsn if length(n.colorsteps) == 1
-#' @param show.limits passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
+#' @param nice.breaks passed to scale_color_stepsn if length(n.colorsteps) == 1
+#' @param show.limits passed to scale_color_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
 #' @param dotplot
-#' @param legend.decimals passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
+#' @param legend.decimals passed to scale_color_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
 #'
 #' @return
 #' @export
@@ -466,20 +466,20 @@ feature_plot <- function(SO,
 
           if (!is.null(n.colorsteps)) {
             if (length(n.colorsteps) == 1) {
-              heatmap.plot <-
-                heatmap.plot +
-                ggplot2::scale_fill_stepsn(colors = col.pal,
-                                           n.breaks = n.colorsteps,
-                                           nice.breaks = nice.breaks,
-                                           na.value = na.value)
+              plot <-
+                plot +
+                ggplot2::scale_color_stepsn(colors = col.pal,
+                                            n.breaks = n.colorsteps,
+                                            nice.breaks = nice.breaks,
+                                            na.value = na.value)
             } else {
-              heatmap.plot <-
-                heatmap.plot +
-                ggplot2::scale_fill_stepsn(colors = col.pal,
-                                           breaks = n.colorsteps,
-                                           show.limits = T,
-                                           na.value = na.value,
-                                           labels = function(x) round(x,legend.decimals))
+              plot <-
+                plot +
+                ggplot2::scale_color_stepsn(colors = col.pal,
+                                            breaks = n.colorsteps,
+                                            show.limits = T,
+                                            na.value = na.value,
+                                            labels = function(x) round(x,legend.decimals))
             }
           } else {
             plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,

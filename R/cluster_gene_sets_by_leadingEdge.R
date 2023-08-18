@@ -12,10 +12,8 @@
 cluster_gene_sets_by_leadingEdge <- function(gsea_data_df,
                                              umap_args = list(),
                                              FindNeighbors_args = list(),
-                                             FindClusters_args = list(resolution = 0.6)) {
-
-  gsea_data_df
-
+                                             FindClusters_args = list(resolution = 0.6),
+                                             seed = 42) {
 
   LE_genes <- unique(unlist(gsea_data_df$leadingEdge))
   LE_elements <- lapply(gsea_data_df$leadingEdge, function(x) LE_genes %in% x)
@@ -30,9 +28,12 @@ cluster_gene_sets_by_leadingEdge <- function(gsea_data_df,
   colnames(LE_elements) <- LE_genes
   rownames(LE_elements) <- gsea_data_df$pathway
   # find groups of gene set based on leading edges
+  set.seed(seed)
   dr <- Gmisc::fastDoCall(what = uwot::umap, args = c(umap_args, list(X = LE_elements)))
-  names(dr) <- c("UMAP_1", "UMAP_2")
+  colnames(dr) <- c("UMAP_1", "UMAP_2")
+  set.seed(seed)
   snn <- Gmisc::fastDoCall(what = Seurat::FindNeighbors, args = c(FindNeighbors_args, list(object = LE_elements)))
+  set.seed(seed)
   clust <- Gmisc::fastDoCall(what = Seurat::FindClusters, args = c(FindClusters_args, list(object = snn$snn)))
 
   dr <- as.data.frame(dr)
