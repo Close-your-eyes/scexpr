@@ -1,4 +1,4 @@
-#' Title
+#' Plot results from scexpr::fgsea_on_msigdbr
 #'
 #' @param data
 #' @param ticksSize
@@ -73,8 +73,6 @@ plot_gsea <- function(data,
                                  color = color_leadingEdge,
                                  y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["spreadES"]]/7, -data[["spreadES"]]/7),
                                  x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["leadingEdge_rank"]]/2, data[["leadingEdge_rank"]] + (nrow(data[["stats"]]) - data[["leadingEdge_rank"]])/2 ))
-      #hjust = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), 0, 1)
-      # data[["leadingEdge_rank"]]*1.1, data[["leadingEdge_rank"]]*0.98
     }
   }
 
@@ -94,7 +92,11 @@ plot_gsea <- function(data,
 
     if (annotation_pos[1] == "auto") {
       annotation_pos[2] <- data[["ES"]] * 0.8 # y
-      annotation_pos[1] <- which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) #x
+      if (data[["ES"]] > 0) {
+        annotation_pos[1] <- which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) #x
+      } else {
+        annotation_pos[1] <- 300
+      }
       annotation_pos <- as.numeric(annotation_pos)
     }
 
