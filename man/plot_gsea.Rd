@@ -13,11 +13,14 @@ plot_gsea(
   label_genes = NULL,
   theme = ggplot2::theme_bw(),
   plot_leadingEdge_rank = T,
-  plot_leadingEdge_size = T
+  plot_leadingEdge_size = T,
+  annotation_pos = NULL,
+  annotation_size = 4,
+  annotation_with_name = F
 )
 }
 \arguments{
-\item{plot_leadingEdge_size}{}
+\item{annotation_with_name}{}
 }
 \description{
 Title

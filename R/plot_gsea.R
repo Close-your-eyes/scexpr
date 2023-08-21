@@ -9,6 +9,9 @@
 #' @param theme
 #' @param plot_leadingEdge_rank
 #' @param plot_leadingEdge_size
+#' @param annotation_pos
+#' @param annotation_size
+#' @param annotation_with_name
 #'
 #' @return
 #' @export
@@ -22,7 +25,10 @@ plot_gsea <- function(data,
                       label_genes = NULL, # leave NULL be default because it may take some time in case many gene sets are tested
                       theme = ggplot2::theme_bw(),
                       plot_leadingEdge_rank = T,
-                      plot_leadingEdge_size = T) {
+                      plot_leadingEdge_size = T,
+                      annotation_pos = NULL,
+                      annotation_size = 4,
+                      annotation_with_name = F) {
 
   p <- with(data,
             p <- ggplot2::ggplot(data=curve) +
@@ -65,17 +71,53 @@ plot_gsea <- function(data,
       p <- p + ggplot2::annotate("text",
                                  label = paste0("n = ", data[["leadingEdge_size"]]), #  which(data[["ticks"]]$rank == data[["leadingEdge_rank"]])
                                  color = color_leadingEdge,
-                                 y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["spreadES"]]/8, -data[["spreadES"]]/8),
+                                 y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["spreadES"]]/7, -data[["spreadES"]]/7),
                                  x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["leadingEdge_rank"]]/2, data[["leadingEdge_rank"]] + (nrow(data[["stats"]]) - data[["leadingEdge_rank"]])/2 ))
       #hjust = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), 0, 1)
       # data[["leadingEdge_rank"]]*1.1, data[["leadingEdge_rank"]]*0.98
     }
   }
-  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (n = ", nrow(data[["ticks"]]), ")"), subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
 
+  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (n = ", nrow(data[["ticks"]]), ")"),
+                         subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
+
+
+  if (!is.null(annotation_pos)) {
+    # use geom_richtext to avoid annotate("richtext") which would require library(ggtext)
+    # in geom_richtext create a data.frame to avoid multi plotting of label for every data point in original data frame of ggplot object
+
+    #p1 <- round(data[["pval"]]/10^floor(log10(abs(data[["pval"]]))), 0)
+    #p2 <- floor(log10(abs(data[["pval"]])))
+    p_raw <- formatC(data[["pval"]], format = "e", digits = 1)
+    p1 <- strsplit(p_raw, "e")[[1]][1]
+    p2 <- strsplit(p_raw, "e")[[1]][2]
+
+    if (annotation_pos[1] == "auto") {
+      annotation_pos[2] <- data[["ES"]] * 0.8 # y
+      annotation_pos[1] <- which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) #x
+      annotation_pos <- as.numeric(annotation_pos)
+    }
+
+    if (annotation_with_name) {
+      ann_label <- paste0("**", data[["name"]], " (n = ", nrow(data[["ticks"]]), ")", "**<br>*p* = ", p1, " x 10<sup>", p2, "</sup><br>ES = ", signif(data[["ES"]], 2), "<br>NES = ", data[["NES"]])
+    } else {
+      ann_label <- paste0("*p* = ", p1, " x 10<sup>", p2, "</sup><br>ES = ", signif(data[["ES"]], 2), "<br>NES = ", data[["NES"]])
+    }
+
+    p <- p +
+      ggtext::geom_richtext(data = data.frame(label = ann_label),
+                            aes(label = label),
+                            x = annotation_pos[1],
+                            y = annotation_pos[2],
+                            size = annotation_size,
+                            fill = NA,
+                            label.color = NA,
+                            hjust = 0)
+  }
   p_metric <- ggplot2::ggplot(as.data.frame(data[["stats"]]),
                               ggplot2::aes(x = rank, y = stat)) +
-    ggplot2::geom_col() +
+    ggplot2::geom_col(color = "black") +
+    ggplot2::geom_vline(xintercept = which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) + 0.5, linetype = "dashed", linewidth = 0.3) +
     theme +
     ggplot2::labs(x="gene rank", y="ranking metric")
   return(list(plot = p, metric_plot = p_metric))
