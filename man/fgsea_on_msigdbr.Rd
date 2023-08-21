@@ -13,7 +13,8 @@ fgsea_on_msigdbr(
   use.msigdbr = F,
   msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL),
   fgsea_fun = fgsea::fgseaMultilevel,
-  fgsea_args = list(stats = gene.ranks, pathways = gene.sets)
+  fgsea_args = list(stats = gene.ranks, pathways = gene.sets),
+  ...
 )
 }
 \arguments{
@@ -23,7 +24,9 @@ fgsea_on_msigdbr(
 
 \item{return.subset.gene.sets}{return the subset of each gene set that is actually found in gene.ranks}
 
-\item{return.gene.sets}{set to FALSE in order to save memory when the same gene sets are used mulitple times}
+\item{return.gene.sets}{set to FALSE in order to save memory when the same gene sets are used multiple times}
+
+\item{...}{arguments to .plotEnrichment}
 }
 \description{
 Convenient wrapper around fgsea function

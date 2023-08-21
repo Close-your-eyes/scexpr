@@ -157,11 +157,11 @@ feature_plot(
 \item{n.colorsteps}{number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
 if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn}
 
-\item{nice.breaks}{passed to scale_fill_stepsn if length(n.colorsteps) == 1}
+\item{nice.breaks}{passed to scale_color_stepsn if length(n.colorsteps) == 1}
 
-\item{show.limits}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend}
+\item{show.limits}{passed to scale_color_stepsn if length(n.colorsteps) > 1; show min and max limit on legend}
 
-\item{legend.decimals}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to}
+\item{legend.decimals}{passed to scale_color_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to}
 
 \item{label.feature}{provide a column in meta.data of SO which should be used for labels
 (e.g. a short form that does not disturb the plot so much)}
