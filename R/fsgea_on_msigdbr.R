@@ -154,26 +154,27 @@ prep_gsea <- function(name,
   return(data)
 }
 
-.prep_gsea_colorbar <- function(x,
-                                cut_level_pos_stat = 4,
-                                cut_level_neg_stat = 4) {
+.prep_gsea_colorbar <- function(x, zscore_cuts = NULL) {
+
+  x$stat_scale <- scale(x$stat)
+  if (is.null(zscore_cuts)) {
+    zscore_cuts <- seq(floor(min(x$stat_scale)), ceiling(max(x$stat_scale)), 1)
+  }
   data <-
-    dplyr::bind_rows(list(x %>%
-                            dplyr::filter(stat > 0) %>%
-                            dplyr::mutate(group = as.numeric(as.factor(cut(rank,cut_level_pos_stat)))),
-                          x %>%
-                            dplyr::filter(stat < 0) %>%
-                            dplyr::mutate(group = -as.numeric(as.factor(cut(rank,cut_level_neg_stat)))),
-                          x %>%
-                            dplyr::filter(stat == 0) %>%
-                            dplyr::mutate(group = 0))) %>%
+    x %>%
+    dplyr::mutate(group = as.numeric(as.factor(cut(stat_scale, breaks = zscore_cuts)))) %>%
     dplyr::group_by(group) %>%
     dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
   data$group <- factor(data$group, levels = data %>% dplyr::arrange(min_rank) %>% dplyr::pull(group))
   data <- dplyr::arrange(data, group)
 
   ## add interpolation in case more levels than colors in brewer.pal
-  data$fill_col <- RColorBrewer::brewer.pal(nrow(data), "RdBu")
+  if (nrow(data) > 11) {
+    fill_col <- grDevices::colorRampPalette(RColorBrewer::brewer.pal(11, "RdBu"), interpolate = "linear")(nrow(data))
+  } else {
+    fill_col <- RColorBrewer::brewer.pal(nrow(data), "RdBu")
+  }
+  data$fill_col <- fill_col
   return(data)
 }
 

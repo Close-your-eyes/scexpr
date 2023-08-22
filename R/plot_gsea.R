@@ -30,24 +30,23 @@ plot_gsea <- function(data,
                       annotation_size = 4,
                       annotation_with_name = F) {
 
-  p <- with(data,
-            p <- ggplot2::ggplot(data=curve) +
-              ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
-              ggplot2::geom_segment(data=ticks,
-                                    mapping=ggplot2::aes(x=rank, y=-spreadES/10,
-                                                         xend=rank, yend=spreadES/10),
-                                    linewidth=ticksSize) +
-              ggplot2::geom_hline(yintercept=posES, colour=color_min_max_ES_line, linetype="dashed") +
-              ggplot2::geom_hline(yintercept=negES, colour=color_min_max_ES_line, linetype="dashed") +
-              ggplot2::geom_hline(yintercept=0, colour="black") +
-              theme +
-              ggplot2::labs(x="gene rank", y="enrichment score (ES)")
-  )
-  p <- p + ggplot2::geom_rect(data = data[["colorbar_df"]], aes(xmin = min_rank,
-                                                                xmax = max_rank,
-                                                                fill = I(fill_col)),
-                              ymin = -data[["spreadES"]]/16,
-                              ymax = data[["spreadES"]]/16, alpha = 0.8)
+  p <-
+    ggplot2::ggplot(data = data$curve) +
+    ggplot2::geom_segment(data=data$ticks,
+                          mapping=ggplot2::aes(x=rank, y=-data$spreadES/10,
+                                               xend=rank, yend=data$spreadES/10),
+                          linewidth=ticksSize) +
+    ggplot2::geom_rect(data = data[["colorbar_df"]], aes(xmin = min_rank,
+                                                         xmax = max_rank,
+                                                         fill = I(fill_col)),
+                       ymin = -data[["spreadES"]]/16,
+                       ymax = data[["spreadES"]]/16, alpha = 0.8) +
+    ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
+    ggplot2::geom_hline(yintercept=data$posES, colour=color_min_max_ES_line, linetype="dashed") +
+    ggplot2::geom_hline(yintercept=data$negES, colour=color_min_max_ES_line, linetype="dashed") +
+    ggplot2::geom_hline(yintercept=0, colour="black") +
+    theme +
+    ggplot2::labs(x="gene rank", y="enrichment score (ES)")
 
 
   if (!is.null(label_genes)) {
