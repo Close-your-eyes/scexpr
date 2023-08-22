@@ -36,6 +36,7 @@ plot_gsea <- function(data,
                           mapping=ggplot2::aes(x=rank, y=-data$spreadES/10,
                                                xend=rank, yend=data$spreadES/10),
                           linewidth=ticksSize) +
+    ## how to add colorbar legend?
     ggplot2::geom_rect(data = data[["colorbar_df"]], aes(xmin = min_rank,
                                                          xmax = max_rank,
                                                          fill = I(fill_col)),
