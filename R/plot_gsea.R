@@ -30,24 +30,35 @@ plot_gsea <- function(data,
                       annotation_size = 4,
                       annotation_with_name = F) {
 
+
+  '    scale_color_gradientn(  #add the manual guide for the empty aes
+      limits=c(min(val),max(val)),
+      colors=viridisLite::inferno(100),
+      name="Some value")'
+
+  ' ggplot2::scale_fill_steps(values = data[["colorbar_df"]][["data"]]$fill_col,
+                              breaks = data[["colorbar_df"]][["breaks"]],
+                              name = "xxx") +'
+
   p <-
     ggplot2::ggplot(data = data$curve) +
-    ggplot2::geom_segment(data=data$ticks,
-                          mapping=ggplot2::aes(x=rank, y=-data$spreadES/10,
-                                               xend=rank, yend=data$spreadES/10),
+    ggplot2::geom_segment(data = data$ticks,
+                          mapping=ggplot2::aes(x = rank, y = -data$spreadES/10,
+                                               xend = rank, yend = data$spreadES/10),
                           linewidth=ticksSize) +
-    ## how to add colorbar legend?
-    ggplot2::geom_rect(data = data[["colorbar_df"]], aes(xmin = min_rank,
-                                                         xmax = max_rank,
-                                                         fill = I(fill_col)),
+    ggplot2::geom_rect(data = data[["colorbar_df"]][["data"]], aes(xmin = min_rank,
+                                                                   xmax = max_rank,
+                                                                   fill = zscore),
                        ymin = -data[["spreadES"]]/16,
-                       ymax = data[["spreadES"]]/16, alpha = 0.8) +
+                       ymax = data[["spreadES"]]/16, alpha = 0.8,
+                       show.legend = T) +
+    scale_fill_manual(values = data[["colorbar_df"]][["data"]]$fill_col) +
     ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
-    ggplot2::geom_hline(yintercept=data$posES, colour=color_min_max_ES_line, linetype="dashed") +
-    ggplot2::geom_hline(yintercept=data$negES, colour=color_min_max_ES_line, linetype="dashed") +
-    ggplot2::geom_hline(yintercept=0, colour="black") +
+    ggplot2::geom_hline(yintercept = data$posES, colour = color_min_max_ES_line, linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = data$negES, colour = color_min_max_ES_line, linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = 0, colour = "black") +
     theme +
-    ggplot2::labs(x="gene rank", y="enrichment score (ES)")
+    ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]")
 
 
   if (!is.null(label_genes)) {
