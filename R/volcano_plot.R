@@ -77,6 +77,7 @@
 #' @param use.limma logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
 #' which relies on values returned from limma
 #' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[c(2,3)]), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc
+#' @param use.MAST use MAST for testing for DE genes
 #'
 #' @importFrom magrittr %>%
 #'
@@ -124,6 +125,8 @@ volcano_plot <- function(SO,
                          gsea.param = NULL,
                          interactive.only = F,
                          use.limma = F,
+                         use.MAST = F,
+                         MAST.logfc.threshold = 0,
                          ...) {
 
   default_warn <- getOption("warn")
@@ -133,6 +136,10 @@ volcano_plot <- function(SO,
   ### attach attributes to vd; like the ngc, pgc, min.pct, assay, p.adjust, use.limma, and so on, this can then be tested for, when volcano.data as input
 
   ## fix shiny app for interactive volcano plot
+
+  if (use.limma && use.MAST) {
+    stop("Only one to TRUE, use.MAST or use.limma.")
+  }
 
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
@@ -274,8 +281,7 @@ volcano_plot <- function(SO,
     ## then use FindMarker function with cells.1 and cells.2 arguments
     ## then process the output to fit the current output
     # see https://www.bioconductor.org/packages/release/bioc/vignettes/MAST/inst/doc/MAITAnalysis.html
-
-    vd <- .calc_vd(assay_data = Seurat::GetAssayData(SO, slot = "data"),
+    vd <- .calc_vd(assay_data = SO,
                    ngc = ngc,
                    pgc = pgc,
                    pgn = positive.group.name,
@@ -283,7 +289,9 @@ volcano_plot <- function(SO,
                    inf.fc.shift = inf.fc.shift,
                    n.feat.for.p.adj = length(intersect_features),
                    p.adjust = p.adjust,
-                   use.limma = use.limma)
+                   use.limma = use.limma,
+                   use.MAST = use.MAST,
+                   MAST.logfc.threshold = MAST.logfc.threshold)
   } else {
     if(!is.matrix(volcano.data)) {
       stop("volcano.data has to be a matrix.")
@@ -468,7 +476,35 @@ volcano_plot <- function(SO,
                      n.feat.for.p.adj = NULL,
                      inf.fc.shift = 2,
                      p.adjust = "bonferroni",
-                     use.limma = F) {
+                     use.limma = F,
+                     use.MAST = F,
+                     MAST.logfc.threshold = 0) {
+
+
+  if (!use.MAST && methods::is(assay_data, "Seurat")) {
+    assay_data <- Seurat::GetAssayData(assay_data, slot = "data")
+  } else if (use.MAST && methods::is(assay_data, "Seurat")) {
+    Seurat::Idents(assay_data) <- assay_data@meta.data[,1,drop=T]
+    vd <- Seurat::FindMarkers(Seurat::GetAssay(assay_data, Seurat::DefaultAssay(assay_data)),
+                              test.use = "MAST",
+                              logfc.threshold = MAST.logfc.threshold,
+                              cells.1 = pgc, cells.2 = ngc)
+
+    names(vd)[which(names(vd) == "avg_log2FC")] <- "log2.fc"
+    names(vd)[which(names(vd) == "p_val")] <- "p.val"
+    names(vd)[which(names(vd) == "p_val_adj")] <- "adj.p.val"
+    names(vd)[which(names(vd) == "pct.1")] <- paste0("pct.", pgn)
+    names(vd)[which(names(vd) == "pct.2")] <- paste0("pct.", ngn)
+    vd$infinite.FC = ifelse(is.infinite(vd$log2.fc), 1, 0)
+
+
+  } else if(use.MAST && !methods::is(assay_data, "Seurat")) {
+    stop("Provide a Seurat object as assay_data to run MAST.")
+  } else {
+    # nothing, assay_data is matrix then, hopefully
+  }
+
+
 
   if (use.limma) {
     if (!requireNamespace("BiocManager", quietly = T)) {
@@ -497,7 +533,7 @@ volcano_plot <- function(SO,
                      infinite.FC = ifelse(is.infinite(log2(apm) - log2(anm)), 1, 0)[rownames(vd)],
                      check.names = F)
 
-  } else {
+  } else if (!use.MAST) {
     if (!requireNamespace("matrixTests", quietly = T)) {
       utils::install.packages("matrixTests")
     }
