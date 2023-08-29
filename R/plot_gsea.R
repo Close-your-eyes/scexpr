@@ -30,29 +30,36 @@ plot_gsea <- function(data,
                       annotation_size = 4,
                       annotation_with_name = F) {
 
+  data$stats$zscore <- round(scale(data$stats$stat),1)
+  data2 <-
+    as.data.frame(data$stats) %>%
+    dplyr::group_by(zscore) %>%
+    dplyr::filter(rank %in% c(min(rank), max(rank))) %>%
+    dplyr::summarise(min_rank = min(rank), max_rank = max(rank)) %>%
+    dplyr::mutate(zscore2 = round(zscore,0)) %>%
+    dplyr::mutate(zscore2 = ifelse(zscore2 < -4, -4, zscore2)) %>%
+    dplyr::mutate(zscore2 = ifelse(zscore2 > 4, 4, zscore2))
+  color_break_limit <- min(c(abs(min(data2$zscore2)), max(data2$zscore2)))-1
 
-  '    scale_color_gradientn(  #add the manual guide for the empty aes
-      limits=c(min(val),max(val)),
-      colors=viridisLite::inferno(100),
-      name="Some value")'
 
-  ' ggplot2::scale_fill_steps(values = data[["colorbar_df"]][["data"]]$fill_col,
-                              breaks = data[["colorbar_df"]][["breaks"]],
-                              name = "xxx") +'
+  # manually provide bluish and reddish color to scale_fill_stepsn in order to have switch from blue to red at zero
+  #cols1 <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu"))[1:5])(round(sum(data2$zscore<0)/length(data2$zscore)*10))
+  #cols2 <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu"))[7:11])(round(sum(data2$zscore>0)/length(data2$zscore)*10))
+  #scales::show_col(c(cols1, cols2))
+  #scales::show_col(rev(RColorBrewer::brewer.pal(11,"RdBu")))
 
   p <-
     ggplot2::ggplot(data = data$curve) +
     ggplot2::geom_segment(data = data$ticks,
-                          mapping=ggplot2::aes(x = rank, y = -data$spreadES/10,
-                                               xend = rank, yend = data$spreadES/10),
-                          linewidth=ticksSize) +
-    ggplot2::geom_rect(data = data[["colorbar_df"]][["data"]], aes(xmin = min_rank,
-                                                                   xmax = max_rank,
-                                                                   fill = zscore),
+                          mapping=ggplot2::aes(x = rank, y = -data$spreadES/10, xend = rank, yend = data$spreadES/10),
+                          linewidth = ticksSize) +
+    ggplot2::geom_rect(data = data2, aes(xmin = min_rank,
+                                         xmax = max_rank,
+                                         fill = zscore2),
                        ymin = -data[["spreadES"]]/16,
                        ymax = data[["spreadES"]]/16, alpha = 0.8,
                        show.legend = T) +
-    scale_fill_manual(values = data[["colorbar_df"]][["data"]]$fill_col) +
+    ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")), breaks = seq(-color_break_limit,color_break_limit,1)) +
     ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
     ggplot2::geom_hline(yintercept = data$posES, colour = color_min_max_ES_line, linetype = "dashed") +
     ggplot2::geom_hline(yintercept = data$negES, colour = color_min_max_ES_line, linetype = "dashed") +
