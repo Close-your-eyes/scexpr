@@ -126,7 +126,7 @@ prep_gsea <- function(name,
                               stats = gene.ranks,
                               gseaParam = gseaParam)
 
-  colorbar_df <- .prep_gsea_colorbar(x = as.data.frame(data[["stats"]]))
+  #colorbar_df <- .prep_gsea_colorbar(x = as.data.frame(data[["stats"]]))
   rank_df <- data.frame(gene = names(rev(gene.ranks)[data[["ticks"]][["rank"]]]), rank = data[["ticks"]][["rank"]])
 
   leadingEdge_rank <- as.numeric(data[["curve"]][which(data[["curve"]]$ES == c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))]), "rank"])
@@ -143,7 +143,7 @@ prep_gsea <- function(name,
 
   data <- c(data, list(name = name,
                        rank_df = rank_df,
-                       colorbar_df = colorbar_df,
+                       #colorbar_df = colorbar_df,
                        leadingEdge_rank = leadingEdge_rank,
                        leadingEdge_size = leadingEdge_size,
                        pval = pval,
@@ -153,7 +153,6 @@ prep_gsea <- function(name,
 }
 
 .prep_gsea_colorbar <- function(x) {
-  browser()
   zscore_cuts <- NULL
   x$stat_scale <- scale(x$stat)
   if (is.null(zscore_cuts)) {

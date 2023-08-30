@@ -141,6 +141,12 @@ volcano_plot <- function(SO,
     stop("Only one to TRUE, use.MAST or use.limma.")
   }
 
+  if (use.MAST) {
+    if (!requireNamespace("MAST", quietly = T)) {
+      BiocManager::install("MAST")
+    }
+  }
+
   if (missing(negative.group.cells) || missing(positive.group.cells)) {
     stop("positive.group.cells and negative.group.cells are required.")
   }
@@ -244,7 +250,6 @@ volcano_plot <- function(SO,
   if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
     warning("Different features across SOs detected. Will carry on with common ones only.")
   }
-
 
   # DietSeurat is slow ?!
   # Seurat::DietSeurat(, assays = assay, counts = F)
@@ -487,6 +492,7 @@ volcano_plot <- function(SO,
     Seurat::Idents(assay_data) <- assay_data@meta.data[,1,drop=T]
     vd <- Seurat::FindMarkers(Seurat::GetAssay(assay_data, Seurat::DefaultAssay(assay_data)),
                               test.use = "MAST",
+                              min.pct = 0, # filtered before
                               logfc.threshold = MAST.logfc.threshold,
                               cells.1 = pgc, cells.2 = ngc)
 

@@ -28,18 +28,23 @@ plot_gsea <- function(data,
                       plot_leadingEdge_size = T,
                       annotation_pos = NULL,
                       annotation_size = 4,
+                      rank_metric_zscore_lims = c(-4,4),
                       annotation_with_name = F) {
 
-  data$stats$zscore <- round(scale(data$stats$stat),1)
-  data2 <-
+
+  if (abs(min(rank_metric_zscore_lims)) != abs(max(rank_metric_zscore_lims))) {
+    warning("rank_metric_zscore_lims are not symmetric around zero. This may yield a misleading divergent color scale which does not break at zero.")
+  }
+
+  data_colorbar <-
     as.data.frame(data$stats) %>%
+    dplyr::mutate(zscore = as.vector(round(scale(stat),0))) %>%
+    dplyr::mutate(zscore = ifelse(zscore < min(rank_metric_zscore_lims), min(rank_metric_zscore_lims), zscore)) %>%
+    dplyr::mutate(zscore = ifelse(zscore > max(rank_metric_zscore_lims), max(rank_metric_zscore_lims), zscore)) %>%
     dplyr::group_by(zscore) %>%
     dplyr::filter(rank %in% c(min(rank), max(rank))) %>%
-    dplyr::summarise(min_rank = min(rank), max_rank = max(rank)) %>%
-    dplyr::mutate(zscore2 = round(zscore,0)) %>%
-    dplyr::mutate(zscore2 = ifelse(zscore2 < -4, -4, zscore2)) %>%
-    dplyr::mutate(zscore2 = ifelse(zscore2 > 4, 4, zscore2))
-  color_break_limit <- min(c(abs(min(data2$zscore2)), max(data2$zscore2)))-1
+    dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
+  color_break_limit <- min(c(abs(min(data_colorbar$zscore)), max(data_colorbar$zscore)))-1
 
 
   # manually provide bluish and reddish color to scale_fill_stepsn in order to have switch from blue to red at zero
@@ -53,9 +58,9 @@ plot_gsea <- function(data,
     ggplot2::geom_segment(data = data$ticks,
                           mapping=ggplot2::aes(x = rank, y = -data$spreadES/10, xend = rank, yend = data$spreadES/10),
                           linewidth = ticksSize) +
-    ggplot2::geom_rect(data = data2, aes(xmin = min_rank,
+    ggplot2::geom_rect(data = data_colorbar, aes(xmin = min_rank,
                                          xmax = max_rank,
-                                         fill = zscore2),
+                                         fill = zscore),
                        ymin = -data[["spreadES"]]/16,
                        ymax = data[["spreadES"]]/16, alpha = 0.8,
                        show.legend = T) +
@@ -67,7 +72,6 @@ plot_gsea <- function(data,
     theme +
     ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]")
 
-browser()
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
                                       max.overlaps = length(le_ranks),
