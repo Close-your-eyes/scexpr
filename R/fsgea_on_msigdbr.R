@@ -155,10 +155,22 @@ prep_gsea <- function(name,
 }
 
 .prep_gsea_colorbar <- function(x) {
-  zscore_cuts = NULL
+  browser()
+  zscore_cuts <- NULL
   x$stat_scale <- scale(x$stat)
   if (is.null(zscore_cuts)) {
     zscore_cuts <- seq(floor(min(x$stat_scale)), ceiling(max(x$stat_scale)), 1)
+
+
+    unique(c(seq(min(zscore_cuts), max(zscore_cuts), 4), max(zscore_cuts)))
+
+    x <- unique(c(min(zscore_cuts), seq(min(zscore_cuts), 0, 2), 0))
+    y <- unique(c(min(zscore_cuts), seq(min(x), 0, 3), 0))
+
+    z <- unique(c(seq(0, max(zscore_cuts), 2), max(zscore_cuts)))
+    z1 <- unique(c(0, seq(0, max(z), 3), max(z)))
+
+    split_func(zscore_cuts[which(zscore_cuts <= 0)],4)
   }
   data <-
     x %>%
@@ -219,4 +231,10 @@ prep_gsea <- function(name,
     negES=min(bottoms),
     spreadES=max(tops)-min(bottoms),
     maxAbsStat=max(abs(statsAdj)))
+}
+
+split_func <- function(x, by) {
+  r <- diff(range(x))
+  out <- seq(0, r - by - 1, by = by)
+  c(round(min(x) + c(0, out - 0.51 + (max(x) - max(out)) / 2), 0), max(x))
 }

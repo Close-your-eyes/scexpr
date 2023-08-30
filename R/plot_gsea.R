@@ -60,7 +60,7 @@ plot_gsea <- function(data,
     theme +
     ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]")
 
-
+browser()
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
                                       max.overlaps = length(le_ranks),
