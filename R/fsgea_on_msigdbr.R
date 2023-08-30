@@ -34,7 +34,6 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
   }
-
   if (is.null(gene.ranks)) {
     stop("gene.ranks has to be provided.")
   }
@@ -63,12 +62,11 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
   }
   names(gene.sets) <- make.unique(names(gene.sets))
 
-
   if (!"pathways" %in% names(fgsea_args)) {
     fgsea_args <- c(list(pathways = gene.sets), fgsea_args)
   }
   if (!"stats" %in% names(fgsea_args)) {
-    fgsea_args <- c(list(stats = gene.sets), fgsea_args)
+    fgsea_args <- c(list(stats = gene.ranks), fgsea_args)
   }
   results <- as.data.frame(Gmisc::fastDoCall(fgsea_fun, args = fgsea_args))
   if (use.msigdbr) {

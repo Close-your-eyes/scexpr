@@ -91,8 +91,8 @@
 #' if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn
 #' @param nice.breaks passed to scale_color_stepsn if length(n.colorsteps) == 1
 #' @param show.limits passed to scale_color_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
-#' @param dotplot
 #' @param legend.decimals passed to scale_color_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
+#' @param contour.label.args
 #'
 #' @return
 #' @export
@@ -196,8 +196,9 @@ feature_plot <- function(SO,
                          col.pal.contour = "custom",
                          contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1), # arguments to geom_density_2d
                          contour.label.nudge = c(0,0),
+                         contour.label.args = list(size = 4),
                          plot.expr.freq.by.contour.group = F,
-                         use_ggnewscale_for_contour_colors = T, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
+                         use_ggnewscale_for_contour_colors = F, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
                          expand_limits = list(), # arguments to ggplot2::expand_limits
                          color.scale.labels = NULL,
                          ...) {
@@ -662,14 +663,15 @@ feature_plot <- function(SO,
 
 
         if (use_ggnewscale_for_contour_colors) {
-          plot <-
-            plot +
-            ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])),
-                                show.legend = F)
+          plot <- plot + Gmisc::fastDoCall(geom_label, args = c(contour.label.args,
+                                                                list(data = group_labels, show.legend = F, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])))))
+
+          #plot <- plot + ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])), show.legend = F)
         } else {
-          plot <-
-            plot +
-            ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))
+
+          plot <- plot + Gmisc::fastDoCall(geom_label, args = c(contour.label.args,
+                                                 list(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))))
+          #plot <- plot + ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))
         }
 
       }
