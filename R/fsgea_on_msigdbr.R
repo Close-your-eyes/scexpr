@@ -24,7 +24,7 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
                              gene.sets = NULL,
                              return.subset.gene.sets = T,
                              return.gene.sets = T,
-                             min.padj = 0.001, # which plots to generate
+                             min.padj = 0, # which plots to generate; by default: none
                              use.msigdbr = F,
                              msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL),
                              fgsea_fun = fgsea::fgseaMultilevel,
