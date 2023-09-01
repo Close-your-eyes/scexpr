@@ -36,6 +36,7 @@ plot_gsea <- function(data,
     warning("rank_metric_zscore_lims are not symmetric around zero. This may yield a misleading divergent color scale which does not break at zero.")
   }
 
+
   data_colorbar <-
     as.data.frame(data$stats) %>%
     dplyr::mutate(zscore = as.vector(round(scale(stat),0))) %>%
@@ -45,8 +46,11 @@ plot_gsea <- function(data,
     dplyr::filter(rank %in% c(min(rank), max(rank))) %>%
     dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
   color_break_limit <- min(c(abs(min(data_colorbar$zscore)), max(data_colorbar$zscore)))-1
-
-
+  min_max <- c(min(data_colorbar$zscore), max(data_colorbar$zscore))
+  # make sure it is symmetric
+  data_colorbar <-
+    data_colorbar %>%
+    dplyr::mutate(zscore = ifelse(abs(zscore) > color_break_limit+1, (color_break_limit+1)*sign(zscore), zscore))
   # manually provide bluish and reddish color to scale_fill_stepsn in order to have switch from blue to red at zero
   #cols1 <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu"))[1:5])(round(sum(data2$zscore<0)/length(data2$zscore)*10))
   #cols2 <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu"))[7:11])(round(sum(data2$zscore>0)/length(data2$zscore)*10))
@@ -64,13 +68,15 @@ plot_gsea <- function(data,
                        ymin = -data[["spreadES"]]/16,
                        ymax = data[["spreadES"]]/16, alpha = 0.8,
                        show.legend = T) +
-    ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")), breaks = seq(-color_break_limit,color_break_limit,1)) +
+    # not perfect yet. how to manually change legend text (breaks and limits?)
+    ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")), breaks = seq(-color_break_limit,color_break_limit,1), show.limits = F) +
     ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
     ggplot2::geom_hline(yintercept = data$posES, colour = color_min_max_ES_line, linetype = "dashed") +
     ggplot2::geom_hline(yintercept = data$negES, colour = color_min_max_ES_line, linetype = "dashed") +
     ggplot2::geom_hline(yintercept = 0, colour = "black") +
     theme +
-    ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]")
+    ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]") +
+    guides(fill = guide_colorsteps())
 
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),

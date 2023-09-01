@@ -28,7 +28,7 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
                              use.msigdbr = F,
                              msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL),
                              fgsea_fun = fgsea::fgseaMultilevel,
-                             fgsea_args = list(stats = gene.ranks, pathways = gene.sets),
+                             fgsea_args = list(),
                              ...) {
 
   if (!requireNamespace("fgsea", quietly = TRUE)) {
@@ -68,6 +68,7 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
   if (!"stats" %in% names(fgsea_args)) {
     fgsea_args <- c(list(stats = gene.ranks), fgsea_args)
   }
+
   results <- as.data.frame(Gmisc::fastDoCall(fgsea_fun, args = fgsea_args))
   if (use.msigdbr) {
     results$pathway_cat <- gene.sets.list[["cats"]][results$pathway]
