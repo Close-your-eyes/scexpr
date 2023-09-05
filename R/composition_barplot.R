@@ -132,7 +132,7 @@ composition_barplot <- function(SO,
     plot <-
       plot +
       ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                         ggplot2::aes(color = I(label_color), label = paste0(round(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
+                         ggplot2::aes(color = I(label_color), label = paste0(smart.round2(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
                          nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
                          size = label_size)
     #position = ggplot2::position_stack(vjust = 0.5))
@@ -153,7 +153,7 @@ composition_barplot <- function(SO,
       plot <-
         plot +
         ggplot2::geom_text(data = table0,
-                           ggplot2::aes(color = I(label_color), label = paste0(round(pct*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
+                           ggplot2::aes(color = I(label_color), label = paste0(smart.round2(pct*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
                            nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
                            size = label_size, inherit.aes = F)
     }
@@ -182,3 +182,21 @@ composition_barplot <- function(SO,
 
   return(list(data = table, plot = plot))
 }
+
+
+#https://stackoverflow.com/questions/32544646/round-vector-of-numerics-to-integer-while-preserving-their-sum
+smart.round1 <- function(x) {
+  y <- floor(x)
+  indices <- tail(order(x-y), round(sum(x)) - sum(y))
+  y[indices] <- y[indices] + 1
+  y
+}
+smart.round2 <- function(x, digits = 0) {
+  up <- 10 ^ digits
+  x <- x * up
+  y <- floor(x)
+  indices <- tail(order(x-y), round(sum(x)) - sum(y))
+  y[indices] <- y[indices] + 1
+  y / up
+}
+
