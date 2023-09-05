@@ -35,7 +35,8 @@ freq_pie_chart <- function(SO,
                            label_size = 5,
                            label_inside_radius = 0.75,
                            label_outside_radius = 1.1,
-                           label_angle = "circle", # circle or numeric
+                           label_angle_inside = "circle", # circle or numeric
+                           label_angle_outside = "circle", # circle or numeric
                            legend.position = "right",
                            col_pal = scexpr::col_pal("custom"),
                            border_color = "white",
@@ -57,6 +58,8 @@ freq_pie_chart <- function(SO,
                            #avoid_overlap_min_frac = 0.05
 ) {
 
+  ## geom_textpath for labels?
+
   if (!requireNamespace("ggforce", quietly = T)) {
     utils::install.packages("ggforce")
   }
@@ -76,9 +79,14 @@ freq_pie_chart <- function(SO,
   label_outside <- match.arg(label_outside, c("none", "abs", "rel"))
   label_inside <- match.arg(label_inside, c("rel", "abs", "none"))
 
-  if (label_angle != "circle") {
-    if (!is.numeric(label_angle)) {
-      stop("label_angle has to be 'circle' or numeric.")
+  if (label_angle_inside != "circle") {
+    if (!is.numeric(label_angle_inside)) {
+      stop("label_angle_inside has to be 'circle' or numeric.")
+    }
+  }
+  if (label_angle_outside != "circle") {
+    if (!is.numeric(label_angle_outside)) {
+      stop("label_angle_outside has to be 'circle' or numeric.")
     }
   }
 
@@ -94,11 +102,17 @@ freq_pie_chart <- function(SO,
   tab$mid_angle <-  0.5*(tab[,"start_angle"] + tab[,"end_angle"])
 
   # text angle equal to angle of circle but readable
-  if (label_angle == "circle") {
+  if (label_angle_inside == "circle") {
     # relevant if order_pieces = T or order_pieces = F ??
-    tab$text_angle <- ifelse(tab$mid_angle > pi, 270 - tab$mid_angle*180/pi, 90 - tab$mid_angle*180/pi)
+    tab$text_angle_inside <- ifelse(tab$mid_angle > pi, 270 - tab$mid_angle*180/pi, 90 - tab$mid_angle*180/pi)
   } else {
-    tab$text_angle <- label_angle
+    tab$text_angle_inside <- label_angle_inside
+  }
+  if (label_angle_outside == "circle") {
+    # relevant if order_pieces = T or order_pieces = F ??
+    tab$text_angle_outside <- ifelse(tab$mid_angle > pi, 270 - tab$mid_angle*180/pi, 90 - tab$mid_angle*180/pi)
+  } else {
+    tab$text_angle_outside <- label_angle_outside
   }
 
   if (length(label_outside_radius) > nrow(tab) || nrow(tab) %% length(label_outside_radius) != 0) {
@@ -263,7 +277,7 @@ freq_pie_chart <- function(SO,
       ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color_inside),
                                                   x = label_inside_radius*sin(mid_angle),
                                                   y = label_inside_radius*cos(mid_angle),
-                                                  angle = text_angle,
+                                                  angle = text_angle_inside,
                                                   label = label_inside_text),
                          size = label_size)
   }
@@ -274,9 +288,10 @@ freq_pie_chart <- function(SO,
       ggplot2::geom_text(data = tab, ggplot2::aes(color = I(text_color_outside),
                                                   x = label_outside_radius*sin(mid_angle),
                                                   y = label_outside_radius*cos(mid_angle),
-                                                  angle = text_angle,
+                                                  angle = text_angle_outside,
                                                   label = label_outside_text),
-                         size = label_size)
+                         size = label_size,
+                         hjust = 1)
   }
 
   return(list(plot = plot, data = tab))
