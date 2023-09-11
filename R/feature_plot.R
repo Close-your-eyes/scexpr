@@ -143,6 +143,7 @@ feature_plot <- function(SO,
                          legend.shape.size = 3,
                          legend.col.size = 3,
                          legend.label.position = "right",
+                         legend.title = NULL,
                          hide.shape.legend = F,
 
                          font.family = "sans",
@@ -516,11 +517,14 @@ feature_plot <- function(SO,
 
 
     # legend options
-    if (make.italic) {
-      legend.title <- substitute(paste(italic(x)), list(x = x))
-    } else {
-      legend.title <- substitute(paste(x), list(x = x))
+    if (is.null(legend.title)) {
+      if (make.italic) {
+        legend.title <- substitute(paste(italic(x)), list(x = x))
+      } else {
+        legend.title <- substitute(paste(x), list(x = x))
+      }
     }
+
     if (length(legend.position) == 1) {
       plot <- plot + ggplot2::theme(legend.position = legend.position)
       if (legend.position %in% c("top", "bottom")) {
