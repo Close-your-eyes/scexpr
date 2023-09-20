@@ -191,6 +191,7 @@ smart.round1 <- function(x) {
   y[indices] <- y[indices] + 1
   y
 }
+
 smart.round2 <- function(x, digits = 0) {
   up <- 10 ^ digits
   x <- x * up
@@ -199,4 +200,5 @@ smart.round2 <- function(x, digits = 0) {
   y[indices] <- y[indices] + 1
   y / up
 }
+
 

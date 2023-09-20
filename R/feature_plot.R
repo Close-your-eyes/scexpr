@@ -1210,16 +1210,22 @@ feature_plot <- function(SO,
     message("No expressers found for ", feature, ".")
   }
 
-  if (length(feature == 1) && anyNA(data[,1])) {
-    message(feature, ": NA found in data.")
-    if (na.rm) {
+  nacol <- apply(data, 2, anyNA)
+  if (any(nacol)) {
+    message(paste(names(which(nacol)), collapse = ", "), ": NA found in data.")
+    if (na.rm && length(feature) == 1) {
       data <- data[which(!is.na(data[,1])),]
+    }  else if (na.rm && length(feature) > 1) {
+      message("Cannot remove NA values when more than one feature is requested.")
     }
   }
-  if (length(feature == 1) && any(is.infinite(data[,1]))) {
-    message(feature, ": Inf found in data.")
-    if (inf.rm) {
+  infcol <- apply(data, 2, function(x) any(is.infinite(x)))
+  if (any(infcol)) {
+    message(paste(names(which(infcol)), collapse = ", "), ": Inf found in data.")
+    if (inf.rm && length(feature) == 1) {
       data <- data[which(!is.infinite(data[,1])),]
+    } else if (inf.rm && length(feature) > 1) {
+      message("Cannot remove inf values when more than one feature is requested.")
     }
   }
 
