@@ -46,7 +46,7 @@
 #' @param col.pal.d
 #' @param col.excluded.cells
 #' @param col.non.expresser
-#' @param col.pal.rev
+#' @param col.pal.dir
 #' @param theme
 #' @param plot.axis.labels
 #' @param plot.panel.grid
@@ -152,7 +152,7 @@ feature_plot <- function(SO,
                          col.excluded.cells = "grey95",
                          col.non.expresser = "grey85",
                          col.expresser = "tomato2",
-                         col.pal.rev = F,
+                         col.pal.dir = 1,
                          n.colorsteps = NULL,
                          nice.breaks = F,
                          show.limits = T,
@@ -333,13 +333,13 @@ feature_plot <- function(SO,
     # select color scale
     if (is.numeric(data[,1])) {
       if (length(col.pal.c) == 1 && !col.pal.c %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal.c, reverse = col.pal.rev)
+        col.pal <- col_pal(name = col.pal.c, direction = col.pal.dir)
       } else {
         col.pal <- col.pal.c
       }
     } else {
       if (length(col.pal.d) == 1 && !col.pal.d %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal.d, reverse = col.pal.rev, n = nlevels(as.factor(data[,1])))
+        col.pal <- col_pal(name = col.pal.d, direction = col.pal.dir, n = nlevels(as.factor(data[,1])))
       } else {
         col.pal <- col.pal.d
       }
@@ -604,7 +604,7 @@ feature_plot <- function(SO,
       ## cells currently not considered
       contour_data <- .get.data(SO, feature = contour_feature, reduction = names(reduction))
       if (length(col.pal.contour) == 1 && !col.pal.contour %in% grDevices::colors()) {
-        col.pal.contour <- col_pal(name = col.pal.contour, reverse = col.pal.rev, n = nlevels(as.factor(contour_data[,1])))
+        col.pal.contour <- col_pal(name = col.pal.contour, direction = col.pal.dir, n = nlevels(as.factor(contour_data[,1])))
       }
 
       # order of col.pal.contour in case it has names??

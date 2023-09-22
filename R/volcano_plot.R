@@ -590,7 +590,7 @@ volcano_plot <- function(SO,
                       errorbar.size = 0.2,
                       errorbar.width = 0.2,
                       col.pal = "RdBu",
-                      col.pal.rev = T,
+                      col.pal.dir = 1,
                       col.type = c("c", "d"), # continuous or discrete
                       pt.size = 1,
                       pt.alpha = 0.8,
@@ -673,11 +673,11 @@ volcano_plot <- function(SO,
     # select color scale
     if (col.type == "c") {
       if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal, reverse = col.pal.rev)
+        col.pal <- col_pal(name = col.pal, direction = col.pal.dir)
       }
     } else if (col.type == "d") {
       if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal, reverse = col.pal.rev, n = nlevels(as.factor(vd[which(vd[,feature_colname] %in% features.to.color),features.color.by])))
+        col.pal <- col_pal(name = col.pal, direction = col.pal.dir, n = nlevels(as.factor(vd[which(vd[,feature_colname] %in% features.to.color),features.color.by])))
       }
     }
     if (col.type == "c") {

@@ -521,7 +521,7 @@ qc_plots <- function(SO,
     ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
                    panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
                    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
-    ggplot2::scale_color_manual(values = col_pal()) +
+    ggplot2::scale_color_manual(values = col_pal("custom")) +
     ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks)) +
     ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
     ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)

@@ -24,7 +24,7 @@
 #' @param expr.freq.hjust
 #' @param legend.title
 #' @param col.pal
-#' @param col.pal.rev
+#' @param col.pal.dir
 #' @param nrow
 #' @param ncol
 #' @param expr.freq.decimals decimal precision of frequency labels
@@ -54,7 +54,7 @@ feature_plot_stat <- function(SO,
                               split.by = NULL,
                               pt.size = 0.5,
                               col.pal = "custom",
-                              col.pal.rev = F,
+                              col.pal.dir = 1,
                               nrow = NULL,
                               ncol = NULL,
                               feature.aliases = NULL,
@@ -174,7 +174,7 @@ feature_plot_stat <- function(SO,
   }
 
   if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-    col.pal <- col_pal(name = col.pal, reverse = col.pal.rev)
+    col.pal <- col_pal(name = col.pal, direction = col.pal.dir)
   }
 
   plot <- plot + theme
