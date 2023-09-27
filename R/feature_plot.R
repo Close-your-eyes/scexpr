@@ -147,7 +147,7 @@ feature_plot <- function(SO,
                          hide.shape.legend = F,
 
                          font.family = "sans",
-                         col.pal.c = "spectral",
+                         col.pal.c = "RColorBrewer::Spectral",
                          col.pal.d = "custom",
                          col.excluded.cells = "grey95",
                          col.non.expresser = "grey85",
