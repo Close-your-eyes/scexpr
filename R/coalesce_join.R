@@ -49,7 +49,15 @@ coalesce_join <- function(x, y,
     ))
     names(coalesced) <- to_coalesce
 
-    dplyr::bind_cols(joined, coalesced)[cols[which(!cols %in% by)]] # modified from dplyr::bind_cols(joined, coalesced)[cols]; needed if by = c("xyz" = "abc") and "abc" becomes "xyz" in joined df
+    # only remove cols when they have different names in x and y; because then the col name from y disappears; this is irrespective of left_join and right_join
+    # what about other way of specifying join columns?
+    cols2 <- if(is.null(names(by))) {
+      cols
+    } else {
+      by2 <- by[which(names(by) != by)]
+      cols[which(!cols %in% by2)]
+    }
+    dplyr::bind_cols(joined, coalesced)[cols2] # modified from dplyr::bind_cols(joined, coalesced)[cols]; needed if by = c("xyz" = "abc") and "abc" becomes "xyz" in joined df
   } else {
     joined
   }
