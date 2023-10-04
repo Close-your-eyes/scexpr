@@ -49,7 +49,7 @@ coalesce_join <- function(x, y,
     ))
     names(coalesced) <- to_coalesce
 
-    dplyr::bind_cols(joined, coalesced)[cols]
+    dplyr::bind_cols(joined, coalesced)[cols[which(!cols %in% by)]] # modified from dplyr::bind_cols(joined, coalesced)[cols]; needed if by = c("xyz" = "abc") and "abc" becomes "xyz" in joined df
   } else {
     joined
   }
