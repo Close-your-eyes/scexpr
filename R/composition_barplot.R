@@ -26,6 +26,7 @@
 composition_barplot <- function(SO,
                                 x_cat,
                                 fill_cat,
+                                y = c("rel", "abs"),
                                 col_pal = scexpr::col_pal("custom"),
                                 border_color = "black",
                                 plot_rel_labels = F,
@@ -60,6 +61,8 @@ composition_barplot <- function(SO,
   } else {
     fctr <- 1
   }
+
+  y = match.arg(y, c("rel", "abs"))
 
   table <-
     SO %>%
@@ -115,36 +118,69 @@ composition_barplot <- function(SO,
     dplyr::mutate(rel_x_cumsum = cumsum(rel_x)) %>%
     dplyr::mutate(rel_x_cumsum_lag = dplyr::lag(rel_x_cumsum, default = 0)) %>%
     dplyr::mutate(label_ypos = rel_x_cumsum_lag + (rel_x_cumsum-rel_x_cumsum_lag)/2) %>%
+    dplyr::mutate(n_cumsum = cumsum(n)) %>%
+    dplyr::mutate(n_cumsum_lag = dplyr::lag(n_cumsum, default = 0)) %>%
+    dplyr::mutate(n_label_ypos = n_cumsum_lag + (n_cumsum-n_cumsum_lag)/2) %>%
     #dplyr::filter(rel_x >= min_label_freq) %>%
     #dplyr::mutate(rel_x = rel_x*fctr) %>%
     #dplyr::mutate(label_ypos = label_ypos*fctr) %>%
     tibble::as_tibble()
 
 
-  plot <-
-    ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = rel_x*fctr, fill = !!rlang::sym(fill_cat))) +
-    ggplot2::geom_col(color = border_color) +
-    ggplot2::scale_fill_manual(values = col_pal) +
-    ggplot2::labs(y = ifelse(label_rel_pct, "frequency [%]", "frequency")) +
-    scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1)*fctr)
+  if (y == "rel") {
+    plot <-
+      ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = rel_x*fctr, fill = !!rlang::sym(fill_cat))) +
+      ggplot2::geom_col(color = border_color) +
+      ggplot2::scale_fill_manual(values = col_pal) +
+      ggplot2::labs(y = ifelse(label_rel_pct, "frequency [%]", "frequency")) +
+      scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1)*fctr)
+  } else if (y == "abs") {
+    plot <-
+      ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = n, fill = !!rlang::sym(fill_cat))) +
+      ggplot2::geom_col(color = border_color) +
+      ggplot2::scale_fill_manual(values = col_pal)
+  }
+
+
+
 
   if (plot_rel_labels) {
-    plot <-
-      plot +
-      ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                         ggplot2::aes(color = I(label_color), label = paste0(smart.round2(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
-                         nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
-                         size = label_size)
+    if (y == "rel") {
+      plot <-
+        plot +
+        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
+                           ggplot2::aes(color = I(label_color), label = paste0(smart.round2(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
+                           nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
+                           size = label_size)
+    } else if (y == "abs") {
+      plot <-
+        plot +
+        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
+                           ggplot2::aes(color = I(label_color), label = paste0(smart.round2(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = n_label_ypos),
+                           nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
+                           size = label_size)
+    }
+
     #position = ggplot2::position_stack(vjust = 0.5))
   }
 
   if (plot_abs_labels) {
-    plot <-
-      plot +
-      ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                         ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = label_ypos*fctr),
-                         nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
-                         size = label_size)
+    if (y == "rel") {
+      plot <-
+        plot +
+        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
+                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = label_ypos*fctr),
+                           nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
+                           size = label_size)
+    } else if (y == "abs") {
+      plot <-
+        plot +
+        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
+                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = n_label_ypos),
+                           nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
+                           size = label_size)
+    }
+
     #position = ggplot2::position_stack(vjust = 0.5))
   }
 
