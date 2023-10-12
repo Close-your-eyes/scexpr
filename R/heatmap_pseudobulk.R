@@ -104,7 +104,7 @@ heatmap_pseudobulk <- function(SO,
 
                                y.font.size = 10,
                                color = "NA",
-                               fill = scexpr::col_pal(name = "RColorBrewer::RdBu", n = 9, direction = 1),
+                               fill = scexpr::col_pal(name = "RColorBrewer::RdBu", n = 11, direction = -1),
                                n.colorsteps = NULL,
                                nice.breaks = F,
                                show.limits = T,
