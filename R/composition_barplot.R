@@ -101,9 +101,14 @@ composition_barplot <- function(SO,
   }
 
 
+
   if (!is.null(names(col_pal)) && any(!unique(table[,fill_cat,drop=T]) %in% names(col_pal))) {
     col_pal <- unname(col_pal)
   } else {
+    # new
+    if (is.null(names(col_pal))) {
+      names(col_pal) <- sort(unique(table[,fill_cat,drop=T]))
+    }
     table$bar_segment_cols <- col_pal[as.character(table[,fill_cat,drop=T])]
     table$label_color <- ifelse(farver::decode_colour(table$bar_segment_cols, to = "hcl")[, "l"] > 50, "black", "white")
   }
@@ -128,6 +133,15 @@ composition_barplot <- function(SO,
     #dplyr::mutate(label_ypos = label_ypos*fctr) %>%
     tibble::as_tibble()
 
+
+  if (!is.null(levels(SO[,x_cat]))) {
+    if (summarize_all_x) {
+      table$clusters <- factor(table$clusters, levels = c("all", levels(SO[,x_cat])))
+    } else {
+      table$clusters <- factor(table$clusters, levels = levels(SO[,x_cat]))
+    }
+
+  }
 
   if (y == "rel") {
     plot <-
