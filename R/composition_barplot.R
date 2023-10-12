@@ -63,6 +63,7 @@ composition_barplot <- function(SO,
   }
 
   y = match.arg(y, c("rel", "abs"))
+  data_total <- NULL
 
   table <-
     SO %>%
@@ -96,6 +97,7 @@ composition_barplot <- function(SO,
       table0$label_ypos <- total_labels_ypos
       table0$label_color = "black" # could be made relative to background color
     }
+    data_total <- table0
   }
 
 
@@ -185,6 +187,7 @@ composition_barplot <- function(SO,
   }
 
   if (plot_total_labels) {
+    # TODO: adjust to plotting n (abs values, not rel)
     if (plot_rel_labels) {
       plot <-
         plot +
@@ -216,7 +219,7 @@ composition_barplot <- function(SO,
     }
   }
 
-  return(list(data = table, plot = plot))
+  return(list(data = table, plot = plot, data_total = data_total))
 }
 
 
