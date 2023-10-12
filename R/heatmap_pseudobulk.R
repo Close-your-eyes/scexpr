@@ -126,8 +126,8 @@ heatmap_pseudobulk <- function(SO,
                                legend.title.position = "top",
                                legend.title.hjust = 0.5,
                                legend.labels = c("min", "", "max"),
-                               legend_size_ncol = NULL,
-                               legend_size_nrow = NULL
+                               legend.size.ncol = NULL,
+                               legend.size.nrow = NULL,
                                feature.labels = NULL,
                                feature.labels.nudge_x = -0.1,
                                feature.labels.axis.width = 0.2,
@@ -577,8 +577,8 @@ heatmap_pseudobulk <- function(SO,
                                                  title.hjust = legend.title.hjust,
                                                  label.position = "bottom",
                                                  order = 2,
-                                                 ncol = legend_size_ncol,
-                                                 ncol = legend_size_nrow,
+                                                 ncol = legend.size.ncol,
+                                                 nrow = legend.size.nrow,
                                                  override.aes = list(color = "black")))
 
 
