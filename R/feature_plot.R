@@ -95,6 +95,7 @@
 #' @param contour.label.args
 #' @param legend.title
 #' @param legend.reverse
+#' @param contour_same_across_split.by
 #'
 #' @return
 #' @export
@@ -201,6 +202,7 @@ feature_plot <- function(SO,
                          contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1), # arguments to geom_density_2d
                          contour.label.nudge = c(0,0),
                          contour.label.args = list(size = 4),
+                         contour_same_across_split.by = T,
                          plot.expr.freq.by.contour.group = F,
                          use_ggnewscale_for_contour_colors = F, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
                          expand_limits = list(), # arguments to ggplot2::expand_limits
@@ -606,7 +608,15 @@ feature_plot <- function(SO,
     # plot contours, optionally
     if (!is.null(contour_feature)) {
       ## cells currently not considered
-      contour_data <- .get.data(SO, feature = contour_feature, reduction = names(reduction))
+      contour_data <- .get.data(SO,
+                                feature = contour_feature,
+                                reduction = names(reduction),
+                                split.by = split.by)
+      # use all cells across split.by to assign contours? (other word: same contour in every facet based on all cells, irrespective of split.by)
+      if (contour_same_across_split.by) {
+        contour_data <- purrr::map_dfr(stats::setNames(unique(contour_data$split.by), unique(contour_data$split.by)), function(x) contour_data %>% dplyr::mutate(split.by = x))
+      }
+
       if (length(col.pal.contour) == 1 && !col.pal.contour %in% grDevices::colors()) {
         col.pal.contour <- col_pal(name = col.pal.contour, direction = col.pal.dir, n = nlevels(as.factor(contour_data[,1])))
       }
@@ -653,8 +663,6 @@ feature_plot <- function(SO,
             Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args[[unique(contour_data[,contour_feature])[i]]], list(data = contour_data[which(contour_data[,contour_feature] == unique(contour_data[,contour_feature])[i]),], color = col.pal.contour[i])))
         }
       }
-
-
 
       if (plot.expr.freq.by.contour.group) {
         group_labels <-
