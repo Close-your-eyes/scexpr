@@ -147,6 +147,7 @@ feature_plot <- function(SO,
                          legend.col.size = 3,
                          legend.label.position = "right",
                          legend.title = NULL,
+                         legend.title.position = NULL,
                          legend.reverse = F,
                          hide.shape.legend = F,
 
@@ -571,6 +572,7 @@ feature_plot <- function(SO,
                                 label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
                                 title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                 label.position = legend.label.position,
+                                title.position = legend.title.position,
                                 title = switch(plot.legend.title, legend.title, NULL))
         },
         color = if (plot.colorbar) {
@@ -579,6 +581,7 @@ feature_plot <- function(SO,
                                   label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
                                   title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                   label.position = legend.label.position,
+                                  title.position = legend.title.position,
                                   title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
@@ -588,6 +591,7 @@ feature_plot <- function(SO,
                                 label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),
                                 title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                 label.position = legend.label.position,
+                                title.position = legend.title.position,
                                 title = switch(plot.legend.title, legend.title, NULL))
         })
 
