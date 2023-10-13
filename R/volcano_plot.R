@@ -153,6 +153,12 @@ volcano_plot <- function(SO,
   if (length(positive.group.name) > 1 || length(negative.group.name) > 1) {
     stop("Only provide one name for negative.group.cells and positive.group.name, each.")
   }
+  if (length(negative.group.cells)) {
+    stop("Length of negative.group.cells is zero ?!")
+  }
+  if (length(positive.group.name)) {
+    stop("Length of positive.group.name is zero ?!")
+  }
   if (!is.null(gsea.param)) {
     if (!is.list(gsea.param)) {
       stop("gsea.param has to be a list.")

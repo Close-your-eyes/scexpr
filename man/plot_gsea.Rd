@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_gsea.R
 \name{plot_gsea}
 \alias{plot_gsea}
-\title{Title}
+\title{Plot results from scexpr::fgsea_on_msigdbr}
 \usage{
 plot_gsea(
   data,
@@ -16,6 +16,7 @@ plot_gsea(
   plot_leadingEdge_size = T,
   annotation_pos = NULL,
   annotation_size = 4,
+  rank_metric_zscore_lims = c(-4, 4),
   annotation_with_name = F
 )
 }
@@ -23,5 +24,5 @@ plot_gsea(
 \item{annotation_with_name}{}
 }
 \description{
-Title
+Plot results from scexpr::fgsea_on_msigdbr
 }

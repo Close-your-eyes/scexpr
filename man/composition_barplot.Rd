@@ -8,6 +8,7 @@ composition_barplot(
   SO,
   x_cat,
   fill_cat,
+  y = c("rel", "abs"),
   col_pal = scexpr::col_pal("custom"),
   border_color = "black",
   plot_rel_labels = F,

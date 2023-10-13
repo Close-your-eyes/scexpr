@@ -46,14 +46,16 @@ feature_plot(
   legend.shape.size = 3,
   legend.col.size = 3,
   legend.label.position = "right",
+  legend.title = NULL,
+  legend.reverse = F,
   hide.shape.legend = F,
   font.family = "sans",
-  col.pal.c = "spectral",
+  col.pal.c = "RColorBrewer::Spectral",
   col.pal.d = "custom",
   col.excluded.cells = "grey95",
   col.non.expresser = "grey85",
   col.expresser = "tomato2",
-  col.pal.rev = F,
+  col.pal.dir = -1,
   n.colorsteps = NULL,
   nice.breaks = F,
   show.limits = T,
@@ -90,8 +92,9 @@ feature_plot(
   col.pal.contour = "custom",
   contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
   contour.label.nudge = c(0, 0),
+  contour.label.args = list(size = 4),
   plot.expr.freq.by.contour.group = F,
-  use_ggnewscale_for_contour_colors = T,
+  use_ggnewscale_for_contour_colors = F,
   expand_limits = list(),
   color.scale.labels = NULL,
   ...
@@ -153,6 +156,8 @@ feature_plot(
 \item{cutoff.expression}{select the cutoff feature expression levels for filtering}
 
 \item{legend.position}{values between 0 and -1}
+
+\item{legend.reverse}{}
 
 \item{n.colorsteps}{number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
 if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn}

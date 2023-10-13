@@ -25,7 +25,7 @@ feature_plot_stat(
   split.by = NULL,
   pt.size = 0.5,
   col.pal = "custom",
-  col.pal.rev = F,
+  col.pal.dir = 1,
   nrow = NULL,
   ncol = NULL,
   feature.aliases = NULL,

@@ -93,6 +93,8 @@
 #' @param show.limits passed to scale_color_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
 #' @param legend.decimals passed to scale_color_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
 #' @param contour.label.args
+#' @param legend.title
+#' @param legend.reverse
 #'
 #' @return
 #' @export
@@ -144,6 +146,7 @@ feature_plot <- function(SO,
                          legend.col.size = 3,
                          legend.label.position = "right",
                          legend.title = NULL,
+                         legend.reverse = F,
                          hide.shape.legend = F,
 
                          font.family = "sans",
@@ -577,6 +580,7 @@ feature_plot <- function(SO,
                                   title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
+                                reverse = legend.reverse,
                                 nrow = legend.nrow,
                                 ncol = legend.ncol,
                                 label.theme = ggtext::element_markdown(size = legend.text.size, family = font.family),

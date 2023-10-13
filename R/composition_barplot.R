@@ -133,12 +133,11 @@ composition_barplot <- function(SO,
     #dplyr::mutate(label_ypos = label_ypos*fctr) %>%
     tibble::as_tibble()
 
-
   if (!is.null(levels(SO[,x_cat]))) {
     if (summarize_all_x) {
-      table$clusters <- factor(table$clusters, levels = c("all", levels(SO[,x_cat])))
+      table[,x_cat] <- factor(table[,x_cat,drop=T], levels = c("all", levels(SO[,x_cat])))
     } else {
-      table$clusters <- factor(table$clusters, levels = levels(SO[,x_cat]))
+      table[,x_cat] <- factor(table[,x_cat,drop=T], levels = levels(SO[,x_cat]))
     }
 
   }

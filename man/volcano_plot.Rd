@@ -45,6 +45,8 @@ volcano_plot(
   gsea.param = NULL,
   interactive.only = F,
   use.limma = F,
+  use.MAST = F,
+  MAST.logfc.threshold = 0,
   ...
 )
 }
@@ -162,6 +164,8 @@ return these values}
 
 \item{use.limma}{logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
 which relies on values returned from limma}
+
+\item{use.MAST}{use MAST for testing for DE genes}
 
 \item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{c(2,3)}), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc}
 }
