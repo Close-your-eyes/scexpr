@@ -186,8 +186,10 @@ feature_plot <- function(SO,
                          plot.labels = NULL,
                          label.feature = NULL,
                          label.size = 12,
+                         label.color = "black",
                          label.center.fun = c("median", "mean"),
                          label.nudge = c(0,0), # nudging in x and y direction
+                         label.filter.cells = T,
                          na.rm = F,
                          inf.rm = F,
                          bury_NA = T,
@@ -710,14 +712,51 @@ feature_plot <- function(SO,
 
         dimcol1 <- paste0(reduction, "_", dims[1])
         dimcol2 <- paste0(reduction, "_", dims[2])
-        label_df <-
-          data %>%
-          dplyr::group_by(!!sym(x), SO.split) %>%
-          dplyr::summarise(!!dimcol1 := label.center.fun(!!sym(dimcol1)) + label.nudge[1],
-                           !!dimcol2 := label.center.fun(!!sym(dimcol2)) + label.nudge[2],
-                           .groups = "drop") %>%
-          dplyr::rename("label" = !!sym(x)) %>%
-          as.data.frame()
+
+        # plot labels only on included cells
+        if (label.filter.cells) {
+          inds <- which(rownames(data) %in% names(cells[which(cells == 1)]))
+        } else {
+          inds <- rownames(data)
+        }
+
+        if (!methods::is(label.nudge, "list")) {
+          label.nudge <- list(label.nudge)
+        }
+
+
+        if (length(label.nudge) != 1 & length(label.nudge) != length(unique(data[inds,x]))) {
+          stop("Length of label.nudge does not match number of groups to label: ", lenght(label.nudge), " vs. ", length(unique(data[inds,x])), ".")
+        }
+        if (length(label.nudge) == 1) { # only one label nudging
+          label_df <-
+            data[inds,] %>%
+            dplyr::group_by(!!sym(x), SO.split) %>%
+            dplyr::summarise(!!dimcol1 := label.center.fun(!!sym(dimcol1)) + label.nudge[[1]][1],
+                             !!dimcol2 := label.center.fun(!!sym(dimcol2)) + label.nudge[[1]][2],
+                             .groups = "drop") %>%
+            dplyr::rename("label" = !!sym(x)) %>%
+            as.data.frame()
+        } else {
+          label_df <-
+            data[inds,] %>%
+            dplyr::group_by(!!sym(x), SO.split) %>%
+            dplyr::summarise(!!dimcol1 := label.center.fun(!!sym(dimcol1)),
+                             !!dimcol2 := label.center.fun(!!sym(dimcol2)),
+                             .groups = "drop") %>%
+            dplyr::rename("label" = !!sym(x)) %>%
+            as.data.frame()
+
+          for (i in seq_along(label.nudge)) {
+            # dim 3 and 4 are dimension reduction columns
+            label_df[i,3] <- label_df[i,3] + label.nudge[[i]][1]
+            label_df[i,4] <- label_df[i,4] + label.nudge[[i]][2]
+          }
+
+        }
+
+
+
 
         if (!is.null(label.feature)) {
           temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
@@ -725,11 +764,29 @@ feature_plot <- function(SO,
           label_df[,1] <- stats::setNames(temp[,2,drop=T], temp[,1,drop=T])[label_df[,1]]
         }
 
+        if (!is.null(label.color) & length(label.color) != 1 & length(label.color) != nrow(label_df)) {
+          stop("Length of label.color does not match number of groups to label: ", lenght(label.color), " vs. ", nrow(label_df), ".")
+        }
+
         if (plot.labels == "text") {
-          plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
+          if (!is.null(label.color) & length(label.color) == 1) {
+            plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color) #...
+          } else {
+            for (i in seq_along(label.color)) {
+              plot <- plot + ggplot2::geom_text(data = label_df[i,], ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color[i])
+            }
+          }
         }
         if (plot.labels == "label") {
-          plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
+          if (!is.null(label.color) & length(label.color) == 1) {
+            plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color) #...
+          } else {
+            for (i in seq_along(label.color)) {
+              plot <-  plot <- plot + ggplot2::geom_label(data = label_df[i,], ggplot2::aes(label = label), size = label.size,family = font.family, color = label.color[i]) #...
+            }
+          }
+
+
         }
       }
     }
