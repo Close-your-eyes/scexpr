@@ -728,6 +728,7 @@ feature_plot <- function(SO,
         if (length(label.nudge) != 1 & length(label.nudge) != length(unique(data[inds,x]))) {
           stop("Length of label.nudge does not match number of groups to label: ", lenght(label.nudge), " vs. ", length(unique(data[inds,x])), ".")
         }
+
         if (length(label.nudge) == 1) { # only one label nudging
           label_df <-
             data[inds,] %>%
