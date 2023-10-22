@@ -231,6 +231,9 @@ feature_plot <- function(SO,
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
   #if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
+  if (!is.logical(plot.labels)) {
+    stop("plot.labels has to be logical: T or F.")
+  }
   if ((length(order.discrete) %in% c(0,1)) && (is.null(order.discrete) || is.na(order.discrete))) {stop("order.discrete should be logical or a vector of factor levels in order.")}
   if (length(contour_feature) > 1) {stop("Only provide one contour_feature.")}
   if (length(legend.position) > 2) {stop("legend.position should have length 1 being top, bottom, left, right; or length 2 indicating the corner where legend is to place.")}
@@ -695,7 +698,6 @@ feature_plot <- function(SO,
           label.nudge <- list(label.nudge)
         }
 
-
         if (length(label.nudge) != 1 & length(label.nudge) != length(unique(data[inds,x]))) {
           stop("Length of label.nudge does not match number of groups to label: ", lenght(label.nudge), " vs. ", length(unique(data[inds,x])), ".")
         }
@@ -724,7 +726,6 @@ feature_plot <- function(SO,
             label_df[i,3] <- label_df[i,3] + label.nudge[[i]][1]
             label_df[i,4] <- label_df[i,4] + label.nudge[[i]][2]
           }
-
         }
 
         if (!is.null(label.feature)) {
@@ -733,11 +734,11 @@ feature_plot <- function(SO,
           label_df[,1] <- stats::setNames(temp[,2,drop=T], temp[,1,drop=T])[label_df[,1]]
         }
 
-        if (!is.null(label.color) & length(label.color) != 1 & length(label.color) != nrow(label_df)) {
-          stop("Length of label.color does not match number of groups to label: ", lenght(label.color), " vs. ", nrow(label_df), ".")
-        }
-
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = c(list(data = label_df, mapping = ggplot2::aes(label = label)), geom_richtext.args))
+
+        '        if (!is.null(label.color) & length(label.color) != 1 & length(label.color) != nrow(label_df)) {
+          stop("Length of label.color does not match number of groups to label: ", lenght(label.color), " vs. ", nrow(label_df), ".")
+        }'
 
         'if (plot.labels == "text") {
           if (!is.null(label.color) & length(label.color) == 1) {
