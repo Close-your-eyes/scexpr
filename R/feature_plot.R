@@ -64,7 +64,6 @@
 #' @param strip.selection
 #' @param ...
 #' @param plot.labels
-#' @param label.size
 #' @param split.by.scales
 #' @param na.rm
 #' @param inf.rm
@@ -183,10 +182,8 @@ feature_plot <- function(SO,
                          strip.font.size = 14,
                          strip.selection = NA,
 
-                         plot.labels = NULL,
+                         plot.labels = F,
                          label.feature = NULL,
-                         label.size = 12,
-                         label.color = "black",
                          label.center.fun = c("median", "mean"),
                          label.nudge = c(0,0), # nudging in x and y direction
                          label.filter.cells = T,
@@ -210,6 +207,7 @@ feature_plot <- function(SO,
                          use_ggnewscale_for_contour_colors = F, ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
                          expand_limits = list(), # arguments to ggplot2::expand_limits
                          color.scale.labels = NULL,
+                         geom_richtext.args = list(label.colour = NA, fill = NA, size = 4, color = "black"),
                          ...) {
 
 
@@ -232,7 +230,7 @@ feature_plot <- function(SO,
   if (!is.null(ncol.inner) && !is.null(nrow.inner)) {stop("Please only select one, ncol.inner or nrow.inner. Leave the other NULL.")}
   if (!is.null(legend.nrow) && !is.null(legend.ncol)) {stop("Please only select one, legend.nrow or legend.ncol. Leave the other NULL.")}
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
-  if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
+  #if (!is.null(plot.labels)) {plot.labels <- match.arg(plot.labels, c("text", "label"))}
   if ((length(order.discrete) %in% c(0,1)) && (is.null(order.discrete) || is.na(order.discrete))) {stop("order.discrete should be logical or a vector of factor levels in order.")}
   if (length(contour_feature) > 1) {stop("Only provide one contour_feature.")}
   if (length(legend.position) > 2) {stop("legend.position should have length 1 being top, bottom, left, right; or length 2 indicating the corner where legend is to place.")}
@@ -436,33 +434,6 @@ feature_plot <- function(SO,
           plot <- plot + ggplot2::geom_point(data = data[intersect(which(rownames(data) %in% names(which(cells == 1))), which(data[,x] == i)),], ggplot2::aes(color = !!rlang::sym(x), shape = !!shape.by), size = pt.size)
         }
       }
-
-      # put this below contour plotting so that labels are on top (see below)
-      '      if (!is.null(plot.labels)) {
-        if (is.numeric(data[,1])) {
-          message("Labels not plotted as ", x, " is numeric.")
-        } else {
-          # potentially: use mclust, densityMclust(), (mixed gaussian model) to find multimodal clusters; x,y separately
-          label_df <- do.call(rbind, lapply(unique(data[,1]), function(z) data.frame(label = z,
-                                                                                     avg1 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[1])]),
-                                                                                     avg2 = mean(data[which(data[,1] == z), paste0(reduction, "_", dims[2])]))))
-
-          label_column <- if (!is.null(label.feature)) {
-            temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
-            label_df[,1] <- as.character(label_df[,1])
-            label_df[,1] <- stats::setNames(temp[,2,drop=T], temp[,1,drop=T])[label_df[,1]]
-          }
-
-          names(label_df)[c(2,3)] <- c(paste0(reduction, "_", dims[1]), paste0(reduction, "_", dims[2]))
-          if (plot.labels == "text") {
-            plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
-          }
-          if (plot.labels == "label") {
-            plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family) #...
-          }
-        }
-      }'
-
       plot.colorbar <- is.numeric(data[,1])
       make.italic <- F
     }
@@ -700,7 +671,7 @@ feature_plot <- function(SO,
     }
 
 
-    if (!is.null(plot.labels)) {
+    if (plot.labels) {
       if (is.numeric(data[,1])) {
         message("Labels not plotted as ", x, " is numeric.")
       } else {
@@ -756,9 +727,6 @@ feature_plot <- function(SO,
 
         }
 
-
-
-
         if (!is.null(label.feature)) {
           temp <- unique(data[,c(1,which(colnames(data) == "label.feature")[1])])
           label_df[,1] <- as.character(label_df[,1])
@@ -769,7 +737,9 @@ feature_plot <- function(SO,
           stop("Length of label.color does not match number of groups to label: ", lenght(label.color), " vs. ", nrow(label_df), ".")
         }
 
-        if (plot.labels == "text") {
+        plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = c(list(data = label_df, mapping = ggplot2::aes(label = label)), geom_richtext.args))
+
+        'if (plot.labels == "text") {
           if (!is.null(label.color) & length(label.color) == 1) {
             plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color) #...
           } else {
@@ -786,9 +756,8 @@ feature_plot <- function(SO,
               plot <-  plot <- plot + ggplot2::geom_label(data = label_df[i,], ggplot2::aes(label = label), size = label.size,family = font.family, color = label.color[i]) #...
             }
           }
+        }'
 
-
-        }
       }
     }
 
