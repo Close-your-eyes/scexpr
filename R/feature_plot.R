@@ -210,6 +210,7 @@ feature_plot <- function(SO,
                          geom_richtext.args = list(label.colour = NA, fill = NA, size = 4, color = "black"),
                          ...) {
 
+  ## geom textpath for contour lines?
 
   ## add axis arrows, shortened:
   #p_blood <- p_blood + guides(x = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])))/4 ),
@@ -629,7 +630,7 @@ feature_plot <- function(SO,
           stop("list of contour_args has to have names of factor levels of contour_feature.")
         }
       }
-
+#stat_density2d()
       if (use_ggnewscale_for_contour_colors) {
         plot <-
           plot +
