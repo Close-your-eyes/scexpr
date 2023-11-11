@@ -152,7 +152,16 @@ qc_diagnostic <- function(data_dirs,
     # this adds folder name prefix to cell names
     #names(x) <- basename(dirname(x))
 
-    filt_data <- Seurat::Read10X(data.dir = ffbms[x])
+
+    if (any(grepl("\\.h5$", list.files(ffbms[x])))) {
+      if (length(grepl("\\.h5$", list.files(ffbms[x]))) > 1) {
+        message("Found more than one .h5 file in ", ffbms[x], ". Will use the first: ", grep("\\.h5$", list.files(ffbms[x], full.names = T), value = T)[1])
+      }
+      filt_data <- Seurat::Read10X_h5(filename = grep("\\.h5$", list.files(ffbms[x], full.names = T)[1], value = T))
+    } else {
+      filt_data <- Seurat::Read10X(data.dir = ffbms[x])
+    }
+
     if (is.list(filt_data)) {
       message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
       filt_data <- filt_data[["Gene Expression"]]
