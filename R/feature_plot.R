@@ -706,20 +706,20 @@ feature_plot <- function(SO,
         if (length(label.nudge) == 1) { # only one label nudging
           label_df <-
             data[inds,] %>%
-            dplyr::group_by(!!sym(x), SO.split) %>%
-            dplyr::summarise(!!dimcol1 := label.center.fun(!!sym(dimcol1)) + label.nudge[[1]][1],
-                             !!dimcol2 := label.center.fun(!!sym(dimcol2)) + label.nudge[[1]][2],
+            dplyr::group_by(!!rlang::sym(x), SO.split) %>%
+            dplyr::summarise(!!dimcol1 := label.center.fun(!!rlang::sym(dimcol1)) + label.nudge[[1]][1],
+                             !!dimcol2 := label.center.fun(!!rlang::sym(dimcol2)) + label.nudge[[1]][2],
                              .groups = "drop") %>%
-            dplyr::rename("label" = !!sym(x)) %>%
+            dplyr::rename("label" = !!rlang::sym(x)) %>%
             as.data.frame()
         } else {
           label_df <-
             data[inds,] %>%
-            dplyr::group_by(!!sym(x), SO.split) %>%
-            dplyr::summarise(!!dimcol1 := label.center.fun(!!sym(dimcol1)),
-                             !!dimcol2 := label.center.fun(!!sym(dimcol2)),
+            dplyr::group_by(!!rlang::sym(x), SO.split) %>%
+            dplyr::summarise(!!dimcol1 := label.center.fun(!!rlang::sym(dimcol1)),
+                             !!dimcol2 := label.center.fun(!!rlang::sym(dimcol2)),
                              .groups = "drop") %>%
-            dplyr::rename("label" = !!sym(x)) %>%
+            dplyr::rename("label" = !!rlang::sym(x)) %>%
             as.data.frame()
 
           for (i in seq_along(label.nudge)) {

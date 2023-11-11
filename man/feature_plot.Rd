@@ -47,6 +47,7 @@ feature_plot(
   legend.col.size = 3,
   legend.label.position = "right",
   legend.title = NULL,
+  legend.title.position = NULL,
   legend.reverse = F,
   hide.shape.legend = F,
   font.family = "sans",
@@ -75,11 +76,11 @@ feature_plot(
   inset.size = c(0.15, 0.15),
   strip.font.size = 14,
   strip.selection = NA,
-  plot.labels = NULL,
+  plot.labels = F,
   label.feature = NULL,
-  label.size = 12,
   label.center.fun = c("median", "mean"),
   label.nudge = c(0, 0),
+  label.filter.cells = T,
   na.rm = F,
   inf.rm = F,
   bury_NA = T,
@@ -93,10 +94,12 @@ feature_plot(
   contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 1),
   contour.label.nudge = c(0, 0),
   contour.label.args = list(size = 4),
+  contour_same_across_split.by = T,
   plot.expr.freq.by.contour.group = F,
   use_ggnewscale_for_contour_colors = F,
   expand_limits = list(),
   color.scale.labels = NULL,
+  geom_richtext.args = list(label.colour = NA, fill = NA, size = 4, color = "black"),
   ...
 )
 }
@@ -157,8 +160,6 @@ feature_plot(
 
 \item{legend.position}{values between 0 and -1}
 
-\item{legend.reverse}{}
-
 \item{n.colorsteps}{number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
 if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn}
 
@@ -172,6 +173,8 @@ if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 th
 (e.g. a short form that does not disturb the plot so much)}
 
 \item{trajectory.slot}{name of Misc slot that contains information on how to plot a trajectory}
+
+\item{contour_same_across_split.by}{}
 }
 \description{
 Plot features of single cell transcriptomes on a dimension reduction map
