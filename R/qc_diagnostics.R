@@ -152,7 +152,16 @@ qc_diagnostic <- function(data_dirs,
     # this adds folder name prefix to cell names
     #names(x) <- basename(dirname(x))
 
-    filt_data <- Seurat::Read10X(data.dir = ffbms[x])
+
+    if (any(grepl("\\.h5$", list.files(ffbms[x])))) {
+      if (length(grepl("\\.h5$", list.files(ffbms[x]))) > 1) {
+        message("Found more than one .h5 file in ", ffbms[x], ". Will use the first: ", grep("\\.h5$", list.files(ffbms[x], full.names = T), value = T)[1])
+      }
+      filt_data <- Seurat::Read10X_h5(filename = grep("\\.h5$", list.files(ffbms[x], full.names = T)[1], value = T))
+    } else {
+      filt_data <- Seurat::Read10X(data.dir = ffbms[x])
+    }
+
     if (is.list(filt_data)) {
       message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
       filt_data <- filt_data[["Gene Expression"]]
@@ -511,7 +520,7 @@ qc_plots <- function(SO,
   qc_p1 <- suppressMessages(feature_plot(SO,
                                          features = c(qc_cols, clustering_cols[1]),
                                          reduction = "UMAP", legend.position = "none",
-                                         plot.labels = "text", label.size = 6))
+                                         plot.labels = T))
 
   qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
                            ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
@@ -531,7 +540,8 @@ qc_plots <- function(SO,
                                              reduction = reduction,
                                              pt.size = 0.5,
                                              legend.position = "none",
-                                             label.size = 6, plot.labels = "text", plot.title = F),
+                                             plot.labels = T,
+                                             plot.title = F),
                                 suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])[["plot"]]),
                                 ncol = 1)
 

@@ -155,15 +155,22 @@ cluster_correlation <- function(SO,
   #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
   #identical(Seurat::AverageExpression(SO[[1]][[1]], assays = assay, group.by = meta.cols[[1]], slot = "data", verbose = F)[[assay]], avg.expr2[[1]][[1]])
 
+
   if (missing(avg.expr)) {
     avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, slot = "data", verbose = F)[[assay]]))
   } else {
     avg.expr <- purrr::map(.x = avg.expr, .f = ~ purrr::map(.x = .x, .f = ~ .x[features,,drop=F]))
   }
 
+  # if one level in meta.col only, Seurat writes 'all' as column name but not the actual level, fix that
+  for (i in seq_along(avg.expr)) {
+    if (all(colnames(avg.expr[[i]][[1]]) == "all")) {
+      colnames(avg.expr[[i]][[1]]) <- unique(SO[[i]][[1]]@meta.data[,meta.cols[i]])
+    }
+  }
+
   # filter for levels
   avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) {purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F])})
-
 
   if (!is.null(split.by)) {
 
@@ -211,7 +218,7 @@ cluster_correlation <- function(SO,
     ## filter clusters with n cells below threshold
     for (i in 1:nrow(n_cell_df_nest)) {
       avg.expr[[n_cell_df_nest[i,"SO"]]] <-
-        avg.expr[[n_cell_df_nest[i,"SO"]]][,n_cell_df_nest[[i,"meta_col_levels"]]]
+        avg.expr[[n_cell_df_nest[i,"SO"]]][,n_cell_df_nest[[i,"meta_col_levels"]],drop=F]
     }
 
     # calculate correlations
@@ -225,14 +232,18 @@ cluster_correlation <- function(SO,
                 !identical(make.names(colnames(avg.expr[[2]])), colnames(avg.expr[[2]]))))) {
         message("Mathematical operators of special characters found in factor levels. Those are replace by dots in linear model formulae.")
       }
+      # also check for names of SOs
+
       # run the make.names thing to have a common command below
-      orig_colnames_1 <- stats::setNames(colnames(avg.expr[[1]]), nm = make.names(colnames(avg.expr[[1]])))
-      orig_colnames_2 <- stats::setNames(colnames(avg.expr[[2]]), nm = make.names(colnames(avg.expr[[2]])))
-      colnames(avg.expr[[1]]) <- make.names(colnames(avg.expr[[1]]))
-      colnames(avg.expr[[2]]) <- make.names(colnames(avg.expr[[2]]))
+      # add names of SO to make sure cluster names are unique
+      orig_colnames_1 <- stats::setNames(colnames(avg.expr[[1]]), nm = paste0(make.names(names(SO)[1]), "_", make.names(colnames(avg.expr[[1]]))))
+      orig_colnames_2 <- stats::setNames(colnames(avg.expr[[2]]), nm = paste0(make.names(names(SO)[2]), "_", make.names(colnames(avg.expr[[2]]))))
+      colnames(avg.expr[[1]]) <- paste0(make.names(names(SO)[1]), "_", make.names(colnames(avg.expr[[1]])))
+      colnames(avg.expr[[2]]) <- paste0(make.names(names(SO)[2]), "_", make.names(colnames(avg.expr[[2]])))
 
       combs_raw <- expand.grid(colnames(avg.expr[[1]]), colnames(avg.expr[[2]]))
       combs_raw <- combs_raw[which(as.character(combs_raw[,1]) != as.character(combs_raw[,2])),]
+
       #orders <- apply(combs_raw, 1, function(x) order(c(x[1], x[2])), simplify = F)
       #combs <- split(combs_raw, 1:nrow(combs_raw))
       #combs_helper <- dplyr::bind_rows(mapply(x = combs, y = orders, function(x,y) x[y], SIMPLIFY = F))
@@ -256,7 +267,7 @@ cluster_correlation <- function(SO,
     }
 
     # order columns and rows to get the right elements filtered in case of lower.triangle.only
-    cm <- cm[levels[[1]], levels[[2]]]
+    cm <- cm[levels[[1]], levels[[2]],drop=F]
 
     if (lower.triangle.only) {
       if (ncol(cm) != nrow(cm)) {
@@ -297,9 +308,9 @@ cluster_correlation <- function(SO,
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
   cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
 
-  pp <- c(col_pal("RdBu", n = 11, direction = -1)[2:5],
-          rep(col_pal("RdBu", n = 11, direction = -1)[6], mid.white.strech.length),
-          col_pal("RdBu", n = 11, direction = -1)[7:10])
+  pp <- c(col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[2:5],
+          rep(col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[6], mid.white.strech.length),
+          col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[7:10])
 
   cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
     ggplot2::geom_tile(colour = "black") +

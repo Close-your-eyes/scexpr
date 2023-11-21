@@ -177,7 +177,7 @@ freq_pie_chart <- function(SO,
     ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = pie_inside_radius, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
     ggforce::geom_arc_bar(colour = border_color) +
     theme +
-    labs(fill = legend_title) +
+    ggplot2::labs(fill = legend_title) +
     ggplot2::scale_fill_manual(values = col_pal) +
     ggplot2::coord_fixed(ratio = 1)
 
