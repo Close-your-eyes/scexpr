@@ -62,6 +62,8 @@ feature_plot_stat <- function(SO,
                               facetting_args = list(scales = "free_y"),
                               ...) {
 
+  # add option to plot facet labels in italics
+
   if (missing(SO)) {
     stop("Seurat object list or feature vector is missing.")
   }
