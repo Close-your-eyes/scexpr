@@ -25,8 +25,6 @@
 #' @param legend.title
 #' @param col.pal
 #' @param col.pal.dir
-#' @param nrow
-#' @param ncol
 #' @param expr.freq.decimals decimal precision of frequency labels
 #' @param expr.freq.pct plot expression frequency in percent?
 #'
@@ -55,14 +53,13 @@ feature_plot_stat <- function(SO,
                               pt.size = 0.5,
                               col.pal = "custom",
                               col.pal.dir = 1,
-                              nrow = NULL,
-                              ncol = NULL,
                               feature.aliases = NULL,
                               cutoff.feature = NULL,
                               cutoff.expression = 0,
                               exclusion.feature = NULL,
                               font.family = "sans",
                               theme = ggplot2::theme_bw(),
+                              facetting_args = list(scales = "free_y"),
                               ...) {
 
   if (missing(SO)) {
@@ -70,9 +67,6 @@ feature_plot_stat <- function(SO,
   }
   if (missing(meta.col)) {
     stop("meta.col reauired.")
-  }
-  if (!is.null(ncol) && !is.null(nrow)) {
-    stop("Please only select one, ncol or nrow Leave the other NULL.")
   }
   if (!is.null(split.by)) {
     warning("split.by requires testing.")
@@ -184,7 +178,7 @@ feature_plot_stat <- function(SO,
 
   plot <- plot + ggplot2::theme(...)
   plot <- plot + ggplot2::scale_color_manual(values = col.pal)
-  plot <- plot + ggplot2::facet_wrap(ggplot2::vars(Feature), scales = "free_y", nrow = nrow, ncol = ncol)
+  plot <- plot + Gmisc::fastDoCall(ggh4x::facet_wrap2, args = c(list(facets = ggplot2::vars(Feature)), facetting_args))
 
   if (!plot.strip) {
     plot <- plot + theme(strip.background = element_blank(), strip.text.x = element_blank())
