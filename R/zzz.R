@@ -3,7 +3,7 @@
   # https://stackoverflow.com/questions/9439256/how-can-i-handle-r-cmd-check-no-visible-binding-for-global-variable-notes-when
 
   # CRAN Note avoidance
-  if(getRversion() >= "2.15.1")
+  if (base::getRversion() >= "2.15.1") {
     utils::globalVariables(
 
       #.calc_vd
@@ -36,7 +36,17 @@
         "Gene.stable.ID.MM", "n_cells", "meta_col_level", "orig.ident", "name",
         #qc_diagnostics
         "logFC", "statistic", "pval", "pct_out")
-
-
     )
+  }
+  # this message will appear when the if-conditions are met and when library(scexpr) is run or any function with scexpr::
+  if ((requireNamespace("Seurat") && packageVersion("Seurat") > "4.9") ||
+      (requireNamespace("SeuratObject") && packageVersion("SeuratObject") > "4.9")) {
+    message("Seurat or SeuratObject is bigger than version 4.
+            Functions of scexpr cannot handle Seurat version 5 object currently.
+            In order to get a compatible Seurat version, you may run:
+            remove.packages('Seurat')
+            remove.packages('SeuratObject')
+            devtools::install_github('mojaveazure/seurat-object', ref = 'release/4.1.4') # say no to updates
+            devtools::install_github('satijalab/seurat', ref = 'seurat4')  # say no to updates")
+  }
 }
