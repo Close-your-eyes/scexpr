@@ -26,14 +26,13 @@ feature_plot_stat(
   pt.size = 0.5,
   col.pal = "custom",
   col.pal.dir = 1,
-  nrow = NULL,
-  ncol = NULL,
   feature.aliases = NULL,
   cutoff.feature = NULL,
   cutoff.expression = 0,
   exclusion.feature = NULL,
   font.family = "sans",
   theme = ggplot2::theme_bw(),
+  facetting_args = list(scales = "free_y"),
   ...
 )
 }

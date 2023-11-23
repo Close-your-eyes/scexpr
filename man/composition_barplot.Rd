@@ -12,6 +12,7 @@ composition_barplot(
   col_pal = scexpr::col_pal("custom"),
   border_color = "black",
   plot_rel_labels = F,
+  label_only_largest = F,
   plot_abs_labels = F,
   plot_total_labels = F,
   total_labels_ypos = 1.05,
@@ -30,7 +31,7 @@ composition_barplot(
 \arguments{
 \item{SO}{Seurat object or data frame}
 
-\item{plot_sigma}{}
+\item{sigma_just}{}
 }
 \description{
 Plot composition of one category by another

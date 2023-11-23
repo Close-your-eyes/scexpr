@@ -18,6 +18,9 @@
 #' @param plot_total_labels
 #' @param total_labels_ypos
 #' @param plot_sigma
+#' @param y
+#' @param label_only_largest
+#' @param sigma_just
 #'
 #' @return
 #' @export
@@ -30,6 +33,7 @@ composition_barplot <- function(SO,
                                 col_pal = scexpr::col_pal("custom"),
                                 border_color = "black",
                                 plot_rel_labels = F,
+                                label_only_largest = F,
                                 plot_abs_labels = F,
                                 plot_total_labels = F,
                                 total_labels_ypos = 1.05,
@@ -128,9 +132,9 @@ composition_barplot <- function(SO,
     dplyr::mutate(n_cumsum = cumsum(n)) %>%
     dplyr::mutate(n_cumsum_lag = dplyr::lag(n_cumsum, default = 0)) %>%
     dplyr::mutate(n_label_ypos = n_cumsum_lag + (n_cumsum-n_cumsum_lag)/2) %>%
-    #dplyr::filter(rel_x >= min_label_freq) %>%
-    #dplyr::mutate(rel_x = rel_x*fctr) %>%
-    #dplyr::mutate(label_ypos = label_ypos*fctr) %>%
+    dplyr::mutate(rel_x_fctr = rel_x*fctr) %>%
+    dplyr::mutate(rel_x_fctr_pct = paste0(smart.round2(rel_x_fctr, label_rel_pct_decimals), " %")) %>%
+    dplyr::mutate(label_ypos_fctr = label_ypos*fctr) %>%
     tibble::as_tibble()
 
   if (!is.null(levels(SO[,x_cat]))) {
@@ -156,47 +160,40 @@ composition_barplot <- function(SO,
       ggplot2::scale_fill_manual(values = col_pal)
   }
 
+  if (plot_rel_labels || plot_abs_labels) {
+    table_temp <- table %>% dplyr::filter(rel_x >= min_label_freq)
 
-
-
-  if (plot_rel_labels) {
     if (y == "rel") {
-      plot <-
-        plot +
-        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                           ggplot2::aes(color = I(label_color), label = paste0(smart.round2(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = label_ypos*fctr),
-                           nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
-                           size = label_size)
+      y_plot <- "label_ypos_fctr"
     } else if (y == "abs") {
+      y_plot <- "n_label_ypos"
+    }
+
+    if (label_only_largest) {
+      table_temp <-
+        table_temp %>%
+        dplyr::group_by(!!rlang::sym(x_cat)) %>%
+        dplyr::slice_max(rel_x_fctr) %>%
+        dplyr::ungroup()
+    }
+
+    if (plot_rel_labels) {
       plot <-
         plot +
-        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                           ggplot2::aes(color = I(label_color), label = paste0(smart.round2(rel_x*fctr, label_rel_pct_decimals), " %"), x = !!rlang::sym(x_cat), y = n_label_ypos),
+        ggplot2::geom_text(data = table_temp,
+                           ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
                            nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
                            size = label_size)
     }
 
-    #position = ggplot2::position_stack(vjust = 0.5))
-  }
-
-  if (plot_abs_labels) {
-    if (y == "rel") {
+    if (plot_abs_labels) {
       plot <-
         plot +
-        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = label_ypos*fctr),
-                           nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
-                           size = label_size)
-    } else if (y == "abs") {
-      plot <-
-        plot +
-        ggplot2::geom_text(data = table %>% dplyr::filter(rel_x >= min_label_freq),
-                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = n_label_ypos),
+        ggplot2::geom_text(data = table_temp,
+                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
                            nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
                            size = label_size)
     }
-
-    #position = ggplot2::position_stack(vjust = 0.5))
   }
 
   if (plot_total_labels) {
