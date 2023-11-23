@@ -45,7 +45,7 @@ composition_barplot <- function(SO,
                                 summarize_all_x = F,
                                 label_rel_nudge = c(0,0),
                                 label_abs_nudge = c(0,0),
-                                label_size = 4,
+                                label_size = 4, # vector of label_size only considered if label_rel_nudge and label_abs_nudge are lists (or one of them)
                                 flip = F) {
 
 
@@ -117,8 +117,6 @@ composition_barplot <- function(SO,
     table$label_color <- ifelse(farver::decode_colour(table$bar_segment_cols, to = "hcl")[, "l"] > 50, "black", "white")
   }
 
-
-
   ## use cumsum approach to define label position in middle of bars
   ## this allow to remove label by min_label_freq and still have the correct coordinate
   ## coordinates became wrong with position = ggplot2::position_stack(vjust = 0.5) when some values were removed
@@ -174,25 +172,76 @@ composition_barplot <- function(SO,
         table_temp %>%
         dplyr::group_by(!!rlang::sym(x_cat)) %>%
         dplyr::slice_max(rel_x_fctr) %>%
-        dplyr::ungroup()
+        dplyr::ungroup() %>%
+        dplyr::arrange(clusters, rel_x_cumsum)
+    } else {
+      table_temp <-
+        table %>%
+        dplyr::arrange(clusters, rel_x_cumsum)
     }
 
     if (plot_rel_labels) {
-      plot <-
-        plot +
-        ggplot2::geom_text(data = table_temp,
-                           ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
-                           nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
-                           size = label_size)
+      ## individual nudging:
+      # add nudge_x and nudge_y to table
+      # order the table first by x_cat and cumsum
+      # this allows to provide a list of vectors for nudge_x and nudge_y
+      if (methods::is(label_rel_nudge, "list")) {
+        if (length(label_rel_nudge) != nrow(table_temp)) {
+          message("Length of label_rel_nudge and number of labels are not equal.")
+          if (label_size != 1 && length(label_size) != length(label_abs_nudge)) {
+            message("Length of label_size and number of labels are not equal. Will use the first entry of label.size for all.")
+          }
+        } else {
+          if (length(label_size) != length(label_rel_nudge)) {
+            label_size <- rep(label_size[1], length(label_rel_nudge))
+          }
+          for (j in seq_along(label_rel_nudge)) {
+            plot <-
+              plot +
+              ggplot2::geom_text(data = table_temp[j,],
+                                 ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                                 nudge_x = label_rel_nudge[[j]][1], nudge_y = label_rel_nudge[[j]][2],
+                                 size = label_size[j])
+          }
+        }
+      } else {
+        plot <-
+          plot +
+          ggplot2::geom_text(data = table_temp,
+                             ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                             nudge_x = label_rel_nudge[1], nudge_y = label_rel_nudge[2],
+                             size = label_size)
+      }
     }
 
     if (plot_abs_labels) {
-      plot <-
-        plot +
-        ggplot2::geom_text(data = table_temp,
-                           ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
-                           nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
-                           size = label_size)
+      if (methods::is(label_abs_nudge, "list")) {
+        if (length(label_abs_nudge) != nrow(table_temp)) {
+          message("Length of label_rel_nudge and number of labels are not equal.")
+          if (label_size != 1 && length(label_size) != length(label_abs_nudge)) {
+            message("Length of label_size and number of labels are not equal. Will use the first entry of label.size for all.")
+          }
+        } else {
+          if (length(label_size) != length(label_abs_nudge)) {
+            label_size <- rep(label_size[1], length(label_abs_nudge))
+          }
+          for (j in seq_along(label_abs_nudge)) {
+            plot <-
+              plot +
+              ggplot2::geom_text(data = table_temp[j,],
+                                 ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                                 nudge_x = label_abs_nudge[[j]][1], nudge_y = label_abs_nudge[[j]][2],
+                                 size = label_size[j])
+          }
+        }
+      } else {
+        plot <-
+          plot +
+          ggplot2::geom_text(data = table_temp,
+                             ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                             nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
+                             size = label_size)
+      }
     }
   }
 
