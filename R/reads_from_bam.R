@@ -121,6 +121,8 @@ reads_from_bam <- function(file_path,
       strand = reads[[x]][["strand"]],
       seq = reads[[x]][["seq"]], # as.character implicit
       qual = reads[[x]][["qual"]],
+      mapq = reads[[x]][["mapq"]],
+      cigar = reads[[x]][["cigar"]],
       stringsAsFactors = FALSE
     )
 
