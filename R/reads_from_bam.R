@@ -15,7 +15,9 @@
 #' @param add_flags a named list of columns to add; each element must have n elements (length of genomic_ranges)
 #' @param add_tags tags to extract from bam file, passed to Rsamtools::ScanBamParam(); character(0) for nothing; missing tags do not seem to matter
 #' @param read_scores calculate read scores from PhredQuality
-#' @param revcomp_minus_strand calculate reverse complement of reads on minus strand; passed as reverseComplement to Rsamtools::ScanBamParam
+#' @param revcomp_minus_strand calculate reverse complement of reads on minus strand; passed as reverseComplement to Rsamtools::ScanBamParam;
+#' for alignment to reference sequence, set it to FALSE; per default the sequence on + strand is returned (=FALSE), if one wants the
+#' sequence from - strand then set to TRUE
 #' @param lapply_fun lapply function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
 #'

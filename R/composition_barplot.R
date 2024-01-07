@@ -173,11 +173,11 @@ composition_barplot <- function(SO,
         dplyr::group_by(!!rlang::sym(x_cat)) %>%
         dplyr::slice_max(rel_x_fctr) %>%
         dplyr::ungroup() %>%
-        dplyr::arrange(clusters, rel_x_cumsum)
+        dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
     } else {
       table_temp <-
         table %>%
-        dplyr::arrange(clusters, rel_x_cumsum)
+        dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
     }
 
     if (plot_rel_labels) {
