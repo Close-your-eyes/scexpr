@@ -104,8 +104,7 @@ composition_barplot <- function(SO,
     data_total <- table0
   }
 
-
-
+  # check this somewhen; in some cases label_color is not defined and then an error occurs below
   if (!is.null(names(col_pal)) && any(!unique(table[,fill_cat,drop=T]) %in% names(col_pal))) {
     col_pal <- unname(col_pal)
   } else {
@@ -172,13 +171,11 @@ composition_barplot <- function(SO,
         table_temp %>%
         dplyr::group_by(!!rlang::sym(x_cat)) %>%
         dplyr::slice_max(rel_x_fctr) %>%
-        dplyr::ungroup() %>%
-        dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
-    } else {
-      table_temp <-
-        table %>%
-        dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
+        dplyr::ungroup()
     }
+    table_temp <-
+      table_temp %>%
+      dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
 
     if (plot_rel_labels) {
       ## individual nudging:
