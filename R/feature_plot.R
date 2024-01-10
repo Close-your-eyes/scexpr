@@ -208,6 +208,7 @@ feature_plot <- function(SO,
                          expand_limits = list(), # arguments to ggplot2::expand_limits
                          color.scale.labels = NULL,
                          geom_richtext.args = list(label.colour = NA, fill = NA, size = 4, color = "black"),
+                         facet_grid_row_var = NULL,
                          ...) {
 
   ## geom textpath for contour lines?
@@ -308,6 +309,10 @@ feature_plot <- function(SO,
                       na.rm = na.rm,
                       inf.rm = inf.rm,
                       trajectory.slot = trajectory.slot)
+
+    if (!is.null(facet_grid_row_var)) {
+      data$facet_grid_row <- facet_grid_row_var
+    }
 
     if (!is.data.frame(data)) {
       ## when !is.null(trajectory.slot) and the slot has been found
@@ -580,10 +585,14 @@ feature_plot <- function(SO,
       ggplot2::ggtitle(substitute(paste(x, sep = ""), list(x = title))) +
       ggplot2::theme(plot.title = ggplot2::element_text(size = title.font.size, family = font.family),
                      strip.text.x = ggplot2::element_text(size = strip.font.size, family = font.family),
+                     strip.text.y = ggplot2::element_text(size = strip.font.size, family = font.family),
                      legend.background = ggplot2::element_blank(),
                      legend.key.size = ggplot2::unit(legend.key.size, "cm"),
                      legend.key = ggplot2::element_blank(), ## keeps background of legend symbols transparent
                      ...)
+
+    # add default options to put legend closer to the plot
+    # add the way theme argument are passed somewhen
 
 
     # plot contours, optionally
@@ -770,7 +779,14 @@ feature_plot <- function(SO,
     }
 
     # define facets and plot freq.of.expr annotation
-    wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales, nrow = nrow.inner, ncol = ncol.inner)}
+   # browser()
+    # facet_grid_row
+    # facet_grid_row_var
+    if (is.null(facet_grid_row_var)) {
+      wrap_by <- function(...) {ggplot2::facet_wrap(ggplot2::vars(...), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales, nrow = nrow.inner, ncol = ncol.inner)}
+    } else {
+      wrap_by <- function(...) {ggplot2::facet_grid(cols = ggplot2::vars(...), rows = ggplot2::vars(facet_grid_row), labeller = ggplot2::label_wrap_gen(multi_line = F), scales = split.by.scales)}
+    }
     if (is.null(SO.split) && !is.null(split.by)) {
       plot <- plot + wrap_by(split.by)
     } else if (!is.null(SO.split) && is.null(split.by)) {
