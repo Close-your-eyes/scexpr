@@ -1,12 +1,25 @@
-#' Title
+#' Compare entries of two compatible UMI matrices
 #'
-#' @param mat1
-#' @param mat2
+#' Matrices will be reduces to matching rownames and columnnames.
+#' Then root mean square error (RSME), total and relative differences in UMIs counts
+#' are computed. This is done for matrix as a whole as well as rowwise. Rows are expected
+#' to contain features. It is expected that matrices contain positive values only.
+#' An error will not be thrown if this is violated, though.
 #'
-#' @return
+#' @param mat1 matrix 1 with rownames and colnames
+#' @param mat2 matrix 2 with rownames and colnames
+#'
+#' @return list with measures of differences or errors, as a whole and rowwise
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' mat1 <- random_matrix_normal <- matrix(rnorm(5 * 6), nrow = 5, ncol = 6)
+#' mat2 <- random_matrix_normal <- matrix(rnorm(5 * 6), nrow = 5, ncol = 6)
+#' colnames(mat1) <- colnames(mat2) <- 1:ncol(mat1)
+#' rownames(mat1) <- rownames(mat2) <- 1:nrow(mat1)
+#' mat_diff <- compare_UMI_matrices(mat1 = mat1, mat2 = mat2)
+#' }
 compare_UMI_matrices <- function(mat1, mat2) {
 
   matching_cols <- intersect(colnames(mat1), colnames(mat2))
@@ -56,6 +69,7 @@ compare_UMI_matrices <- function(mat1, mat2) {
                                     dplyr::left_join, by = "ind")
   names(rowwise_error_df)[which(names(rowwise_error_df) == "ind")] <- "rowname"
   rowwise_error_df <- rowwise_error_df[,c(2,1,3,4,5,6)]
+  rowwise_error_df$rowname <- as.character(rowwise_error_df$rowname)
 
   return(list(RSME = rmse,
               MSE = mse,
