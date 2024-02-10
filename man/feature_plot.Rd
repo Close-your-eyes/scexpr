@@ -100,6 +100,7 @@ feature_plot(
   expand_limits = list(),
   color.scale.labels = NULL,
   geom_richtext.args = list(label.colour = NA, fill = NA, size = 4, color = "black"),
+  facet_grid_row_var = NULL,
   ...
 )
 }

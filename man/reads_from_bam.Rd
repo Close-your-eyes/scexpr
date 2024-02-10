@@ -26,7 +26,9 @@ reads_from_bam(
 
 \item{read_scores}{calculate read scores from PhredQuality}
 
-\item{revcomp_minus_strand}{calculate reverse complement of reads on minus strand; passed as reverseComplement to Rsamtools::ScanBamParam}
+\item{revcomp_minus_strand}{calculate reverse complement of reads on minus strand; passed as reverseComplement to Rsamtools::ScanBamParam;
+for alignment to reference sequence, set it to FALSE; per default the sequence on + strand is returned (=FALSE), if one wants the
+sequence from - strand then set to TRUE}
 
 \item{lapply_fun}{lapply function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 

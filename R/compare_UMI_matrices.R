@@ -22,6 +22,10 @@
 #' }
 compare_UMI_matrices <- function(mat1, mat2) {
 
+  if (is.null(colnames(mat1)) || is.null(colnames(mat2)) || is.null(rownames(mat1)) || is.null(rownames(mat2))) {
+    stop("mat1 and mat2 need to have rows.")
+  }
+
   matching_cols <- intersect(colnames(mat1), colnames(mat2))
   matching_rows <- intersect(rownames(mat1), rownames(mat2))
   mat1 <- as.matrix(mat1[matching_rows,matching_cols])
@@ -70,6 +74,15 @@ compare_UMI_matrices <- function(mat1, mat2) {
   names(rowwise_error_df)[which(names(rowwise_error_df) == "ind")] <- "rowname"
   rowwise_error_df <- rowwise_error_df[,c(2,1,3,4,5,6)]
   rowwise_error_df$rowname <- as.character(rowwise_error_df$rowname)
+
+  rowwise_error_df$abs_umi_group = cut(rowwise_error_df$abs_umi,
+                         include.lowest = T,
+                         breaks = c(1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8))
+  levels <- c(0, levels(rowwise_error_df$abs_umi_group))
+  rowwise_error_df$abs_umi_group <- as.character(rowwise_error_df$abs_umi_group)
+  rowwise_error_df$abs_umi_group[which(is.na(rowwise_error_df$abs_umi_group))] <- "0"
+  rowwise_error_df$abs_umi_group <- factor(rowwise_error_df$abs_umi_group, levels = levels)
+
 
   return(list(RSME = rmse,
               MSE = mse,
