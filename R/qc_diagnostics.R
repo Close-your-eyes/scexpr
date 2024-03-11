@@ -72,6 +72,8 @@ qc_diagnostic <- function(data_dirs,
                           invert_cells = F,
                           feature_rm = NULL,
                           feature_aggr = NULL,
+                          ffbms = NULL,
+                          rfbms = NULL,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -123,22 +125,45 @@ qc_diagnostic <- function(data_dirs,
 
   #dots <- list(...)
 
-  checked_dirs <- check_dir(data_dirs = data_dirs, SoupX = SoupX)
-  data_dirs <- checked_dirs[[1]]
-  if (SoupX && !checked_dirs[[2]]) {
-    message("raw_feature_bc_matrix not found in every data_dir. SoupX set to FALSE.")
-  }
-  SoupX <- checked_dirs[[2]]
-  if (return_SoupX && !checked_dirs[[3]] && SoupX) {
-    message("More than one data_dir provided. return_SoupX set to FALSE.")
-  }
-  return_SoupX <- checked_dirs[[3]]
-  if (!SoupX) {
+  if (is.null(ffbms) && is.null(rfbms)) {
+    checked_dirs <- check_dir(data_dirs = data_dirs, SoupX = SoupX)
+    data_dirs <- checked_dirs[[1]]
+
+    if (SoupX && !checked_dirs[[2]]) {
+      message("raw_feature_bc_matrix not found in every data_dir. SoupX set to FALSE.")
+    }
+    SoupX <- checked_dirs[[2]]
+    if (return_SoupX && !checked_dirs[[3]] && SoupX) {
+      message("More than one data_dir provided. return_SoupX set to FALSE.")
+    }
+    return_SoupX <- checked_dirs[[3]]
+    if (!SoupX) {
+      return_SoupX <- F
+    }
+    ffbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices", x))]))
+    rfbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("raw_feature_bc_matrix|raw_gene_bc_matrices", x))]))
+  } else {
+    if (SoupX) {
+      message("ffbms and/or rfbms provided directly. SoupX and returnSoupX set to FALSE.")
+      SoupX <- F
+    }
     return_SoupX <- F
+    if (decontX) {
+      message("ffbms and/or rfbms provided directly. decontX set to FALSE.")
+      decontX <- F
+    }
+    if (!is.null(ffbms)) {
+      if (is.null(names(ffbms))) {
+        stop("ffbms need to have names.")
+      }
+    }
+    if (!is.null(rfbms)) {
+      if (is.null(names(rfbms))) {
+        stop("rfbms need to have names.")
+      }
+    }
   }
 
-  ffbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices", x))]))
-  rfbms <- unlist(lapply(data_dirs, function(x) x[which(grepl("raw_feature_bc_matrix|raw_gene_bc_matrices", x))]))
 
   if (any(duplicated(names(ffbms)))) {
     print(ffbms)
@@ -412,7 +437,7 @@ qc_diagnostic <- function(data_dirs,
 
     for (nn in n_PCs_to_meta_clustering) {
       if (nn > 0) {
-        meta2 <- scale_min_max(cbind(meta, SOx@reductions[[ifelse(length(data_dirs) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn]))
+        meta2 <- scale_min_max(cbind(meta, SOx@reductions[[ifelse(length(ffbms) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
       } else {
         meta2 <- scale_min_max(meta)
       }
