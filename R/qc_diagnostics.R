@@ -74,10 +74,14 @@ qc_diagnostic <- function(data_dirs,
                           feature_aggr = NULL,
                           ffbms = NULL,
                           rfbms = NULL,
+                          batch_corr = c("harmony", "none"),
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
     utils::install.packages("matrixStats")
+  }
+  if (!requireNamespace("hdf5r", quietly = T)) {
+    utils::install.packages("hdf5r")
   }
   if (!requireNamespace("uwot", quietly = T)) {
     utils::install.packages("uwot")
@@ -123,6 +127,8 @@ qc_diagnostic <- function(data_dirs,
     stop("n_PCs_to_meta_clustering should be numeric.")
   }
 
+  batch_corr <- match.arg(batch_corr, c("harmony", "none"))
+
   #dots <- list(...)
 
   if (is.null(ffbms) && is.null(rfbms)) {
@@ -162,6 +168,11 @@ qc_diagnostic <- function(data_dirs,
         stop("rfbms need to have names.")
       }
     }
+  }
+
+  if (length(ffbms) == 1 && batch_corr == "harmony") {
+    message("Only one sample provided. Setting batch_corr to 'none'.")
+    batch_corr <- "none"
   }
 
 
@@ -259,8 +270,8 @@ qc_diagnostic <- function(data_dirs,
         message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are exlcuded to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
       }
       SO <- subset(SO, cells = setdiff(names(factors), zero_libsize_cells))
-
-      SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"),
+      # scDblFinder
+      SO@meta.data$dbl_score <- computeDoubletDensity(x = Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"),
                                                                    subset.row = var_feat,
                                                                    dims = npcs)
       SO@meta.data$dbl_score_log <- log1p(SO@meta.data$dbl_score)
@@ -279,7 +290,7 @@ qc_diagnostic <- function(data_dirs,
                 reductions = "umap",
                 nhvf = nhvf,
                 npcs = npcs,
-                batch_corr = "harmony",
+                batch_corr = batch_corr,
                 RunHarmony_args = list(group.by.vars = "orig.ident"),
                 FindClusters_args = list(resolution = resolution),
                 normalization = "LogNormalize",
@@ -339,6 +350,7 @@ qc_diagnostic <- function(data_dirs,
                          reductions = "umap",
                          nhvf = nhvf,
                          npcs = npcs,
+                         batch_corr = batch_corr,
                          RunHarmony_args = list(group.by.vars = "orig.ident"),
                          FindClusters_args = list(resolution = resolution),
                          normalization = "LogNormalize",
@@ -425,6 +437,9 @@ qc_diagnostic <- function(data_dirs,
     SOx@meta.data$nFeature_RNA_log <- log1p(SOx@meta.data$nFeature_RNA)
     SOx@meta.data$nCount_RNA_log <- log1p(SOx@meta.data$nCount_RNA)
     SOx@meta.data$pct_mt_log <- log1p(SOx@meta.data$pct_mt)
+    # this could be done above with SO
+    SOx@meta.data$pct_mt <- ifelse(is.na(SOx@meta.data$pct_mt), 0,SOx@meta.data$pct_mt)
+    SOx@meta.data$pct_mt_log <- ifelse(is.na(SOx@meta.data$pct_mt_log ), 0, SOx@meta.data$pct_mt_log )
 
     ## multi-dirs: split matrix!
     SOx@meta.data$residuals <- unlist(lapply(unique(SOx@meta.data$orig.ident), function(x) {
@@ -437,12 +452,17 @@ qc_diagnostic <- function(data_dirs,
 
     for (nn in n_PCs_to_meta_clustering) {
       if (nn > 0) {
-        meta2 <- scale_min_max(cbind(meta, SOx@reductions[[ifelse(length(ffbms) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
+       if (batch_corr == "harmony" && length(ffbms) > 1) {
+         temp_slot <- "harmony"
+        } else {
+          temp_slot <- "pca"
+        }
+        meta2 <- scale_min_max(cbind(meta, SOx@reductions[[temp_slot]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
       } else {
         meta2 <- scale_min_max(meta)
       }
 
-      umap_dims <- uwot::umap(meta2, metric = "cosine")
+      umap_dims <- uwot::umap(X = meta2, metric = "cosine")
       colnames(umap_dims) <- c(paste0("meta_UMAP_1_PC", nn), paste0("meta_UMAP_2_PC", nn))
       SOx[[paste0("umapmetaPC", nn)]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = paste0("UMAPMETAPC", nn, "_"), assay = "RNA")
 
