@@ -28,26 +28,12 @@
 #' of expressing cells; 0.1 stands for min 10 % expressing cells
 #' @param max.padj filter features across levels in meta.col for a significance
 #' level of differential expression (one level vs. all others)
-#' @param title which title to add to plot; if NULL no title is plotted
-#' @param title.font.size font size of title
-#' @param font.family which font type (family) to use for plotting,
-#' e.g. mono or sans
-#' @param y.font.size font size of features names on y-axis
 #' @param color color of stroke (border) around tiles or dots; "NA" means no stroke is plotted; NA has
 #' to be put in quotation mark ("NA"), such that geom_point accepts it.
 #' other choices may be black, white or any other color code; when "auto" a grey70 is used
 #' when dotplot = F and a the number of features is below 100.
 #' @param plot.feature.breaks
 #' @param plot.sec.axis
-#' @param legend.position
-#' @param legend.direction
-#' @param legend.barheight
-#' @param legend.barwidth
-#' @param legend.text.size
-#' @param legend.title.text.size
-#' @param legend.title.fill
-#' @param legend.title.size
-#' @param legend.title.position
 #' @param legend.labels
 #' @param feature.labels
 #' @param feature.labels.nudge_x
@@ -74,17 +60,20 @@
 #' if auto, then roughly scexpr::col_pal(name = "RColorBrewer::RdBu", n = 11, direction = -1) is used.
 #' if !is.null(n.colorsteps) this scale is adjusted to make sure the split between blue and red happens at zero.
 #' when a color scale is provided manually a meaningful split of a diverging scale at zero has to be forced manually.
-#' @param flip.axes
-#' @param legend.title.hjust
+#' @param flip.axes flip x and y axes
 #' @param n.colorsteps number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
 #' if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn
 #' @param nice.breaks passed to scale_fill_stepsn if length(n.colorsteps) == 1
 #' @param show.limits passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend
-#' @param dotplot
+#' @param dotplot do not plot tiles but dots, the size of which then indicates the percentage of transcribing cells
 #' @param legend.decimals passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to
-#' @param border_linewidth linewidth (geom_tile) or stroke (geom_point); defines the size of borders aroung tiles or points
-#' @param legend.size.ncol
-#' @param legend.size.nrow
+#' @param border_linewidth linewidth (geom_tile) or stroke (geom_point); defines the size of borders around tiles or points
+#' @param convert_gene_identifier_args list of named arguments to scexpr::convert_gene_identifier; only needed
+#' if plot.sec.axis is TRUE, most likely you may have to set species to Hs or Mm as needed, in case it cannot be guessed.
+#' @param theme ggplot theme, has to be passed with brackets
+#' @param theme_args arguments to theme
+#' @param legend_fill_args arguments passed to ggplot2::guide_colorsteps or ggplot2::guide_colorbar, depend upon the color scale
+#' @param legend_size_args arguments passed to ggplot2::guide_legend to modify the size legend, only applies if dotplot = T
 #'
 #' @importFrom magrittr %>%
 #'
@@ -101,16 +90,12 @@ heatmap_pseudobulk <- function(SO,
                                feature_selection_strategy = c(2,1),
                                order_features = F,
                                normalization = "scale", # scale, c(-1,1), NULL
-                               topn.features = 10,
+                               topn.features = 5,
                                break.ties = c(T, F),
                                topn.metric = c("padj", "logFC", "auc"),
                                min.pct = 0.1,
                                max.padj = 0.05,
-                               title = NULL,
-                               title.font.size = 14,
-                               font.family = "sans",
 
-                               y.font.size = 10,
                                color = "auto",
                                border_linewidth = 0.2,
                                fill = "auto",
@@ -121,31 +106,42 @@ heatmap_pseudobulk <- function(SO,
                                dotplot = F,
                                plot.feature.breaks = T,
                                plot.sec.axis = F,
-
                                flip.axes = F,
-
-                               legend.position = "right",
-                               legend.direction = "vertical",
-                               legend.barheight = 8,
-                               legend.barwidth = 1,
-                               legend.text.size = 10,
-                               legend.title.text.size = 10,
-                               legend.title.fill = "auto",
-                               legend.title.size = "transcription\nfrequency [%]",
-                               legend.title.position = "top",
-                               legend.title.hjust = 0.5,
                                legend.labels = c("min", "", "max"),
-                               legend.size.ncol = NULL,
-                               legend.size.nrow = NULL,
                                feature.labels = NULL,
                                feature.labels.nudge_x = -0.1,
                                feature.labels.axis.width = 0.2,
                                plot_hlines_between_groups = F,
                                hlines = NULL,
                                hlines_args = list(),
+                               convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
+                               theme = ggplot2::theme_classic(),
+                               theme_args = list(axis.title = ggplot2::element_blank(),
+                                                 axis.text.x = ggplot2::element_text(),
+                                                 axis.text.y = ggplot2::element_text(size = 10, face = "italic"),
+                                                 legend.position = "right",
+                                                 legend.direction = "vertical"),
+                               legend_fill_args = list(label.theme = ggplot2::element_text(size = 10),
+                                                       title.theme = ggplot2::element_text(size = 10),
+                                                       title.position = "top",
+                                                       title = "..auto..",
+                                                       title.hjust = 0.5,
+                                                       barwidth = 1,
+                                                       barheight = 8,
+                                                       order = 1),
+                               legend_size_args = list(label.theme = ggplot2::element_text(size = 10),
+                                                       title.theme = ggplot2::element_text(size = 10),
+                                                       title.position = "top",
+                                                       title = "transcription\nfrequency [%]",
+                                                       title.hjust = 0.5,
+                                                       label.position = "bottom",
+                                                       order = 2,
+                                                       ncol = NULL,
+                                                       nrow = NULL,
+                                                       override.aes = list(color = "black")),
                                ...) {
 
-  # ... arguments to ggrepel, like nudge_y and scexpr::convert_gene_identifier
+  # ... arguments to ggrepel, like nudge_y
 
   if (!requireNamespace("devtools", quietly = T)) {
     utils::install.packages("devtools")
@@ -187,18 +183,21 @@ heatmap_pseudobulk <- function(SO,
     message("hlines provided but plot_hlines_between_groups is FALSE.")
   }
 
-  if (methods::is(normalization, "character") && normalization == "scale" && legend.title.fill == "auto") {
-    legend.title.fill <- "transcription\nlevel [z-score]"
-  } else if (legend.title.fill == "auto") {
-    legend.title.fill <- "transcription\nlevel"
+  if (methods::is(normalization, "character") && normalization == "scale" && "title" %in% names(legend_fill_args) && legend_fill_args[["title"]] == "..auto..") {
+    legend_fill_args[["title"]] <- "transcription\nlevel [z-score]"
+  } else if ("legend.title" %in% names(legend_fill_args) && legend_fill_args[["title"]] == "..auto..") {
+    legend_fill_args[["title"]] <- "transcription\nlevel"
   }
 
-  legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
-  if (legend.direction == "horizontal") {
-    temp <- legend.barwidth
-    legend.barwidth <- legend.barheight
-    legend.barheight <- temp
+  #legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
+  if ("legend.direction" %in% names(theme_args)) {
+    if (theme_args$legend.direction == "horizontal") {
+      temp <- legend.barwidth
+      legend.barwidth <- legend.barheight
+      legend.barheight <- temp
+    }
   }
+
 
   SO <- .check.SO(SO = SO, assay = assay) #length = 1
   assay <- Seurat::DefaultAssay(SO[[1]])
@@ -316,6 +315,17 @@ heatmap_pseudobulk <- function(SO,
   }
 
   # filter non-expressed features with rowSums
+  # filter group wise for min_pct with tapply; umi_mat in apply has to be coverted to dense - too expensive
+'  group_vec <- unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T]), use.names = F)
+  umi_mat <- do.call(cbind, purrr::map(SO, Seurat::GetAssayData, slot = "data", assay = assay))
+  temp_tapply_fun <- function(vec, group_vec) {tapply(vec, group_vec, function(x) sum(x>0)/length(x))}
+  out <- purrr::map(split(1:ncol(umi_mat), ceiling(seq_along(1:ncol(umi_mat))/1000)), function(inds) {
+    tt <- apply(umi_mat[inds,], MARGIN = 1, FUN = temp_tapply_fun, group_vec = group_vec)
+    presto_feat <- names(which(apply(tt, MARGIN = 2, function(x) any(x > min.pct))))
+    return(presto_feat)
+  }, .progress = T)'
+
+
   presto_feat <- unique(unlist(purrr::map(SO, function(x) names(which(Matrix::rowSums(Seurat::GetAssayData(x, slot = "data", assay = assay)) > 0)))))
   if (!is.null(features)) {
     features <- .check.features(SO = SO, features = unique(features), meta.data = F)
@@ -328,7 +338,7 @@ heatmap_pseudobulk <- function(SO,
   # by default, presto gives deviating results with respect to avgExpr and logFC
   # use expm1 to match results Seurats procedure, see example below (comparison of presto and Seurat)
   wil_auc_raw <- presto::wilcoxauc(X = Gmisc::fastDoCall(cbind, lapply(SO, function(x) expm1(Seurat::GetAssayData(x, slot = "data", assay = assay)[presto_feat,]))),
-                                   y = unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T])))
+                                   y = unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T]), use.names = F))
 
   # prep features variable here to have one common pipeline below
   if (is.null(features)) {
@@ -339,8 +349,6 @@ heatmap_pseudobulk <- function(SO,
   ## when no features are provided (features = NULL), then order_features is always TRUE.
   ## when !is.null(features), order_features may be TRUE or FALSE
 
-
-  ## make this a separate function
   if (order_features) {
     features3 <- feature_order_fun(wil_auc_raw = wil_auc_raw,
                                    topn.features = topn.features,
@@ -396,18 +404,6 @@ heatmap_pseudobulk <- function(SO,
     dplyr::filter(group %in% unlist(levels.plot)) %>%
     dplyr::mutate(group = factor(group, levels = unlist(levels.plot))) %>%
     dplyr::mutate(feature = factor(feature, levels = unique(features)))
-
-
-  '  htp <-
-    as.data.frame(wil_auc_mat) %>%
-    tibble::rownames_to_column("Feature") %>%
-    dplyr::filter(Feature %in% features) %>%
-    tidyr::pivot_longer(cols = -Feature, names_to = "cluster", values_to = "avgExpr") %>%
-    dplyr::filter(cluster %in% unlist(levels.plot)) %>%
-    dplyr::left_join(wil_auc[,c(which(names(wil_auc) %in% c("feature", "group", "pct_in")))], by = c("Feature" = "feature", "cluster" = "group")) %>%
-    dplyr::mutate(cluster = factor(cluster, levels = unlist(levels.plot))) %>%
-    dplyr::mutate(Feature = factor(Feature, levels = unique(features)))
-  '
 
   scale.max <- as.numeric(format(floor_any(max(wil_auc$avgExpr), 0.1), nsmall = 1))
   scale.min <- as.numeric(format(ceiling_any(min(wil_auc$avgExpr), 0.1), nsmall = 1))
@@ -471,28 +467,28 @@ heatmap_pseudobulk <- function(SO,
     }
   }
 
+  if (flip.axes) {
+    if ("axis.text.x" %in% names(theme_args) && "axis.text.y" %in% names(theme_args)) {
+      names(theme_args)[which(names(theme_args) == "axis.text.x")] <- "axis.text.x2"
+      names(theme_args)[which(names(theme_args) == "axis.text.y")] <- "axis.text.x"
+      names(theme_args)[which(names(theme_args) == "axis.text.x2")] <- "axis.text.y"
+    } else if ("axis.text.x" %in% names(theme_args)) {
+      names(theme_args)[which(names(theme_args) == "axis.text.x")] <- "axis.text.y"
+    } else if ("axis.text.y" %in% names(theme_args)) {
+      names(theme_args)[which(names(theme_args) == "axis.text.y")] <- "axis.text.x"
+    }
+  }
 
   if (flip.axes) {
-    heatmap.plot <-
-      ggplot2::ggplot(wil_auc, ggplot2::aes(y = group, x = feature, fill = avgExpr)) +
-      ggplot2::theme_classic() +
-      ggplot2::theme(axis.text.y = ggplot2::element_text(family = font.family),
-                     axis.text.x = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family))
-
+    heatmap.plot <- ggplot2::ggplot(wil_auc, ggplot2::aes(y = group, x = feature, fill = avgExpr))
   } else {
-    heatmap.plot <-
-      ggplot2::ggplot(wil_auc, ggplot2::aes(x = group, y = feature, fill = avgExpr)) +
-      ggplot2::theme_classic() +
-      ggplot2::theme(axis.text.x = ggplot2::element_text(family = font.family),
-                     axis.text.y = ggplot2::element_text(size = y.font.size, face = "italic", family = font.family))
+    heatmap.plot <- ggplot2::ggplot(wil_auc, ggplot2::aes(x = group, y = feature, fill = avgExpr))
   }
 
   heatmap.plot <-
     heatmap.plot +
-    ggplot2::ggtitle(title) +
-    ggplot2::theme(title = ggplot2::element_text(size = title.font.size, family = font.family),
-                   axis.title = ggplot2::element_blank(),
-                   legend.position = legend.position, legend.direction = legend.direction)
+    theme +
+    Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
 
   if (dotplot) {
     heatmap.plot <- heatmap.plot + ggplot2::geom_point(ggplot2::aes(size = pct_in), shape = 21, color = color, stroke = border_linewidth)
@@ -527,30 +523,13 @@ heatmap_pseudobulk <- function(SO,
 
   heatmap.plot <-
     heatmap.plot +
-    ggplot2::guides(fill = guide_fun(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                     title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
-                                     title.position = legend.title.position,
-                                     title = legend.title.fill,
-                                     title.hjust = legend.title.hjust,
-                                     barwidth = legend.barwidth,
-                                     barheight = legend.barheight,
-                                     order = 1),
-                    size = ggplot2::guide_legend(label.theme = ggplot2::element_text(size = legend.text.size, family = font.family),
-                                                 title.theme = ggplot2::element_text(size = legend.title.text.size, family = font.family),
-                                                 title.position = legend.title.position,
-                                                 title = legend.title.size,
-                                                 title.hjust = legend.title.hjust,
-                                                 label.position = "bottom",
-                                                 order = 2,
-                                                 ncol = legend.size.ncol,
-                                                 nrow = legend.size.nrow,
-                                                 override.aes = list(color = "black")))
-
+    ggplot2::guides(fill = Gmisc::fastDoCall(guide_fun, args = legend_fill_args),
+                    size = Gmisc::fastDoCall(ggplot2::guide_legend, args = legend_size_args))
 
   if (plot.feature.breaks & !is.null(feature.labels)) {
     axis.df <- data.frame(y = 1:length(levels(wil_auc$feature)), feature = levels(wil_auc$feature))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = feature)) +
-      ggrepel::geom_text_repel(fontface = "italic", family = font.family, data = axis.df[which(axis.df$feature %in% feature.labels),], ggplot2::aes(label = feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
+      ggrepel::geom_text_repel(fontface = "italic", data = axis.df[which(axis.df$feature %in% feature.labels),], ggplot2::aes(label = feature), nudge_x = feature.labels.nudge_x, direction = "y", ...) +
       ggplot2::scale_x_continuous(limits = c(-0.1, 0), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::scale_y_continuous(limits = c(0, length(levels(wil_auc$feature)) + 0.5), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme_void()
@@ -559,11 +538,10 @@ heatmap_pseudobulk <- function(SO,
   }
 
   if (plot.sec.axis) {
-    out <- convert_gene_identifier(idents = levels(wil_auc$feature), ident_in = "SYMBOL", ident_out = "GENENAME", ...)
-    #out <- AnnotationDbi::mapIds(org.Hs.eg.db::org.Hs.eg.db, keys = levels(htp$Feature), keytype = "SYMBOL", column = i, multiVals = "first")
+    out <- Gmisc::fastDoCall(scexpr::convert_gene_identifier, args = c(list(idents = levels(wil_auc$feature)), convert_gene_identifier_args))
     axis.df <- data.frame(y = 1:length(levels(wil_auc$feature)), feature = levels(wil_auc$feature)) %>% dplyr::left_join(out, by = c("feature" = "SYMBOL"))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = GENENAME)) +
-      ggplot2::geom_text(hjust = 0, family = font.family) +
+      ggplot2::geom_text(hjust = 0) +
       ggplot2::scale_x_continuous(limits = c(0, 2), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::scale_y_continuous(limits = c(0.4, length(levels(wil_auc$feature)) + 0.4), expand = c(0, 0), breaks = NULL, labels = NULL, name = NULL) +
       ggplot2::theme(panel.background = ggplot2::element_blank(), plot.margin = ggplot2::margin(0, 0, 0, 0, "pt"), axis.title = ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.ticks = ggplot2::element_blank())
