@@ -20,6 +20,9 @@ qc_diagnostic(
   invert_cells = F,
   feature_rm = NULL,
   feature_aggr = NULL,
+  ffbms = NULL,
+  rfbms = NULL,
+  batch_corr = c("harmony", "none"),
   ...
 )
 }
