@@ -440,14 +440,19 @@ heatmap_pseudobulk <- function(SO,
       n.colorsteps <- seq(-1, 1, 0.5)
     } else {
       # this may be subject to optimization
-      n.colorsteps <- seq(-min_bin,min_bin,1)
+      #n.colorsteps <- seq(-min_bin,min_bin,1)
+      n.colorsteps <- seq(-n_neg_bin,n_pos_bin1,1)
     }
   }
 
   if (fill == "auto") {
-    fill <- scexpr::col_pal(name = "RColorBrewer::RdBu", n = 10, direction = -1) # keep an even number ?
-    #fill <- fill[-c(1:2,11)] # rm very dark colors. uhhh, so negative.
-    # how many to remove such that the procedure below works? even or odd?
+    fill <- scexpr::col_pal(name = "RColorBrewer::RdBu", n = 11, direction = -1)[-c(1,11)]
+    # increase color scale length here with *10
+    fill <- prismatic::color(grDevices::colorRampPalette(fill)(length(n.colorsteps)*10))
+
+    # somehow, for scale_fill_stepsn a color scale with one blue color only
+    # and 4 red yield an ugly color scale. we have to interpolate the color scale by factor then
+    # but then pick n colors * 5 depend upond if bins of n.colorsteps are negative or positive
 
     # condition on n.colorsteps needed here?
     #if (length(n.colorsteps) > 1 || n.colorsteps == "auto") {
@@ -459,7 +464,9 @@ heatmap_pseudobulk <- function(SO,
         fill <- fill[-rm_top_bins]
       } else if (n_neg_bin < n_pos_bin1) {
         # more positive bins then negative: remove colors from bottom of the scale
-        fill <- fill[-(1:c(n_pos_bin1-n_neg_bin))]
+        # here multiply by 5 and accordingly to color scale bins, pick a respective number from bottom and top
+        top_bins <- (length(fill)-(n_pos_bin2*5-1)):length(fill)
+        fill <- fill[c(1:(n_neg_bin*5), top_bins)]
       }
     }
   }
