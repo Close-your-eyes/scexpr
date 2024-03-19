@@ -2,30 +2,27 @@
 % Please edit documentation in R/heatmap_pseudobulk.R
 \name{heatmap_pseudobulk}
 \alias{heatmap_pseudobulk}
-\title{Title}
+\title{Plot a heatmap of average gene transcription of transcriptomes in different groups (clusters)}
 \usage{
 heatmap_pseudobulk(
   SO,
   meta.col = NULL,
   levels.calc = NULL,
   levels.plot = NULL,
-  assay = c("RNA", "SCT"),
+  assay = "RNA",
   features = NULL,
   feature_selection_strategy = c(2, 1),
   order_features = F,
   normalization = "scale",
-  topn.features = 10,
+  topn.features = 5,
   break.ties = c(T, F),
   topn.metric = c("padj", "logFC", "auc"),
   min.pct = 0.1,
   max.padj = 0.05,
-  title = NULL,
-  title.font.size = 14,
-  font.family = "sans",
-  y.font.size = 10,
-  color = "NA",
-  fill = scexpr::col_pal(name = "RColorBrewer::RdBu", n = 11, direction = -1),
-  n.colorsteps = NULL,
+  color = "auto",
+  border_linewidth = 0.2,
+  fill = "auto",
+  n.colorsteps = "auto",
   nice.breaks = F,
   show.limits = T,
   legend.decimals = 1,
@@ -33,25 +30,25 @@ heatmap_pseudobulk(
   plot.feature.breaks = T,
   plot.sec.axis = F,
   flip.axes = F,
-  legend.position = "right",
-  legend.direction = "vertical",
-  legend.barheight = 8,
-  legend.barwidth = 1,
-  legend.text.size = 10,
-  legend.title.text.size = 10,
-  legend.title.fill = NULL,
-  legend.title.size = NULL,
-  legend.title.position = "top",
-  legend.title.hjust = 0.5,
   legend.labels = c("min", "", "max"),
-  legend.size.ncol = NULL,
-  legend.size.nrow = NULL,
   feature.labels = NULL,
   feature.labels.nudge_x = -0.1,
   feature.labels.axis.width = 0.2,
   plot_hlines_between_groups = F,
   hlines = NULL,
   hlines_args = list(),
+  convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
+  theme = ggplot2::theme_classic(),
+  theme_args = list(axis.title = ggplot2::element_blank(), axis.text.x =
+    ggplot2::element_text(), axis.text.y = ggplot2::element_text(size = 10, face =
+    "italic"), legend.position = "right", legend.direction = "vertical"),
+  legend_fill_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
+    ggplot2::element_text(size = 10), title.position = "top", title = "..auto..",
+    title.hjust = 0.5, barwidth = 1, barheight = 8, order = 1),
+  legend_size_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
+    ggplot2::element_text(size = 10), title.position = "top", title =
+    "transcription\\nfrequency [\%]", title.hjust = 0.5, label.position = "bottom", order
+    = 2, ncol = NULL, nrow = NULL, override.aes = list(color = "black")),
   ...
 )
 }
@@ -88,7 +85,7 @@ not relevant when is.null(features)}
 use base::scale and transform average expression value to a standardized
 normal distribution or may be a numeric vector of length 2 for scaling
 each feature from min (first value) to max (second value); in the latter case
-c(-1,1) is most meaningful}
+c(-1,1) is most meaningful; set to NULL to not have any normalization computed}
 
 \item{topn.features}{if no features are selected, this will select how many
 features to plot per level in meta.col; selection is done based on the metric
@@ -107,17 +104,17 @@ of expressing cells; 0.1 stands for min 10 \% expressing cells}
 \item{max.padj}{filter features across levels in meta.col for a significance
 level of differential expression (one level vs. all others)}
 
-\item{title}{which title to add to plot; if NULL no title is plotted}
+\item{color}{color of stroke (border) around tiles or dots; "NA" means no stroke is plotted; NA has
+to be put in quotation mark ("NA"), such that geom_point accepts it.
+other choices may be black, white or any other color code; when "auto" a grey70 is used
+when dotplot = F and a the number of features is below 100.}
 
-\item{title.font.size}{font size of title}
+\item{border_linewidth}{linewidth (geom_tile) or stroke (geom_point); defines the size of borders around tiles or points}
 
-\item{font.family}{which font type (family) to use for plotting,
-e.g. mono or sans}
-
-\item{y.font.size}{font size of features names on y-axis}
-
-\item{color}{color of stroke (border) around tiles or dots; "NA" means no stroke is plotted;
-other choices may be black, white or any other color code}
+\item{fill}{color scale to use for filling tiles or dots.
+if auto, then roughly scexpr::col_pal(name = "RColorBrewer::RdBu", n = 11, direction = -1) is used.
+if !is.null(n.colorsteps) this scale is adjusted to make sure the split between blue and red happens at zero.
+when a color scale is provided manually a meaningful split of a diverging scale at zero has to be forced manually.}
 
 \item{n.colorsteps}{number of steps (numeric) to divide color scale into; if null then ordinary continuous fill scale is chosen;
 if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 then passed as breaks to scale_fill_stepsn}
@@ -127,6 +124,10 @@ if of length 1 this is passed as n.breaks to scale_fill_stepsn, if length > 1 th
 \item{show.limits}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; show min and max limit on legend}
 
 \item{legend.decimals}{passed to scale_fill_stepsn if length(n.colorsteps) > 1; number of decimals to round legend labels to}
+
+\item{dotplot}{do not plot tiles but dots, the size of which then indicates the percentage of transcribing cells}
+
+\item{flip.axes}{flip x and y axes}
 
 \item{plot_hlines_between_groups}{plot horizontal lines to separate groups of genes that are
 differentially expressed by a group on the x-axis; if hlines is NULL the breaks are
@@ -138,7 +139,18 @@ hlines = c(1.5, 3.5) will plot lines between the first and second, and, third an
 entry on the y-axis, respectively}
 
 \item{hlines_args}{arguments to geom_hline like linewidth or linetype}
+
+\item{convert_gene_identifier_args}{list of named arguments to scexpr::convert_gene_identifier; only needed
+if plot.sec.axis is TRUE, most likely you may have to set species to Hs or Mm as needed, in case it cannot be guessed.}
+
+\item{theme}{ggplot theme, has to be passed with brackets}
+
+\item{theme_args}{arguments to theme}
+
+\item{legend_fill_args}{arguments passed to ggplot2::guide_colorsteps or ggplot2::guide_colorbar, depend upon the color scale}
+
+\item{legend_size_args}{arguments passed to ggplot2::guide_legend to modify the size legend, only applies if dotplot = T}
 }
 \description{
-Title
+Plot a heatmap of average gene transcription of transcriptomes in different groups (clusters)
 }
