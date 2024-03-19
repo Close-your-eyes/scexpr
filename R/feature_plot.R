@@ -602,7 +602,9 @@ feature_plot <- function(SO,
                                 feature = contour_feature,
                                 reduction = names(reduction),
                                 split.by = split.by)
-      # use all cells across split.by to assign contours? (other word: same contour in every facet based on all cells, irrespective of split.by)
+      # use all cells across split.by to assign contours? (in other words: same contour in every facet based on all cells, irrespective of split.by)
+
+      ## keep this as a list? or spare it?
       if (contour_same_across_split.by) {
         contour_data <- purrr::map_dfr(stats::setNames(unique(contour_data$split.by), unique(contour_data$split.by)), function(x) contour_data %>% dplyr::mutate(split.by = x))
       }
@@ -615,6 +617,7 @@ feature_plot <- function(SO,
 
       # more than one list to contour_args? (different settings for different contour for factor levels of contour_feature)
       # only when use_ggnewscale_for_contour_colors is FALSE
+
       if (list_depth(contour_args) == 1 && !use_ggnewscale_for_contour_colors) {
         contour_args <- rep(list(contour_args), length(unique(contour_data[,contour_feature])))
 
@@ -631,6 +634,14 @@ feature_plot <- function(SO,
           }
         }
         names(contour_args) <- unique(contour_data[,contour_feature])
+
+        if (length(unique(contour_data[,contour_feature])) != length(col.pal.contour)) {
+          if (length(col.pal.contour) == 1) {
+            col.pal.contour <- rep(col.pal.contour, length(unique(contour_data[,contour_feature])))
+          } else {
+            stop("col.pal.contour has to have the same length as factor levels of contour_feature, or length 1.")
+          }
+        }
 
       } else if (length(lengths(contour_args)) != length(unique(contour_data[,contour_feature])) && !use_ggnewscale_for_contour_colors) {
         stop("Length of list of contour_args lists does not match length of factor levels of contour_feature.")
