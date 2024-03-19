@@ -13,6 +13,8 @@ qc_diagnostic(
   resolution_meta = 0.8,
   n_PCs_to_meta_clustering = 2,
   scDblFinder = T,
+  min_UMI = 30,
+  min_UMI_var_feat = 5,
   SoupX = F,
   decontX = F,
   return_SoupX = T,
@@ -20,6 +22,9 @@ qc_diagnostic(
   invert_cells = F,
   feature_rm = NULL,
   feature_aggr = NULL,
+  ffbms = NULL,
+  rfbms = NULL,
+  batch_corr = c("harmony", "none"),
   ...
 )
 }
@@ -45,6 +50,10 @@ n_PCs_to_meta_clustering = 3 PCs 1-3 are used, when n_PCs_to_meta_clustering = 1
 
 \item{scDblFinder}{logical, whether to run doublet detection algorithm from scDblFinder}
 
+\item{min_UMI}{min number of UMI per cell (colSums)}
+
+\item{min_UMI_var_feat}{min number of UMI in variable featured per cell (colSums); only relevant if scDblFinder = T}
+
 \item{SoupX}{logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.}
 
 \item{decontX}{logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)}
@@ -63,6 +72,12 @@ removal is done after aggregation (if feature_aggr is provided)}
 \item{feature_aggr}{named list of character vectors of features to aggregate;
 names of of list entries are names of the aggregated feature; aggregation of counts
 is simply done by addition; aggregation is done before feature removal (if feature_rm is provided)}
+
+\item{ffbms}{named paths to folders with raw/filtered feature matrix files or .h5 files; this will skip any procedure with data_dirs}
+
+\item{rfbms}{named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs}
+
+\item{batch_corr}{which batch correction to apply for integration of different samples}
 
 \item{...}{additional arguments to SoupX::autoEstCont}
 }

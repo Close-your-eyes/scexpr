@@ -50,6 +50,11 @@
 #' @param feature_aggr named list of character vectors of features to aggregate;
 #' names of of list entries are names of the aggregated feature; aggregation of counts
 #' is simply done by addition; aggregation is done before feature removal (if feature_rm is provided)
+#' @param min_UMI min number of UMI per cell (colSums)
+#' @param min_UMI_var_feat min number of UMI in variable featured per cell (colSums); only relevant if scDblFinder = T
+#' @param ffbms named paths to folders with raw/filtered feature matrix files or .h5 files; this will skip any procedure with data_dirs
+#' @param rfbms named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs
+#' @param batch_corr which batch correction to apply for integration of different samples
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -65,6 +70,8 @@ qc_diagnostic <- function(data_dirs,
                           resolution_meta = 0.8,
                           n_PCs_to_meta_clustering = 2,
                           scDblFinder = T,
+                          min_UMI = 30,
+                          min_UMI_var_feat = 5,
                           SoupX = F,
                           decontX = F,
                           return_SoupX = T,
@@ -250,28 +257,44 @@ qc_diagnostic <- function(data_dirs,
       }
     }
 
-    SO <- Seurat::CreateSeuratObject(counts = as.matrix(filt_data))
-    SO@meta.data$orig.ident <- x
+    # this is generally not a bad idea and it was necessary to get scDblFinder running once: https://github.com/LTLA/BiocNeighbors/issues/24
+    if (!is.null(min_UMI)) {
+      UMI_sum <- colSums(filt_data)
+      if (any(UMI_sum < min_UMI)) {
+        message(sum(UMI_sum < min_UMI), " cells removed for having less UMI then min_UMI.")
+      }
+      filt_data <- filt_data[,names(UMI_sum[which(UMI_sum >= min_UMI)])]
+    }
 
+    SO <- Seurat::CreateSeuratObject(counts = filt_data)
+    SO@meta.data$orig.ident <- x
+    Seurat::RenameCells(SO, paste0(Seurat::Cells(SO), "__", x))
 
     # filter cells which have library size of zero to enable scDblFinder without error
     # https://github.com/plger/scDblFinder/issues/55
     if (scDblFinder) {
-
       var_feat <- Seurat::VariableFeatures(Seurat::FindVariableFeatures(SO,
                                                                         selection.method = "vst",
                                                                         nfeatures = nhvf,
                                                                         verbose = F,
                                                                         assay = "RNA"))
-
       factors <- scuttle::librarySizeFactors(filt_data[var_feat,])
       zero_libsize_cells <- names(which(factors == 0))
       if (length(zero_libsize_cells) > 0) {
-        message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are exlcuded to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
+        message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are removed to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
+        SO <- subset(SO, cells = setdiff(names(factors), zero_libsize_cells))
       }
-      SO <- subset(SO, cells = setdiff(names(factors), zero_libsize_cells))
+
+      if (!is.null(min_UMI_var_feat)) {
+        UMI_sum <- colSums(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA")[var_feat,])
+        if (any(UMI_sum < min_UMI_var_feat)) {
+          message(sum(UMI_sum < min_UMI_var_feat), " cells removed for having less UMI in variable features as min_UMI_var_feat. See https://github.com/LTLA/BiocNeighbors/issues/24,")
+        }
+        SO <- subset(SO, cells = names(UMI_sum[which(UMI_sum >= min_UMI_var_feat)]))
+      }
+
       # scDblFinder
-      SO@meta.data$dbl_score <- computeDoubletDensity(x = Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"),
+      SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"),
                                                                    subset.row = var_feat,
                                                                    dims = npcs)
       SO@meta.data$dbl_score_log <- log1p(SO@meta.data$dbl_score)
@@ -452,8 +475,8 @@ qc_diagnostic <- function(data_dirs,
 
     for (nn in n_PCs_to_meta_clustering) {
       if (nn > 0) {
-       if (batch_corr == "harmony" && length(ffbms) > 1) {
-         temp_slot <- "harmony"
+        if (batch_corr == "harmony" && length(ffbms) > 1) {
+          temp_slot <- "harmony"
         } else {
           temp_slot <- "pca"
         }
@@ -462,6 +485,9 @@ qc_diagnostic <- function(data_dirs,
         meta2 <- scale_min_max(meta)
       }
 
+
+      #https://datascience.stackexchange.com/questions/27726/when-to-use-cosine-simlarity-over-euclidean-similarity
+      # with cosine metric: relative composition is more important
       umap_dims <- uwot::umap(X = meta2, metric = "cosine")
       colnames(umap_dims) <- c(paste0("meta_UMAP_1_PC", nn), paste0("meta_UMAP_2_PC", nn))
       SOx[[paste0("umapmetaPC", nn)]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = paste0("UMAPMETAPC", nn, "_"), assay = "RNA")
