@@ -21,7 +21,7 @@
 #' If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
 #' (i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
 #' of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
-#' the common Seurat object though, the merged and harmonzized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
+#' the common Seurat object though, the merged and harmonized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
 #'
 #'
 #' @param data_dirs list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
@@ -55,6 +55,7 @@
 #' @param ffbms named paths to folders with raw/filtered feature matrix files or .h5 files; this will skip any procedure with data_dirs
 #' @param rfbms named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs
 #' @param batch_corr which batch correction to apply for integration of different samples
+#' @param diet_seurat
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -82,6 +83,7 @@ qc_diagnostic <- function(data_dirs,
                           ffbms = NULL,
                           rfbms = NULL,
                           batch_corr = c("harmony", "none"),
+                          diet_seurat = T,
                           ...) {
 
   if (!requireNamespace("matrixStats", quietly = T)) {
@@ -288,11 +290,10 @@ qc_diagnostic <- function(data_dirs,
       if (!is.null(min_UMI_var_feat)) {
         UMI_sum <- colSums(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA")[var_feat,])
         if (any(UMI_sum < min_UMI_var_feat)) {
-          message(sum(UMI_sum < min_UMI_var_feat), " cells removed for having less UMI in variable features as min_UMI_var_feat. See https://github.com/LTLA/BiocNeighbors/issues/24,")
+          message(sum(UMI_sum < min_UMI_var_feat), " cells removed for having less UMI in variable features as min_UMI_var_feat. See https://github.com/LTLA/BiocNeighbors/issues/24.")
         }
         SO <- subset(SO, cells = names(UMI_sum[which(UMI_sum >= min_UMI_var_feat)]))
       }
-
       # scDblFinder
       SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"),
                                                                    subset.row = var_feat,
@@ -460,18 +461,17 @@ qc_diagnostic <- function(data_dirs,
     SOx@meta.data$nFeature_RNA_log <- log1p(SOx@meta.data$nFeature_RNA)
     SOx@meta.data$nCount_RNA_log <- log1p(SOx@meta.data$nCount_RNA)
     SOx@meta.data$pct_mt_log <- log1p(SOx@meta.data$pct_mt)
+
     # this could be done above with SO
+    # replace NA wiht 0 to avoid error in umap calculation
     SOx@meta.data$pct_mt <- ifelse(is.na(SOx@meta.data$pct_mt), 0,SOx@meta.data$pct_mt)
-    SOx@meta.data$pct_mt_log <- ifelse(is.na(SOx@meta.data$pct_mt_log ), 0, SOx@meta.data$pct_mt_log )
+    SOx@meta.data$pct_mt_log <- ifelse(is.na(SOx@meta.data$pct_mt_log ), 0, SOx@meta.data$pct_mt_log)
 
     ## multi-dirs: split matrix!
-    SOx@meta.data$residuals <- unlist(lapply(unique(SOx@meta.data$orig.ident), function(x) {
-      stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))
-    }))
+    SOx@meta.data$residuals <- unlist(lapply(unique(SOx@meta.data$orig.ident), function(x) stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))))
 
     ## clustering on meta data (quality metrics)
     message("Running dimension reduction and clustering on qc meta data.")
-    meta <- dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals)
 
     for (nn in n_PCs_to_meta_clustering) {
       if (nn > 0) {
@@ -480,9 +480,10 @@ qc_diagnostic <- function(data_dirs,
         } else {
           temp_slot <- "pca"
         }
-        meta2 <- scale_min_max(cbind(meta, SOx@reductions[[temp_slot]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
+        meta2 <- scale_min_max(cbind(dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals),
+                                     SOx@reductions[[temp_slot]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
       } else {
-        meta2 <- scale_min_max(meta)
+        meta2 <- scale_min_max(dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals))
       }
 
 
@@ -506,8 +507,12 @@ qc_diagnostic <- function(data_dirs,
     return(SOx)
   })
 
-  message("Run scexpr:::qc_plots() on the Seurat object for visualization of clustering on phenotype and qc data.")
+  if (diet_seurat) {
+    SO <- lapply(SO, function(SOx) Seurat::DietSeurat(SOx, dimreducs = c(names(SOx@reductions))))
+  }
 
+
+  message("Run scexpr:::qc_plots() on the Seurat object for visualization of clustering on phenotype and qc data.")
   if (return_SoupX) {
     message("Use e.g. SoupX::plotChangeMap(x[['sc']], cleanedMatrix = SoupX::adjustCounts(x[['sc']]), geneSet = 'GNLY') + theme_bw() + theme(panel.grid = element_blank()) + scale_color_gradientn(colors = col_pal('spectral'), na.value = 'grey95') to plot changes in counts.")
     SO <- c(SO, list(SO_sx[["sc"]]), list(SO_sx[["sc_info"]]))

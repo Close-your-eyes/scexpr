@@ -39,6 +39,7 @@ prep_SO(
   EmbedSOM_args = list(),
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
+  scale_RNA_assay_when_SCT = T,
   ...
 )
 }
@@ -102,7 +103,7 @@ e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]
 
 \item{verbose}{print messages and progress bars from functions}
 
-\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO.list[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
+\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
 
 \item{...}{}
 }

@@ -25,6 +25,7 @@ qc_diagnostic(
   ffbms = NULL,
   rfbms = NULL,
   batch_corr = c("harmony", "none"),
+  diet_seurat = T,
   ...
 )
 }
@@ -79,6 +80,8 @@ is simply done by addition; aggregation is done before feature removal (if featu
 
 \item{batch_corr}{which batch correction to apply for integration of different samples}
 
+\item{diet_seurat}{}
+
 \item{...}{additional arguments to SoupX::autoEstCont}
 }
 \value{
@@ -106,5 +109,5 @@ a first round based on qc metric clustering.
 If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
 (i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
 of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
-the common Seurat object though, the merged and harmonzized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
+the common Seurat object though, the merged and harmonized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
 }
