@@ -28,8 +28,31 @@ compare_UMI_matrices <- function(mat1, mat2) {
     stop("mat1 and mat2 need to have rows.")
   }
 
+  if (nrow(mat1) != nrow(mat2)) {
+    message("mat1 and mat2 have different number of rows.")
+  }
+
+  if (ncol(mat1) != ncol(mat2)) {
+    message("mat1 and mat2 have different number of columns.")
+  }
+
   matching_cols <- intersect(colnames(mat1), colnames(mat2))
   matching_rows <- intersect(rownames(mat1), rownames(mat2))
+
+  if (length(matching_rows) != nrow(mat1) || length(matching_rows) != nrow(mat2)) {
+
+  }
+
+  if (length(matching_cols) != ncol(mat1) || length(matching_cols) != ncol(mat2)) {
+    if (length(setdiff(matching_cols, colnames(mat1))) > 0) {
+      message(x, " of matching columns")
+    }
+    if (length(x <- setdiff(colnames(mat1), matching_cols)) > 0) {
+      message(x, " of matching columns")
+    }
+    setdiff(colnames(mat1), matching_cols)
+  }
+
   mat1 <- as.matrix(mat1[matching_rows,matching_cols])
   mat2 <- as.matrix(mat2[matching_rows,matching_cols])
 

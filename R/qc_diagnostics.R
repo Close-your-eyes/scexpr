@@ -72,7 +72,7 @@ qc_diagnostic <- function(data_dirs,
                           n_PCs_to_meta_clustering = 2,
                           scDblFinder = T,
                           min_UMI = 30,
-                          min_UMI_var_feat = 5,
+                          min_UMI_var_feat = 10,
                           SoupX = F,
                           decontX = F,
                           return_SoupX = T,
@@ -228,6 +228,9 @@ qc_diagnostic <- function(data_dirs,
       }
     }
 
+    # change cell names here to avoid duplicate names from multiple samples
+    colnames(filt_data) <- paste0(x, "__", colnames(filt_data))
+
     if (ncol(filt_data) == 0) {
       message("No cells left after filtering. Return NULL for this sample.")
       return(NULL)
@@ -270,9 +273,8 @@ qc_diagnostic <- function(data_dirs,
 
     SO <- Seurat::CreateSeuratObject(counts = filt_data)
     SO@meta.data$orig.ident <- x
-    SO <- Seurat::RenameCells(SO, paste0(Seurat::Cells(SO), "__", x))
 
-    # filter cells which have library size of zero to enable scDblFinder without error
+    # filter out cells which have library size of zero to enable scDblFinder without error
     # https://github.com/plger/scDblFinder/issues/55
     if (scDblFinder) {
       var_feat <- Seurat::VariableFeatures(Seurat::FindVariableFeatures(SO,
