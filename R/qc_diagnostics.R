@@ -268,7 +268,7 @@ qc_diagnostic <- function(data_dirs,
 
     SO <- Seurat::CreateSeuratObject(counts = filt_data)
     SO@meta.data$orig.ident <- x
-    Seurat::RenameCells(SO, paste0(Seurat::Cells(SO), "__", x))
+    SO <- Seurat::RenameCells(SO, paste0(Seurat::Cells(SO), "__", x))
 
     # filter cells which have library size of zero to enable scDblFinder without error
     # https://github.com/plger/scDblFinder/issues/55
