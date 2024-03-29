@@ -756,30 +756,6 @@ feature_plot <- function(SO,
         }
 
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = c(list(data = label_df, mapping = ggplot2::aes(label = label)), geom_richtext.args))
-
-        '        if (!is.null(label.color) & length(label.color) != 1 & length(label.color) != nrow(label_df)) {
-          stop("Length of label.color does not match number of groups to label: ", lenght(label.color), " vs. ", nrow(label_df), ".")
-        }'
-
-        'if (plot.labels == "text") {
-          if (!is.null(label.color) & length(label.color) == 1) {
-            plot <- plot + ggplot2::geom_text(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color) #...
-          } else {
-            for (i in seq_along(label.color)) {
-              plot <- plot + ggplot2::geom_text(data = label_df[i,], ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color[i])
-            }
-          }
-        }
-        if (plot.labels == "label") {
-          if (!is.null(label.color) & length(label.color) == 1) {
-            plot <- plot + ggplot2::geom_label(data = label_df, ggplot2::aes(label = label), size = label.size, family = font.family, color = label.color) #...
-          } else {
-            for (i in seq_along(label.color)) {
-              plot <-  plot <- plot + ggplot2::geom_label(data = label_df[i,], ggplot2::aes(label = label), size = label.size,family = font.family, color = label.color[i]) #...
-            }
-          }
-        }'
-
       }
     }
 

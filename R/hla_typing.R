@@ -26,6 +26,7 @@
 #' @param p_group_colName column name of p_group in hla_ref
 #' @param g_group_colName column name of g_group in hla_ref
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
+#' @param maxmis
 #'
 #' @importFrom magrittr %>%
 #' @import Matrix
@@ -45,6 +46,7 @@ hla_typing <- function(hla_ref,
                        p_group_colName = "p_group",
                        g_group_colName = "g_group",
                        lapply_fun = lapply,
+                       maxmis = 0,
                        ...) {
 
   # check for unique read names
@@ -71,16 +73,32 @@ hla_typing <- function(hla_ref,
   library(Matrix) # required for sparseMatrix below; saves memory
   print("Calculating single matches.")
   single_res <- do.call(rbind, lapply_fun(split(1:nrow(reads), ceiling(seq_along(1:nrow(reads))/1e4)), function(rows) {
-    single_res <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]), pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T])), "sparseMatrix")
+
+    'single_res <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
+                                                      pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = 0),
+                                                      max.mismatch = 0),
+                              "sparseMatrix")'
+    # vwhichPDict allows for max.mismatch, but vcountPDict does not
+    single_res <- Biostrings::vwhichPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
+                                          pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = maxmis),
+                                          max.mismatch = maxmis)
+    single_res <- lapply(single_res, function(z) {
+      temp <- rep(0, length(rows))
+      temp[z] <- 1
+      return(temp)
+    })
+    single_res <- methods::as(do.call(cbind, single_res), "sparseMatrix")
+
     colnames(single_res) <- hla_ref[,hla_allele_colName,drop=T]
     rownames(single_res) <- reads[rows,read_name_colName,drop=T]
     return(single_res)
-  }), ...)
+  }, ...))
   n_noHit <- sum(Matrix::rowSums(single_res) == 0)
   n_Hit <- sum(Matrix::rowSums(single_res) > 0)
 
   # as.matrix here as this will speed up iteration over col.combs below!
-  top_single_res <- as.matrix(single_res[Matrix::rowSums(single_res) > 0, Matrix::colSums(single_res) >= max(Matrix::colSums(single_res))/allele_diff])
+  top_single_res <- as.matrix(single_res[Matrix::rowSums(single_res) > 0,
+                                         Matrix::colSums(single_res) >= max(Matrix::colSums(single_res))/allele_diff])
   top_single_res_df <-
     data.frame(n_Hit = Matrix::colSums(top_single_res)) %>%
     tibble::rownames_to_column(hla_allele_colName) %>%
@@ -91,10 +109,17 @@ hla_typing <- function(hla_ref,
   # but would require another argument to define with mapply fun to use
   col.combs <- utils::combn(ncol(top_single_res), 2, simplify = F)
   print(paste0("Calculating pairwise matches. Combinations: ", length(col.combs), "."))
+
   pairwise_results <- lapply_fun(col.combs, function(x) {
-    c(sum(top_single_res[,x[1]] + top_single_res[,x[2]] == 1),
-      sum(top_single_res[,x[1]] + top_single_res[,x[2]] == 2))
-  }, ...)
+    temp <- Matrix::rowSums(top_single_res[,x])
+    return(c(sum(temp == 1), sum(temp == 2)))
+  })
+
+'  pairwise_results <- lapply_fun(col.combs, function(x) {
+    temp <- matrixStats::rowSums2(top_single_res, cols = x)
+    return(c(sum(temp == 1), sum(temp == 2)))
+  })
+  '
 
   pairwise_results_df <-
     data.frame(unique_explained_reads = sapply(pairwise_results, "[", 1), double_explained_reads = sapply(pairwise_results, "[", 2), allele.1 = colnames(top_single_res)[sapply(col.combs, "[", 1)], allele.2 = colnames(top_single_res)[sapply(col.combs, "[", 2)]) %>%
@@ -115,8 +140,8 @@ hla_typing <- function(hla_ref,
     dplyr::filter(combined.rank == min(combined.rank)) %>%
     dplyr::ungroup() %>%
     dplyr::distinct(allele.1.2, .keep_all = T) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(hla_allele_colName), dplyr::all_of(p_group_colName), dplyr::all_of(g_group_colName)), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("p_group.1" = p_group_colName, "g_group.1" = g_group_colName) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(hla_allele_colName), dplyr::all_of(p_group_colName), dplyr::all_of(g_group_colName)), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("p_group.2" = p_group_colName, "g_group.2" = g_group_colName) %>%
+    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("p_group.1" = p_group_colName, "g_group.1" = g_group_colName) %>%
+    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("p_group.2" = p_group_colName, "g_group.2" = g_group_colName) %>%
     dplyr::left_join(top_single_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), n_Hit), by = c("allele.1" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.1" = n_Hit) %>%
     dplyr::left_join(top_single_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), n_Hit), by = c("allele.2" = hla_allele_colName)) %>% dplyr::rename("explained_reads_allele.2" = n_Hit) %>%
     dplyr::mutate(n_Hit = n_Hit) %>%
