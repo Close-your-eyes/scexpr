@@ -14,7 +14,7 @@ qc_diagnostic(
   n_PCs_to_meta_clustering = 2,
   scDblFinder = T,
   min_UMI = 30,
-  min_UMI_var_feat = 5,
+  min_UMI_var_feat = 10,
   SoupX = F,
   decontX = F,
   return_SoupX = T,

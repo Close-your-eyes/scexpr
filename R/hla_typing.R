@@ -61,6 +61,42 @@ hla_typing <- function(hla_ref,
 
   lapply_fun <- match.fun(lapply_fun)
 
+  if (missing(hla_ref)) {
+    stop("hla_ref missing.")
+  }
+  if (missing(reads)) {
+    stop("reads missing.")
+  }
+  if (allele_diff < 1 || allele_diff == 1) {
+    stop("allele_diff has to be larger than 1.")
+  }
+  if (top_n_pairwise_results < 1) {
+    stop("top_n_pairwise_results has to be at least 1.")
+  }
+
+  if (!read_seq_colName %in% names(reads)) {
+    stop(read_seq_colName, " not found in names of reads.")
+  }
+  if (!read_name_colName %in% names(reads)) {
+    stop(read_name_colName, " not found in names of reads.")
+  }
+  if (!hla_seq_colName %in% names(hla_ref)) {
+    stop(hla_seq_colName, " not found in names of hla_ref")
+  }
+  if (!p_group_colName %in% names(hla_ref)) {
+    stop(p_group_colName, " not found in names of hla_ref")
+  }
+  if (!g_group_colName %in% names(hla_ref)) {
+    stop(g_group_colName, " not found in names of hla_ref")
+  }
+  if (!hla_allele_colName %in% names(hla_ref)) {
+    stop(hla_allele_colName, " not found in names of hla_ref")
+  }
+
+  if (anyDuplicated(reads[,read_name_colName,drop=T])) {
+    message("Duplicated ", read_name_colName, " found. Will make them unique.")
+    reads[,read_seq_colName] <- make.unique(reads[,read_seq_colName,drop=T])
+  }
 
   if (length(invalid <- which(grepl("[^ACTGU]", reads[,read_seq_colName,drop=T]))) > 0) {
     message(length(invalid), " sequences with non-DNA or non-RNA characters detected. Those are excluded.")
@@ -72,7 +108,8 @@ hla_typing <- function(hla_ref,
 
   library(Matrix) # required for sparseMatrix below; saves memory
   print("Calculating single matches.")
-  single_res <- do.call(rbind, lapply_fun(split(1:nrow(reads), ceiling(seq_along(1:nrow(reads))/1e4)), function(rows) {
+  single_res <- do.call(rbind, lapply_fun(split(1:nrow(reads),
+                                                ceiling(seq_along(1:nrow(reads))/1e3)), function(rows) {
 
     'single_res <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
                                                       pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = 0),
@@ -82,19 +119,23 @@ hla_typing <- function(hla_ref,
     single_res <- Biostrings::vwhichPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
                                           pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = maxmis),
                                           max.mismatch = maxmis)
-    single_res <- lapply(single_res, function(z) {
-      temp <- rep(0, length(rows))
-      temp[z] <- 1
-      return(temp)
-    })
+    single_res <- lapply(single_res, function(z) replace(rep(0, length(rows)), z, 1))
     single_res <- methods::as(do.call(cbind, single_res), "sparseMatrix")
 
     colnames(single_res) <- hla_ref[,hla_allele_colName,drop=T]
     rownames(single_res) <- reads[rows,read_name_colName,drop=T]
     return(single_res)
-  }, ...))
+  }))
   n_noHit <- sum(Matrix::rowSums(single_res) == 0)
   n_Hit <- sum(Matrix::rowSums(single_res) > 0)
+
+  if (n_Hit == 0) {
+    stop("No matches/hits determined.")
+  }
+
+  message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
+  message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
+
 
   # as.matrix here as this will speed up iteration over col.combs below!
   top_single_res <- as.matrix(single_res[Matrix::rowSums(single_res) > 0,

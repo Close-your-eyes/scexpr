@@ -16,6 +16,7 @@ hla_typing(
   p_group_colName = "p_group",
   g_group_colName = "g_group",
   lapply_fun = lapply,
+  maxmis = 0,
   ...
 )
 }
@@ -44,6 +45,8 @@ expression difference of alleles HLA-A from father and HLA-A from mother. Intend
 \item{g_group_colName}{column name of g_group in hla_ref}
 
 \item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
+
+\item{maxmis}{}
 
 \item{...}{additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen}
 }
