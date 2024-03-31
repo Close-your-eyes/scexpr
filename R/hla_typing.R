@@ -108,34 +108,53 @@ hla_typing <- function(hla_ref,
 
   library(Matrix) # required for sparseMatrix below; saves memory
   print("Calculating single matches.")
-  single_res <- do.call(rbind, lapply_fun(split(1:nrow(reads),
-                                                ceiling(seq_along(1:nrow(reads))/1e3)), function(rows) {
+  if ("strand" %in% names(reads)) {
+    single_res <- lapply(split(reads, as.character(reads$strand)),
+                         single_matching,
+                         lapply_fun = lapply_fun,
+                         hla_ref = hla_ref,
+                         maxmis = maxmis,
+                         hla_seq_colName = hla_seq_colName,
+                         hla_allele_colName = hla_allele_colName,
+                         ...)
 
-    'single_res <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
-                                                      pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = 0),
-                                                      max.mismatch = 0),
-                              "sparseMatrix")'
-    # vwhichPDict allows for max.mismatch, but vcountPDict does not
-    single_res <- Biostrings::vwhichPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
-                                          pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = maxmis),
-                                          max.mismatch = maxmis)
-    single_res <- lapply(single_res, function(z) replace(rep(0, length(rows)), z, 1))
-    single_res <- methods::as(do.call(cbind, single_res), "sparseMatrix")
+    # report n_hit and n_noHit separately and all together
+    for (i in names(single_res)) {
+      message("Strand (", i, "):")
+      n_noHit <- sum(Matrix::rowSums(single_res[[i]]) == 0)
+      n_Hit <- sum(Matrix::rowSums(single_res[[i]]) > 0)
+      message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
+      message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
+    }
+    single_res <- do.call(rbind, single_res)
+    n_noHit <- sum(Matrix::rowSums(single_res) == 0)
+    n_Hit <- sum(Matrix::rowSums(single_res) > 0)
+    message("Total:")
+    if (n_Hit == 0) {
+      stop("No matches/hits determined.")
+    }
+    message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
+    message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
 
-    colnames(single_res) <- hla_ref[,hla_allele_colName,drop=T]
-    rownames(single_res) <- reads[rows,read_name_colName,drop=T]
-    return(single_res)
-  }))
-  n_noHit <- sum(Matrix::rowSums(single_res) == 0)
-  n_Hit <- sum(Matrix::rowSums(single_res) > 0)
+  } else {
 
-  if (n_Hit == 0) {
-    stop("No matches/hits determined.")
+    single_res <- lapply(reads,
+                         single_matching,
+                         lapply_fun = lapply_fun,
+                         hla_ref = hla_ref,
+                         maxmis = maxmis,
+                         hla_seq_colName = hla_seq_colName,
+                         hla_allele_colName = hla_allele_colName,
+                         ...)
+    n_noHit <- sum(Matrix::rowSums(single_res) == 0)
+    n_Hit <- sum(Matrix::rowSums(single_res) > 0)
+    message("Total:")
+    if (n_Hit == 0) {
+      stop("No matches/hits determined.")
+    }
+    message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
+    message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
   }
-
-  message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
-  message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
-
 
   # as.matrix here as this will speed up iteration over col.combs below!
   top_single_res <- as.matrix(single_res[Matrix::rowSums(single_res) > 0,
@@ -148,28 +167,33 @@ hla_typing <- function(hla_ref,
 
   # could also be made mapply or purrr::map2 with utils::combn(ncol(top_single_res), 2, simplify = T)
   # but would require another argument to define with mapply fun to use
-  col.combs <- utils::combn(ncol(top_single_res), 2, simplify = F)
+  col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)
   print(paste0("Calculating pairwise matches. Combinations: ", length(col.combs), "."))
-
   pairwise_results <- lapply_fun(col.combs, function(x) {
     temp <- Matrix::rowSums(top_single_res[,x])
     return(c(sum(temp == 1), sum(temp == 2)))
-  })
+  }, ...)
 
-'  pairwise_results <- lapply_fun(col.combs, function(x) {
+  '  pairwise_results <- lapply_fun(col.combs, function(x) {
     temp <- matrixStats::rowSums2(top_single_res, cols = x)
     return(c(sum(temp == 1), sum(temp == 2)))
   })
   '
-
   pairwise_results_df <-
-    data.frame(unique_explained_reads = sapply(pairwise_results, "[", 1), double_explained_reads = sapply(pairwise_results, "[", 2), allele.1 = colnames(top_single_res)[sapply(col.combs, "[", 1)], allele.2 = colnames(top_single_res)[sapply(col.combs, "[", 2)]) %>%
+    data.frame(unique_explained_reads = sapply(pairwise_results, "[", 1),
+               double_explained_reads = sapply(pairwise_results, "[", 2),
+               allele.1 = colnames(top_single_res)[sapply(col.combs, "[", 1)],
+               allele.2 = colnames(top_single_res)[sapply(col.combs, "[", 2)]) %>%
     dplyr::mutate(total_explained_reads = unique_explained_reads + double_explained_reads)  %>%
-    dplyr::mutate(total_explained_reads_rank = dplyr::dense_rank(-total_explained_reads), unique_explained_reads_rank = dplyr::dense_rank(-unique_explained_reads)) %>%
+    dplyr::mutate(total_explained_reads_rank = dplyr::dense_rank(-total_explained_reads),
+                  unique_explained_reads_rank = dplyr::dense_rank(-unique_explained_reads)) %>%
     dplyr::mutate(rank.sum = total_explained_reads_rank + unique_explained_reads_rank)
 
   top_pairwise_results_df <-
-    dplyr::bind_rows(pairwise_results_df %>% dplyr::slice_min(n = top_n_pairwise_results*2, order_by = unique_explained_reads_rank), pairwise_results_df %>% dplyr::slice_min(n = top_n_pairwise_results*2, order_by = total_explained_reads_rank)) %>%
+    dplyr::bind_rows(pairwise_results_df %>%
+                       dplyr::slice_min(n = top_n_pairwise_results*2, order_by = unique_explained_reads_rank),
+                     pairwise_results_df %>%
+                       dplyr::slice_min(n = top_n_pairwise_results*2, order_by = total_explained_reads_rank)) %>%
     dplyr::distinct() %>%
     dplyr::mutate(combined.rank = dplyr::dense_rank(base::interaction(-total_explained_reads, -unique_explained_reads, lex.order = TRUE)))
 
@@ -277,9 +301,38 @@ hla_typing <- function(hla_ref,
               top_pairwise_res_for_plotting_df = top_pairwise_results_df.plot,
               top_single_res_plot = single.plot,
               top_pairwise_res_plot = pairwise.plot,
+              pairwise_results_df = pairwise_results_df,
               rank_plot_p1 = rank.plot.p1,
               rank_plot_p2 = rank.plot.p2,
               rank_read_plot = rank.read.plot))
+}
+
+single_matching <- function(reads,
+                            lapply_fun,
+                            hla_ref,
+                            maxmis,
+                            hla_seq_colName,
+                            hla_allele_colName,
+                            ...) {
+
+  reads <- setNames(reads[,read_seq_colName,drop=T], reads[,read_name_colName,drop=T])
+  single_res <- do.call(rbind, lapply_fun(split(reads,ceiling(seq_along(reads)/1e3)), function(rrr) {
+
+    'hit_matrix <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
+                                                      pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = 0),
+                                                      max.mismatch = 0),
+                              "sparseMatrix")'
+    # vwhichPDict allows for max.mismatch, but vcountPDict does not
+    hit_matrix <- Biostrings::vwhichPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
+                                          pdict = Biostrings::PDict(rrr, max.mismatch = maxmis),
+                                          max.mismatch = maxmis)
+    hit_matrix <- lapply(hit_matrix, function(z) replace(rep(0, length(rrr)), z, 1))
+    hit_matrix <- methods::as(do.call(cbind, hit_matrix), "sparseMatrix")
+    colnames(hit_matrix) <- hla_ref[,hla_allele_colName,drop=T]
+    rownames(hit_matrix) <- names(rrr)
+    return(hit_matrix)
+  }, ...))
+  return(single_res)
 }
 
 reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
