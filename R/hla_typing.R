@@ -60,6 +60,7 @@ hla_typing <- function(hla_ref,
   }
 
   lapply_fun <- match.fun(lapply_fun)
+  arg_list <- list(...)
 
   if (missing(hla_ref)) {
     stop("hla_ref missing.")
@@ -168,33 +169,33 @@ hla_typing <- function(hla_ref,
   col.combs <- t(utils::combn(1:ncol(top_single_res), 2, simplify = T))
   print(paste0("Calculating pairwise matches. Combinations: ", nrow(col.combs), "."))
 
-  # Source the C++ code
-  sourceCpp("/Volumes/AG_Hiepe/Christopher.Skopnik/R_packages/scexpr/inst/extdata/calculateRowSumsInCpp2.cpp")
-  #sourceCpp("/Volumes/AG_Hiepe/Christopher.Skopnik/R_packages/scexpr/inst/extdata/calculateRowSumsInCpp3.cpp")
-
-  browser()
-
   # Call the C++ function to calculate row sums
+  # Source the C++ code
+  '
+  sourceCpp("/Users/vonskopnik/Documents/R_packages/scexpr/src/calculateRowSumsInCpp2.cpp")
   system.time(results <- countOccurrencesInCpp(top_single_res, col.combs)) # col.combs[1:2,,drop=F]
-
-  #try to run the c++ fun in parallel
-  ### todo: how to split the matrix???
-  chunk_membership <- rep(1:ceiling(nrow(col.combs)/nrow(col.combs)/8), each = nrow(col.combs)/8)[1:nrow(col.combs)]
-  col.combs_split <- scexpr:::split_mat(col.combs, chunk_membership)
-
-  # Split the matrix into chunks
-  col.combs2 <- split(col.combs, chunk_membership)
-
-
-
+  col.combs2 <- split_mat(col.combs, n_chunks = 4, byrow = T)
   system.time(
-    pairwise_results <- lapply_fun(col.combs_split, function(x) {
+    pairwise_results <- lapply_fun(col.combs2, function(x) {
       countOccurrencesInCpp(top_single_res, x)
     }, ...)
-  )
+  )'
+
+  if (identical(lapply_fun, parallel::mclapply) && "mc.cores" %in% names(arg_list)) {
+    # split_mat fun from scexpr package
+    # Split the matrix into chunks for multithreading
+    pairwise_results <- lapply_fun(split_mat(col.combs, n_chunks = arg_list[["mc.cores"]], byrow = T), function(x) {
+      countOccurrencesInCpp(top_single_res, x)
+    }, ...)
+    pairwise_results <- do.call(rbind, pairwise_results)
+  } else {
+    pairwise_results <- countOccurrencesInCpp(top_single_res, col.combs)
+  }
 
 
-'  #top_single_res[1:3,1:5]
+  # other attempts with collapse package
+  # however, it does not support subsetting in c++
+  '  #top_single_res[1:3,1:5]
   pairwise_results <- matrix(0, nrow = length(col.combs), ncol = 2)
   # Iterate over each combination of columns
   for (i in seq_along(col.combs)) {
@@ -224,7 +225,8 @@ hla_typing <- function(hla_ref,
 
 
   ## old version, working:
-'  pairwise_results <- lapply_fun(col.combs, function(x) {
+  'col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)
+  pairwise_results <- lapply_fun(col.combs, function(x) {
     temp <- matrixStats::rowSums2(top_single_res, cols = x)
     #temp <- collapse::fsum(t(top_single_res[,x]))
     #temp <- Matrix::rowSums(top_single_res[,x])
@@ -232,8 +234,8 @@ hla_typing <- function(hla_ref,
   }, ...)'
 
   pairwise_results_df <-
-    data.frame(unique_explained_reads = sapply(pairwise_results, "[", 1),
-               double_explained_reads = sapply(pairwise_results, "[", 2),
+    data.frame(unique_explained_reads = pairwise_results[,1], # sapply(pairwise_results, "[", 1),
+               double_explained_reads = pairwise_results[,2], # sapply(pairwise_results, "[", 2),
                allele.1 = colnames(top_single_res)[sapply(col.combs, "[", 1)],
                allele.2 = colnames(top_single_res)[sapply(col.combs, "[", 2)]) %>%
     dplyr::mutate(total_explained_reads = unique_explained_reads + double_explained_reads)  %>%
