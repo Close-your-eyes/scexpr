@@ -95,7 +95,7 @@ hla_typing <- function(hla_ref,
 
   if (anyDuplicated(reads[,read_name_colName,drop=T])) {
     message("Duplicated ", read_name_colName, " found. Will make them unique.")
-    reads[,read_seq_colName] <- make.unique(reads[,read_seq_colName,drop=T])
+    reads[,read_name_colName] <- make.unique(reads[,read_name_colName,drop=T])
   }
 
   if (length(invalid <- which(grepl("[^ACTGU]", reads[,read_seq_colName,drop=T]))) > 0) {
@@ -129,17 +129,7 @@ hla_typing <- function(hla_ref,
       message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
     }
     single_res <- do.call(rbind, single_res)
-    n_noHit <- sum(Matrix::rowSums(single_res) == 0)
-    n_Hit <- sum(Matrix::rowSums(single_res) > 0)
-    message("Total:")
-    if (n_Hit == 0) {
-      stop("No matches/hits determined.")
-    }
-    message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
-    message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
-
   } else {
-
     single_res <- lapply(reads,
                          single_matching,
                          lapply_fun = lapply_fun,
@@ -148,19 +138,22 @@ hla_typing <- function(hla_ref,
                          hla_seq_colName = hla_seq_colName,
                          hla_allele_colName = hla_allele_colName,
                          ...)
-    n_noHit <- sum(Matrix::rowSums(single_res) == 0)
-    n_Hit <- sum(Matrix::rowSums(single_res) > 0)
-    message("Total:")
-    if (n_Hit == 0) {
-      stop("No matches/hits determined.")
-    }
-    message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
-    message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
   }
 
+  rowsum_temp <- Matrix::rowSums(single_res) > 0
+  colsum_temp <- Matrix::colSums(single_res)
+  n_noHit <- sum(Matrix::rowSums(single_res) == 0)
+  n_Hit <- sum(rowsum_temp)
+  message("Total:")
+  if (n_Hit == 0) {
+    stop("No matches/hits determined.")
+  }
+  message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
+  message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
+
+
   # as.matrix here as this will speed up iteration over col.combs below!
-  top_single_res <- as.matrix(single_res[Matrix::rowSums(single_res) > 0,
-                                         Matrix::colSums(single_res) >= max(Matrix::colSums(single_res))/allele_diff])
+  top_single_res <- as.matrix(single_res[rowsum_temp, colsum_temp >= max(colsum_temp)/allele_diff])
   top_single_res_df <-
     data.frame(n_Hit = Matrix::colSums(top_single_res)) %>%
     tibble::rownames_to_column(hla_allele_colName) %>%
@@ -169,18 +162,75 @@ hla_typing <- function(hla_ref,
 
   # could also be made mapply or purrr::map2 with utils::combn(ncol(top_single_res), 2, simplify = T)
   # but would require another argument to define with mapply fun to use
-  col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)
-  print(paste0("Calculating pairwise matches. Combinations: ", length(col.combs), "."))
-  pairwise_results <- lapply_fun(col.combs, function(x) {
+  #col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)
+  #print(paste0("Calculating pairwise matches. Combinations: ", length(col.combs), "."))
+
+  col.combs <- t(utils::combn(1:ncol(top_single_res), 2, simplify = T))
+  print(paste0("Calculating pairwise matches. Combinations: ", nrow(col.combs), "."))
+
+  # Source the C++ code
+  sourceCpp("/Volumes/AG_Hiepe/Christopher.Skopnik/R_packages/scexpr/inst/extdata/calculateRowSumsInCpp2.cpp")
+  #sourceCpp("/Volumes/AG_Hiepe/Christopher.Skopnik/R_packages/scexpr/inst/extdata/calculateRowSumsInCpp3.cpp")
+
+  browser()
+
+  # Call the C++ function to calculate row sums
+  system.time(results <- countOccurrencesInCpp(top_single_res, col.combs)) # col.combs[1:2,,drop=F]
+
+  #try to run the c++ fun in parallel
+  ### todo: how to split the matrix???
+  chunk_membership <- rep(1:ceiling(nrow(col.combs)/nrow(col.combs)/8), each = nrow(col.combs)/8)[1:nrow(col.combs)]
+  col.combs_split <- scexpr:::split_mat(col.combs, chunk_membership)
+
+  # Split the matrix into chunks
+  col.combs2 <- split(col.combs, chunk_membership)
+
+
+
+  system.time(
+    pairwise_results <- lapply_fun(col.combs_split, function(x) {
+      countOccurrencesInCpp(top_single_res, x)
+    }, ...)
+  )
+
+
+'  #top_single_res[1:3,1:5]
+  pairwise_results <- matrix(0, nrow = length(col.combs), ncol = 2)
+  # Iterate over each combination of columns
+  for (i in seq_along(col.combs)) {
+    # Compute row sums for the current combination using fsum()
+    temp <- collapse::fsum(t(top_single_res[, col.combs[[i]]]))
+    # Count occurrences of 1 and 2 in row sums
+    pairwise_results[i, 1] <- sum(temp == 1)
+    pairwise_results[i, 2] <- sum(temp == 2)
+  }
+'
+
+  '
+  tt <- collapse::fsubset(top_single_res, subset = list(c(1:2), c(4:5)))
+  out <- collapse::fsum(x = t(top_single_res), vars = c(1,2))
+  collapse::collap(t(top_single_res), by = c(1,2), FUN = collapse::fsum)
+  m <- qM(mtcars)
+  nrow(m)
+  tt <- fsum(m, g = list(c(rep(1,16),rep(2,16)),
+                         c(rep(3,10),rep(4,22)),
+                         c(rep(5,5),rep(6,27))))
+
+  fsum(m, g)
+  pairwise_results <- purrr::map(col.combs, function(x) {
     temp <- Matrix::rowSums(top_single_res[,x])
     return(c(sum(temp == 1), sum(temp == 2)))
-  }, ...)
+  }, .progress = T)'
 
-  '  pairwise_results <- lapply_fun(col.combs, function(x) {
+
+  ## old version, working:
+'  pairwise_results <- lapply_fun(col.combs, function(x) {
     temp <- matrixStats::rowSums2(top_single_res, cols = x)
+    #temp <- collapse::fsum(t(top_single_res[,x]))
+    #temp <- Matrix::rowSums(top_single_res[,x])
     return(c(sum(temp == 1), sum(temp == 2)))
-  })
-  '
+  }, ...)'
+
   pairwise_results_df <-
     data.frame(unique_explained_reads = sapply(pairwise_results, "[", 1),
                double_explained_reads = sapply(pairwise_results, "[", 2),
