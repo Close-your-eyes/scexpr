@@ -181,6 +181,8 @@ hla_typing <- function(hla_ref,
     }, ...)
   )'
 
+  # doing this in R was too slow. other packages did not have the functionality
+  # so, written in c++
   if (identical(lapply_fun, parallel::mclapply) && "mc.cores" %in% names(arg_list)) {
     # split_mat fun from scexpr package
     # Split the matrix into chunks for multithreading
