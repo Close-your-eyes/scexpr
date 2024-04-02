@@ -116,6 +116,8 @@ hla_typing <- function(hla_ref,
                          maxmis = maxmis,
                          hla_seq_colName = hla_seq_colName,
                          hla_allele_colName = hla_allele_colName,
+                         read_name_colName = read_name_colName,
+                         read_seq_colName = read_seq_colName,
                          ...)
 
     # report n_hit and n_noHit separately and all together
@@ -313,6 +315,8 @@ single_matching <- function(reads,
                             maxmis,
                             hla_seq_colName,
                             hla_allele_colName,
+                            read_name_colName,
+                            read_seq_colName,
                             ...) {
 
   reads <- setNames(reads[,read_seq_colName,drop=T], reads[,read_name_colName,drop=T])
