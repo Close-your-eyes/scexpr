@@ -186,14 +186,13 @@ hla_typing <- function(hla_ref,
   if (identical(lapply_fun, parallel::mclapply) && "mc.cores" %in% names(arg_list)) {
     # split_mat fun from scexpr package
     # Split the matrix into chunks for multithreading
-    pairwise_results <- lapply_fun(split_mat(col.combs, n_chunks = arg_list[["mc.cores"]], byrow = T), function(x) {
-      countOccurrencesInCpp(top_single_res, x)
+    pairwise_results <- lapply_fun(scexpr::split_mat(col.combs, n_chunks = arg_list[["mc.cores"]], byrow = T), function(x) {
+      scexpr:::countOccurrencesInCpp(top_single_res, x)
     }, ...)
     pairwise_results <- do.call(rbind, pairwise_results)
   } else {
-    pairwise_results <- countOccurrencesInCpp(top_single_res, col.combs)
+    pairwise_results <- scexpr:::countOccurrencesInCpp(top_single_res, col.combs)
   }
-
 
   # other attempts with collapse package
   # however, it does not support subsetting in c++
@@ -238,8 +237,8 @@ hla_typing <- function(hla_ref,
   pairwise_results_df <-
     data.frame(unique_explained_reads = pairwise_results[,1], # sapply(pairwise_results, "[", 1),
                double_explained_reads = pairwise_results[,2], # sapply(pairwise_results, "[", 2),
-               allele.1 = colnames(top_single_res)[sapply(col.combs, "[", 1)],
-               allele.2 = colnames(top_single_res)[sapply(col.combs, "[", 2)]) %>%
+               allele.1 = colnames(top_single_res)[col.combs[,1]],
+               allele.2 = colnames(top_single_res)[col.combs[,2]]) %>%
     dplyr::mutate(total_explained_reads = unique_explained_reads + double_explained_reads)  %>%
     dplyr::mutate(total_explained_reads_rank = dplyr::dense_rank(-total_explained_reads),
                   unique_explained_reads_rank = dplyr::dense_rank(-unique_explained_reads)) %>%
@@ -315,18 +314,18 @@ hla_typing <- function(hla_ref,
   rank.read.plot <- ggplot2::ggplot(top_pairwise_results_df.plot, ggplot2::aes(x = as.factor(row.number.rank), y = total_explained_reads, fill = plot.color)) +
     ggplot2::geom_point(size = 2, shape = 21) +
     ggplot2::xlab("rank") +
-    ggplot2::ylab("total explained reads") +
+    ggplot2::ylab("total\nexplained\nreads") +
     ggplot2::theme_bw() +
     ggplot2::theme(legend.position = "none", panel.grid.minor = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pairwise_results_df), 10))
 
   n_Hit <- as.numeric(levels(as.factor(top_pairwise_results_df.plot$n_Hit)))
   if ((max(top_pairwise_results_df.plot$total_explained_reads) - min(top_pairwise_results_df.plot$total_explained_reads)) > 10) {
-    rank.read.plot <- rank.read.plot + ggplot2::scale_y_continuous(breaks = seq(max(top_pairwise_results_df.plot$total_explained_reads), min(top_pairwise_results_df.plot$total_explained_reads), by = -floor_any(max(top_pairwise_results_df.plot$total_explained_reads) - min(top_pairwise_results_df.plot$total_explained_reads), 10)), sec.axis = ggplot2::sec_axis(~ . / n_Hit * 100, name = "% of matching reads that\nmatched min. one ref. allele"))
+    rank.read.plot <- rank.read.plot + ggplot2::scale_y_continuous(breaks = seq(max(top_pairwise_results_df.plot$total_explained_reads), min(top_pairwise_results_df.plot$total_explained_reads), by = -floor_any(max(top_pairwise_results_df.plot$total_explained_reads) - min(top_pairwise_results_df.plot$total_explained_reads), 10)), sec.axis = ggplot2::sec_axis(~ . / n_Hit * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
   } else if ((max(top_pairwise_results_df.plot$total_explained_reads) - min(top_pairwise_results_df.plot$total_explained_reads)) > 5) {
-    rank.read.plot <- rank.read.plot + ggplot2::scale_y_continuous(breaks = seq(max(top_pairwise_results_df.plot$total_explained_reads), min(top_pairwise_results_df.plot$total_explained_reads), by = -5), sec.axis = ggplot2::sec_axis(~ . / n_Hit * 100, name = "% of matching reads that\nmatched min. one ref. allele"))
+    rank.read.plot <- rank.read.plot + ggplot2::scale_y_continuous(breaks = seq(max(top_pairwise_results_df.plot$total_explained_reads), min(top_pairwise_results_df.plot$total_explained_reads), by = -5), sec.axis = ggplot2::sec_axis(~ . / n_Hit * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
   } else {
-    rank.read.plot <- rank.read.plot + ggplot2::scale_y_continuous(breaks = seq(max(top_pairwise_results_df.plot$total_explained_reads), min(top_pairwise_results_df.plot$total_explained_reads), by = -1), sec.axis = ggplot2::sec_axis(~ . / n_Hit * 100, name = "% of matching reads that\nmatched min. one ref. allele"))
+    rank.read.plot <- rank.read.plot + ggplot2::scale_y_continuous(breaks = seq(max(top_pairwise_results_df.plot$total_explained_reads), min(top_pairwise_results_df.plot$total_explained_reads), by = -1), sec.axis = ggplot2::sec_axis(~ . / n_Hit * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
   }
 
   height.1 <- nlevels(as.factor(top_pairwise_results_df.plot$p_group.1))
