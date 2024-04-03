@@ -152,7 +152,6 @@ hla_typing <- function(hla_ref,
   message(n_Hit, " reads with at least one match/hit, (", round(n_Hit/(n_Hit+n_noHit)*100), " %)")
   message(n_noHit, " reads with no match/hit, (", round(n_noHit/(n_Hit+n_noHit)*100), " %)")
 
-
   # as.matrix here as this will speed up iteration over col.combs below!
   top_single_res <- as.matrix(single_res[rowsum_temp, colsum_temp >= max(colsum_temp)/allele_diff])
   top_single_res_df <-
@@ -160,6 +159,7 @@ hla_typing <- function(hla_ref,
     tibble::rownames_to_column(hla_allele_colName) %>%
     dplyr::left_join(hla_ref, by = hla_allele_colName) %>%
     dplyr::mutate(rank = dplyr::row_number(-n_Hit))
+
 
   # could also be made mapply or purrr::map2 with utils::combn(ncol(top_single_res), 2, simplify = T)
   # but would require another argument to define with mapply fun to use
@@ -252,7 +252,15 @@ hla_typing <- function(hla_ref,
     dplyr::distinct() %>%
     dplyr::mutate(combined.rank = dplyr::dense_rank(base::interaction(-total_explained_reads, -unique_explained_reads, lex.order = TRUE)))
 
-  top_pairwise_results_df$allele.1.2 <- apply(top_pairwise_results_df[,c("allele.1", "allele.2")], 1, function(x) paste(sort(c(x[1], x[2])), collapse = "_"))
+
+  # works
+  library(Rcpp)
+  sourceCpp("/Users/vonskopnik/Documents/R_packages/scexpr/src/orderAndConcatenate.cpp")
+  result <- orderAndConcatenateStrings(as.matrix(pairwise_results_df[,c("allele.1", "allele.2")]))
+  browser()
+
+  #top_pairwise_results_df$allele.1.2 <- apply(top_pairwise_results_df[,c("allele.1", "allele.2")], 1, function(x) paste(sort(c(x[1], x[2])), collapse = "_"))
+
 
   top_pairwise_results_df <-
     top_pairwise_results_df %>%
