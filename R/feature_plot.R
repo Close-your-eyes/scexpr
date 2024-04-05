@@ -650,7 +650,7 @@ feature_plot <- function(SO,
           stop("list of contour_args has to have names of factor levels of contour_feature.")
         }
       }
-#stat_density2d()
+      #stat_density2d()
       if (use_ggnewscale_for_contour_colors) {
         plot <-
           plot +
@@ -680,14 +680,14 @@ feature_plot <- function(SO,
 
 
         if (use_ggnewscale_for_contour_colors) {
-          plot <- plot + Gmisc::fastDoCall(geom_label, args = c(contour.label.args,
-                                                                list(data = group_labels, show.legend = F, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])))))
+          plot <- plot + Gmisc::fastDoCall(ggplot2::geom_label, args = c(contour.label.args,
+                                                                         list(data = group_labels, show.legend = F, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])))))
 
           #plot <- plot + ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct, color = !!rlang::sym(names(group_labels)[1])), show.legend = F)
         } else {
 
-          plot <- plot + Gmisc::fastDoCall(geom_label, args = c(contour.label.args,
-                                                 list(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))))
+          plot <- plot + Gmisc::fastDoCall(ggplot2::geom_label, args = c(contour.label.args,
+                                                                         list(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))))
           #plot <- plot + ggplot2::geom_label(data = group_labels, ggplot2::aes(x = dr1_avg, y = dr2_avg, label = pct))
         }
 
@@ -720,7 +720,7 @@ feature_plot <- function(SO,
         }
 
         if (length(label.nudge) != 1 & length(label.nudge) != length(unique(data[inds,x]))) {
-          stop("Length of label.nudge does not match number of groups to label: ", lenght(label.nudge), " vs. ", length(unique(data[inds,x])), ".")
+          stop("Length of label.nudge does not match number of groups to label: ", length(label.nudge), " vs. ", length(unique(data[inds,x])), ".")
         }
 
         if (length(label.nudge) == 1) { # only one label nudging
@@ -766,7 +766,7 @@ feature_plot <- function(SO,
     }
 
     # define facets and plot freq.of.expr annotation
-   # browser()
+    # browser()
     # facet_grid_row
     # facet_grid_row_var
     if (is.null(facet_grid_row_var)) {

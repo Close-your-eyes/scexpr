@@ -552,11 +552,11 @@ heatmap_pseudobulk <- function(SO,
     if (flip.axes) {
       heatmap.plot <-
         heatmap.plot +
-        Gmisc::fastDoCall(geom_vline, args = c(list(xintercept = hlines), hlines_args))
+        Gmisc::fastDoCall(ggplot2::geom_vline, args = c(list(xintercept = hlines), hlines_args))
     } else {
       heatmap.plot <-
         heatmap.plot +
-        Gmisc::fastDoCall(geom_hline, args = c(list(yintercept = hlines), hlines_args))
+        Gmisc::fastDoCall(ggplot2::geom_hline, args = c(list(yintercept = hlines), hlines_args))
     }
 
   } else {
