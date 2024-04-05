@@ -10,6 +10,7 @@ hla_typing(
   allele_diff = 5,
   top_n_pairwise_results = 50,
   hla_seq_colName = "seq_Exon2_3",
+  hla_seq_colName2 = "seq",
   read_seq_colName = "seq",
   hla_allele_colName = "allele",
   read_name_colName = "readName",
@@ -17,6 +18,8 @@ hla_typing(
   g_group_colName = "g_group",
   lapply_fun = lapply,
   maxmis = 0,
+  complete_seq_columns = c("5'UTR", paste0("Exon", 1:8), "3'UTR"),
+  make_reads_distinct = F,
   ...
 )
 }
@@ -30,9 +33,11 @@ e.g. if highest abundant HLA-A allele 1 has 20 matched reads and diff_allele_hit
 at least 4 (=20/5) matched reads to be considered in the subsequent pairwise matching. In other words, what is the maximum expected/allowed
 expression difference of alleles HLA-A from father and HLA-A from mother. Intended to speed up the subsequent pairwise matching.}
 
-\item{top_n_pairwise_results}{top ranks of unique_explained_reads_rank and total_explained_reads_rank of pairwise matches used for plotting}
+\item{top_n_pairwise_results}{top ranks of uni_expl_reads_rank and tot_expl_reads_rank of pairwise matches used for plotting}
 
 \item{hla_seq_colName}{column name of hla sequences in hla_ref}
+
+\item{hla_seq_colName2}{HLA sequence column name for second round of matching (e.g. now using HLA alleles as ref which have all exon annotated)}
 
 \item{read_seq_colName}{column name read sequences in reads}
 
@@ -46,7 +51,11 @@ expression difference of alleles HLA-A from father and HLA-A from mother. Intend
 
 \item{lapply_fun}{function name without quotes; lapply, pbapply::pblapply or parallel::mclapply are suggested}
 
-\item{maxmis}{}
+\item{maxmis}{max number of mismatches}
+
+\item{complete_seq_columns}{which columns in hla_ref to use in order to define complete cases (e.g. no missing exons)}
+
+\item{make_reads_distinct}{logical whether to remove duplicated reads (read_seq_colName)}
 
 \item{...}{additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen}
 }
@@ -62,6 +71,6 @@ The results of pairwise matches are hence plotted by p-groups.
 \details{
 Reads are checked for perfect matches (hits) in all provided hla reference alleles (or a sub-sequence of them, e.g. only exon 2 and 3 which are subject to highest variation).
 For every hla allele the number of hits are counted - the allele can 'explain' a number of reads. This is done for every allele on its own.
-Then pairwise combinations of alleles are checked for the number of reads that they explain redundantly (double_explained_reads) or uniquely (uniquely_explained_reads) and in total (total_explained_reads).
-The allele-combinations with the highest ranks (combination of total_explained_reads and uniquely_explained_reads) likely reflect the cells' HLA type.
+Then pairwise combinations of alleles are checked for the number of reads that they explain redundantly (dbl_expl_reads) or uniquely (uniquely_explained_reads) and in total (tot_expl_reads).
+The allele-combinations with the highest ranks (combination of tot_expl_reads and uniquely_explained_reads) likely reflect the cells' HLA type.
 }

@@ -193,7 +193,7 @@ freq_pie_chart <- function(SO,
   }
 
   if (is.na(plot[["theme"]][["panel.background"]][["fill"]])) {
-    plot <- plot + theme(panel.background = element_rect(fill = "white"))
+    plot <- plot + theme(panel.background = ggplot2::element_rect(fill = "white"))
   }
 
   # in case label are outside of the circle, adjust their color (black or white) to the panel.background

@@ -183,7 +183,7 @@ feature_plot_stat <- function(SO,
   plot <- plot + Gmisc::fastDoCall(ggh4x::facet_wrap2, args = c(list(facets = ggplot2::vars(Feature)), facetting_args))
 
   if (!plot.strip) {
-    plot <- plot + theme(strip.background = element_blank(), strip.text.x = element_blank())
+    plot <- plot + theme(strip.background = ggplot2::element_blank(), strip.text.x = ggplot2::element_blank())
   }
 
   return(plot)

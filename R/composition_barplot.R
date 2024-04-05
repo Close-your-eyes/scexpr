@@ -122,7 +122,7 @@ composition_barplot <- function(SO,
   table <-
     table %>%
     dplyr::group_by(!!rlang::sym(x_cat)) %>%
-    dplyr::arrange(desc(!!rlang::sym(fill_cat)), .by_group = T) %>%
+    dplyr::arrange(dplyr::desc(!!rlang::sym(fill_cat)), .by_group = T) %>%
     dplyr::mutate(rel_x_cumsum = cumsum(rel_x)) %>%
     dplyr::mutate(rel_x_cumsum_lag = dplyr::lag(rel_x_cumsum, default = 0)) %>%
     dplyr::mutate(label_ypos = rel_x_cumsum_lag + (rel_x_cumsum-rel_x_cumsum_lag)/2) %>%
@@ -149,7 +149,7 @@ composition_barplot <- function(SO,
       ggplot2::geom_col(color = border_color) +
       ggplot2::scale_fill_manual(values = col_pal) +
       ggplot2::labs(y = ifelse(label_rel_pct, "frequency [%]", "frequency")) +
-      scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1)*fctr)
+      ggplot2::scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1)*fctr)
   } else if (y == "abs") {
     plot <-
       ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = n, fill = !!rlang::sym(fill_cat))) +
@@ -267,11 +267,11 @@ composition_barplot <- function(SO,
       plot +
       ggplot2::coord_flip()
     if (plot_sigma) {
-      plot <- plot + annotate("text", label = "\u03A3", x = Inf, y = total_labels_ypos*fctr, vjust = sigma_just, size = label_size)
+      plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = Inf, y = total_labels_ypos*fctr, vjust = sigma_just, size = label_size)
     }
   } else {
     if (plot_sigma) {
-      plot <- plot + annotate("text", label = "\u03A3", x = -Inf, y = total_labels_ypos*fctr, hjust = sigma_just, size = label_size)
+      plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = -Inf, y = total_labels_ypos*fctr, hjust = sigma_just, size = label_size)
     }
   }
 

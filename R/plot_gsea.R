@@ -62,7 +62,7 @@ plot_gsea <- function(data,
     ggplot2::geom_segment(data = data$ticks,
                           mapping=ggplot2::aes(x = rank, y = -data$spreadES/10, xend = rank, yend = data$spreadES/10),
                           linewidth = ticksSize) +
-    ggplot2::geom_rect(data = data_colorbar, aes(xmin = min_rank,
+    ggplot2::geom_rect(data = data_colorbar, ggplot2::aes(xmin = min_rank,
                                          xmax = max_rank,
                                          fill = zscore),
                        ymin = -data[["spreadES"]]/16,
@@ -76,7 +76,7 @@ plot_gsea <- function(data,
     ggplot2::geom_hline(yintercept = 0, colour = "black") +
     theme +
     ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]") +
-    guides(fill = guide_colorsteps())
+    ggplot2::guides(fill = ggplot2::guide_colorsteps())
 
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
@@ -136,7 +136,7 @@ plot_gsea <- function(data,
 
     p <- p +
       ggtext::geom_richtext(data = data.frame(label = ann_label),
-                            aes(label = label),
+                            ggplot2::aes(label = label),
                             x = annotation_pos[1],
                             y = annotation_pos[2],
                             size = annotation_size,

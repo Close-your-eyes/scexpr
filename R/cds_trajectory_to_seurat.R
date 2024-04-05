@@ -62,7 +62,7 @@ cds_trajectory_to_seurat <- function(cds,
 
   if (!is.null(pseudotime_metacol_name)) {
     if ("pseudotime" %in% names(monocle3::principal_graph_aux(cds)[[reduction_method]])) {
-      pt <- stack(monocle3::principal_graph_aux(cds)[[reduction_method]][["pseudotime"]])
+      pt <- utils::stack(monocle3::principal_graph_aux(cds)[[reduction_method]][["pseudotime"]])
       rownames(pt) <- pt[,2]
       pt <- pt[,-2,drop=F]
       names(pt) <- pseudotime_metacol_name

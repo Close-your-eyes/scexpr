@@ -26,7 +26,10 @@
 #' @param p_group_colName column name of p_group in hla_ref
 #' @param g_group_colName column name of g_group in hla_ref
 #' @param ... additional argument to the lapply function; mainly mc.cores when parallel::mclapply is chosen
-#' @param maxmis
+#' @param maxmis max number of mismatches
+#' @param hla_seq_colName2 HLA sequence column name for second round of matching (e.g. now using HLA alleles as ref which have all exon annotated)
+#' @param complete_seq_columns which columns in hla_ref to use in order to define complete cases (e.g. no missing exons)
+#' @param make_reads_distinct logical whether to remove duplicated reads (read_seq_colName)
 #'
 #' @importFrom magrittr %>%
 #' @import Matrix
@@ -48,6 +51,8 @@ hla_typing <- function(hla_ref,
                        g_group_colName = "g_group",
                        lapply_fun = lapply,
                        maxmis = 0,
+                       complete_seq_columns = c("5'UTR", paste0("Exon", 1:8), "3'UTR"),
+                       make_reads_distinct = F,
                        ...) {
 
   # check for unique read names
@@ -85,6 +90,10 @@ hla_typing <- function(hla_ref,
   if (!hla_seq_colName %in% names(hla_ref)) {
     stop(hla_seq_colName, " not found in names of hla_ref")
   }
+  if (!hla_seq_colName2 %in% names(hla_ref)) {
+    message(hla_seq_colName2, " not found in names of hla_ref. Will skip second round of read alignment.")
+    hla_seq_colName2 <- NULL
+  }
   if (!p_group_colName %in% names(hla_ref)) {
     stop(p_group_colName, " not found in names of hla_ref")
   }
@@ -107,30 +116,42 @@ hla_typing <- function(hla_ref,
       stop("No reads left after filtering for ones with valid DNA/RNA characters only. Please fix the sequences.")
     }
   }
+
+  if (sum(any(grepl("HLA-A", hla_ref[[hla_allele_colName]])),
+          any(grepl("HLA-B", hla_ref[[hla_allele_colName]])),
+          any(grepl("HLA-C", hla_ref[[hla_allele_colName]]))) > 1) {
+    message("More than one of 'HLA-A', 'HLA-B' or 'HLA-C' detected in column '", hla_allele_colName, "' of hla_ref. Did you forget to filter for one reference allele only.")
+  }
+
   # remove columns with all NA, e.g. for HLA-B there is no exon8 --> remove the column
   hla_ref <- hla_ref[,colSums(is.na(hla_ref)) < nrow(hla_ref)]
 
   complete_alleles <-
     hla_ref %>%
-    dplyr::select(dplyr::matches("Exon[[:digit:]]$"), dplyr::contains("UTR"), allele) %>%
+    dplyr::select(dplyr::all_of(names(.)[which(names(.) %in% complete_seq_columns)]), allele) %>%
+    #dplyr::select(dplyr::matches("Exon[[:digit:]]$"), dplyr::contains("UTR"), allele) %>%
     dplyr::filter(stats::complete.cases(.)) %>%
     dplyr::pull(!!rlang::sym(hla_allele_colName))
 
   hla_ref <-
     hla_ref %>%
-    dplyr::mutate(complete_seq = allele %in% complete_alleles)
+    dplyr::mutate(complete_seq = allele %in% complete_alleles) %>%
+    dplyr::distinct(!!rlang::sym(hla_seq_colName), .keep_all = TRUE)
 
-  hla_ref2 <-
-    hla_ref %>%
-    dplyr::group_by(allele_coding) %>%
-    dplyr::mutate(allele_coding_Exon2_3_max_length = seq_Exon2_3_length == max(seq_Exon2_3_length))
+  'dplyr::group_by(allele_coding) %>%
+    dplyr::mutate(allele_coding_Exon2_3_max_len = seq_Exon2_3_length == max(seq_Exon2_3_length)) %>%
+    dplyr::ungroup() %>%'
 
-  hla_ref3 <-
-    hla_ref2 %>%
-    dplyr::filter(allele_coding_Exon2_3_max_length) %>%
-    dplyr::ungroup() %>%
-    dplyr::distinct(g_group, seq_Exon2_3_length, .keep_all = TRUE)
-
+  if (make_reads_distinct) {
+    n_before <- nrow(reads)
+    reads <- dplyr::distinct(reads, !!rlang::sym(read_seq_colName), .keep_all = T)
+    n_after <- nrow(reads)
+    if (n_after < n_before) {
+      message(n_after, " of ", n_before, " (", round(n_after/(n_after+n_before)*100), " %) reads are unique. Will do matching only with those.")
+    } else {
+      message("No duplicated reads found.")
+    }
+  }
 
   first_round_results <- run_read_matching_and_report_results(hla_ref = hla_ref,
                                                               reads = reads,
@@ -147,34 +168,37 @@ hla_typing <- function(hla_ref,
                                                               arg_list = arg_list,
                                                               ...)
 
-  allele_group12_medians <-
+'  allele_group12_medians <-
     first_round_results[["pair_res1_df"]] %>%
     dplyr::group_by(allele_group12) %>%
     dplyr::summarise(median_frac_match_reads_expl = median(frac_match_reads_expl)) %>%
-    dplyr::arrange(dplyr::desc(median_frac_match_reads_expl))
+    dplyr::arrange(dplyr::desc(median_frac_match_reads_expl))'
 
-  top_alleles <-
+ ' top_alleles <-
     first_round_results[["pair_res1_df"]] %>%
     dplyr::filter(frac_match_reads_expl >= allele_group12_medians[1,2,drop=T]) %>%
     dplyr::select(allele1, allele2)
+  top_alleles <- unique(c(top_alleles$allele1, top_alleles$allele2))'
+
+  top_alleles <- colnames(first_round_results[["top_sin_res_mat"]])
 
   hla_ref_top <-
     hla_ref %>%
-    dplyr::filter(!!rlang::sym(hla_allele_colName) %in% unique(c(top_alleles$allele1, top_alleles$allele2)))
+    dplyr::filter(!!rlang::sym(hla_allele_colName) %in% unique(top_alleles))
 
   hla_ref_top_complete <-
     hla_ref %>%
     dplyr::filter(!!rlang::sym(p_group_colName) %in% unique(hla_ref_top[[p_group_colName]])) %>%
-    dplyr::select(dplyr::matches("Exon[[:digit:]]$"), dplyr::contains("UTR"), dplyr::all_of(c(hla_allele_colName, p_group_colName))) %>%
-    dplyr::filter(stats::complete.cases(.))
+    dplyr::filter(complete_seq)
 
   second_round_results <- NULL
   if (!is.null(hla_seq_colName2)) {
+    message("Second round on sequences from ", hla_seq_colName2, " column.")
     second_round_results <- run_read_matching_and_report_results(hla_ref = hla_ref_top_complete,
                                                                  reads = reads,
-                                                                 allele_diff = allele_diff,
+                                                                 allele_diff = 1000, # arbitrary high number to make it uneffective; I did not want a second round of filtering
                                                                  top_n_pairwise_results = top_n_pairwise_results,
-                                                                 hla_seq_colName = hla_seq_colName2,
+                                                                 hla_seq_colName = hla_seq_colName2, # diff to first round
                                                                  read_seq_colName = read_seq_colName,
                                                                  hla_allele_colName = hla_allele_colName,
                                                                  read_name_colName = read_name_colName,
@@ -187,7 +211,7 @@ hla_typing <- function(hla_ref,
   }
 
 
-  return(list(hla_seq_colName = first_round_results, hla_seq_colName2 = second_round_results))
+  return(stats::setNames(list(first_round_results, second_round_results), c(hla_seq_colName, hla_seq_colName2)))
 
 }
 
@@ -208,7 +232,7 @@ run_read_matching_and_report_results <- function(hla_ref,
                                                  ...) {
 
   library(Matrix) # required for sparseMatrix below; saves memory
-  print("Calculating single matches.")
+  message("Calculating single matches.")
   if ("strand" %in% names(reads)) {
     single_res <- lapply(split(reads, as.character(reads$strand)),
                          single_matching,
@@ -224,8 +248,8 @@ run_read_matching_and_report_results <- function(hla_ref,
       message("Strand (", i, "):")
       reads_w_no_match_sum <- sum(Matrix::rowSums(single_res[[i]]) == 0)
       reads_w_min_one_match_sum <- sum(Matrix::rowSums(single_res[[i]]) > 0)
-      message(reads_w_min_one_match_sum, " reads with at least one match/hit, (", round(reads_w_min_one_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
-      message(reads_w_no_match_sum, " reads with no match/hit, (", round(reads_w_no_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
+      message("  ", reads_w_min_one_match_sum, " reads with at least one match/hit, (", round(reads_w_min_one_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
+      message("  ", reads_w_no_match_sum, " reads with no match/hit, (", round(reads_w_no_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
     }
     single_res <- do.call(rbind, single_res)
   } else {
@@ -249,25 +273,21 @@ run_read_matching_and_report_results <- function(hla_ref,
   if (reads_w_min_one_match_sum == 0) {
     stop("No matches/hits determined.")
   }
-  message(reads_w_min_one_match_sum, " reads with at least one match/hit, (", round(reads_w_min_one_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
-  message(reads_w_no_match_sum, " reads with no match/hit, (", round(reads_w_no_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
+  message("  ", reads_w_min_one_match_sum, " reads with at least one match/hit, (", round(reads_w_min_one_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
+  message("  ", reads_w_no_match_sum, " reads with no match/hit, (", round(reads_w_no_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
 
   # as.matrix here as this will speed up iteration over col.combs below!
-  top_single_res <- as.matrix(single_res[reads_w_min_one_match, expl_reads_per_allele >= max(expl_reads_per_allele)/allele_diff])
+  top_single_res <- as.matrix(single_res[which(reads_w_min_one_match), which(expl_reads_per_allele >= max(expl_reads_per_allele)/allele_diff)])
   top_sin_res_df <-
     data.frame(expl_reads = Matrix::colSums(top_single_res)) %>%
     tibble::rownames_to_column(hla_allele_colName) %>%
     dplyr::left_join(hla_ref, by = hla_allele_colName) %>%
     dplyr::mutate(rank = dplyr::row_number(-expl_reads))
 
-
-  # could also be made mapply or purrr::map2 with utils::combn(ncol(top_single_res), 2, simplify = T)
-  # but would require another argument to define with mapply fun to use
   #col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)
-  #print(paste0("Calculating pairwise matches. Combinations: ", length(col.combs), "."))
-
+  # TODO: catch error when only 1 read matches
   col.combs <- t(utils::combn(1:ncol(top_single_res), 2, simplify = T))
-  print(paste0("Calculating pairwise matches. Combinations: ", nrow(col.combs), "."))
+  message("Calculating pairwise matches. Combinations: ", nrow(col.combs), ".")
 
   # Call the C++ function to calculate row sums
   # Source the C++ code
@@ -412,7 +432,7 @@ run_read_matching_and_report_results <- function(hla_ref,
   allele_group12_medians <-
     top_pair_res_plot1 %>%
     dplyr::group_by(allele_group12) %>%
-    dplyr::summarise(median_frac_match_reads_expl = median(frac_match_reads_expl)) %>%
+    dplyr::summarise(median_frac_match_reads_expl = stats::median(frac_match_reads_expl)) %>%
     dplyr::arrange(dplyr::desc(median_frac_match_reads_expl))
 
   overview_plot <- ggplot2::ggplot(top_pair_res_plot1, ggplot2::aes(x = reorder_within(allele_group2, frac_match_reads_expl, allele_group1), y = frac_match_reads_expl)) +
@@ -427,11 +447,10 @@ run_read_matching_and_report_results <- function(hla_ref,
 
   top_pair_res_plot2 <-
     top_pair_res_plot1 %>%
-    dplyr::mutate(row_num_rank = dplyr::row_number(rank_sum)) %>%
-    dplyr::slice_min(order_by = row_num_rank, n = top_n_pairwise_results) %>%
-    dplyr::arrange(row_num_rank) %>%
-    dplyr::mutate(plot.color = as.factor(ifelse(row_num_rank %% 2 != 0, 1, 2)))
-
+    dplyr::mutate(rank_plot = dplyr::row_number(-tot_expl_reads)) %>%
+    dplyr::slice_min(order_by = rank_plot, n = top_n_pairwise_results) %>%
+    dplyr::arrange(rank_plot) %>%
+    dplyr::mutate(plot.color = as.factor(ifelse(rank_plot %% 2 != 0, 1, 2)))
 
   sin_plot <- ggplot2::ggplot(top_sin_res_df, ggplot2::aes(x = reorder_within(!!rlang::sym(hla_allele_colName), expl_reads, allele_group), y = expl_reads)) +
     ggplot2::geom_bar(stat = "identity") +
@@ -442,21 +461,21 @@ run_read_matching_and_report_results <- function(hla_ref,
     ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
     ggplot2::facet_wrap(ggplot2::vars(allele_group), scales = "free_x")
 
-  rank.plot.p1 <- ggplot2::ggplot(top_pair_res_plot2, ggplot2::aes(x = as.factor(row_num_rank), y = stats::reorder(p_group1, row_num_rank), fill = plot.color)) +
+  rank.plot.p1 <- ggplot2::ggplot(top_pair_res_plot2, ggplot2::aes(x = as.factor(rank_plot), y = stats::reorder(p_group1, rank_plot), fill = plot.color)) +
     ggplot2::geom_point(size = 2, shape = 21) +
     ggplot2::ylab("p group 1") +
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pair_res_df), 10)) +
     ggplot2::theme_bw() +
     ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "none", panel.grid.minor = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier"))
 
-  rank.plot.p2 <- ggplot2::ggplot(top_pair_res_plot2, ggplot2::aes(x = as.factor(row_num_rank), y = stats::reorder(p_group2, row_num_rank), fill = plot.color)) +
+  rank.plot.p2 <- ggplot2::ggplot(top_pair_res_plot2, ggplot2::aes(x = as.factor(rank_plot), y = stats::reorder(p_group2, rank_plot), fill = plot.color)) +
     ggplot2::geom_point(size = 2, shape = 21) +
     ggplot2::ylab("p group 2") +
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pair_res_df), 10)) +
     ggplot2::theme_bw() +
     ggplot2::theme(axis.title.x = ggplot2::element_blank(), axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), legend.position = "none", panel.grid.minor = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier"))
 
-  rank.read.plot <- ggplot2::ggplot(top_pair_res_plot2, ggplot2::aes(x = as.factor(row_num_rank), y = tot_expl_reads, fill = plot.color)) +
+  rank.read.plot <- ggplot2::ggplot(top_pair_res_plot2, ggplot2::aes(x = as.factor(rank_plot), y = tot_expl_reads, fill = plot.color)) +
     ggplot2::geom_point(size = 2, shape = 21) +
     ggplot2::xlab("rank") +
     ggplot2::ylab("total\nexplained\nreads") +
@@ -465,23 +484,22 @@ run_read_matching_and_report_results <- function(hla_ref,
     ggplot2::scale_x_discrete(breaks = seq(0, nrow(pair_res_df), 10))
 
   expl_reads_overall <- as.numeric(levels(as.factor(top_pair_res_plot2$expl_reads_overall)))
-  if ((max(top_pair_res_plot2$tot_expl_reads) - min(top_pair_res_plot2$tot_expl_reads)) > 10) {
-    rank.read.plot <-
-      rank.read.plot +
-      ggplot2::scale_y_continuous(breaks = seq(max(top_pair_res_plot2$tot_expl_reads), min(top_pair_res_plot2$tot_expl_reads),
-                                               by = -floor_any((max(top_pair_res_plot2$tot_expl_reads) - min(top_pair_res_plot2$tot_expl_reads))/3, 10)),
-                                  sec.axis = ggplot2::sec_axis(~ . / expl_reads_overall * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
-  } else if ((max(top_pair_res_plot2$tot_expl_reads) - min(top_pair_res_plot2$tot_expl_reads)) > 5) {
-    rank.read.plot <-
-      rank.read.plot +
-      ggplot2::scale_y_continuous(breaks = seq(max(top_pair_res_plot2$tot_expl_reads), min(top_pair_res_plot2$tot_expl_reads), by = -5),
-                                  sec.axis = ggplot2::sec_axis(~ . / expl_reads_overall * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
+  max_tot_reads <- max(top_pair_res_plot2$tot_expl_reads)
+  min_tot_reads <- min(top_pair_res_plot2$tot_expl_reads)
+  max_min_diff <- max_tot_reads - min_tot_reads
+  if (max_min_diff > 10) {
+    breaks <- seq(max_tot_reads,
+                  min_tot_reads,
+                  by = -max(c(10, floor_any((max_tot_reads - min_tot_reads)/3, 10))))
+  } else if (max_min_diff > 5) {
+    breaks <- seq(max_tot_reads, min_tot_reads, by = -5)
   } else {
-    rank.read.plot <-
-      rank.read.plot +
-      ggplot2::scale_y_continuous(breaks = seq(max(top_pair_res_plot2$tot_expl_reads), min(top_pair_res_plot2$tot_expl_reads), by = -1),
-                                  sec.axis = ggplot2::sec_axis(~ . / expl_reads_overall * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
+    breaks <- seq(max_tot_reads, min_tot_reads, by = -1)
   }
+  rank.read.plot <-
+    rank.read.plot +
+    ggplot2::scale_y_continuous(breaks = breaks,
+                                sec.axis = ggplot2::sec_axis(~ . / expl_reads_overall * 100, name = "% of matching\nreads that\nmatched min. one\nref. allele"))
 
   height.1 <- nlevels(as.factor(top_pair_res_plot2$p_group1))
   height.2 <- nlevels(as.factor(top_pair_res_plot2$p_group2))
@@ -512,10 +530,7 @@ run_read_matching_and_report_results <- function(hla_ref,
               pair_res2_df = top_pair_res_plot2,
               plot_sin_res = sin_plot,
               plot_pair_res1 = overview_plot,
-              plot_pair_res2 = pair_plot,
-              plot_rank_1 = rank.plot.p1,
-              plot_rank_2 = rank.plot.p2,
-              plot_rank_3 = rank.read.plot))
+              plot_pair_res2 = pair_plot))
 }
 
 
@@ -530,8 +545,8 @@ single_matching <- function(reads,
                             read_seq_colName,
                             ...) {
 
-  reads <- setNames(reads[,read_seq_colName,drop=T], reads[,read_name_colName,drop=T])
-  single_res <- do.call(rbind, lapply_fun(split(reads,ceiling(seq_along(reads)/1e3)), function(rrr) {
+  reads <- stats::setNames(reads[,read_seq_colName,drop=T], reads[,read_name_colName,drop=T])
+  single_res <- do.call(rbind, lapply_fun(split(reads, ceiling(seq_along(reads)/1e3)), function(rrr) {
 
     'hit_matrix <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
                                                       pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = 0),
