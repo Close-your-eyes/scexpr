@@ -4,12 +4,13 @@
 \alias{split_mat}
 \title{Split matrices just like splitting a data frame.}
 \usage{
-split_mat(x, f, byrow = T, ...)
+split_mat(x, f, n_chunks, chunk_size, byrow = T, ...)
 }
 \arguments{
 \item{x}{a matrix}
 
-\item{f}{a character or factor vector for splitting}
+\item{f}{a character or factor vector for splitting,
+must be same length as rows or cols of x}
 
 \item{byrow}{split by rows (T) or by columns (F)}
 

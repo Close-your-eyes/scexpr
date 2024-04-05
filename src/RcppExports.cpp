@@ -34,10 +34,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// orderAndConcatenateStrings
+std::vector<std::string> orderAndConcatenateStrings(Rcpp::CharacterMatrix mat);
+RcppExport SEXP _scexpr_orderAndConcatenateStrings(SEXP matSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::CharacterMatrix >::type mat(matSEXP);
+    rcpp_result_gen = Rcpp::wrap(orderAndConcatenateStrings(mat));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_scexpr_calculateRowSumsInCpp", (DL_FUNC) &_scexpr_calculateRowSumsInCpp, 2},
     {"_scexpr_countOccurrencesInCpp", (DL_FUNC) &_scexpr_countOccurrencesInCpp, 2},
+    {"_scexpr_orderAndConcatenateStrings", (DL_FUNC) &_scexpr_orderAndConcatenateStrings, 1},
     {NULL, NULL, 0}
 };
 
