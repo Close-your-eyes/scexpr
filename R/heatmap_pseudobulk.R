@@ -141,6 +141,7 @@ heatmap_pseudobulk <- function(SO,
                                                        override.aes = list(color = "black")),
                                ...) {
 
+
   # ... arguments to ggrepel, like nudge_y
 
   if (!requireNamespace("devtools", quietly = T)) {
@@ -189,12 +190,13 @@ heatmap_pseudobulk <- function(SO,
     legend_fill_args[["title"]] <- "transcription\nlevel"
   }
 
-  #legend.direction <- match.arg(legend.direction, c("horizontal", "vertical"))
-  if ("legend.direction" %in% names(theme_args)) {
+  #browser()
+   if ("legend.direction" %in% names(theme_args)) {
+     theme_args$legend.direction <- match.arg(theme_args$legend.direction, c("horizontal", "vertical"))
     if (theme_args$legend.direction == "horizontal") {
-      temp <- legend.barwidth
-      legend.barwidth <- legend.barheight
-      legend.barheight <- temp
+      temp <- legend_fill_args$barwidth
+      legend_fill_args$barwidth <- legend_fill_args$barheight
+      legend_fill_args$barheight <- temp
     }
   }
 
@@ -485,6 +487,7 @@ heatmap_pseudobulk <- function(SO,
     heatmap.plot <- ggplot2::ggplot(wil_auc, ggplot2::aes(x = group, y = feature, fill = avgExpr))
   }
 
+  #browser()
   heatmap.plot <-
     heatmap.plot +
     theme +
@@ -520,12 +523,12 @@ heatmap_pseudobulk <- function(SO,
                                     breaks = c(scale.min, scale.mid, scale.max), labels = labels)
     guide_fun <- ggplot2::guide_colourbar
   }
-
+#browser()
   heatmap.plot <-
     heatmap.plot +
     ggplot2::guides(fill = Gmisc::fastDoCall(guide_fun, args = legend_fill_args),
                     size = Gmisc::fastDoCall(ggplot2::guide_legend, args = legend_size_args))
-
+#browser()
   if (plot.feature.breaks & !is.null(feature.labels)) {
     axis.df <- data.frame(y = 1:length(levels(wil_auc$feature)), feature = levels(wil_auc$feature))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = feature)) +
