@@ -204,7 +204,7 @@ prep_gsea <- function(name,
   statsAdj <- stats[ord]
   statsAdj <- sign(statsAdj) * (abs(statsAdj) ^ gseaParam)
 
-  pathway <- unname(as.vector(na.omit(match(pathway, names(statsAdj)))))
+  pathway <- unname(as.vector(stats::na.omit(match(pathway, names(statsAdj)))))
   pathway <- sort(pathway)
   pathway <- unique(pathway)
 

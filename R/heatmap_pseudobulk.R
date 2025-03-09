@@ -430,7 +430,7 @@ heatmap_pseudobulk <- function(SO,
   n_pos_bin1 <- floor(max(wil_auc$avgExpr))
   n_pos_bin2 <- ceiling(max(wil_auc$avgExpr))
   min_bin <- min(n_neg_bin, n_pos_bin1)
-  if (n.colorsteps == "auto") {
+  if (length(n.colorsteps) == 1 && n.colorsteps == "auto") {
     if (n_pos_bin2 == 1 && n_neg_bin == 1) {
       # fine steps for heatmap with low range
       n.colorsteps <- seq(-1, 1, 0.5)
