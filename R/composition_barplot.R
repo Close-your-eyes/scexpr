@@ -177,7 +177,7 @@ composition_barplot <- function(SO,
     table_temp <-
       table_temp %>%
       dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
-
+#browser()
     if (plot_rel_labels) {
       ## individual nudging:
       # add nudge_x and nudge_y to table
