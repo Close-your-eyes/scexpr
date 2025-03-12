@@ -10,7 +10,7 @@ composition_barplot(
   fill_cat,
   y = c("rel", "abs"),
   col_pal = scexpr::col_pal("custom"),
-  border_color = "black",
+  color = "black",
   plot_rel_labels = F,
   label_only_largest = F,
   plot_abs_labels = F,
@@ -22,8 +22,8 @@ composition_barplot(
   label_rel_pct = T,
   label_rel_pct_decimals = 2,
   summarize_all_x = F,
-  label_rel_nudge = c(0, 0),
-  label_abs_nudge = c(0, 0),
+  label_rel_nudge = list(c(0, 0)),
+  label_abs_nudge = list(c(0, 0)),
   label_size = 4,
   flip = F
 )

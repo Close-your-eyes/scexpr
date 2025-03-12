@@ -175,32 +175,30 @@ composition_barplot <- function(SO,
       table_temp %>%
       dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
 
+    if (!missing(label_rel_nudge) || !missing(label_abs_nudge)) {
+      # print to show order of entries in the table which relevant for nudging labels
+      table_temp[,c(1:5)] |> print(n = nrow(.))
+    }
+
     if (y == "rel") {
       y_plot <- "label_ypos_fctr"
     } else if (y == "abs") {
       y_plot <- "n_label_ypos"
     }
 
-#browser()
     if (plot_rel_labels) {
-      ## individual nudging:
-      # add nudge_x and nudge_y to table
-      # order the table first by x_cat and cumsum
-      # this allows to provide a list of vectors for nudge_x and nudge_y
-
-      if (length(label_rel_nudge) != 1 && length(label_rel_nudge) != nrow(table_temp)) {
-        message("Length of label_rel_nudge and number of labels are not equal. Will not nudge")
-      } else {
-        if (label_size != 1 && length(label_size) != length(label_abs_nudge)) {
-          message("Length of label_size and number of labels are not equal. Will use the first entry of label.size for all.")
-          label_size <- rep(label_size[1], length(label_rel_nudge))
+      label_rel_nudge <- recycle(label_rel_nudge, table_temp[1,,drop=T])
+      label_size <- recycle(label_size, label_rel_nudge)
+      use_names <- F
+      if (!is.null(names(label_rel_nudge))) {
+        if (!anyDuplicated(names(label_rel_nudge)) && !anyDuplicated(table_temp[[x_cat]])) {
+          use_names <- T
+        } else {
+          message("names of label_rel_nudge cannot be used due to duplicates. will stick to their order.")
         }
-
-        if (!is.null(names(label_rel_nudge))) {
-          # with table there would duplicate rows based on names, how to handle?
-          # also check names with xcat
-          ### do not use nudging but fixed xy-coordinates
-          for (j in names(label_rel_nudge)) {
+      }
+      if (use_names) {
+        for (j in names(label_rel_nudge)) {
             plot <-
               plot +
               ggplot2::geom_text(data = table_temp[which(table_temp[[x_cat]] == j),],
@@ -208,47 +206,47 @@ composition_barplot <- function(SO,
                                  nudge_x = label_rel_nudge[[j]][1], nudge_y = label_rel_nudge[[j]][2],
                                  size = label_size[j])
           }
-        } else {
-          for (j in seq_along(label_rel_nudge)) {
-            plot <-
-              plot +
-              ggplot2::geom_text(data = table_temp[j,],
-                                 ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
-                                 nudge_x = label_rel_nudge[[j]][1], nudge_y = label_rel_nudge[[j]][2],
-                                 size = label_size[j])
-          }
+      } else {
+        for (j in seq_along(label_rel_nudge)) {
+          plot <-
+            plot +
+            ggplot2::geom_text(data = table_temp[j,],
+                               ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                               nudge_x = label_rel_nudge[[j]][1], nudge_y = label_rel_nudge[[j]][2],
+                               size = label_size[j])
         }
       }
-
     }
 
     if (plot_abs_labels) {
-      if (methods::is(label_abs_nudge, "list")) {
-        if (length(label_abs_nudge) != nrow(table_temp)) {
-          message("Length of label_rel_nudge and number of labels are not equal.")
-          if (label_size != 1 && length(label_size) != length(label_abs_nudge)) {
-            message("Length of label_size and number of labels are not equal. Will use the first entry of label.size for all.")
-          }
+      label_abs_nudge <- recycle(label_abs_nudge, table_temp[1,,drop=T])
+      label_size <- recycle(label_size, label_abs_nudge)
+      use_names <- F
+      if (!is.null(names(label_abs_nudge))) {
+        if (!anyDuplicated(names(label_abs_nudge)) && !anyDuplicated(table_temp[[x_cat]])) {
+          use_names <- T
         } else {
-          if (length(label_size) != length(label_abs_nudge)) {
-            label_size <- rep(label_size[1], length(label_abs_nudge))
-          }
-          for (j in seq_along(label_abs_nudge)) {
-            plot <-
-              plot +
-              ggplot2::geom_text(data = table_temp[j,],
-                                 ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
-                                 nudge_x = label_abs_nudge[[j]][1], nudge_y = label_abs_nudge[[j]][2],
-                                 size = label_size[j])
-          }
+          message("names of label_abs_nudge cannot be used due to duplicates. will stick to their order.")
+        }
+      }
+      if (use_names) {
+        for (j in names(label_abs_nudge)) {
+          plot <-
+            plot +
+            ggplot2::geom_text(data = table_temp[which(table_temp[[x_cat]] == j),],
+                               ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                               nudge_x = label_abs_nudge[[j]][1], nudge_y = label_abs_nudge[[j]][2],
+                               size = label_size[j])
         }
       } else {
-        plot <-
-          plot +
-          ggplot2::geom_text(data = table_temp,
-                             ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
-                             nudge_x = label_abs_nudge[1], nudge_y = label_abs_nudge[2],
-                             size = label_size)
+        for (j in seq_along(label_abs_nudge)) {
+          plot <-
+            plot +
+            ggplot2::geom_text(data = table_temp[j,],
+                               ggplot2::aes(color = I(label_color), label = rel_x_fctr_pct, x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                               nudge_x = label_abs_nudge[[j]][1], nudge_y = label_abs_nudge[[j]][2],
+                               size = label_size[j])
+        }
       }
     }
   }

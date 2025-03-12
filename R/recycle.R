@@ -7,17 +7,13 @@
 #' @export
 #'
 #' @examples
-recycle <- function(x, y) {
-  if (length(y) > length(x)) {
-    recycle2(y, x)
-  } else {
-    recycle2(x, y)
-  }
-}
+recycle <- function(short, long) {
 
-recycle2 <- function(x, y) {
-  if (length(x) %% length(y) != 0) {
+  if (length(long) < length(short)) {
+    message("recycling: short is longer than long and will be cut to length(long).")
+  } else if (length(long) %% length(short) != 0) {
     message("recycling: longer element is not a multiple of the shorter.")
   }
-  return(rep(y, length.out = length(x)))
+
+  return(rep(short, length.out = length(long)))
 }
