@@ -14,24 +14,73 @@ composition_barplot(
   plot_rel_labels = F,
   label_only_largest = F,
   plot_abs_labels = F,
-  plot_total_labels = F,
-  total_labels_ypos = 1.05,
-  plot_sigma = F,
-  sigma_just = ifelse(flip, 2, -1),
+  plot_total_rel_labels = F,
+  plot_total_abs_labels = F,
   min_label_freq = 0.05,
   label_rel_pct = T,
-  label_rel_pct_decimals = 2,
+  label_rel_decimals = 2,
   summarize_all_x = F,
   label_rel_nudge = list(c(0, 0)),
   label_abs_nudge = list(c(0, 0)),
-  label_size = 4,
+  label_size_rel = 4,
+  label_size_abs = 4,
+  label_total_rel_nudge = c(0, 0),
+  label_total_abs_nudge = c(0, 0),
+  label_position = NULL,
   flip = F
 )
 }
 \arguments{
-\item{SO}{Seurat object or data frame}
+\item{SO}{Seurat object or data frame, meta.data of SO is used}
 
-\item{sigma_just}{}
+\item{x_cat}{column to use as x axis}
+
+\item{fill_cat}{column to use fill category for bar segments}
+
+\item{y}{use absolute (n) or relative (\%) y axis}
+
+\item{col_pal}{color palette for bar filling}
+
+\item{color}{color of bars}
+
+\item{plot_rel_labels}{plot relative labels of bar segment sizes}
+
+\item{label_only_largest}{label only the largest bar segment per x_cat,
+e.g if there are two groups only per x_cat}
+
+\item{plot_abs_labels}{plot absolute labels of bar segment sizes}
+
+\item{plot_total_rel_labels}{plot total labels on top of bar showing how much the
+x_cat occupies from total}
+
+\item{plot_total_abs_labels}{see plot_total_rel_labels}
+
+\item{min_label_freq}{minimum frequency per x_cat to plot labels}
+
+\item{label_rel_pct}{plot relative label as percent (TRUE) or as fraction (FALSE);
+this also affects the axis if y = "rel"}
+
+\item{label_rel_decimals}{number of decimal places for percent values}
+
+\item{summarize_all_x}{add an extra column that summarizes (averages) all others}
+
+\item{label_rel_nudge}{list of x and y values to nudge relative labels;
+list may have names of x_cat but names only apply if there is max. 1 label per x_cat,
+e.g. when label_only_largest = T}
+
+\item{label_abs_nudge}{see label_rel_nudge}
+
+\item{label_size_rel}{vector of size for relative labels}
+
+\item{label_size_abs}{see label_size_rel}
+
+\item{label_total_rel_nudge}{x and y nudging of total label on top}
+
+\item{label_total_abs_nudge}{see label_total_rel_nudge}
+
+\item{label_position}{overwrite calculated label positions, which by default are centered in bar segments}
+
+\item{flip}{flip x and y axis}
 }
 \description{
 Plot composition of one category by another
