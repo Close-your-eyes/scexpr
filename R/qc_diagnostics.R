@@ -191,6 +191,7 @@ qc_diagnostic <- function(data_dirs,
   }
 
   message("Reading filtered_feature_bc_matrix data.")
+
   SO <- lapply(names(ffbms), function(x) {
 
     message(x)
@@ -199,10 +200,10 @@ qc_diagnostic <- function(data_dirs,
 
 
     if (any(grepl("\\.h5$", list.files(ffbms[x])))) {
-      if (length(grepl("\\.h5$", list.files(ffbms[x]))) > 1) {
-        message("Found more than one .h5 file in ", ffbms[x], ". Will use the first: ", grep("\\.h5$", list.files(ffbms[x], full.names = T), value = T)[1])
+      if (length(list.files(ffbms[x], pattern = "\\.h5$")) > 1) {
+        message("Found more than one .h5 file in ", ffbms[x], ". Will use the first: ", list.files(ffbms[x], pattern = "\\.h5$", full.names = T)[1])
       }
-      filt_data <- Seurat::Read10X_h5(filename = grep("\\.h5$", list.files(ffbms[x], full.names = T)[1], value = T))
+      filt_data <- Seurat::Read10X_h5(filename = list.files(ffbms[x], pattern = "\\.h5$", full.names = T)[1])
     } else {
       filt_data <- Seurat::Read10X(data.dir = ffbms[x])
     }
@@ -216,7 +217,7 @@ qc_diagnostic <- function(data_dirs,
     if (!is.null(cells)) {
       if (any(cells %in% colnames(filt_data))) {
         message(length(cells), " cells provided.")
-        message(length(which(cells %in% colnames(filt_data))), " of cells from a total of ", ncol(filt_data), " cells found in data (", length(which(cells %in% colnames(filt_data)))/ncol(filt_data), " %).")
+        message(length(which(cells %in% colnames(filt_data))), " of cells from a total of ", ncol(filt_data), " cells found in data (", round(length(which(cells %in% colnames(filt_data)))/ncol(filt_data)*100, 1), " %).")
         cells <- cells[which(cells %in% colnames(filt_data))]
         if (invert_cells) {
           filt_data <- filt_data[,which(!colnames(filt_data) %in% cells)]
@@ -316,6 +317,7 @@ qc_diagnostic <- function(data_dirs,
                 reductions = "umap",
                 nhvf = nhvf,
                 npcs = npcs,
+                min_cells = 1,
                 batch_corr = batch_corr,
                 RunHarmony_args = list(group.by.vars = "orig.ident"),
                 FindClusters_args = list(resolution = resolution),

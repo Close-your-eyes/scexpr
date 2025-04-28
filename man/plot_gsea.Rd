@@ -6,22 +6,59 @@
 \usage{
 plot_gsea(
   data,
-  ticksSize = 0.2,
+  ticks_linewidth = 0.2,
+  ticks_height = 1,
+  rect_height = 0.65,
+  rect_alpha = 0.85,
   color_ES_line = "black",
-  color_min_max_ES_line = "black",
+  color_ES_lims = "black",
   color_leadingEdge = "hotpink2",
   label_genes = NULL,
-  theme = ggplot2::theme_bw(),
+  theme = theme_bw(),
   plot_leadingEdge_rank = T,
   plot_leadingEdge_size = T,
   annotation_pos = NULL,
   annotation_size = 4,
-  rank_metric_zscore_lims = c(-4, 4),
+  zscore_lims = c(-2, 2),
   annotation_with_name = F
 )
 }
 \arguments{
-\item{annotation_with_name}{}
+\item{data}{named numeric vector of ranking metric, e.g. S2N; names must
+be genes; no need to sort, this is done internally; if taken times -1 the
+gsea plot and ES flips}
+
+\item{ticks_linewidth}{width of gene ticks}
+
+\item{ticks_height}{length or height of gene ticks}
+
+\item{rect_height}{height of colored rectangles on top of gene ticks}
+
+\item{rect_alpha}{alpha level (transparency) of colored rectangles on top of gene ticks}
+
+\item{color_ES_line}{color of the ES line along the gene ranks}
+
+\item{color_ES_lims}{color of vertical lines which indicate min and max
+enrichment score}
+
+\item{color_leadingEdge}{color of vertical line at the max ES}
+
+\item{label_genes}{plot gene names next to their ticks, try leadingEdge or
+a vector gene names to plot}
+
+\item{theme}{ggplot theme}
+
+\item{plot_leadingEdge_rank}{plot a vertical line at the rank of max ES}
+
+\item{plot_leadingEdge_size}{plot the size (n genes) of the leading edge}
+
+\item{annotation_pos}{vector of x and y value where to plot gsea stats}
+
+\item{annotation_size}{size of annotation (geom_text size)}
+
+\item{zscore_lims}{breaks at which to cut the color scale (which is zscore),
+if very few ranks fill a zscore range it is pointless to plot such very small
+rectangle}
 }
 \description{
 Plot results from scexpr::fgsea_on_msigdbr

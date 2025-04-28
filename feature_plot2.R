@@ -1,6 +1,6 @@
 #' Plot features of single cell transcriptomes on a dimension reduction map
 #'
-#' @param SO one or more Seurat object(s)
+#' @param SO one or more Seurat object
 #' @param features vector of features to plot (genes or column names in meta data)
 #' @param assay which assay to get expression data from
 #' @param dims which dimensions of the selected dimension reduction to plot
@@ -542,7 +542,7 @@ feature_plot <- function(SO,
 
 
     # theme_get()[["text"]][["family"]]
-#return(plot)
+    #return(plot)
     plot <-
       plot +
       ggplot2::guides(
@@ -565,7 +565,7 @@ feature_plot <- function(SO,
                                   title.theme = ggtext::element_markdown(size = legend.title.text.size, family = font.family),
                                   label.position = legend.label.position,
                                   title.position = legend.title.position,
-                                   title = switch(plot.legend.title, legend.title, NULL))
+                                  title = switch(plot.legend.title, legend.title, NULL))
         } else {
           ggplot2::guide_legend(override.aes = list(size = legend.col.size),
                                 reverse = legend.reverse,
@@ -963,12 +963,24 @@ feature_plot <- function(SO,
   }
 
   if (any(duplicated(cells))) {
-    message("Duplicates found in cells. Cells is made unique though.")
+    message("Duplicates found in cells. Made unique now.")
     cells <- unique(cells)
   }
 
   # check if cell names are unique across SOs
-  all.cells <- unlist(lapply(SO, function(x) Seurat::Cells(x)))
+  all.cells <- purrr::map(SO, Seurat::Cells)
+  # Get all pairwise combinations of indices
+  combs <- combn(seq_along(all.cells), 2, simplify = F)
+
+  # Check for intersection
+  intersections <- lapply(combs, function(pair) {
+    common <- intersect(char_list[[pair[1]]], char_list[[pair[2]]])
+    list(pair = pair, intersect = common, has_intersect = length(common) > 0)
+  })
+
+  # Filter only those with intersection
+  # intersections_with_common <- Filter(function(x) x$has_intersect, intersections)
+
 
   # check if any cells intersects with not unique cell names in SOs
   if (length(SO) > 1 && any(duplicated(all.cells)) &&
@@ -1274,7 +1286,7 @@ feature_plot <- function(SO,
   if (length(feature == 1) && is.numeric(data[,1]) && all(data[,1] == 0)) {
     message("No expressers found for ", feature, ".")
   }
-#browser()
+  #browser()
   nacol <- apply(data, 2, anyNA)
   if (any(nacol)) {
     message(paste(names(which(nacol)), collapse = ", "), ": NA found in data.")

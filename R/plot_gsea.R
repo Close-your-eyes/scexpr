@@ -1,78 +1,107 @@
 #' Plot results from scexpr::fgsea_on_msigdbr
 #'
-#' @param data
-#' @param ticksSize
-#' @param color_ES_line
-#' @param color_min_max_ES_line
-#' @param color_leadingEdge
-#' @param label_genes
-#' @param theme
-#' @param plot_leadingEdge_rank
-#' @param plot_leadingEdge_size
-#' @param annotation_pos
-#' @param annotation_size
+#' @param data named numeric vector of ranking metric, e.g. S2N; names must
+#' be genes; no need to sort, this is done internally; if taken times -1 the
+#' gsea plot and ES flips
+#' @param ticks_linewidth width of gene ticks
+#' @param color_ES_line color of the ES line along the gene ranks
+#' @param color_ES_lims color of vertical lines which indicate min and max
+#' enrichment score
+#' @param color_leadingEdge color of vertical line at the max ES
+#' @param label_genes plot gene names next to their ticks, try leadingEdge or
+#' a vector gene names to plot
+#' @param theme ggplot theme
+#' @param plot_leadingEdge_rank plot a vertical line at the rank of max ES
+#' @param plot_leadingEdge_size plot the size (n genes) of the leading edge
+#' @param annotation_pos vector of x and y value where to plot gsea stats
+#' @param annotation_size size of annotation (geom_text size)
 #' @param annotation_with_name
+#' @param ticks_height length or height of gene ticks
+#' @param rect_height height of colored rectangles on top of gene ticks
+#' @param rect_alpha alpha level (transparency) of colored rectangles on top of gene ticks
+#' @param zscore_lims breaks at which to cut the color scale (which is zscore),
+#' if very few ranks fill a zscore range it is pointless to plot such very small
+#' rectangle
 #'
 #' @return
 #' @export
 #'
 #' @examples
 plot_gsea <- function(data,
-                      ticksSize=0.2,
+                      ticks_linewidth = 0.2,
+                      ticks_height = 1,
+                      rect_height = 0.65,
+                      rect_alpha = 0.85,
                       color_ES_line = "black",
-                      color_min_max_ES_line = "black",
+                      color_ES_lims = "black",
                       color_leadingEdge = "hotpink2",
-                      label_genes = NULL, # leave NULL be default because it may take some time in case many gene sets are tested
-                      theme = ggplot2::theme_bw(),
+                      label_genes = NULL, # leave NULL by default because it may take some time in case many gene sets are tested
+                      theme = theme_bw(),
                       plot_leadingEdge_rank = T,
                       plot_leadingEdge_size = T,
                       annotation_pos = NULL,
                       annotation_size = 4,
-                      rank_metric_zscore_lims = c(-4,4),
+                      zscore_lims = c(-2,2),
                       annotation_with_name = F) {
-
-
-  if (abs(min(rank_metric_zscore_lims)) != abs(max(rank_metric_zscore_lims))) {
-    warning("rank_metric_zscore_lims are not symmetric around zero. This may yield a misleading divergent color scale which does not break at zero.")
-  }
 
 
   data_colorbar <-
     as.data.frame(data$stats) %>%
     dplyr::mutate(zscore = as.vector(round(scale(stat),0))) %>%
-    dplyr::mutate(zscore = ifelse(zscore < min(rank_metric_zscore_lims), min(rank_metric_zscore_lims), zscore)) %>%
-    dplyr::mutate(zscore = ifelse(zscore > max(rank_metric_zscore_lims), max(rank_metric_zscore_lims), zscore)) %>%
+    dplyr::mutate(zscore = ifelse(zscore < min(zscore_lims), min(zscore_lims), zscore)) %>%
+    dplyr::mutate(zscore = ifelse(zscore > max(zscore_lims), max(zscore_lims), zscore)) %>%
     dplyr::group_by(zscore) %>%
     dplyr::filter(rank %in% c(min(rank), max(rank))) %>%
     dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
-  color_break_limit <- min(c(abs(min(data_colorbar$zscore)), max(data_colorbar$zscore)))-1
-  min_max <- c(min(data_colorbar$zscore), max(data_colorbar$zscore))
-  # make sure it is symmetric
-  data_colorbar <-
-    data_colorbar %>%
-    dplyr::mutate(zscore = ifelse(abs(zscore) > color_break_limit+1, (color_break_limit+1)*sign(zscore), zscore))
-  # manually provide bluish and reddish color to scale_fill_stepsn in order to have switch from blue to red at zero
-  #cols1 <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu"))[1:5])(round(sum(data2$zscore<0)/length(data2$zscore)*10))
-  #cols2 <- grDevices::colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu"))[7:11])(round(sum(data2$zscore>0)/length(data2$zscore)*10))
-  #scales::show_col(c(cols1, cols2))
-  #scales::show_col(rev(RColorBrewer::brewer.pal(11,"RdBu")))
+
+  color_scale_limits <- range(round(scale(data$stats$stat),0))
+  color_breaks <- min(c(abs(min(data_colorbar$zscore)), max(data_colorbar$zscore)))
+  color_breaks <- seq(1,color_breaks,1)
+
+  sES <- data$spreadES/10
+  ticks_height <- sES * ticks_height
+  rect_height <- sES * rect_height
 
   p <-
     ggplot2::ggplot(data = data$curve) +
-    ggplot2::geom_segment(data = data$ticks,
-                          mapping=ggplot2::aes(x = rank, y = -data$spreadES/10, xend = rank, yend = data$spreadES/10),
-                          linewidth = ticksSize) +
-    ggplot2::geom_rect(data = data_colorbar, ggplot2::aes(xmin = min_rank,
-                                         xmax = max_rank,
-                                         fill = zscore),
-                       ymin = -data[["spreadES"]]/16,
-                       ymax = data[["spreadES"]]/16, alpha = 0.8,
-                       show.legend = T) +
-    # not perfect yet. how to manually change legend text (breaks and limits?)
-    ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")), breaks = seq(-color_break_limit,color_break_limit,1), show.limits = F) +
+    ggplot2::geom_segment(
+      data = data$ticks,
+      mapping = ggplot2::aes(
+        x = rank,
+        xend = rank,
+        y = -ticks_height,
+        yend = ticks_height,
+      ),
+      linewidth = ticks_linewidth
+    ) +
+    ggplot2::geom_rect(
+      data = data_colorbar,
+      mapping = ggplot2::aes(
+        xmin = min_rank,
+        xmax = max_rank,
+        fill = zscore
+      ),
+      ymin = -rect_height,
+      ymax = rect_height,
+      alpha = rect_alpha,
+      show.legend = T
+    ) +
+    ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")),
+                               breaks = data_colorbar$zscore,
+                               limits = c(color_scale_limits[1],color_scale_limits[2]),
+                               # center color scale at 0 by ensuring equal number of values around 0
+                               # using color_breaks as it is now gives darker colors as if it would be e.g. c(min,1,0,-1,max)
+                               values = scales::rescale(c(
+                                 color_scale_limits[1],
+                                 -sort(color_breaks, decreasing = T),
+                                 0,
+                                 color_breaks,
+                                 color_scale_limits[2]
+                               )),
+                               show.limits = T) +
     ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
-    ggplot2::geom_hline(yintercept = data$posES, colour = color_min_max_ES_line, linetype = "dashed") +
-    ggplot2::geom_hline(yintercept = data$negES, colour = color_min_max_ES_line, linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = data$posES, colour = color_ES_lims, linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = data$negES, colour = color_ES_lims, linetype = "dashed") +
     ggplot2::geom_hline(yintercept = 0, colour = "black") +
     theme +
     ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]") +
@@ -94,17 +123,21 @@ plot_gsea <- function(data,
                                    y = 0,
                                    yend = c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))],
                                    color = color_leadingEdge,
-                                   linetype="dashed")
+                                   linetype = "dashed")
     if (plot_leadingEdge_size) {
       p <- p + ggplot2::annotate("text",
                                  label = paste0("n = ", data[["leadingEdge_size"]]), #  which(data[["ticks"]]$rank == data[["leadingEdge_rank"]])
                                  color = color_leadingEdge,
-                                 y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["spreadES"]]/7, -data[["spreadES"]]/7),
-                                 x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]), data[["leadingEdge_rank"]]/2, data[["leadingEdge_rank"]] + (nrow(data[["stats"]]) - data[["leadingEdge_rank"]])/2 ))
+                                 y = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]),
+                                            ticks_height + 0.03,
+                                            -ticks_height - 0.03),
+                                 x = ifelse(abs(data[["posES"]]) > abs(data[["negES"]]),
+                                            data[["leadingEdge_rank"]]/2,
+                                            data[["leadingEdge_rank"]] + (nrow(data[["stats"]]) - data[["leadingEdge_rank"]])/2 ))
     }
   }
 
-  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (n = ", nrow(data[["ticks"]]), ")"),
+  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (", nrow(data[["ticks"]]), "/", length(data[["gene.set"]]),  ")"),
                          subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
 
 

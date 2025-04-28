@@ -143,8 +143,8 @@ prep_gsea <- function(name,
 
 
   data <- c(data, list(name = name,
+                       gene.set = gene.set,
                        rank_df = rank_df,
-                       #colorbar_df = colorbar_df,
                        leadingEdge_rank = leadingEdge_rank,
                        leadingEdge_size = leadingEdge_size,
                        pval = pval,

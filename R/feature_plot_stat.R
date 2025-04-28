@@ -180,7 +180,7 @@ feature_plot_stat <- function(SO,
 
   plot <- plot + ggplot2::theme(...)
   plot <- plot + ggplot2::scale_color_manual(values = col.pal)
-  plot <- plot + Gmisc::fastDoCall(ggh4x::facet_wrap2, args = c(list(facets = ggplot2::vars(Feature)), facetting_args))
+  plot <- plot + Gmisc::fastDoCall(facet_wrap, args = c(list(facets = ggplot2::vars(Feature)), facetting_args))
 
   if (!plot.strip) {
     plot <- plot + theme(strip.background = ggplot2::element_blank(), strip.text.x = ggplot2::element_blank())

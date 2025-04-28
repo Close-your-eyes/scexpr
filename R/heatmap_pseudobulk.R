@@ -116,29 +116,35 @@ heatmap_pseudobulk <- function(SO,
                                hlines_args = list(),
                                convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
                                theme = ggplot2::theme_classic(),
-                               theme_args = list(axis.title = ggplot2::element_blank(),
-                                                 axis.text.x = ggplot2::element_text(),
-                                                 axis.text.y = ggplot2::element_text(size = 10, face = "italic"),
-                                                 legend.position = "right",
-                                                 legend.direction = "vertical"),
-                               legend_fill_args = list(label.theme = ggplot2::element_text(size = 10),
-                                                       title.theme = ggplot2::element_text(size = 10),
-                                                       title.position = "top",
-                                                       title = "..auto..",
-                                                       title.hjust = 0.5,
-                                                       barwidth = 1,
-                                                       barheight = 8,
-                                                       order = 1),
-                               legend_size_args = list(label.theme = ggplot2::element_text(size = 10),
-                                                       title.theme = ggplot2::element_text(size = 10),
-                                                       title.position = "top",
-                                                       title = "transcription\nfrequency [%]",
-                                                       title.hjust = 0.5,
-                                                       label.position = "bottom",
-                                                       order = 2,
-                                                       ncol = NULL,
-                                                       nrow = NULL,
-                                                       override.aes = list(color = "black")),
+                               theme_args = list(
+                                 axis.title = ggplot2::element_blank(),
+                                 axis.text.x = ggplot2::element_text(),
+                                 axis.text.y = ggplot2::element_text(size = 10, face = "italic"),
+                                 legend.position = "right",
+                                 legend.direction = "vertical"
+                               ),
+                               legend_fill_args = list(
+                                 label.theme = ggplot2::element_text(size = 10),
+                                 title.theme = ggplot2::element_text(size = 10),
+                                 title.position = "top",
+                                 title = "..auto..",
+                                 title.hjust = 0.5,
+                                 barwidth = 1,
+                                 barheight = 8,
+                                 order = 1
+                               ),
+                               legend_size_args = list(
+                                 label.theme = ggplot2::element_text(size = 10),
+                                 title.theme = ggplot2::element_text(size = 10),
+                                 title.position = "top",
+                                 title = "transcription\nfrequency [%]",
+                                 title.hjust = 0.5,
+                                 label.position = "bottom",
+                                 order = 2,
+                                 ncol = NULL,
+                                 nrow = NULL,
+                                 override.aes = list(color = "black")
+                               ),
                                ...) {
 
 
@@ -443,7 +449,7 @@ heatmap_pseudobulk <- function(SO,
     }
   }
 
-  if (fill == "auto") {
+  if (length(fill) == 1 && fill == "auto") {
     fill <- scexpr::col_pal(name = "RColorBrewer::RdBu", n = 11, direction = -1)[-c(1,11)]
     # increase color scale length here with *10
     fill <- prismatic::color(grDevices::colorRampPalette(fill)(length(n.colorsteps)*10))
