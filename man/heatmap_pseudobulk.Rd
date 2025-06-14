@@ -106,7 +106,7 @@ level of differential expression (one level vs. all others)}
 
 \item{color}{color of stroke (border) around tiles or dots; "NA" means no stroke is plotted; NA has
 to be put in quotation mark ("NA"), such that geom_point accepts it.
-other choices may be black, white or any other color code; when "auto" a grey70 is used
+other choices may be black, white or any other color code; when "auto", grey70 is used
 when dotplot = F and a the number of features is below 100.}
 
 \item{border_linewidth}{linewidth (geom_tile) or stroke (geom_point); defines the size of borders around tiles or points}

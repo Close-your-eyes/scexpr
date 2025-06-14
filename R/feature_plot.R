@@ -831,7 +831,6 @@ feature_plot <- function(SO,
                       split.by = NULL,
                       shape.by = NULL,
                       meta.col = NULL,
-                      cells = NULL,
                       length = NULL) {
   if (!is.list(SO)) {
     SO <- list(SO)
@@ -876,18 +875,18 @@ feature_plot <- function(SO,
     message("Data slot is equal to the counts slot. You may want to normalize.")
   }
 
-  if (!is.null(cells)) {
-    allcells <- unique(unlist(purrr::map(SO, Seurat::Cells)))
-    notfound <- cells[which(!cells %in% allcells)]
-    if (length(notfound) > 0) {
-      message(length(notfound), " of ", length(cells), " cells not found.")
-    }
-    cells <- cells[which(cells %in% allcells)]
-    if (length(cells) == 0) {
-      stop("None of cells found.")
-    }
-    assign("cells", cells, env = parent.frame())
-  }
+  # if (!is.null(cells)) {
+  #   allcells <- unique(unlist(purrr::map(SO, Seurat::Cells)))
+  #   notfound <- cells[which(!cells %in% allcells)]
+  #   if (length(notfound) > 0) {
+  #     message(length(notfound), " of ", length(cells), " cells not found.")
+  #   }
+  #   cells <- cells[which(cells %in% allcells)]
+  #   if (length(cells) == 0) {
+  #     stop("None of cells found.")
+  #   }
+  #   assign("cells", cells, env = parent.frame())
+  # }
 
   if (!is.null(length) && length == 1) {
     return(SO[[1]])
@@ -1180,7 +1179,13 @@ feature_plot <- function(SO,
                       trajectory.slot = NULL) {
 
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by, shape.by = shape.by, meta.col = meta.col)
+  SO <- .check.SO(
+    SO = SO,
+    assay = assay,
+    split.by = split.by,
+    shape.by = shape.by,
+    meta.col = meta.col
+  )
   assay <- match.arg(assay, names(SO[[1]]@assays))
 
   if (length(feature) > 1) {
@@ -1224,8 +1229,15 @@ feature_plot <- function(SO,
 
   data <- do.call(rbind, lapply(names(SO), function(y) {
 
-    data <- cbind(data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], slot = slot, assay = assay)[gene_features,,drop = F])), check.names = F),
-                  data.frame(SO[[y]]@meta.data[,meta_features,drop=F], stringsAsFactors = F, check.names = F))
+    if (utils::compareVersion(as.character(SO1@version), "4.9.9") == 1) {
+      #version 5: use layer
+      data <- cbind(data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], layer = slot, assay = assay)[gene_features,,drop = F])), check.names = F),
+                    data.frame(SO[[y]]@meta.data[,meta_features,drop=F], stringsAsFactors = F, check.names = F))
+    } else {
+      #version 4: use slot
+      data <- cbind(data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], slot = slot, assay = assay)[gene_features,,drop = F])), check.names = F),
+                    data.frame(SO[[y]]@meta.data[,meta_features,drop=F], stringsAsFactors = F, check.names = F))
+    }
 
     if (!is.null(reduction)) {
       reduction <- unique(unlist(lapply(reduction, function(z) {
