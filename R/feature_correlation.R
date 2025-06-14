@@ -220,7 +220,7 @@ feature_correlation <- function(SO,
   ggplot(df, aes(CD8B,B2M, color = abs(resid))) +
     geom_point() +
     geom_smooth(method = "lm") +
-    scale_color_gradientn(colors = scexpr::col_pal("spectral"))
+    scale_color_gradientn(colors = colrr::col_pal("spectral"))
 
 '
 

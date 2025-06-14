@@ -17,7 +17,7 @@ freq_pie_chart(
   label_angle_inside = "circle",
   label_angle_outside = "circle",
   legend.position = "right",
-  col_pal = scexpr::col_pal("custom"),
+  col_pal = colrr::col_pal("custom"),
   border_color = "white",
   order_pieces = T,
   avoid_label_overlap = c("not", "alternating_shift", "outside"),

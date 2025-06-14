@@ -9,7 +9,7 @@ composition_barplot(
   x_cat,
   fill_cat,
   y = c("rel", "abs"),
-  col_pal = scexpr::col_pal("custom"),
+  col_pal = colrr::col_pal("custom"),
   color = "black",
   plot_rel_labels = F,
   label_only_largest = F,

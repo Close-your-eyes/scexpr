@@ -1,5 +1,7 @@
 #' Plot features of single cell transcriptomes on a dimension reduction map
 #'
+#' This function wraps around scexpr::get_data, scexpr::feature_plot_data
+#' and optional combination of plots with patchwork.
 #'
 #' @param SO one Seurat object or a list of multiple ones
 #' @param features vector of features to fetch (genes or column names in
@@ -14,7 +16,8 @@
 #' @param ncol_combine number of columns when combine
 #' @param nrow_combine number of rows when combine
 #' @param strip_select numeric: which facet strips to plot, NULL: plot all
-#' @param ... several feature arguments to scexpr::get_data, for convenience
+#' @param ... several feature arguments to scexpr::get_data, for convenience,
+#' like feature_ex or split_feature
 #' @param pt_size point size
 #' @param pt_size_fct factor of size increase for expressers
 #' @param col_expr color expressers

@@ -578,7 +578,8 @@ prep_SO <- function(SO_unprocessed,
 
       IntegrateData_args <- IntegrateData_args[which(!names(IntegrateData_args) %in% c("anchorset", "new.assay.name", "normalization.method", "verbose"))]
       if (!"features.to.integrate" %in% names(IntegrateData_args)) {
-        IntegrateData_args <- c(list(features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))), IntegrateData_args)
+        IntegrateData_args <- c(list(features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]],
+                                                                                           assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))), IntegrateData_args)
       }
       if (!"k.weight" %in% names(IntegrateData_args)) {
         IntegrateData_args <- c(list(k.weight = k.filter), IntegrateData_args)
@@ -709,9 +710,20 @@ prep_SO <- function(SO_unprocessed,
     refs <- SO@meta.data[,celltype_ref_clusters]
   }
 
+  layer <- "data"
+  if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
+    GetAssayData_args <- list(object = SO,
+                              layer = layer,
+                              assay = "RNA")
+  } else {
+    GetAssayData_args <- list(object = SO,
+                              slot = layer,
+                              assay = "RNA")
+  }
+
   for (i in seq_along(celltype_refs)) {
     for (j in seq_along(celltype_label[[i]])) {
-      celltypes <- SingleR::SingleR(test = Seurat::GetAssayData(SO, slot = "data", assay = "RNA"),
+      celltypes <- SingleR::SingleR(test = Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args),
                                     ref = celltype_refs[[i]],
                                     labels = celltype_refs[[i]]@colData@listData[[celltype_label[[i]][j]]],
                                     clusters = refs)
@@ -731,7 +743,7 @@ prep_SO <- function(SO_unprocessed,
 
   # remove counts as they can be recalculated with rev_lognorm
   if (diet_seurat) {
-    Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA")))
+    Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)))
     SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   }
 

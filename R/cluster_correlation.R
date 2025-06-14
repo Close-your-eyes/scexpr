@@ -308,9 +308,9 @@ cluster_correlation <- function(SO,
   cm.melt$Var1 <- factor(as.character(cm.melt$Var1), levels = levels[[1]])
   cm.melt$Var2 <- factor(as.character(cm.melt$Var2), levels = levels[[2]])
 
-  pp <- c(col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[2:5],
-          rep(col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[6], mid.white.strech.length),
-          col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[7:10])
+  pp <- c(colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[2:5],
+          rep(colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[6], mid.white.strech.length),
+          colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[7:10])
 
   cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
     ggplot2::geom_tile(colour = "black") +

@@ -413,7 +413,7 @@ heatmap_pseudobulk <- function(SO,
       wil_auc <-
         wil_auc %>%
         dplyr::group_by(feature) %>%
-        dplyr::mutate(avgExpr = brathering::scale2(avgExpr, min = min(normalization), max = max(normalization)))
+        dplyr::mutate(avgExpr = scale_min_max(avgExpr, min = min(normalization), max = max(normalization)))
     }
     wil_auc <- dplyr::ungroup(wil_auc)
   }

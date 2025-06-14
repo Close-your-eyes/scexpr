@@ -493,7 +493,15 @@ volcano_plot <- function(SO,
 
 
   if (!use.MAST && methods::is(assay_data, "Seurat")) {
-    assay_data <- Seurat::GetAssayData(assay_data, slot = "data")
+    layer <- "data"
+    if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
+      GetAssayData_args <- list(object = assay_data,
+                                layer = layer)
+    } else {
+      GetAssayData_args <- list(object = assay_data,
+                                slot = layer)
+    }
+    assay_data <- Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)
   } else if (use.MAST && methods::is(assay_data, "Seurat")) {
     Seurat::Idents(assay_data) <- assay_data@meta.data[,1,drop=T]
     vd <- Seurat::FindMarkers(Seurat::GetAssay(assay_data, Seurat::DefaultAssay(assay_data)),
@@ -679,11 +687,11 @@ volcano_plot <- function(SO,
     # select color scale
     if (col.type == "c") {
       if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal, direction = col.pal.dir)
+        col.pal <- colrr::col_pal(name = col.pal, direction = col.pal.dir)
       }
     } else if (col.type == "d") {
       if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal, direction = col.pal.dir, n = nlevels(as.factor(vd[which(vd[,feature_colname] %in% features.to.color),features.color.by])))
+        col.pal <- colrr::col_pal(name = col.pal, direction = col.pal.dir, n = nlevels(as.factor(vd[which(vd[,feature_colname] %in% features.to.color),features.color.by])))
       }
     }
     if (col.type == "c") {

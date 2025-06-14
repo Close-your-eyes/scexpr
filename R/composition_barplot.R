@@ -39,7 +39,7 @@ composition_barplot <- function(SO,
                                 x_cat, #x_var
                                 fill_cat, #fill_var
                                 y = c("rel", "abs"),
-                                col_pal = scexpr::col_pal("custom"),
+                                col_pal = colrr::col_pal("custom"),
                                 color = "black",
                                 plot_rel_labels = F,
                                 label_only_largest = F,
@@ -131,8 +131,8 @@ composition_barplot <- function(SO,
       }
     }
 
-    table0$pct2 <- paste0(smart.round2(table0$pct*100, label_rel_decimals), " %")
-    table0$pct_round <- smart.round2(table0$pct, label_rel_decimals)
+    table0$pct2 <- paste0(brathering::round2(table0$pct*100, label_rel_decimals), " %")
+    table0$pct_round <- brathering::round2(table0$pct, label_rel_decimals)
     table0$label_color = "black" # could be made relative to background color
   }
 
@@ -162,8 +162,8 @@ composition_barplot <- function(SO,
     dplyr::mutate(n_cumsum_lag = dplyr::lag(n_cumsum, default = 0)) %>%
     dplyr::mutate(n_label_ypos = n_cumsum_lag + (n_cumsum-n_cumsum_lag)/2) %>%
     dplyr::mutate(rel_x_fctr = rel_x*fctr) %>%
-    dplyr::mutate(rel_x_fctr_round = smart.round2(rel_x_fctr, label_rel_decimals)) %>%
-    dplyr::mutate(rel_x_fctr_pct = paste0(smart.round2(rel_x_fctr, label_rel_decimals), " %")) %>%
+    dplyr::mutate(rel_x_fctr_round = brathering::round2(rel_x_fctr, label_rel_decimals)) %>%
+    dplyr::mutate(rel_x_fctr_pct = paste0(brathering::round2(rel_x_fctr, label_rel_decimals), " %")) %>%
     dplyr::mutate(label_ypos_fctr = label_ypos*fctr) %>%
     tibble::as_tibble()
 
@@ -307,13 +307,13 @@ plot_label_fun <- function(nudge, size, label_var, name, table_temp, x_cat, y_pl
       nudge <- purrr::map(nudge, ~ if (is.null(.x)) c(0,0) else .x)
     } else {
       message("names of ", name, " cannot be used due to duplicates. will stick to the order provided.")
-      # recycle only when names of nudge not used
-      nudge <- recycle(nudge, table_temp[,1,drop=T])
+      # brathering::recycle only when names of nudge not used
+      nudge <- brathering::recycle(nudge, table_temp[,1,drop=T])
     }
   } else {
-    nudge <- recycle(nudge, table_temp[,1,drop=T])
+    nudge <- brathering::recycle(nudge, table_temp[,1,drop=T])
   }
-  size <- recycle(size, nudge)
+  size <- brathering::recycle(size, nudge)
   for (j in seq_along(nudge)) {
     plot <-
       plot +
@@ -323,23 +323,6 @@ plot_label_fun <- function(nudge, size, label_var, name, table_temp, x_cat, y_pl
                          size = size[j])
   }
   return(plot)
-}
-
-#https://stackoverflow.com/questions/32544646/round-vector-of-numerics-to-integer-while-preserving-their-sum
-smart.round1 <- function(x) {
-  y <- floor(x)
-  indices <- tail(order(x-y), round(sum(x)) - sum(y))
-  y[indices] <- y[indices] + 1
-  y
-}
-
-smart.round2 <- function(x, digits = 0) {
-  up <- 10 ^ digits
-  x <- x * up
-  y <- floor(x)
-  indices <- tail(order(x-y), round(sum(x)) - sum(y))
-  y[indices] <- y[indices] + 1
-  y / up
 }
 
 
@@ -352,13 +335,13 @@ smart.round2 <- function(x, digits = 0) {
 #       label_rel_nudge <- purrr::map(label_rel_nudge, ~ if (is.null(.x)) c(0,0) else .x)
 #     } else {
 #       message("names of label_rel_nudge cannot be used due to duplicates. will stick to the order provided.")
-#       # recycle only when names of not used
-#       label_rel_nudge <- recycle(label_rel_nudge, table_temp[,1,drop=T])
+#       # brathering::recycle only when names of not used
+#       label_rel_nudge <- brathering::recycle(label_rel_nudge, table_temp[,1,drop=T])
 #     }
 #   } else {
-#     label_rel_nudge <- recycle(label_rel_nudge, table_temp[,1,drop=T])
+#     label_rel_nudge <- brathering::recycle(label_rel_nudge, table_temp[,1,drop=T])
 #   }
-#   label_size_rel <- recycle(label_size_rel, label_rel_nudge)
+#   label_size_rel <- brathering::recycle(label_size_rel, label_rel_nudge)
 #   for (j in seq_along(label_rel_nudge)) {
 #     plot <-
 #       plot +
@@ -370,8 +353,8 @@ smart.round2 <- function(x, digits = 0) {
 # }
 
 #   if (plot_abs_labels) {
-#     label_abs_nudge <- recycle(label_abs_nudge, table_temp[,1,drop=T])
-#     label_size_abs <- recycle(label_size_abs, label_abs_nudge)
+#     label_abs_nudge <- brathering::recycle(label_abs_nudge, table_temp[,1,drop=T])
+#     label_size_abs <- brathering::recycle(label_size_abs, label_abs_nudge)
 #     if (!is.null(names(label_abs_nudge))) {
 #       if (!anyDuplicated(names(label_abs_nudge)) && !anyDuplicated(table_temp[[x_cat]])) {
 #         label_abs_nudge <- label_abs_nudge[as.character(table_temp[[x_cat]])]

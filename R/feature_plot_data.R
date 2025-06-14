@@ -362,7 +362,7 @@ feature_plot_data <- function(data,
   #     data.frame(cbind(as.matrix(t(Seurat::GetAssayData(SO[[y]], slot = "data", assay = assay)[feature_cut,,drop = F]))))
   #   }))
   #   if (cutoff_expr == 0) {
-  #     cutoff_expr.plot <- floor_any(min(inset.data[,feature_cut][which(inset.data[,feature_cut] > 0)]), 0.1)
+  #     cutoff_expr.plot <- brathering::floor2(min(inset.data[,feature_cut][which(inset.data[,feature_cut] > 0)]), 0.1)
   #   } else {
   #     cutoff_expr.plot <- cutoff_expr
   #   }

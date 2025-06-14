@@ -339,8 +339,8 @@ feature_plot <- function(SO,
         scale.min <- min(data[Reduce(intersect, list(which(data[,1] != 0), which(rownames(data) %in% names(which(cells == 1))), which(is.finite(data[,1])))),1], na.rm = T) # != 0 for module scores
         scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
-        scale.max <- as.numeric(format(ceiling_any(scale.max, 0.1), nsmall = 1))
-        scale.min <- as.numeric(format(floor_any(scale.min, 0.1), nsmall = 1))
+        scale.max <- as.numeric(format(brathering::ceiling2(scale.max, 0.1), nsmall = 1))
+        scale.min <- as.numeric(format(brathering::floor2(scale.min, 0.1), nsmall = 1))
         scale.mid <- as.numeric(format(round(scale.mid, 1), nsmall = 1))
       }
     }
@@ -348,13 +348,13 @@ feature_plot <- function(SO,
     # select color scale
     if (is.numeric(data[,1])) {
       if (length(col.pal.c) == 1 && !col.pal.c %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal.c, direction = col.pal.dir)
+        col.pal <- colrr::col_pal(name = col.pal.c, direction = col.pal.dir)
       } else {
         col.pal <- col.pal.c
       }
     } else {
       if (length(col.pal.d) == 1 && !col.pal.d %in% grDevices::colors()) {
-        col.pal <- col_pal(name = col.pal.d, direction = col.pal.dir, n = nlevels(as.factor(data[,1])))
+        col.pal <- colrr::col_pal(name = col.pal.d, direction = col.pal.dir, n = nlevels(as.factor(data[,1])))
       } else {
         col.pal <- col.pal.d
       }
@@ -611,7 +611,7 @@ feature_plot <- function(SO,
       }
 
       if (length(col.pal.contour) == 1 && !col.pal.contour %in% grDevices::colors()) {
-        col.pal.contour <- col_pal(name = col.pal.contour, direction = col.pal.dir, n = nlevels(as.factor(contour_data[,1])))
+        col.pal.contour <- colrr::col_pal(name = col.pal.contour, direction = col.pal.dir, n = nlevels(as.factor(contour_data[,1])))
       }
 
       # order of col.pal.contour in case it has names??
@@ -792,7 +792,7 @@ feature_plot <- function(SO,
         data.frame(cbind(as.matrix(t(Seurat::GetAssayData(SO[[y]], slot = "data", assay = assay)[cutoff.feature,,drop = F]))))
       }))
       if (cutoff.expression == 0) {
-        cutoff.expression.plot <- floor_any(min(inset.data[,cutoff.feature][which(inset.data[,cutoff.feature] > 0)]), 0.1)
+        cutoff.expression.plot <- brathering::floor2(min(inset.data[,cutoff.feature][which(inset.data[,cutoff.feature] > 0)]), 0.1)
       } else {
         cutoff.expression.plot <- cutoff.expression
       }
@@ -1607,9 +1607,6 @@ get_repel_coords <- function(.data, g_base, width=2, height=2, ...) {
 
 }
 '
-ceiling_any = function(x, accuracy, f = ceiling){f(x/ accuracy) * accuracy}
-
-floor_any = function(x, accuracy, f = floor){f(x/ accuracy) * accuracy}
 
 list_depth <- function(this,thisdepth=0){
   if(!is.list(this)){

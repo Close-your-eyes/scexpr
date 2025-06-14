@@ -294,7 +294,7 @@ run_read_matching_and_report_results <- function(hla_ref,
   '
   sourceCpp("/Users/vonskopnik/Documents/R_packages/scexpr/src/calculateRowSumsInCpp2.cpp")
   system.time(results <- countOccurrencesInCpp(top_single_res, col.combs)) # col.combs[1:2,,drop=F]
-  col.combs2 <- split_mat(col.combs, n_chunks = 4, byrow = T)
+  col.combs2 <- brathering::split_mat(col.combs, n_chunks = 4, byrow = T)
   system.time(
     pairwise_results <- lapply_fun(col.combs2, function(x) {
       countOccurrencesInCpp(top_single_res, x)
@@ -304,9 +304,8 @@ run_read_matching_and_report_results <- function(hla_ref,
   # doing this in R was too slow. other packages did not have the functionality
   # so, written in c++
   if (identical(lapply_fun, parallel::mclapply) && "mc.cores" %in% names(arg_list)) {
-    # split_mat fun from scexpr package
     # Split the matrix into chunks for multithreading
-    pairwise_results <- lapply_fun(scexpr::split_mat(col.combs, n_chunks = arg_list[["mc.cores"]], byrow = T), function(x) {
+    pairwise_results <- lapply_fun(brathering::split_mat(col.combs, n_chunks = arg_list[["mc.cores"]], byrow = T), function(x) {
       scexpr:::countOccurrencesInCpp(top_single_res, x)
     }, ...)
     pairwise_results <- do.call(rbind, pairwise_results)
@@ -490,7 +489,7 @@ run_read_matching_and_report_results <- function(hla_ref,
   if (max_min_diff > 10) {
     breaks <- seq(max_tot_reads,
                   min_tot_reads,
-                  by = -max(c(10, floor_any((max_tot_reads - min_tot_reads)/3, 10))))
+                  by = -max(c(10, brathering::floor2((max_tot_reads - min_tot_reads)/3, 10))))
   } else if (max_min_diff > 5) {
     breaks <- seq(max_tot_reads, min_tot_reads, by = -5)
   } else {
@@ -579,15 +578,6 @@ scale_y_reordered <- function(..., sep = "___") {
   reg <- paste0(sep, ".+$")
   ggplot2::scale_y_discrete(labels = function(x) gsub(reg, "", x), ...)
 }
-
-ceiling_any = function(x, accuracy, f = ceiling) {
-  f(x / accuracy) * accuracy
-}
-
-floor_any = function(x, accuracy, f = floor) {
-  f(x / accuracy) * accuracy
-}
-
 
 
 

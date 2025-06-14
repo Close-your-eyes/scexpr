@@ -170,7 +170,7 @@ feature_plot_stat <- function(SO,
   }
 
   if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-    col.pal <- col_pal(name = col.pal, direction = col.pal.dir)
+    col.pal <- colrr::col_pal(name = col.pal, direction = col.pal.dir)
   }
 
   plot <- plot + theme
