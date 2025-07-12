@@ -13,7 +13,7 @@ check.SO <- function(SO,
   if (!any(unlist(lapply(SO, class)) == "Seurat")) {
     stop("All SO have to be Seurat objects (class == Seurat).")
   }
-  if (!is.null(meta.col) && length(.check.features(SO, meta.col, rownames = F)) == 0) {
+  if (!is.null(meta.col) && length(check.features(SO, meta.col, rownames = F)) == 0) {
     stop("meta.col not found in all objects.")
   }
 
@@ -1213,4 +1213,97 @@ list_depth <- function(this,thisdepth=0){
   }else{
     return(max(unlist(lapply(this,list_depth,thisdepth=thisdepth+1))))
   }
+}
+
+
+check.features <- function(SO,
+                           features,
+                           rownames = T,
+                           meta.data = T,
+                           meta.data.numeric = F) {
+
+  if (is.null(features)) {return(NULL)}
+  if (!rownames && !meta.data) {return((NULL))}
+  if (!is.list(SO)) {
+    SO <- list(SO)
+  }
+  features <- unique(features)
+
+  features.out <- feat.check(SO = SO,
+                             features = features,
+                             rownames = rownames,
+                             meta.data = meta.data,
+                             ignore.case = T,
+                             meta.data.numeric = meta.data.numeric)
+
+  if (length(features.out) == 0) {
+    stop("Non of the provided features has not been found in every SO. No features left to plot.")
+  }
+
+  ### TO DO WITH meta.data.numeric
+  hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
+  if (any(hits > 1)) {
+    message(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered.")
+    features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
+    if (length(features.out) == 0) {stop("Non of the provided features has not been found in every SO. No features left to plot.")}
+    hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
+    if (any(hits > 1)) {
+      stop(paste0(paste(names(hits)[which(hits > 1)], collapse = ","), " still found more than once in at least one SO when not ignoring case. Please fix this (check rownames and meta.data)."))
+    } else {
+      ignore.case <- F
+    }
+  } else {
+    ignore.case <- T
+  }
+
+  if (length(features.out) < length(features)) {message("Features not found in every SO: ", paste(setdiff(features, features.out), collapse = ","))}
+  if (length(features.out) > length(features)) {stop("More features after check.features than before?!")}
+  return(features.out)
+}
+
+hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
+  if (ignore.case) {
+    sapply(features, function(x) {
+      max(sapply(SO, function(y) {
+        if (rownames & !meta.data) {
+          length(which(tolower(x) == tolower(rownames(y))))
+        } else if (!rownames & meta.data) {
+          length(which(tolower(x) == tolower(names(y@meta.data))))
+        } else if (rownames & meta.data) {
+          length(which(tolower(x) == c(tolower(rownames(y)), tolower(names(y@meta.data)))))
+        }
+      }))
+    })
+  } else {
+    sapply(features, function(x) {
+      max(sapply(SO, function(y) {
+        if (rownames & !meta.data) {
+          length(which(x == rownames(y)))
+        } else if (!rownames & meta.data) {
+          length(which(x == names(y@meta.data)))
+        } else if (rownames & meta.data) {
+          length(which(x == c(rownames(y), names(y@meta.data))))
+        }
+      }))
+    })
+  }
+
+}
+
+
+feat.check <- function(SO, features, rownames, meta.data, ignore.case, meta.data.numeric) {
+  unlist(lapply(features, function(x) {
+    Reduce(intersect, lapply(SO, function(y) {
+      if (rownames && !meta.data && !meta.data.numeric) {
+        search <- rownames(y)
+      } else if (rownames && !meta.data && meta.data.numeric) {
+        search <- c(rownames(y), unique(c(names(which(sapply(y@meta.data, is.numeric))), names(which(sapply(y@meta.data, is.logical))))))
+      } else if (!rownames && meta.data) {
+        search <- names(y@meta.data)
+      } else if (rownames && meta.data) {
+        search <- c(names(y@meta.data), rownames(y))
+      }
+      grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
+    }))
+  }))
 }

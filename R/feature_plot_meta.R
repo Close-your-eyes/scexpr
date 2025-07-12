@@ -8,10 +8,10 @@ feature_plot_meta <- function(plot,
   shapeby <- tryCatch(rlang::sym(attr(plot[["data"]], "shape_feature")), error = function(e) NULL)
 
   if (plot_all_across_split && "split_feature" %in% names(attributes(plot[["data"]]))) {
-    plot <- plot + ggplot2::geom_point(data = ~dplyr::select(., -split_feature |> dplyr::filter(cells == 1),
+    plot <- plot + ggplot2::geom_point(data = ~dplyr::select(., -split_feature) |> dplyr::filter(cells == 1),
                                                              mapping = ggplot2::aes(shape = !!shapeby),
                                                              size = pt_size,
-                                                             color = col_split))
+                                                             color = col_split)
   }
 
   if (is.null(order_discr_explicit)) {

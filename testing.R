@@ -1,10 +1,10 @@
 library(scexpr)
 #source("/Users/vonskopnik/Documents/R_packages/scexpr/feature_plot2.R")
 #source("/Users/vonskopnik/Documents/R_packages/scexpr/helpers.R")
-source("~/Documents/R_packages/scexpr/R/get_data.R")
-source("~/Documents/R_packages/scexpr/R/feature_plot_data.R")
-source("~/Documents/R_packages/scexpr/R/feature_plot_gene.R")
-source("~/Documents/R_packages/scexpr/R/feature_plot_meta.R")
+# source("~/Documents/R_packages/scexpr/R/get_data.R")
+# source("~/Documents/R_packages/scexpr/R/feature_plot_data.R")
+# source("~/Documents/R_packages/scexpr/R/feature_plot_gene.R")
+# source("~/Documents/R_packages/scexpr/R/feature_plot_meta.R")
 SO1 <- readRDS("/Users/vonskopnik/Documents/scRNAseq/2019_SLE_LN/data/SO_processed/SO_urine_hg38_CR7_wo_Introns_non_contam_rep1_SCT_harmony_1_800_12_230509-104557.rds")
 SO1 <- Seurat::UpdateSeuratObject(SO1)
 
@@ -86,3 +86,16 @@ names(formals(feature_plot2))[which(!names(formals(feature_plot2)) %in% names(fo
 
 #check feature cutoff direction
 
+
+
+# BiocManager::install("splatter")
+library(splatter)
+ncol(SO1)
+params <- splatter::splatEstimate(as.matrix(SO1@assays$RNA$counts[SO1@assays[["SCT"]]@var.features, sample.int(ncol(SO1), 2000)]))
+params2 <- splatter::kersplatEstimate(as.matrix(SO1@assays$RNA$counts[SO1@assays[["SCT"]]@var.features, sample.int(ncol(SO1), 2000)]))
+sim <- splatter::splatSimulate(params = params, method = "groups", group.prob = rep(0.2,5))
+sim2 <- splatter::kersplatSimulate(params = params2)
+SOy <- prep_SO(SO_unprocessed = list(xxx = Seurat::CreateSeuratObject(counts = sim2@assays@data@listData[["counts"]])),
+               reductions = "umap", normalization = "LogNormalize", verbose = T, npcs = 10, nhvf = 400)
+feature_plot2(SOy, c("Gene2", "RNA_snn_res.1") ,reduction = "umap", theme = colrr::theme_material())
+names(SOy@meta.data)

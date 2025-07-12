@@ -42,6 +42,7 @@ Imports:
     ggnewscale,
     ggtext,
     Rcpp,
+    zeallot,
 Suggests: 
     presto,
     patchwork,

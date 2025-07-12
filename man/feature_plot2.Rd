@@ -106,7 +106,8 @@ deselected ones are plotted with color col_ex_cells (=0) in feature_plot}
 
 \item{strip_select}{numeric: which facet strips to plot, NULL: plot all}
 
-\item{...}{several feature arguments to scexpr::get_data, for convenience}
+\item{...}{several feature arguments to scexpr::get_data, for convenience,
+like feature_ex or split_feature}
 
 \item{pt_size}{point size}
 
@@ -253,5 +254,6 @@ group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")}
 col_split?}
 }
 \description{
-Plot features of single cell transcriptomes on a dimension reduction map
+This function wraps around scexpr::get_data, scexpr::feature_plot_data
+and optional combination of plots with patchwork.
 }

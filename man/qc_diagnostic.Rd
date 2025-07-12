@@ -12,7 +12,7 @@ qc_diagnostic(
   resolution_SoupX = 0.6,
   resolution_meta = 0.8,
   n_PCs_to_meta_clustering = 2,
-  scDblFinder = T,
+  scDblFinder = F,
   min_UMI = 30,
   min_UMI_var_feat = 10,
   SoupX = F,

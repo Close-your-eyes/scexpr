@@ -11,7 +11,7 @@ prep_SO(
   min_cells = 50,
   downsample = 1,
   export_prefix = NULL,
-  reductions = c("umap", "som", "gqtsom", "tsne"),
+  reductions = c("umap"),
   nhvf = 800,
   npcs = 20,
   normalization = c("SCT", "LogNormalize"),
@@ -33,7 +33,7 @@ prep_SO(
   RunTSNE_args = list(theta = 0),
   FindNeighbors_args = list(),
   FindClusters_args = list(resolution = seq(0.1, 1, 0.1)),
-  RunHarmony_args = list(),
+  RunHarmony_args = list(group.by.vars = "orig.ident"),
   SOM_args = list(),
   GQTSOM_args = list(),
   EmbedSOM_args = list(),
@@ -57,7 +57,8 @@ or an absolute number of cells per object (downsample > 1 & downsample >= min_ce
 
 \item{export_prefix}{prefix to the output rds file}
 
-\item{reductions}{which reduction to calculate, tsne --> Seurat::RunTSNE, umap --> Seurat::RunUMAP}
+\item{reductions}{which reduction to calculate, one of multiple of
+c("umap", "som", "gqtsom", "tsne")}
 
 \item{nhvf}{number high variables features, passed to Seurat::SCTransform
 or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures}
@@ -70,7 +71,7 @@ consider for downstream functions like tSNE or UMAP}
 \item{hvf_determination_before_merge}{determine variable features before or after merging multiple samples;
 either by the standard LogNormalize workflow or by SCTransform function; this is most important for
 deciding whether SCtransform is run on mulitple samples separately before merging (set to TRUE) or
-after merging (set to FALSE); in my experience and when the integration procedure is set to harmony setting
+after merging (set to FALSE); in my experience and when batch_corr = harmony, setting
 it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links}
 
 \item{batch_corr}{procedure for batch correction between samples in SO_unprocessed;
@@ -99,7 +100,8 @@ when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay:
 
 \item{var_feature_filter}{character vector of features which are to exclude from variable features;
 this will affect downstream PCA, dimension reduction and clustering;
-e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]), value = T)}
+e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]), value = T) to
+exclude T cell receptor gene segments}
 
 \item{verbose}{print messages and progress bars from functions}
 

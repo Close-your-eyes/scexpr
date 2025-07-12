@@ -70,7 +70,7 @@ qc_diagnostic <- function(data_dirs,
                           resolution_SoupX = 0.6,
                           resolution_meta = 0.8,
                           n_PCs_to_meta_clustering = 2,
-                          scDblFinder = T,
+                          scDblFinder = F,
                           min_UMI = 30,
                           min_UMI_var_feat = 10,
                           SoupX = F,
@@ -265,7 +265,7 @@ qc_diagnostic <- function(data_dirs,
 
     # this is generally not a bad idea and it was necessary to get scDblFinder running once: https://github.com/LTLA/BiocNeighbors/issues/24
     if (!is.null(min_UMI)) {
-      UMI_sum <- colSums(filt_data)
+      UMI_sum <- Matrix::colSums(filt_data)
       if (any(UMI_sum < min_UMI)) {
         message(sum(UMI_sum < min_UMI), " cells removed for having less UMI then min_UMI.")
       }
@@ -426,6 +426,9 @@ qc_diagnostic <- function(data_dirs,
 
     # differentiate mouse, human or no MT-genes at all
     # and add freq of RPS / RPL and MRPS / MRPL genes
+
+    #grep("^MT-|mt-", c("MT-iii", "mt-zzz"), value = T)
+    # regex for or: |
     if (any(grepl("^MT-", rownames(SOx))) && !any(grepl("^mt-", rownames(SOx)))) {
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^MT-"), "pct_mt")
       SOx <- Seurat::AddMetaData(SOx, Seurat::PercentageFeatureSet(SOx, pattern = "^RP[SL]"), "pct_ribo")
@@ -464,12 +467,13 @@ qc_diagnostic <- function(data_dirs,
 
     SOx@meta.data$nFeature_RNA_log <- log1p(SOx@meta.data$nFeature_RNA)
     SOx@meta.data$nCount_RNA_log <- log1p(SOx@meta.data$nCount_RNA)
-    SOx@meta.data$pct_mt_log <- log1p(SOx@meta.data$pct_mt)
-
-    # this could be done above with SO
-    # replace NA wiht 0 to avoid error in umap calculation
-    SOx@meta.data$pct_mt <- ifelse(is.na(SOx@meta.data$pct_mt), 0,SOx@meta.data$pct_mt)
-    SOx@meta.data$pct_mt_log <- ifelse(is.na(SOx@meta.data$pct_mt_log ), 0, SOx@meta.data$pct_mt_log)
+    if ("pct_mt" %in% names(SOx@meta.data)) {
+      SOx@meta.data$pct_mt_log <- log1p(SOx@meta.data$pct_mt)
+      # this could be done above with SO
+      # replace NA wiht 0 to avoid error in umap calculation
+      SOx@meta.data$pct_mt <- ifelse(is.na(SOx@meta.data$pct_mt), 0, SOx@meta.data$pct_mt)
+      SOx@meta.data$pct_mt_log <- ifelse(is.na(SOx@meta.data$pct_mt_log), 0, SOx@meta.data$pct_mt_log)
+    }
 
     ## multi-dirs: split matrix!
     SOx@meta.data$residuals <- unlist(lapply(unique(SOx@meta.data$orig.ident), function(x) stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log, data = SOx@meta.data[which(SOx@meta.data$orig.ident == x),]))))
