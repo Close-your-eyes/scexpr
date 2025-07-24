@@ -45,19 +45,19 @@
   #devtools::install_github("satijalab/seurat", ref="seurat4")
 
   # this message will appear when the if-conditions are met and when library(scexpr) is run or any function with scexpr::
-  if ((requireNamespace("Seurat") && utils::packageVersion("Seurat") > "4.9") ||
-      (requireNamespace("SeuratObject") && utils::packageVersion("SeuratObject") > "4.9")) {
-    message("Seurat or SeuratObject is bigger than version 4.
-            Functions of scexpr cannot handle Seurat version 5 object currently.
-            In order to get a compatible Seurat version, you may run:
-            # https://github.com/satijalab/seurat/issues/7989
-            remove.packages('Seurat')
-            remove.packages('SeuratObject')
-            devtools::install_github('mojaveazure/seurat-object', ref = 'release/4.1.4') # say no to updates
-            devtools::install_github('satijalab/seurat', ref = 'seurat4')  # say no to updates
-            or
-            remotes::install_version('Seurat', version = '4.4.0', repos = 'http://cran.us.r-project.org')
-            remotes::install_version('SeuratObject', version = '4.1.4', repos = 'http://cran.us.r-project.org')")
-  }
+  # if ((requireNamespace("Seurat") && utils::packageVersion("Seurat") > "4.9") ||
+  #     (requireNamespace("SeuratObject") && utils::packageVersion("SeuratObject") > "4.9")) {
+  #   message("Seurat or SeuratObject is bigger than version 4.
+  #           Functions of scexpr cannot handle Seurat version 5 object currently.
+  #           In order to get a compatible Seurat version, you may run:
+  #           # https://github.com/satijalab/seurat/issues/7989
+  #           remove.packages('Seurat')
+  #           remove.packages('SeuratObject')
+  #           devtools::install_github('mojaveazure/seurat-object', ref = 'release/4.1.4') # say no to updates
+  #           devtools::install_github('satijalab/seurat', ref = 'seurat4')  # say no to updates
+  #           or
+  #           remotes::install_version('Seurat', version = '4.4.0', repos = 'http://cran.us.r-project.org')
+  #           remotes::install_version('SeuratObject', version = '4.1.4', repos = 'http://cran.us.r-project.org')")
+  # }
 }
 
