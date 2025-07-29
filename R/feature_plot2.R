@@ -80,6 +80,7 @@
 #' @param label_nudge named list of xy-values how to shift labels, names must
 #' be the values of feature_label
 #' @param label_repel do repel labels to avoid overlap with ggrepel?
+#' @param label_multi_try try to label split clusters with one label each?
 #' @param label_args arguments to ggtext::geom_richtext
 #' @param contour_filter_cells when feature_contour is provided; only consider
 #' cells which are not excluded for contour calculation
@@ -111,6 +112,9 @@
 #' group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")
 #' @param plot_all_across_split do plot all cells across feature_split in
 #' col_split?
+#' @param feature_ex
+#' @param feature_cut
+#' @param feature_cut_expr
 #'
 #' @return
 #' @export
@@ -197,6 +201,8 @@ feature_plot2 <- function(SO,
                           label_center_fun = c("median", "mean"),
                           label_nudge = list(),
                           label_repel = F,
+                          label_multi_try = F,
+                          label_multi_max = 3,
                           label_args = list(
                             label.colour = NA,
                             fill = "white",
@@ -207,13 +213,15 @@ feature_plot2 <- function(SO,
                           contour_filter_cells = T,
                           contour_rm_outlier = F,
                           contour_rm_lowfreq_subcluster = F,
+                          contour_multi_try = F,
+                          contour_multi_max = 3,
                           contour_col_pal_args = list(name = "custom"),
                           contour_args = list(
                             contour_var = "ndensity",
                             breaks = 0.3,
                             linewidth = 0.5
                           ), # arguments to geom_density_2d
-                          contour_label_nudge = c(0,0),
+                          contour_label_nudge = list(),
                           contour_label_args = list(
                             label.colour = NA,
                             fill = "white",
@@ -292,11 +300,15 @@ feature_plot2 <- function(SO,
                                                            label_center_fun = label_center_fun,
                                                            label_nudge = label_nudge,
                                                            label_repel = label_repel,
+                                                           label_multi_try = label_multi_try,
+                                                           label_multi_max = label_multi_max,
                                                            label_args = label_args,
                                                            order_discr_explicit = order_discr_explicit,
                                                            contour_filter_cells = contour_filter_cells,
                                                            contour_rm_outlier = contour_rm_outlier,
                                                            contour_rm_lowfreq_subcluster = contour_rm_lowfreq_subcluster,
+                                                           contour_multi_try = contour_multi_try,
+                                                           contour_multi_max = contour_multi_max,
                                                            contour_col_pal_args = contour_col_pal_args,
                                                            contour_args = contour_args,
                                                            contour_label_nudge = contour_label_nudge,

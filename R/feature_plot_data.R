@@ -63,6 +63,7 @@
 #' @param label_nudge named list of xy-values how to shift labels, names must
 #' be the values of feature_label
 #' @param label_repel do repel labels to avoid overlap with ggrepel?
+#' @param label_multi_try try to label split clusters with one label each?
 #' @param label_args arguments to ggtext::geom_richtext
 #' @param contour_filter_cells when feature_contour is provided; only consider
 #' cells which are not excluded for contour calculation
@@ -91,6 +92,7 @@
 #' group or expression frequency via: 'pct'
 #' @param plot_all_across_split do plot all cells across feature_split in
 #' col_split?
+#' @param order_discr_explicit
 #'
 #' @return
 #' @export
@@ -159,6 +161,8 @@ feature_plot_data <- function(data,
                               label_center_fun = c("median", "mean"),
                               label_nudge = list(),
                               label_repel = F,
+                              label_multi_try = F,
+                              label_multi_max = 3,
                               label_args = list(
                                 label.colour = NA,
                                 fill = "white",
@@ -169,6 +173,8 @@ feature_plot_data <- function(data,
                               contour_filter_cells = T,
                               contour_rm_outlier = F,
                               contour_rm_lowfreq_subcluster = F,
+                              contour_multi_try = F,
+                              contour_multi_max = 3,
                               contour_col_pal_args = list(name = "custom"),
                               contour_args = list(
                                 contour_var = "ndensity",
@@ -176,7 +182,7 @@ feature_plot_data <- function(data,
                                 linewidth = 0.5
                               ),
                               contour_expr_freq = F,
-                              contour_label_nudge = c(0,0),
+                              contour_label_nudge = list(),
                               contour_label_args = list(
                                 label.colour = NA,
                                 fill = "white",
@@ -230,11 +236,11 @@ feature_plot_data <- function(data,
   # }
 
   # get color palette
-  col.pal <- get_col_pal(data = data,
-                         col_pal_c_args = col_pal_c_args,
-                         col_pal_d_args = col_pal_d_args)
+  col.pal <- scexpr:::get_col_pal(data = data,
+                                  col_pal_c_args = col_pal_c_args,
+                                  col_pal_d_args = col_pal_d_args)
 
-  data <- check.aliases(feature = attr(data, "feature"), feature_alias, data)
+  data <- scexpr:::check.aliases(feature = attr(data, "feature"), feature_alias, data)
 
   # excluded cells
   shapeby <- tryCatch(rlang::sym(attr(data, "shape_feature")), error = function(e) NULL)
@@ -243,26 +249,26 @@ feature_plot_data <- function(data,
     ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells)
 
   if (attr(data, "feature_type") == "gene") {
-    freqs <- get.freqs2(data = data)
-    plot <- do.call(feature_plot_gene, args = list(plot = plot,
-                                                   freqs = freqs,
-                                                   pt_size = pt_size,
-                                                   pt_size_fct = pt_size_fct,
-                                                   col_expr = col_expr,
-                                                   col_non_expr = col_non_expr,
-                                                   col_binary = col_binary,
-                                                   freq_plot = freq_plot,
-                                                   freq_pos = freq_pos,
-                                                   freq_size = freq_size,
-                                                   col_split = col_split,
-                                                   plot_all_across_split = plot_all_across_split))
+    freqs <- scexpr:::get.freqs2(data = data)
+    plot <- do.call(scexpr:::feature_plot_gene, args = list(plot = plot,
+                                                            freqs = freqs,
+                                                            pt_size = pt_size,
+                                                            pt_size_fct = pt_size_fct,
+                                                            col_expr = col_expr,
+                                                            col_non_expr = col_non_expr,
+                                                            col_binary = col_binary,
+                                                            freq_plot = freq_plot,
+                                                            freq_pos = freq_pos,
+                                                            freq_size = freq_size,
+                                                            col_split = col_split,
+                                                            plot_all_across_split = plot_all_across_split))
   } else {
     freqs <- NULL
-    plot <- do.call(feature_plot_meta, args = list(plot = plot,
-                                                   order_discr_explicit = order_discr_explicit,
-                                                   pt_size = pt_size,
-                                                   col_split = col_split,
-                                                   plot_all_across_split = plot_all_across_split))
+    plot <- do.call(scexpr:::feature_plot_meta, args = list(plot = plot,
+                                                            order_discr_explicit = order_discr_explicit,
+                                                            pt_size = pt_size,
+                                                            col_split = col_split,
+                                                            plot_all_across_split = plot_all_across_split))
   }
 
   plot <- plot + theme
@@ -276,33 +282,33 @@ feature_plot_data <- function(data,
       Gmisc::fastDoCall(ggplot2::guide_legend, args = shape_legend_args)
     })
 
-  plot <- add_facet(plot = plot,
-                    facet_grid_row_var = facet_grid_row_var,
-                    facet_scales = facet_scales,
-                    nrow_inner = nrow_inner,
-                    ncol_inner = ncol_inner)
+  plot <- scexpr:::add_facet(plot = plot,
+                             facet_grid_row_var = facet_grid_row_var,
+                             facet_scales = facet_scales,
+                             nrow_inner = nrow_inner,
+                             ncol_inner = ncol_inner)
 
   if (!col_binary) {
-    plot <- add_color_scale(plot = plot,
-                            col.pal = col.pal,
-                            col_legend_args = col_legend_args,
-                            col_steps = col_steps,
-                            legendbreaks = legendbreaks,
-                            legendlabels = legendlabels,
-                            col_steps_nice = col_steps_nice,
-                            col_na = col_na)
+    plot <- scexpr:::add_color_scale(plot = plot,
+                                     col.pal = col.pal,
+                                     col_legend_args = col_legend_args,
+                                     col_steps = col_steps,
+                                     legendbreaks = legendbreaks,
+                                     legendlabels = legendlabels,
+                                     col_steps_nice = col_steps_nice,
+                                     col_na = col_na)
   }
 
   if (!is.null(name_anno_pos)) {
-    title <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
-                       feature_cut = attr(data, "feature_cut", exact = T),
-                       feature_cut_expr = attr(data, "feature_cut_expr"),
-                       freq = freqs[["freq.expr"]][["freq2"]],
-                       feature_italic = attr(data, "feature_type") == "gene",
-                       feature = attr(data, "feature"),
-                       name_anno = name_anno,
-                       #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
-                       markdown = T)
+    title <- scexpr:::get_title(feature_ex = attr(data, "feature_ex", exact = T),
+                                feature_cut = attr(data, "feature_cut", exact = T),
+                                feature_cut_expr = attr(data, "feature_cut_expr"),
+                                freq = freqs[["freq.expr"]][["freq2"]],
+                                feature_italic = attr(data, "feature_type") == "gene",
+                                feature = attr(data, "feature"),
+                                name_anno = name_anno,
+                                #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
+                                markdown = T)
     if ("title" %in% name_anno_pos) {
       plot <- plot + ggplot2::labs(title = title)
       #plot <- plot + ggplot2::labs(title = substitute(paste(x, sep = ""), list(x = title)))
@@ -315,24 +321,31 @@ feature_plot_data <- function(data,
     }
   }
 
-  plot <- add_axes_expansion(plot = plot,
-                             axes_lim_set = axes_lim_set,
-                             axes_lim_expand = axes_lim_expand)
+  plot <- scexpr:::add_axes_expansion(plot = plot,
+                                      axes_lim_set = axes_lim_set,
+                                      axes_lim_expand = axes_lim_expand)
 
+  label_label <- NULL
   if ("label_feature" %in% names(attributes(plot[["data"]]))) {
     plot <- add_labels(plot = plot,
                        label_filter_cells = label_filter_cells,
                        label_center_fun = label_center_fun,
                        label_nudge = label_nudge,
                        label_repel = label_repel,
-                       label_args = label_args)
+                       label_multi_try = label_multi_try,
+                       label_multi_max = label_multi_max,
+                       label_args = label_args,
+                       finalize_plotting = F)
   }
 
+  label_contour <- NULL
   if ("contour_feature" %in% names(attributes(plot[["data"]]))) {
     plot <- add_contour(plot = plot,
                         label_center_fun = label_center_fun,
                         contour_rm_outlier = contour_rm_outlier,
                         contour_rm_lowfreq_subcluster = contour_rm_lowfreq_subcluster,
+                        contour_multi_try = contour_multi_try,
+                        contour_multi_max = contour_multi_max,
                         contour_filter_cells = contour_filter_cells,
                         contour_col_pal_args = contour_col_pal_args,
                         contour_args = contour_args,
@@ -342,8 +355,29 @@ feature_plot_data <- function(data,
                         contour_expr_freq = contour_expr_freq,
                         contour_ggnewscale = contour_ggnewscale,
                         contour_fun = contour_fun,
-                        contour_path_label = contour_path_label)
+                        contour_path_label = contour_path_label,
+                        finalize_plotting_expr_freq_labels = F)
   }
+
+
+  if (!is.null(label_label) || !is.null(label_contour)) {
+    # label_label and label_contour are assigned in add_labels and add_contour respectively
+    # plotting them is combined here to allow repelling
+    # contour label have no separate repel argument
+    #
+    plot <- co_add_feature_and_contour_labels(plot = plot,
+                                              label_label = label_label,
+                                              label_contour = label_contour,
+                                              label_nudge = label_nudge,
+                                              label_repel = label_repel,
+                                              label_args = label_args,
+                                              contour_label_nudge = contour_label_nudge,
+                                              contour_label_args = contour_label_args)
+
+  }
+
+
+  # repel labels from label_feature and contour_expr_freq
 
   # if (plot_traj) {
   #   plot <- plot + ggplot2::geom_segment(data = data_traj, ggplot2::aes(x = from_x, y = from_y, xend = to_x, yend = to_y),

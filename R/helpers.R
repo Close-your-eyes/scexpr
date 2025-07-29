@@ -670,12 +670,15 @@ add_labels <- function(plot = plot,
                        label_center_fun = c("median", "mean"),
                        label_nudge = c(0,0),
                        label_repel = F,
+                       label_multi_try = F,
+                       label_multi_max = 3,
                        label_args = list(
                          label.colour = NA,
                          fill = "white",
                          size = 4,
                          color = "black",
-                         label.padding = ggplot2::unit(rep(0.1,4), "lines"))) {
+                         label.padding = ggplot2::unit(rep(0.1,4), "lines")),
+                       finalize_plotting = F) {
 
   data <- plot[["data"]] #|> tidyr::pivot_wider(names_from = feat, values_from = value)
   label_feature <- ifelse("label_feature" %in% names(attributes(plot[["data"]])), "label_feature", "feature")
@@ -696,100 +699,90 @@ add_labels <- function(plot = plot,
     data <- dplyr::filter(data, cells == 1)
   }
 
-  if (!methods::is(label_nudge, "list") || (is.null(names(label_nudge)) && length(label_nudge) > 0)) {
-    #label_nudge <- list(label_nudge)
-    message("label_nudge has to be a named list with names being those of labels.")
-    label_nudge <- replicate(length(unique(data[[label_feature]])), c(0,0), simplify = F)
-    names(label_nudge) <- unique(data[[label_feature]])
-  }
-  if (any(lengths(label_nudge) != 2)) {
-    message("label_nudge should contain vectors of length 2 only.")
-    label_nudge <- label_nudge[which(lengths(label_nudge) == 2)]
-  }
-  if (length(label_nudge) > 0) {
-    len_bef <- length(label_nudge)
-    label_nudge <- label_nudge[which(names(label_nudge) %in% unique(data[[label_feature]]))]
-    if (length(label_nudge) < len_bef) {
-      message("label_nudge: not all names found in label column of data.")
-    }
-  }
-
-  data <-
-    data |>
-    dplyr::group_by(!!rlang::sym(label_feature), SO.split) |>
-    dplyr::mutate(group_id = as.character(dplyr::cur_group_id())) |>
-    dplyr::ungroup()
-
-  # low p: multimodality
-  dip_p <- purrr::map_dfr(split(data, data$group_id), function(x) {
-    subset <- sample.int(nrow(x), min(nrow(x), 71999))
-    xp <- diptest::dip.test(x = x[[dimcol1]][subset])[["p.value"]]
-    yp <- diptest::dip.test(x = x[[dimcol2]][subset])[["p.value"]]
-    return(data.frame(xp = xp, yp = yp))
-  }, .id = "group_id") |>
-    dplyr::left_join(dplyr::distinct(data, !!rlang::sym(label_feature), SO.split, group_id), by = c("group_id" = "group_id")) |>
-    dplyr::filter(xp < 0.01 | yp < 0.01)
-
-  plotranges <- purrr::map(brathering::gg_lims(plot), diff)
-  names(plotranges) <- c(dimcol1, dimcol2)
-
-  ## calculate separate avg coordinates for multi clusters
-  # collapse them if too few cells or if too close
-  dtach <- !"mclust" %in% .packages()
-  library(mclust)
-  label_df_multi <- purrr::pmap_dfr(.l = asplit(dip_p, 2), .f = function(group_id, xp, yp, label_feature, SO.split) {
-    datasub <-
+  label_df_multi <- data.frame()
+  if (label_multi_try) {
+    # low p: multimodality
+    dip_p <-
       data |>
-      dplyr::filter(group_id %in% !!group_id) |>
-      dplyr::filter(SO.split %in% !!SO.split)
-    xp <- as.numeric(xp)
-    yp <- as.numeric(yp)
+      dplyr::group_by(!!rlang::sym(label_feature), SO.split) |>
+      dplyr::slice_sample(n = 5e4) |>
+      dplyr::summarise(
+        xp = diptest::dip.test(.data[[dimcol1]])$p.value,
+        yp = diptest::dip.test(.data[[dimcol2]])$p.value,
+        .groups = "drop") |>
+      dplyr::filter(xp < 0.01 | yp < 0.01)
 
-    if (xp < 0.01 && yp >= 0.01) {
-      dimcolavgs <- get_dim_avg_multi(
-        data = datasub,
-        dim1 = dimcol1,
-        dim2 = dimcol2,
-        plotranges = plotranges,
-        label_center_fun = label_center_fun
-      )
-      dimcol1_avg <- dimcolavgs[[1]]
-      dimcol2_avg <- dimcolavgs[[2]]
-    }
-    if (yp < 0.01 && xp >= 0.01) {
-      dimcolavgs <- get_dim_avg_multi(
-        data = datasub,
-        dim1 = dimcol2,
-        dim2 = dimcol1,
-        plotranges = plotranges,
-        label_center_fun = label_center_fun
-      )
-      dimcol1_avg <- dimcolavgs[[2]]
-      dimcol2_avg <- dimcolavgs[[1]]
-    }
-    if (xp < 0.01 && yp < 0.01) {
-      mcl <- mclust::Mclust(dimcol12_data <- datasub[,c(dimcol1, dimcol2)], verbose = F)
-      dimcol12_data_split <- split(dimcol12_data, mcl[["classification"]])
-      fractions <- purrr::map_int(dimcol12_data_split,nrow)/nrow(dimcol12_data)
-      dimcol12_data_split <- dimcol12_data_split[which(fractions>=0.2)]
-      if (!length(dimcol12_data_split)) {
-        dimcol12_data_split <- list(dimcol12_data)
+
+    plotranges <- purrr::map(brathering::gg_lims(plot), diff)
+    names(plotranges) <- c(dimcol1, dimcol2)
+
+    ## calculate separate avg coordinates for multi clusters
+    # collapse them if too few cells or if too close
+    dtach <- !"mclust" %in% .packages()
+    null <- capture.output(library(mclust))
+    label_df_multi <- purrr::pmap_dfr(.l = asplit(dip_p, 2), .f = function(label_feature, SO.split, xp, yp) {
+      set.seed(as.numeric(xp))
+      datasub <-
+        data |>
+        dplyr::filter(SO.split %in% !!SO.split & label_feature %in% !!label_feature) |>
+        dplyr::slice_sample(n = 5000)
+      xp <- as.numeric(xp)
+      yp <- as.numeric(yp)
+
+      if (xp < 0.01 && yp >= 0.01) {
+        dimcolavgs <- get_dim_avg_multi(
+          data = datasub,
+          dim1 = dimcol1,
+          dim2 = dimcol2,
+          plotranges = plotranges,
+          label_center_fun = label_center_fun
+        )
+        dimcol1_avg <- dimcolavgs[[1]]
+        dimcol2_avg <- dimcolavgs[[2]]
       }
-      dimcol1_avg <- purrr::map_dbl(dimcol12_data_split, ~label_center_fun(.x[[dimcol1]]))
-      dimcol2_avg <- purrr::map_dbl(dimcol12_data_split, ~label_center_fun(.x[[dimcol2]]))
-      new_avg <- collapse_close_points(x = dimcol1_avg, y = dimcol2_avg, threshold = mean(0.2*unlist(plotranges)))
-      dimcol1_avg <- new_avg[["x"]]
-      dimcol2_avg <- new_avg[["y"]]
-    }
+      if (yp < 0.01 && xp >= 0.01) {
+        dimcolavgs <- get_dim_avg_multi(
+          data = datasub,
+          dim1 = dimcol2,
+          dim2 = dimcol1,
+          plotranges = plotranges,
+          label_center_fun = label_center_fun
+        )
+        dimcol1_avg <- dimcolavgs[[2]]
+        dimcol2_avg <- dimcolavgs[[1]]
+      }
+      if (xp < 0.01 && yp < 0.01) {
+        mcl <- mclust::Mclust(
+          dimcol12_data <- datasub[,c(dimcol1, dimcol2)],
+          G = 2:label_multi_max,
+          modelNames = "VVV",
+          verbose = F
+        )
+        #dimcol12_data$clust <- mcl[["classification"]]
+        #brathering::plot2(dimcol12_data, color = "clust")
+        dimcol12_data_split <- split(dimcol12_data, mcl[["classification"]])
+        fractions <- purrr::map_int(dimcol12_data_split,nrow)/nrow(dimcol12_data)
+        dimcol12_data_split <- dimcol12_data_split[which(fractions>=0.2)]
+        if (!length(dimcol12_data_split)) {
+          dimcol12_data_split <- list(dimcol12_data)
+        }
+        dimcol1_avg <- purrr::map_dbl(dimcol12_data_split, ~label_center_fun(.x[[dimcol1]]))
+        dimcol2_avg <- purrr::map_dbl(dimcol12_data_split, ~label_center_fun(.x[[dimcol2]]))
+        new_avg <- collapse_close_points(x = dimcol1_avg, y = dimcol2_avg, threshold = mean(0.2*unlist(plotranges)))
+        dimcol1_avg <- new_avg[["x"]]
+        dimcol2_avg <- new_avg[["y"]]
+      }
+      return(stats::setNames(data.frame(
+        dimcol1_avg = dimcol1_avg,
+        dimcol2_avg = dimcol2_avg,
+        label_feature = label_feature,
+        SO.split = SO.split), c(dimcol1, dimcol2, "label", "SO.split")))
+    })
     if (dtach) {
       detach("package:mclust", unload = T)
     }
-    return(stats::setNames(data.frame(
-      dimcol1_avg = dimcol1_avg,
-      dimcol2_avg = dimcol2_avg,
-      label_feature = label_feature,
-      SO.split = SO.split), c(dimcol1, dimcol2, "label", "SO.split")))
-  })
+  }
+
   # not split up clusters
   label_df <-
     data |>
@@ -808,31 +801,35 @@ add_labels <- function(plot = plot,
   }
   rownames(label_df) <- NULL
 
-  # optionally: repel labels
-  if (label_repel) {
-    label_df <-
-      label_df |>
-      dplyr::left_join(brathering::get_repel_coords(ggobj = ggplot2::ggplot(label_df,
-                                                                            ggplot2::aes(x = !!rlang::sym(dimcol1),
-                                                                                         y = !!rlang::sym(dimcol2)))),
-                       by = c(dimcol1, dimcol2)) |>
-      dplyr::select(-c(!!rlang::sym(dimcol1), !!rlang::sym(dimcol2))) |>
-      dplyr::rename(!!rlang::sym(dimcol1) := x_repel, !!rlang::sym(dimcol2) := y_repel)
+  label_df <-
+    label_df |>
+    # make for optional get_repel_coords, aligned with optional contour_labels
+    dplyr::mutate("feature" = label) |>
+    # reorder for optional get_repel_coords
+    dplyr::select(!!rlang::sym(dimcol1), !!rlang::sym(dimcol2), label, feature, SO.split)
+
+  if (!finalize_plotting) {
+    assign("label_label", label_df, env = parent.frame())
+  } else {
+    if (label_repel) {
+      label_df <- purrr::map_dfr(split(label_df, label_df$SO.split), brathering::get_repel_coords) #brathering::
+    }
+    label_nudge <- check_nudge_list(nudge_list = label_nudge,
+                                    label_df = label_df)
+
+    # nudge labels by name
+    for (i in names(label_nudge)) {
+      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + label_nudge[[i]][1]
+      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + label_nudge[[i]][2]
+    }
+
+    plot <- plot +
+      Gmisc::fastDoCall(what = ggtext::geom_richtext,
+                        args = c(list(
+                          data = label_df,
+                          mapping = ggplot2::aes(label = label)), label_args))
   }
 
-  # nudge labels by name
-  for (i in names(label_nudge)) {
-    label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + label_nudge[[i]][1]
-    label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + label_nudge[[i]][2]
-  }
-
-  plot <-
-    plot +
-    Gmisc::fastDoCall(what = ggtext::geom_richtext,
-                      args = c(list(
-                        data = label_df,
-                        mapping = ggplot2::aes(label = label)
-                      ), label_args))
   return(plot)
 }
 
@@ -844,6 +841,7 @@ get_dim_avg_multi <- function(data,
                               min_range_frac = 0.2,
                               label_center_fun) {
 
+  null <- capture.output(library(mclust))
   mcl <- mclust::Mclust(data_dim1 <- data[[dim1]], verbose = F)
   cluster_split <- split(data_dim1, mcl[["classification"]])
   # filter low fraction splits
@@ -917,14 +915,20 @@ add_contour <- function(plot,
                         contour_same_across_split = T,
                         contour_expr_freq = F,
                         contour_ggnewscale = F,
+                        contour_multi_try = F,
+                        contour_multi_max = 3,
                         contour_fun = ggplot2::geom_density2d,
-                        contour_path_label = NULL) {
+                        contour_path_label = NULL,
+                        finalize_plotting_expr_freq_labels = F) {
   dtach <- !"mclust" %in% .packages()
-  library(mclust)
+  null <- capture.output(library(mclust))
   # use all cells across split_by to assign contours? (in other words: same contour in every facet based on all cells, irrespective of split_by)
 
   label_center_fun <- rlang::arg_match(label_center_fun)
   label_center_fun <- match.fun(label_center_fun)
+
+  dimcol1 <- attr(plot[["data"]], "dim1")
+  dimcol2 <- attr(plot[["data"]], "dim2")
 
   data <- NULL
   try(expr = {
@@ -940,89 +944,100 @@ add_contour <- function(plot,
       data <- dplyr::filter(data, cells == 1)
     }
 
-    dimcol1 <- attr(plot[["data"]], "dim1")
-    dimcol2 <- attr(plot[["data"]], "dim2")
-
-    data <-
-      data |>
-      dplyr::group_by(contour_feature, SO.split) |>
-      dplyr::mutate(group_id = as.character(dplyr::cur_group_id())) |>
-      dplyr::ungroup()
+    data <- dplyr::mutate(data, group_id = as.character(dplyr::cur_group_id()), .by = c(contour_feature, SO.split))
 
     # filter 2D outliers by contour_feature level
     # instead of filtering below
     if (contour_rm_outlier) {
       # if min 5 algos indicate an outlier it is removed
-      data <- purrr::map_dfr(split(data, data$group_id), ~.x[which(rowSums(brathering::outlier(.x[,c(attr(plot[["data"]], "dim1"), attr(plot[["data"]], "dim2"))])) < 5),])
+      data <- purrr::map_dfr(split(data, data$group_id),
+                             ~.x[which(rowSums(brathering::outlier(.x[,c(dimcol1, dimcol2)], methods = "dbscan")) == 0),])
     }
 
-    # check for multimodal clusters: first with diptest
-    # low p: multimodality
-    dip_p <- purrr::map_dfr(split(data, data$group_id), function(x) {
-      subset <- sample.int(nrow(x), min(nrow(x), 71999))
-      xp <- diptest::dip.test(x = x[[dimcol1]][subset])[["p.value"]]
-      yp <- diptest::dip.test(x = x[[dimcol2]][subset])[["p.value"]]
-      return(data.frame(xp = xp, yp = yp))
-    }, .id = "group_id") |>
-      dplyr::left_join(dplyr::distinct(data, contour_feature, SO.split, group_id), by = c("group_id" = "group_id")) |>
-      dplyr::filter(xp < 0.01 | yp < 0.01)
-
-    plotranges <- purrr::map(brathering::gg_lims(plot), diff)
-    names(plotranges) <- c(dimcol1, dimcol2)
-
-    ## generate a separate id for split clusters to make separate contours
-    # collapse them if too few cells or if too close
-    data2 <- purrr::pmap_dfr(.l = asplit(dip_p, 2), .f = function(group_id, xp, yp, contour_feature, SO.split) {
-      datasub <-
+    data2 <- data.frame()
+    if (contour_multi_try) {
+      # check for multimodal clusters: first with diptest
+      # low p: multimodality
+      dip_p <-
         data |>
-        dplyr::filter(group_id %in% !!group_id) |>
-        dplyr::filter(SO.split %in% !!SO.split)
-      xp <- as.numeric(xp)
-      yp <- as.numeric(yp)
-      if (xp < 0.01 || yp < 0.01) {
-        mcl <- mclust::Mclust(datasub[,c(dimcol1, dimcol2)], verbose = F)
-        datasub_split <- split(datasub, mcl[["classification"]])
+        dplyr::group_by(contour_feature, SO.split) |>
+        dplyr::slice_sample(n = 5e4) |>
+        dplyr::summarise(
+          xp = diptest::dip.test(.data[[dimcol1]])$p.value,
+          yp = diptest::dip.test(.data[[dimcol2]])$p.value,
+          .groups = "drop") |>
+        dplyr::filter(xp < 0.01 | yp < 0.01)
 
-        # filter low fraction splits
-        # these data will be missing for contour calculation
-        # maybe remove that if filtering outliers above works
-        if (contour_rm_lowfreq_subcluster) {
-          ncells <- purrr::map_dbl(datasub_split, nrow)
-          fractions <- ncells/nrow(datasub)
-          datasub_split <- datasub_split[which(fractions>=0.2)]
-          if (!length(datasub_split)) {
-            datasub_split <- list(datasub)
+      plotranges <- purrr::map(brathering::gg_lims(plot), diff)
+      names(plotranges) <- c(dimcol1, dimcol2)
+
+      ## generate a separate id for split clusters to make separate contours
+      # collapse them if too few cells or if too close
+      data2 <- purrr::pmap_dfr(.l = asplit(dip_p, 2), .f = function(contour_feature, SO.split, xp, yp) {
+        set.seed(as.numeric(xp))
+        datasub <-
+          data |>
+          dplyr::filter(contour_feature %in% !!contour_feature & SO.split %in% !!SO.split) |>
+          dplyr::slice_sample(n = 5000)
+        xp <- as.numeric(xp)
+        yp <- as.numeric(yp)
+        if (xp < 0.01 || yp < 0.01) {
+          mcl <- mclust::Mclust(
+            datasub[,c(dimcol1, dimcol2)],
+            modelNames = "VVV",
+            G = 2:contour_multi_max,
+            verbose = F
+          )
+          datasub_split <- split(datasub, mcl[["classification"]])
+
+          # filter low fraction splits
+          # these data will be missing for contour calculation
+          # maybe remove that if filtering outliers above works
+          if (contour_rm_lowfreq_subcluster) {
+            ncells <- purrr::map_dbl(datasub_split, nrow)
+            fractions <- ncells/nrow(datasub)
+            datasub_split <- datasub_split[which(fractions>=0.2)]
+            if (!length(datasub_split)) {
+              datasub_split <- list(datasub)
+            }
           }
-        }
 
-        dimcol1_avg <- purrr::map_dbl(datasub_split, ~label_center_fun(.x[[dimcol1]]))
-        dimcol2_avg <- purrr::map_dbl(datasub_split, ~label_center_fun(.x[[dimcol2]]))
-        clusters <- stack(collapse_close_points(
-          x = dimcol1_avg,
-          y = dimcol2_avg,
-          threshold = mean(0.2*unlist(plotranges)),
-          return_cluster = T
-        ))
-        datasub_split <- purrr::map(stats::setNames(unique(clusters$values), unique(clusters$values)), function(x) {
-          dplyr::bind_rows(datasub_split[clusters[which(clusters$values == x), "ind", drop = T]])
-        })
-        datasub_split <-
-          dplyr::bind_rows(datasub_split, .id = "split") |>
-          dplyr::mutate(contour_feature_split = paste0(contour_feature, "_", split))
-      }
-      return(datasub_split)
-    })
-    if (dtach) {
-      detach("package:mclust", unload = T)
+          dimcol1_avg <- purrr::map_dbl(datasub_split, ~label_center_fun(.x[[dimcol1]]))
+          dimcol2_avg <- purrr::map_dbl(datasub_split, ~label_center_fun(.x[[dimcol2]]))
+          clusters <- stack(collapse_close_points(
+            x = dimcol1_avg,
+            y = dimcol2_avg,
+            threshold = mean(0.2*unlist(plotranges)),
+            return_cluster = T
+          ))
+          datasub_split <- purrr::map(stats::setNames(unique(clusters$values), unique(clusters$values)), function(x) {
+            dplyr::bind_rows(datasub_split[clusters[which(clusters$values == x), "ind", drop = T]])
+          })
+          datasub_split <-
+            dplyr::bind_rows(datasub_split, .id = "split") |>
+            dplyr::mutate(contour_feature_split = paste0(contour_feature, "_", split))
+        }
+        return(datasub_split)
+      })
     }
 
     # join rows of unimodal and multimodal clusters
-    data <- dplyr::bind_rows(data |> dplyr::filter(!contour_feature %in% unique(data2[["contour_feature"]])),
+    data <- dplyr::bind_rows(data |>
+                               dplyr::filter(!contour_feature %in% unique(data2[["contour_feature"]])) |>
+                               dplyr::mutate(contour_feature_split = NA),
                              data2) |>
-      dplyr::mutate(contour_feature_split = ifelse(is.na(contour_feature_split), as.character(contour_feature), contour_feature_split))
+      dplyr::mutate(contour_feature_split = ifelse(
+        is.na(contour_feature_split),
+        as.character(contour_feature),
+        contour_feature_split
+      ))
 
     # assign for next feature
     assign("contour_data", data, envir = parent.frame(8))
+  }
+
+  if (dtach) {
+    detach("package:mclust", unload = T)
   }
 
   ## keep this as a list? or spare it?
@@ -1089,7 +1104,9 @@ add_contour <- function(plot,
   }
 
   # calc expression freq per cluster
-  if ((contour_expr_freq || !identical(ggplot2::geom_density_2d, contour_fun)) && is.numeric(data[["feature"]]) && !is.null(contour_path_label)) {
+  if ((contour_expr_freq || !identical(ggplot2::geom_density_2d, contour_fun)) &&
+      is.numeric(data[["feature"]]) &&
+      !is.null(contour_path_label)) {
     # filter for largest subcluster of multimodal clusters
     # plot[["data"]] is unfiltered
 
@@ -1144,10 +1161,6 @@ add_contour <- function(plot,
                    color = contour_col_pal[i])))
         }
 
-
-
-
-
         # plot <-
         #   plot +
         #   Gmisc::fastDoCall(geomtextpath::geom_labeldensity2d, args = c(
@@ -1165,46 +1178,171 @@ add_contour <- function(plot,
     expr_by_cluster <-
       plot[["data"]] |>
       dplyr::group_by(contour_feature, SO.split) |>
-      dplyr::summarise(pct = sum(feature > 0)/dplyr::n()*100, .groups = "drop") |>
-      dplyr::mutate(pct = ifelse(pct < 1, ifelse(pct == 0, "0 %", "< 1 %"), paste0(round(pct,0), " %")))
+      # label = pct
+      dplyr::summarise(label = sum(feature > 0)/dplyr::n()*100, .groups = "drop") |>
+      dplyr::mutate(label = ifelse(label < 1, ifelse(label == 0, "0 %", "< 1 %"), paste0(round(label,0), " %")))
 
     # data may have been subject to filtering
     largest_subcluster <-
       data |>
       dplyr::group_by(contour_feature, SO.split, contour_feature_split) |>
-      dplyr::summarise(n = dplyr::n()) |>
-      dplyr::slice_max(order_by = n, n = 1, with_ties = F) |>
-      dplyr::ungroup()
-    label_positions <-
+      dplyr::summarise(n = dplyr::n(), .groups = "drop") |>
+      dplyr::slice_max(order_by = n, n = 1, with_ties = F, by = c(contour_feature, SO.split))
+    label_df <-
       data |>
       dplyr::semi_join(largest_subcluster, by = c("contour_feature_split", "SO.split")) |>
       dplyr::group_by(contour_feature, SO.split) |>
-      dplyr::summarise(dr1_avg = mean(!!rlang::sym(dimcol1)) + contour_label_nudge[1],
-                       dr2_avg = mean(!!rlang::sym(dimcol2)) + contour_label_nudge[2]) |>
-      dplyr::left_join(expr_by_cluster, by = c("contour_feature", "SO.split"))
+      dplyr::summarise(!!dimcol1 := label_center_fun(!!rlang::sym(dimcol1)),
+                       !!dimcol2 := label_center_fun(!!rlang::sym(dimcol2)),
+                       .groups = "drop") |>
+      dplyr::left_join(expr_by_cluster, by = c("contour_feature", "SO.split")) |>
+      dplyr::rename("feature" = contour_feature)
 
-
-    if (contour_ggnewscale) {
-      plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext,
-                                       args = c(contour_label_args,
-                                                list(data = label_positions,
-                                                     show.legend = F,
-                                                     mapping = ggplot2::aes(
-                                                       x = dr1_avg,
-                                                       y = dr2_avg,
-                                                       label = pct,
-                                                       color = !!rlang::sym(names(group_labels)[1])))))
+    if (!finalize_plotting_expr_freq_labels) {
+      assign("label_contour", label_df, env = parent.frame())
     } else {
-      plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext,
-                                       args = c(contour_label_args,
-                                                list(data = label_positions,
-                                                     mapping = ggplot2::aes(
-                                                       x = dr1_avg,
-                                                       y = dr2_avg,
-                                                       label = pct))))
+      contour_label_nudge <- check_nudge_list(nudge_list = contour_label_nudge,
+                                              label_df = label_df)
+
+      # nudge labels by name
+      for (i in names(contour_label_nudge)) {
+        label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + contour_label_nudge[[i]][1]
+        label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + contour_label_nudge[[i]][2]
+      }
+      if (contour_ggnewscale) {
+        plot <- plot +
+          Gmisc::fastDoCall(ggtext::geom_richtext,
+                            args = c(contour_label_args,
+                                     list(data = label_df,
+                                          show.legend = F,
+                                          mapping = ggplot2::aes(
+                                            x = !!rlang::sym(dimcol1),
+                                            y = !!rlang::sym(dimcol2),
+                                            label = label,
+                                            color = !!rlang::sym(names(group_labels)[1])))))
+      } else {
+        plot <- plot +
+          Gmisc::fastDoCall(ggtext::geom_richtext,
+                            args = c(contour_label_args,
+                                     list(data = label_df,
+                                          mapping = ggplot2::aes(
+                                            x = !!rlang::sym(dimcol1),
+                                            y = !!rlang::sym(dimcol2),
+                                            label = label))))
+      }
     }
   }
   return(plot)
+}
+
+co_add_feature_and_contour_labels <- function(plot,
+                                              label_label,
+                                              label_contour,
+                                              label_nudge,
+                                              label_repel,
+                                              label_args,
+                                              contour_label_nudge,
+                                              contour_label_args) {
+
+
+  dimcol1 <- attr(plot[["data"]], "dim1")
+  dimcol2 <- attr(plot[["data"]], "dim2")
+  ### add nudging after repel
+  if (!is.null(label_label) && !is.null(label_contour)) {
+    # repel expr freq by contour and feature label
+    label_df <- dplyr::bind_rows(label = label_label, contour = label_contour, .id = "group")
+    label_df <- label_df[,c(2:ncol(label_df), 1)]
+    label_df <- purrr::map_dfr(split(label_df, label_df$SO.split), brathering::get_repel_coords) #brathering::
+    label_nudge <- check_nudge_list(nudge_list = label_nudge,
+                                    label_df = label_df)
+    contour_label_nudge <- check_nudge_list(nudge_list = contour_label_nudge,
+                                            label_df = label_df)
+    for (i in names(label_nudge)) {
+      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + label_nudge[[i]][1]
+      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + label_nudge[[i]][2]
+    }
+    for (i in names(contour_label_nudge)) {
+      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + contour_label_nudge[[i]][1]
+      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + contour_label_nudge[[i]][2]
+    }
+    label_df <- split(label_df, label_df$group)
+    plot <- plot +
+      Gmisc::fastDoCall(what = ggtext::geom_richtext,
+                        args = c(list(
+                          data = label_df[["label"]],
+                          mapping = ggplot2::aes(label = label)
+                        ), label_args))
+    plot <- plot +
+      Gmisc::fastDoCall(what = ggtext::geom_richtext,
+                        args = c(list(
+                          data = label_df[["contour"]],
+                          mapping = ggplot2::aes(label = label)
+                        ), label_args))
+
+  } else if (!is.null(label_label)) {
+
+    label_df <- label_label
+    if (label_repel) {
+      label_df <- purrr::map_dfr(split(label_df, label_df$SO.split), brathering::get_repel_coords) #brathering::
+    }
+
+    label_nudge <- check_nudge_list(nudge_list = label_nudge,
+                                    label_df = label_df)
+    # nudge labels by name
+    for (i in names(label_nudge)) {
+      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + label_nudge[[i]][1]
+      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + label_nudge[[i]][2]
+    }
+
+    plot <- plot +
+      Gmisc::fastDoCall(what = ggtext::geom_richtext,
+                        args = c(list(
+                          data = label_df,
+                          mapping = ggplot2::aes(label = label)), label_args))
+
+  } else if (!is.null(label_contour)) {
+
+    label_df <- label_contour
+    contour_label_nudge <- check_nudge_list(nudge_list = contour_label_nudge,
+                                            label_df = label_df)
+    for (i in names(contour_label_nudge)) {
+      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + contour_label_nudge[[i]][1]
+      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + contour_label_nudge[[i]][2]
+    }
+
+    plot <-
+      plot +
+      Gmisc::fastDoCall(what = ggtext::geom_richtext,
+                        args = c(list(
+                          data = label_contour,
+                          mapping = ggplot2::aes(label = label)
+                        ), contour_label_args))
+  }
+  return(plot)
+}
+
+
+check_nudge_list <- function(nudge_list,
+                             label_df) {
+  name <- deparse(substitute(nudge_list))
+  if (!methods::is(nudge_list, "list") || (is.null(names(nudge_list)) && length(nudge_list) > 0)) {
+    #nudge_list <- list(nudge_list)
+    message(name, " has to be a named list with names being those of labels.")
+    nudge_list <- replicate(length(label_df[["feature"]]), c(0,0), simplify = F)
+    names(nudge_list) <- label_df[["feature"]]
+  }
+  if (any(lengths(nudge_list) != 2)) {
+    message(name, " should contain vectors of length 2 only.")
+    nudge_list <- nudge_list[which(lengths(nudge_list) == 2)]
+  }
+  if (length(nudge_list) > 0) {
+    len_bef <- length(nudge_list)
+    nudge_list <- nudge_list[which(names(nudge_list) %in% label_df[["feature"]])]
+    if (length(nudge_list) < len_bef) {
+      message(name, ": not all names found in label column of data.")
+    }
+  }
+  return(nudge_list)
 }
 
 list_depth <- function(this,thisdepth=0){
@@ -1222,6 +1360,11 @@ check.features <- function(SO,
                            meta.data = T,
                            meta.data.numeric = F) {
 
+  features <- features[which(!is.na(features))]
+  features <- trimws(features)
+  features <- features[which(features != "")]
+
+  if (!length(features)) {return(NULL)}
   if (is.null(features)) {return(NULL)}
   if (!rownames && !meta.data) {return((NULL))}
   if (!is.list(SO)) {
