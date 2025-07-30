@@ -151,7 +151,6 @@ get_data <- function(SO,
       }
     }
 
-
     # redundant to meta_features
     if (!is.null(meta_col)) {
       data <- cbind(data, x@meta.data[,meta_col,drop=F])
@@ -170,17 +169,19 @@ get_data <- function(SO,
     } else {
       data[["split_feature"]] <- factor("1")
     }
+    # do it here to enable duplicate names, e.g. from multiple objects
+    # duplicate rownames would be appended by ...1 and prohibit checking for cells below
+    data <- tibble::rownames_to_column(data, "id")
     return(data)
   }, .id = "SO.split")
-
   # ensure that facet ordering is according to the order of SO objects provided
   data$SO.split <- factor(data$SO.split, levels = names(SO))
   data <- dplyr::relocate(data, SO.split, .after = dplyr::last_col())
 
   if (!is.null(cells)) {
     # this avoids introduction of NA for duplicate names
-    data <- data[which(rownames(data) %in% names(cells)),]
-    data[["cells"]] <- unname(cells[rownames(data)])
+    data <- data[which(data$id %in% names(cells)),]
+    data[["cells"]] <- unname(cells[data$id])
   } else {
     data[["cells"]] <- 1
   }
@@ -205,7 +206,8 @@ get_data <- function(SO,
     message(paste(names(which(infcol)), collapse = ", "), ": Inf found in data.")
   }
 
-  data <- tibble::rownames_to_column(data, "id")
+  #data <- tibble::rownames_to_column(data, "id")
+
   # rm all feature but one
   # split data into list with one feature each
   data <- purrr::map(stats::setNames(lapply(seq_along(feature), function(i) feature[-i]), feature),

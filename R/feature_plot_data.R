@@ -359,7 +359,6 @@ feature_plot_data <- function(data,
                         finalize_plotting_expr_freq_labels = F)
   }
 
-
   if (!is.null(label_label) || !is.null(label_contour)) {
     # label_label and label_contour are assigned in add_labels and add_contour respectively
     # plotting them is combined here to allow repelling
