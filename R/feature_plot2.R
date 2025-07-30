@@ -115,6 +115,10 @@
 #' @param feature_ex
 #' @param feature_cut
 #' @param feature_cut_expr
+#' @param combine_guides passed to patchwork::wrap_plots, NULL or collect
+#' @param label_multi_max
+#' @param contour_multi_try
+#' @param contour_multi_max
 #'
 #' @return
 #' @export
@@ -133,6 +137,7 @@ feature_plot2 <- function(SO,
                                                qmax = 1,
                                                label_feature = NULL),
                           combine = T,
+                          combine_guides = NULL,
                           ncol_combine = NULL,
                           nrow_combine = NULL,
                           strip_select = NULL,
@@ -176,6 +181,8 @@ feature_plot2 <- function(SO,
                                                 hjust = 1.1,
                                                 vjust = 1.25,
                                                 color = NA,
+                                                fill = NA,
+                                                label.color = NA,
                                                 size = 4,
                                                 text.color = "black"),
 
@@ -188,7 +195,8 @@ feature_plot2 <- function(SO,
                                             panel.grid = ggplot2::element_blank(),
                                             legend.background = ggplot2::element_blank(),
                                             legend.key.size = ggplot2::unit(0.3, "cm"),
-                                            legend.key = ggplot2::element_blank()),
+                                            legend.key = ggplot2::element_blank(),
+                                            title = ggtext::element_markdown()),
 
                           facet_scales = c("fixed", "free", "free_x", "free_y"),
                           facet_grid_row_var = NULL,
@@ -337,7 +345,7 @@ feature_plot2 <- function(SO,
       message("ncol_combine set NULL as ncol_combine and nrow_combine are provided.")
       ncol_combine <- NULL
     }
-    plots <- patchwork::wrap_plots(plots, ncol = ncol_combine, nrow = nrow_combine)
+    plots <- patchwork::wrap_plots(plots, ncol = ncol_combine, nrow = nrow_combine, guides = combine_guides)
   }
   if (length(plots) == 1 && !combine) {
     plots <- plots[[1]]

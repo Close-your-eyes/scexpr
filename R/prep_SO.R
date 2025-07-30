@@ -122,6 +122,9 @@ prep_SO <- function(SO_unprocessed,
       utils::install.packages("harmony")
     }
   }
+  if (!requireNamespace("zap", quietly = T)) {
+    devtools::install_github("coolbutuseless/zap")
+  }
 
   if (is.null(save_path)) {
     message("No save_path to save Seurat objects to provided.")
@@ -294,12 +297,17 @@ prep_SO <- function(SO_unprocessed,
   }
 
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d_%H%M%S")
-  save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".rds"), sep = "_")
+  ext <- ifelse(!requireNamespace("zap", quietly = T), "rds", "zap")
+  save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".", ext), sep = "_")
   Seurat::Misc(SO, "object_name") <- save.name
 
   if (!is.null(save_path)) {
     dir.create(save_path, showWarnings = F, recursive = T)
-    saveRDS(SO, compress = F, file = file.path(save_path, save.name))
+    if (ext == "rds") {
+      saveRDS(SO, compress = F, file = file.path(save_path, save.name))
+    } else if (ext == "zap") {
+      zap::zap_write(SO, dst = file.path(save_path, save.name), compress = "zstd")
+    }
     message(paste0("SO saved to: ", save_path, " as ", save.name, "."))
   }
 

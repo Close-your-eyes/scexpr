@@ -81,4 +81,5 @@ Suggests:
     farver,
     SingleCellExperiment,
     igraph,
-    glmGamPoi
+    glmGamPoi,
+    zap

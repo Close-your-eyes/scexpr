@@ -148,7 +148,8 @@ feature_plot_data <- function(data,
                                                 panel.grid = ggplot2::element_blank(),
                                                 legend.background = ggplot2::element_blank(),
                                                 legend.key.size = ggplot2::unit(0.3, "cm"),
-                                                legend.key = ggplot2::element_blank()),
+                                                legend.key = ggplot2::element_blank(),
+                                                title = ggtext::element_markdown()),
 
                               facet_scales = c("fixed", "free", "free_x", "free_y"),
                               facet_grid_row_var = NULL,
@@ -236,11 +237,11 @@ feature_plot_data <- function(data,
   # }
 
   # get color palette
-  col.pal <- scexpr:::get_col_pal(data = data,
-                                  col_pal_c_args = col_pal_c_args,
-                                  col_pal_d_args = col_pal_d_args)
+  col.pal <- get_col_pal(data = data,
+                         col_pal_c_args = col_pal_c_args,
+                         col_pal_d_args = col_pal_d_args)
 
-  data <- scexpr:::check.aliases(feature = attr(data, "feature"), feature_alias, data)
+  data <- check.aliases(feature = attr(data, "feature"), feature_alias, data)
 
   # excluded cells
   shapeby <- tryCatch(rlang::sym(attr(data, "shape_feature")), error = function(e) NULL)
@@ -249,26 +250,26 @@ feature_plot_data <- function(data,
     ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells)
 
   if (attr(data, "feature_type") == "gene") {
-    freqs <- scexpr:::get.freqs2(data = data)
-    plot <- do.call(scexpr:::feature_plot_gene, args = list(plot = plot,
-                                                            freqs = freqs,
-                                                            pt_size = pt_size,
-                                                            pt_size_fct = pt_size_fct,
-                                                            col_expr = col_expr,
-                                                            col_non_expr = col_non_expr,
-                                                            col_binary = col_binary,
-                                                            freq_plot = freq_plot,
-                                                            freq_pos = freq_pos,
-                                                            freq_size = freq_size,
-                                                            col_split = col_split,
-                                                            plot_all_across_split = plot_all_across_split))
+    freqs <- get.freqs2(data = data)
+    plot <- do.call(feature_plot_gene, args = list(plot = plot,
+                                                   freqs = freqs,
+                                                   pt_size = pt_size,
+                                                   pt_size_fct = pt_size_fct,
+                                                   col_expr = col_expr,
+                                                   col_non_expr = col_non_expr,
+                                                   col_binary = col_binary,
+                                                   freq_plot = freq_plot,
+                                                   freq_pos = freq_pos,
+                                                   freq_size = freq_size,
+                                                   col_split = col_split,
+                                                   plot_all_across_split = plot_all_across_split))
   } else {
     freqs <- NULL
-    plot <- do.call(scexpr:::feature_plot_meta, args = list(plot = plot,
-                                                            order_discr_explicit = order_discr_explicit,
-                                                            pt_size = pt_size,
-                                                            col_split = col_split,
-                                                            plot_all_across_split = plot_all_across_split))
+    plot <- do.call(feature_plot_meta, args = list(plot = plot,
+                                                   order_discr_explicit = order_discr_explicit,
+                                                   pt_size = pt_size,
+                                                   col_split = col_split,
+                                                   plot_all_across_split = plot_all_across_split))
   }
 
   plot <- plot + theme
@@ -282,33 +283,32 @@ feature_plot_data <- function(data,
       Gmisc::fastDoCall(ggplot2::guide_legend, args = shape_legend_args)
     })
 
-  plot <- scexpr:::add_facet(plot = plot,
-                             facet_grid_row_var = facet_grid_row_var,
-                             facet_scales = facet_scales,
-                             nrow_inner = nrow_inner,
-                             ncol_inner = ncol_inner)
+  plot <- add_facet(plot = plot,
+                    facet_grid_row_var = facet_grid_row_var,
+                    facet_scales = facet_scales,
+                    nrow_inner = nrow_inner,
+                    ncol_inner = ncol_inner)
 
-  if (!col_binary) {
-    plot <- scexpr:::add_color_scale(plot = plot,
-                                     col.pal = col.pal,
-                                     col_legend_args = col_legend_args,
-                                     col_steps = col_steps,
-                                     legendbreaks = legendbreaks,
-                                     legendlabels = legendlabels,
-                                     col_steps_nice = col_steps_nice,
-                                     col_na = col_na)
-  }
+  plot <- add_color_scale(plot = plot,
+                          col.pal = col.pal,
+                          col_legend_args = col_legend_args,
+                          col_steps = col_steps,
+                          legendbreaks = legendbreaks,
+                          legendlabels = legendlabels,
+                          col_steps_nice = col_steps_nice,
+                          col_na = col_na,
+                          col_binary = col_binary)
 
   if (!is.null(name_anno_pos)) {
-    title <- scexpr:::get_title(feature_ex = attr(data, "feature_ex", exact = T),
-                                feature_cut = attr(data, "feature_cut", exact = T),
-                                feature_cut_expr = attr(data, "feature_cut_expr"),
-                                freq = freqs[["freq.expr"]][["freq2"]],
-                                feature_italic = attr(data, "feature_type") == "gene",
-                                feature = attr(data, "feature"),
-                                name_anno = name_anno,
-                                #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
-                                markdown = T)
+    title <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
+                       feature_cut = attr(data, "feature_cut", exact = T),
+                       feature_cut_expr = attr(data, "feature_cut_expr"),
+                       freq = freqs[["freq.expr"]][["freq2"]],
+                       feature_italic = attr(data, "feature_type") == "gene",
+                       feature = attr(data, "feature"),
+                       name_anno = name_anno,
+                       #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
+                       markdown = T)
     if ("title" %in% name_anno_pos) {
       plot <- plot + ggplot2::labs(title = title)
       #plot <- plot + ggplot2::labs(title = substitute(paste(x, sep = ""), list(x = title)))
@@ -321,9 +321,9 @@ feature_plot_data <- function(data,
     }
   }
 
-  plot <- scexpr:::add_axes_expansion(plot = plot,
-                                      axes_lim_set = axes_lim_set,
-                                      axes_lim_expand = axes_lim_expand)
+  plot <- add_axes_expansion(plot = plot,
+                             axes_lim_set = axes_lim_set,
+                             axes_lim_expand = axes_lim_expand)
 
   label_label <- NULL
   if ("label_feature" %in% names(attributes(plot[["data"]]))) {
@@ -363,7 +363,7 @@ feature_plot_data <- function(data,
     # label_label and label_contour are assigned in add_labels and add_contour respectively
     # plotting them is combined here to allow repelling
     # contour label have no separate repel argument
-    #
+
     plot <- co_add_feature_and_contour_labels(plot = plot,
                                               label_label = label_label,
                                               label_contour = label_contour,

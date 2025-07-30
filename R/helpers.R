@@ -506,80 +506,90 @@ add_color_scale <- function(plot,
                             legendbreaks = "auto",
                             legendlabels = "auto",
                             col_steps_nice = T,
-                            col_na = "grey50") {
+                            col_na = "grey50",
+                            col_binary = F) {
 
 
-
-  if (is.numeric(plot[["data"]][["feature"]])) {
+  if (col_binary) {
     if (col_legend_args[["title"]] == "..auto..") {
-      if (!is.null(attr(plot[["data"]], "layer"))) {
-        if (attr(plot[["data"]], "layer") == "data") {
-          col_legend_args[["title"]] <- "log (UMI)"
-        } else if (attr(plot[["data"]], "layer") == "counts") {
-          col_legend_args[["title"]] <- "UMI"
-        } else {
-          col_legend_args[["title"]] <- attr(plot[["data"]], "layer")
+      col_legend_args[["title"]] <- "UMI"
+    }
+    guide_fun <- ggplot2::guide_legend
+  } else {
+
+    if (is.numeric(plot[["data"]][["feature"]])) {
+      if (col_legend_args[["title"]] == "..auto..") {
+        if (!is.null(attr(plot[["data"]], "layer"))) {
+          if (attr(plot[["data"]], "layer") == "data") {
+            col_legend_args[["title"]] <- "log (UMI)"
+          } else if (attr(plot[["data"]], "layer") == "counts") {
+            col_legend_args[["title"]] <- "UMI"
+          } else {
+            col_legend_args[["title"]] <- attr(plot[["data"]], "layer")
+          }
         }
       }
-    }
-    c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]])
-    qmin <- attr(plot[["data"]], "qmin")
-    qmax <- attr(plot[["data"]], "qmax")
+      c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]])
+      qmin <- attr(plot[["data"]], "qmin")
+      qmax <- attr(plot[["data"]], "qmax")
 
-    if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
+      if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
 
-      # change this
-      if (qmin > 0) {min.lab <- paste0(scale.min, " (q", round(qmin*100, 0), ")")} else {min.lab <- scale.min}
-      if (qmax < 1) {max.lab <- paste0(scale.max, " (q", round(qmax*100, 0), ")")} else {max.lab <- scale.max}
+        # change this
+        if (qmin > 0) {min.lab <- paste0(scale.min, " (q", round(qmin*100, 0), ")")} else {min.lab <- scale.min}
+        if (qmax < 1) {max.lab <- paste0(scale.max, " (q", round(qmax*100, 0), ")")} else {max.lab <- scale.max}
 
-      if (legendbreaks == "minmidmax") {
-        legendbreaks <- c(scale.min, scale.mid, scale.max)
-      }
-      if (legendlabels == "auto" && (qmin > 0 || qmax < 1)) {
-        legendlabels <- c(min.lab, scale.mid, max.lab)
-      } else if (legendlabels != "auto" && (qmin > 0 || qmax < 1)) {
-        message("qmax and/or qmin nor shown in legend.")
-      }
-      scale_color <- fcexpr:::colorscale_heuristic(colorscale_values = plot[["data"]][["feature"]],
-                                                   values_zscored = F,
-                                                   colorsteps = col_steps,
-                                                   legendbreaks = legendbreaks,
-                                                   legendlabels = legendlabels,
-                                                   fill = col.pal,
-                                                   nice_colorsteps = col_steps_nice,
-                                                   type = "color",
-                                                   col_na = col_na,
-                                                   qmin = attr(plot[["data"]], "qmin"),
-                                                   qmax = attr(plot[["data"]], "qmax"),
-                                                   scale.min = scale.min)
+        if (legendbreaks == "minmidmax") {
+          legendbreaks <- c(scale.min, scale.mid, scale.max)
+        }
+        if (legendlabels == "auto" && (qmin > 0 || qmax < 1)) {
+          legendlabels <- c(min.lab, scale.mid, max.lab)
+        } else if (legendlabels != "auto" && (qmin > 0 || qmax < 1)) {
+          message("qmax and/or qmin nor shown in legend.")
+        }
+        scale_color <- fcexpr:::colorscale_heuristic(colorscale_values = plot[["data"]][["feature"]],
+                                                     values_zscored = F,
+                                                     colorsteps = col_steps,
+                                                     legendbreaks = legendbreaks,
+                                                     legendlabels = legendlabels,
+                                                     fill = col.pal,
+                                                     nice_colorsteps = col_steps_nice,
+                                                     type = "color",
+                                                     col_na = col_na,
+                                                     qmin = attr(plot[["data"]], "qmin"),
+                                                     qmax = attr(plot[["data"]], "qmax"),
+                                                     scale.min = scale.min)
 
-      if (grepl("coloursteps", scale_color[["guide"]])) {
-        guide_fun <- ggplot2::guide_colorsteps
+        if (grepl("coloursteps", scale_color[["guide"]])) {
+          guide_fun <- ggplot2::guide_colorsteps
+        } else {
+          guide_fun <- ggplot2::guide_colorbar
+        }
+
+        plot <- plot + scale_color
       } else {
+        # if no expressers are found: breaks and labels would be of different lengths
+        plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
+                                                      limits = c(scale.min, scale.max),
+                                                      breaks = c(scale.min, scale.mid, scale.max),
+                                                      na.value = col_na)
         guide_fun <- ggplot2::guide_colorbar
       }
 
-      plot <- plot + scale_color
     } else {
-      # if no expressers are found: breaks and labels would be of different lengths
-      plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
-                                                    limits = c(scale.min, scale.max),
-                                                    breaks = c(scale.min, scale.mid, scale.max),
-                                                    na.value = col_na)
-      guide_fun <- ggplot2::guide_colorbar
+      if (col_legend_args[["title"]] == "..auto..") {
+        col_legend_args[["title"]] <- attr(plot[["data"]], "feature")
+      }
+      if ("barheight" %in% names(col_legend_args)) {
+        col_legend_args[["barheight"]] <- 1
+      }
+      plot <- plot + ggplot2::scale_color_manual(values = col.pal,
+                                                 na.value = col_na)
+      guide_fun <- ggplot2::guide_legend
     }
-
-  } else {
-    if (col_legend_args[["title"]] == "..auto..") {
-      col_legend_args[["title"]] <- attr(plot[["data"]], "feature")
-    }
-    if ("barheight" %in% names(col_legend_args)) {
-      col_legend_args[["barheight"]] <- 1
-    }
-    plot <- plot + ggplot2::scale_color_manual(values = col.pal,
-                                               na.value = col_na)
-    guide_fun <- ggplot2::guide_legend
   }
+
+
   plot <- plot + ggplot2::guides(color = Gmisc::fastDoCall(guide_fun, args = col_legend_args))
 
   return(plot)
@@ -1253,6 +1263,12 @@ co_add_feature_and_contour_labels <- function(plot,
     label_df <- dplyr::bind_rows(label = label_label, contour = label_contour, .id = "group")
     label_df <- label_df[,c(2:ncol(label_df), 1)]
     label_df <- purrr::map_dfr(split(label_df, label_df$SO.split), brathering::get_repel_coords) #brathering::
+    if ("split_feature" %in% names(plot[["data"]])) {
+      label_df <- dplyr::left_join(
+        label_df,
+        dplyr::distinct(plot[["data"]], label_feature, split_feature),
+        by = c("label" = "label_feature"))
+    }
     label_nudge <- check_nudge_list(nudge_list = label_nudge,
                                     label_df = label_df)
     contour_label_nudge <- check_nudge_list(nudge_list = contour_label_nudge,
@@ -1284,6 +1300,13 @@ co_add_feature_and_contour_labels <- function(plot,
     label_df <- label_label
     if (label_repel) {
       label_df <- purrr::map_dfr(split(label_df, label_df$SO.split), brathering::get_repel_coords) #brathering::
+    }
+
+    if ("split_feature" %in% names(plot[["data"]])) {
+      label_df <- dplyr::left_join(
+        label_df,
+        dplyr::distinct(plot[["data"]], label_feature, split_feature),
+        by = c("label" = "label_feature"))
     }
 
     label_nudge <- check_nudge_list(nudge_list = label_nudge,

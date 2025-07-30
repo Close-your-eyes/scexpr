@@ -62,14 +62,18 @@ feature_plot2(
   label_center_fun = c("median", "mean"),
   label_nudge = list(),
   label_repel = F,
+  label_multi_try = F,
+  label_multi_max = 3,
   label_args = list(label.colour = NA, fill = "white", size = 4, color = "black",
     label.padding = ggplot2::unit(rep(1/20, 4), "lines")),
   contour_filter_cells = T,
   contour_rm_outlier = F,
   contour_rm_lowfreq_subcluster = F,
+  contour_multi_try = F,
+  contour_multi_max = 3,
   contour_col_pal_args = list(name = "custom"),
   contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 0.5),
-  contour_label_nudge = c(0, 0),
+  contour_label_nudge = list(),
   contour_label_args = list(label.colour = NA, fill = "white", size = 4, color = "black",
     label.padding = ggplot2::unit(rep(1/20, 4), "lines")),
   contour_same_across_split = T,
@@ -157,6 +161,8 @@ requires a shape_feature in get_data or ...}
 \item{feature_alias}{named vector of aliases for features, old = new; e.g.
 c("FAIM3" = "FCMR", "MS4A1" = "CD20")}
 
+\item{feature_cut_expr}{}
+
 \item{freq_plot}{do plot frequency of expressers? TRUE, FALSE or ..auto..
 for decision based on number of SOs}
 
@@ -206,6 +212,8 @@ cells which are not excluded for label position calculation}
 be the values of feature_label}
 
 \item{label_repel}{do repel labels to avoid overlap with ggrepel?}
+
+\item{label_multi_try}{try to label split clusters with one label each?}
 
 \item{label_args}{arguments to ggtext::geom_richtext}
 
