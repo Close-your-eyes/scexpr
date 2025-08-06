@@ -37,7 +37,8 @@ feature_plot_data(
     ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.title.x =
     ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), legend.background = ggplot2::element_blank(),
-    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()),
+    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank(),
+    title = ggtext::element_markdown()),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,

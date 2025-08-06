@@ -74,35 +74,36 @@ feature_plot_stat <- function(SO,
     warning("split.by requires testing.")
   }
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
-  geom1 <- match.arg(geom1, c("jitter", "point"))
-  geom2 <- match.arg(geom2, c("boxplot", "violin", "none"))
+  assay <- rlang::arg_match(assay)
+  geom1 <- rlang::arg_match(geom1)
+  geom2 <- rlang::arg_match(geom2)
+  features <- unique(features)
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = split.by) # length = 1 only one SO currently
-  features <- .check.features(SO = SO, features = unique(features), meta.data = T)
+  SO <- check.SO(SO = SO, assay = assay)
+  features <- check.features(SO = SO, features = features, meta.data = T)
   if (length(meta.col) > 1) {
     stop("Please provide only one meta.col.")
   }
 
-  meta.col <- .check.features(SO = SO, features = meta.col, rownames = F)
-  cells <- .check.and.get.cells(SO = SO,
-                                assay = assay,
-                                cells = cells,
-                                cutoff.feature = cutoff.feature,
-                                cutoff.expression = cutoff.expression,
-                                exclusion.feature = exclusion.feature,
-                                downsample = downsample,
-                                return.included.cells.only = T)
+  meta.col <- check.features(SO = SO, features = meta.col, rownames = F)
+  cells <- check.and.get.cells(SO = SO,
+                               assay = assay,
+                               cells = cells,
+                               cutoff.feature = cutoff.feature,
+                               cutoff.expression = cutoff.expression,
+                               exclusion.feature = exclusion.feature,
+                               downsample = downsample,
+                               return.included.cells.only = T)
 
-  # get data with SO being no list does not work
-  data <- .get.data(SO, #stats::setNames(list(SO), "1")
-                    feature = features,
-                    assay = assay,
-                    slot = "data",
-                    cells = cells,
-                    split.by = split.by,
-                    reduction = NULL,
-                    meta.col = meta.col)
+
+  data <- get.data(SO,
+                   feature = features,
+                   assay = assay,
+                   slot = "data",
+                   cells = cells,
+                   split.by = split.by,
+                   reduction = NULL,
+                   meta.col = meta.col)
 
 
   # split.by requires testing - include in pivoting etc and geom_text

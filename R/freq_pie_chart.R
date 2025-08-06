@@ -174,7 +174,15 @@ freq_pie_chart <- function(SO,
   tab$cluster_cols <- col_pal[as.character(tab[,"cluster"])]
 
   plot <-
-    ggplot2::ggplot(tab, ggplot2::aes(x0 = 0, y0 = 0, r0 = pie_inside_radius, r = 1, start = start_angle, end = end_angle, fill = cluster)) +
+    ggplot2::ggplot(tab, ggplot2::aes(
+      x0 = 0,
+      y0 = 0,
+      r0 = pie_inside_radius,
+      r = 1,
+      start = start_angle,
+      end = end_angle,
+      fill = cluster
+    )) +
     ggforce::geom_arc_bar(colour = border_color) +
     theme +
     ggplot2::labs(fill = legend_title) +

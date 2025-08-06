@@ -1229,7 +1229,7 @@ feature_plot <- function(SO,
 
   data <- do.call(rbind, lapply(names(SO), function(y) {
 
-    if (utils::compareVersion(as.character(SO1@version), "4.9.9") == 1) {
+    if (utils::compareVersion(as.character(SO@version), "4.9.9") == 1) {
       #version 5: use layer
       data <- cbind(data.frame(t(as.matrix(Seurat::GetAssayData(SO[[y]], layer = slot, assay = assay)[gene_features,,drop = F])), check.names = F),
                     data.frame(SO[[y]]@meta.data[,meta_features,drop=F], stringsAsFactors = F, check.names = F))

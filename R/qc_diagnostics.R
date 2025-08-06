@@ -489,7 +489,7 @@ qc_diagnostic <- function(data_dirs,
           temp_slot <- "pca"
         }
         meta2 <- brathering::scale2(cbind(dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals),
-                                     SOx@reductions[[temp_slot]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
+                                          SOx@reductions[[temp_slot]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
       } else {
         meta2 <- brathering::scale2(dplyr::select(SOx@meta.data, dplyr::all_of(qc_cols), residuals))
       }
@@ -601,10 +601,9 @@ qc_plots <- function(SO,
               seq(0, 1e5, 2e4))
   breaks <- breaks[which(breaks != 0)]
 
-  qc_p1 <- suppressMessages(feature_plot(SO,
-                                         features = c(qc_cols, clustering_cols[1]),
-                                         reduction = "UMAP", legend.position = "none",
-                                         plot.labels = T))
+  qc_p1 <- suppressMessages(feature_plot2(SO,
+                                          features = c(qc_cols, clustering_cols[1]),
+                                          reduction = "UMAP"))
 
   qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
                            ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
@@ -619,17 +618,13 @@ qc_plots <- function(SO,
     ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
     ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)
 
-  p3_1 <- patchwork::wrap_plots(feature_plot(SO,
+  p3_1 <- patchwork::wrap_plots(feature_plot2(SO,
                                              features = clustering_cols[2],
                                              reduction = reduction,
-                                             pt.size = 0.5,
-                                             col.pal.dir = 1,
-                                             legend.position = "none",
-                                             plot.labels = T,
-                                             plot.title = F),
-                                suppressMessages(freq_pie_chart(SO = SO, meta.col = clustering_cols[2])[["plot"]]),
+                                             pt.size = 0.5),
+                                freq_pie_chart(SO = SO, meta.col = clustering_cols[2])[["plot"]],
                                 ncol = 1)
-
+browser()
   p3_2 <- feature_plot_stat(SO,
                             features = "nCount_RNA_log",
                             meta.col = clustering_cols[2],

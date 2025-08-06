@@ -197,8 +197,8 @@ heatmap_pseudobulk <- function(SO,
   }
 
   #browser()
-   if ("legend.direction" %in% names(theme_args)) {
-     theme_args$legend.direction <- match.arg(theme_args$legend.direction, c("horizontal", "vertical"))
+  if ("legend.direction" %in% names(theme_args)) {
+    theme_args$legend.direction <- match.arg(theme_args$legend.direction, c("horizontal", "vertical"))
     if (theme_args$legend.direction == "horizontal") {
       temp <- legend_fill_args$barwidth
       legend_fill_args$barwidth <- legend_fill_args$barheight
@@ -207,7 +207,7 @@ heatmap_pseudobulk <- function(SO,
   }
 
 
-  SO <- .check.SO(SO = SO, assay = assay) #length = 1
+  SO <- check.SO(SO = SO, assay = assay) #length = 1
   assay <- Seurat::DefaultAssay(SO[[1]])
 
   if (methods::is(normalization, "numeric")) {
@@ -324,7 +324,7 @@ heatmap_pseudobulk <- function(SO,
 
   # filter non-expressed features with rowSums
   # filter group wise for min_pct with tapply; umi_mat in apply has to be coverted to dense - too expensive
-'  group_vec <- unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T]), use.names = F)
+  '  group_vec <- unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T]), use.names = F)
   umi_mat <- do.call(cbind, purrr::map(SO, Seurat::GetAssayData, slot = "data", assay = assay))
   temp_tapply_fun <- function(vec, group_vec) {tapply(vec, group_vec, function(x) sum(x>0)/length(x))}
   out <- purrr::map(split(1:ncol(umi_mat), ceiling(seq_along(1:ncol(umi_mat))/1000)), function(inds) {
@@ -334,20 +334,17 @@ heatmap_pseudobulk <- function(SO,
   }, .progress = T)'
 
   layer <- "data"
-  if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
-    GetAssayData_args <- list(object = x,
-                              layer = layer,
-                              assay = assay)
+  presto_feat <- unique(unlist(purrr::map(SO, function(x) names(which(Matrix::rowSums(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
+    list(object = x,
+         layer = layer,
+         assay = assay)
   } else {
-    GetAssayData_args <- list(object = x,
-                              slot = layer,
-                              assay = assay)
-  }
+    list(object = x,
+         slot = layer,
+         assay = assay)})) > 0)))))
 
-
-  presto_feat <- unique(unlist(purrr::map(SO, function(x) names(which(Matrix::rowSums(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)) > 0)))))
   if (!is.null(features)) {
-    features <- .check.features(SO = SO, features = unique(features), meta.data = F)
+    features <- check.features(SO = SO, features = unique(features), meta.data = F)
     if (any(!features %in% presto_feat)) {
       message("No expressers found for: ", paste(features[which(!features %in% presto_feat)], collapse = ","), ". Will not be plotted.")
     }
@@ -356,8 +353,16 @@ heatmap_pseudobulk <- function(SO,
 
   # by default, presto gives deviating results with respect to avgExpr and logFC
   # use expm1 to match results Seurats procedure, see example below (comparison of presto and Seurat)
-  wil_auc_raw <- presto::wilcoxauc(X = Gmisc::fastDoCall(cbind, lapply(SO, function(x) expm1(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)[presto_feat,]))),
-                                   y = unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T]), use.names = F))
+  wil_auc_raw <- presto::wilcoxauc(X = Gmisc::fastDoCall(cbind, lapply(SO, function(x) expm1(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
+    list(object = x,
+         layer = layer,
+         assay = assay)
+  } else {
+    list(object = x,
+         slot = layer,
+         assay = assay)
+  })[presto_feat,]))),
+  y = unlist(purrr::pmap(list(x = SO, y = meta.col), function(x,y) x@meta.data[,y,drop=T]), use.names = F))
 
   # prep features variable here to have one common pipeline below
   if (is.null(features)) {
@@ -540,12 +545,12 @@ heatmap_pseudobulk <- function(SO,
                                     breaks = c(scale.min, scale.mid, scale.max), labels = labels)
     guide_fun <- ggplot2::guide_colourbar
   }
-#browser()
+  #browser()
   heatmap.plot <-
     heatmap.plot +
     ggplot2::guides(fill = Gmisc::fastDoCall(guide_fun, args = legend_fill_args),
                     size = Gmisc::fastDoCall(ggplot2::guide_legend, args = legend_size_args))
-#browser()
+  #browser()
   if (plot.feature.breaks & !is.null(feature.labels)) {
     axis.df <- data.frame(y = 1:length(levels(wil_auc$feature)), feature = levels(wil_auc$feature))
     axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = feature)) +

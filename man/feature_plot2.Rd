@@ -13,6 +13,7 @@ feature_plot2(
   cells = NULL,
   get_data_args = list(qmin = 0, qmax = 1, label_feature = NULL),
   combine = T,
+  combine_guides = NULL,
   ncol_combine = NULL,
   nrow_combine = NULL,
   strip_select = NULL,
@@ -44,14 +45,15 @@ feature_plot2(
   freq_size = 4,
   name_anno = "..auto..",
   name_anno_pos = c("..auto..", "title", "annotation"),
-  name_anno_args = list(x = Inf, y = Inf, hjust = 1.1, vjust = 1.25, color = NA, size =
-    4, text.color = "black"),
+  name_anno_args = list(x = Inf, y = Inf, hjust = 1.1, vjust = 1.25, color = NA, fill =
+    NA, label.color = NA, size = 4, text.color = "black"),
   theme = ggplot2::theme_bw(),
   theme_args = list(axis.ticks = ggplot2::element_blank(), axis.text.x =
     ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.title.x =
     ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), legend.background = ggplot2::element_blank(),
-    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()),
+    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank(),
+    title = ggtext::element_markdown()),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,
@@ -103,6 +105,8 @@ deselected ones are plotted with color col_ex_cells (=0) in feature_plot}
 \item{get_data_args}{further arguments to scexpr::get_data}
 
 \item{combine}{do combine plots for multiple features with patchwork}
+
+\item{combine_guides}{passed to patchwork::wrap_plots, NULL or collect}
 
 \item{ncol_combine}{number of columns when combine}
 
@@ -160,8 +164,6 @@ requires a shape_feature in get_data or ...}
 
 \item{feature_alias}{named vector of aliases for features, old = new; e.g.
 c("FAIM3" = "FCMR", "MS4A1" = "CD20")}
-
-\item{feature_cut_expr}{}
 
 \item{freq_plot}{do plot frequency of expressers? TRUE, FALSE or ..auto..
 for decision based on number of SOs}
@@ -226,6 +228,8 @@ outlier points to avoid ugly contours? uses brathering::outlier}
 \item{contour_rm_lowfreq_subcluster}{groups in feature_contour are checked for
 split clusters with diptest and mclust, do remove low frequency subclusters
 to avoid ugly contours?}
+
+\item{contour_multi_max}{}
 
 \item{contour_col_pal_args}{discrete colors of contours, see col_pal_c_args}
 

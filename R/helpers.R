@@ -519,15 +519,20 @@ add_color_scale <- function(plot,
 
     if (is.numeric(plot[["data"]][["feature"]])) {
       if (col_legend_args[["title"]] == "..auto..") {
-        if (!is.null(attr(plot[["data"]], "layer"))) {
-          if (attr(plot[["data"]], "layer") == "data") {
-            col_legend_args[["title"]] <- "log (UMI)"
-          } else if (attr(plot[["data"]], "layer") == "counts") {
-            col_legend_args[["title"]] <- "UMI"
-          } else {
-            col_legend_args[["title"]] <- attr(plot[["data"]], "layer")
+        if (attr(plot[["data"]], "feature_type") == "gene") {
+          if (!is.null(attr(plot[["data"]], "layer"))) {
+            if (attr(plot[["data"]], "layer") == "data") {
+              col_legend_args[["title"]] <- "log (UMI)"
+            } else if (attr(plot[["data"]], "layer") == "counts") {
+              col_legend_args[["title"]] <- "UMI"
+            } else {
+              col_legend_args[["title"]] <- attr(plot[["data"]], "layer")
+            }
           }
+        } else if (attr(plot[["data"]], "feature_type") == "meta") {
+          col_legend_args[["title"]] <- NA # omit by default as names shows up through names_anno
         }
+
       }
       c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]])
       qmin <- attr(plot[["data"]], "qmin")
@@ -553,7 +558,7 @@ add_color_scale <- function(plot,
                                                      legendbreaks = legendbreaks,
                                                      legendlabels = legendlabels,
                                                      fill = col.pal,
-                                                     nice_colorsteps = col_steps_nice,
+                                                     colorsteps_nice = col_steps_nice,
                                                      type = "color",
                                                      col_na = col_na,
                                                      qmin = attr(plot[["data"]], "qmin"),
@@ -577,8 +582,10 @@ add_color_scale <- function(plot,
       }
 
     } else {
+
       if (col_legend_args[["title"]] == "..auto..") {
-        col_legend_args[["title"]] <- attr(plot[["data"]], "feature")
+        #col_legend_args[["title"]] <- attr(plot[["data"]], "feature")
+        col_legend_args[["title"]] <- NA # or ""; omit by default as it shows up in annotation or title, may take too much space as legend title
       }
       if ("barheight" %in% names(col_legend_args)) {
         col_legend_args[["barheight"]] <- 1
@@ -1383,6 +1390,7 @@ check.features <- function(SO,
                            meta.data = T,
                            meta.data.numeric = F) {
 
+  features <- unique(features)
   features <- features[which(!is.na(features))]
   features <- trimws(features)
   features <- features[which(features != "")]
@@ -1393,7 +1401,6 @@ check.features <- function(SO,
   if (!is.list(SO)) {
     SO <- list(SO)
   }
-  features <- unique(features)
 
   features.out <- feat.check(SO = SO,
                              features = features,

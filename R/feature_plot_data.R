@@ -201,6 +201,7 @@ feature_plot_data <- function(data,
     stop("data must be data frame from scexpr::get_data")
   }
 
+
   if (freq_plot == "..auto..") {
     freq_plot <- nlevels(data[["SO.split"]]) > 1
   } else if (!is.logical(freq_plot)) {
@@ -211,19 +212,21 @@ feature_plot_data <- function(data,
   } else if (!freq_plot && name_anno == "..auto..") {
     name_anno <- "{feature} ({freq}) in {feature_cut_ex}"
   }
+
   if (!is.null(name_anno_pos)) {
     name_anno_pos <- rlang::arg_match(name_anno_pos, multiple = T)
     if (any(name_anno_pos == "..auto..")) {
-      if (attr(data, "feature_type") == "gene") {
+      if (attr(data, "feature_type") %in% c("gene", "meta")) { # trivial but leave for now
         if (nlevels(data[["SO.split"]]) > 1) {
           name_anno_pos <- "title"
         } else if (nlevels(data[["SO.split"]]) == 1) {
           name_anno_pos <- "annotation"
         }
-      } else if (attr(data, "feature_type") == "meta") {
-        # legend title has it
-        name_anno_pos <- NULL
       }
+      # } else if (attr(data, "feature_type") == "meta") {
+      #   # legend title has it
+      #   name_anno_pos <- NULL
+      # }
     }
   }
 
@@ -320,6 +323,7 @@ feature_plot_data <- function(data,
                                                                    name_anno_args))
     }
   }
+
 
   plot <- add_axes_expansion(plot = plot,
                              axes_lim_set = axes_lim_set,
