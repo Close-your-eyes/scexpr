@@ -71,8 +71,10 @@ check.SO <- function(SO,
 }
 
 check.reduction <- function(SO,
-                            reduction,
+                            reduction = NULL,
                             dims = c(1,2)) {
+
+  if (is.null(reduction)) return(reduction)
 
   if (!is.list(SO)) {
     SO <- list(SO)

@@ -85,7 +85,6 @@ get_data <- function(SO,
                                feature_ex = feature_ex,
                                downsample = downsample)
 
-
   feature <- check.features(SO = SO, feature = feature)
   label_feature <- check.features(SO = SO, features = label_feature, rownames = F)
   contour_feature <- check.features(SO = SO, features = contour_feature, rownames = F)
@@ -315,8 +314,10 @@ get_data <- function(SO,
     attr(data[[i]], "layer") <- layer
     attr(data[[i]], "qmin") <- qmin
     attr(data[[i]], "qmax") <- qmax
-    attr(data[[i]], "dim1") <- paste0(reduction, "_", dims[1])
-    attr(data[[i]], "dim2") <- paste0(reduction, "_", dims[2])
+    if (!is.null(reduction)) {
+      attr(data[[i]], "dim1") <- paste0(reduction, "_", dims[1])
+      attr(data[[i]], "dim2") <- paste0(reduction, "_", dims[2])
+    }
     if (!is.null(label_feature)) {
       attr(data[[i]], "label_feature") <- label_feature
     }

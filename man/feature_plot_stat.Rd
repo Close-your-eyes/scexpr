@@ -7,7 +7,7 @@
 feature_plot_stat(
   SO,
   features,
-  meta.col,
+  meta_col,
   assay = c("RNA", "SCT"),
   geom1 = c("jitter", "point"),
   geom2 = c("boxplot", "violin", "none"),
@@ -27,13 +27,11 @@ feature_plot_stat(
   col.pal = "custom",
   col.pal.dir = 1,
   feature.aliases = NULL,
-  cutoff.feature = NULL,
-  cutoff.expression = 0,
-  exclusion.feature = NULL,
-  font.family = "sans",
+  feature_cut = NULL,
+  feature_cut_expr = 0,
+  feature_ex = NULL,
   theme = ggplot2::theme_bw(),
-  facetting_args = list(scales = "free_y"),
-  ...
+  facetting_args = list(scales = "free_y")
 )
 }
 \arguments{
