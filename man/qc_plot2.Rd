@@ -7,9 +7,7 @@
 qc_plot2(
   SO,
   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log",
-    "residuals"),
-  clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8_PC2"),
-  reduction = "umapmetaPC2",
+    "pct_soup_decontX", "pct_soup_SoupX"),
   geom2 = "boxplot"
 )
 }

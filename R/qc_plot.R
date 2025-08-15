@@ -96,8 +96,6 @@ qc_plot <- function(SO1,
 #'
 #' @param SO
 #' @param qc_cols
-#' @param clustering_cols
-#' @param reduction
 #' @param geom2
 #'
 #' @returns
@@ -105,9 +103,14 @@ qc_plot <- function(SO1,
 #'
 #' @examples
 qc_plot2 <- function(SO,
-                     qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals"),
-                     clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8_PC2"),
-                     reduction = "umapmetaPC2",
+                     qc_cols = c(
+                       "nCount_RNA_log",
+                       "nFeature_RNA_log",
+                       "pct_mt_log",
+                       "dbl_score_log",
+                       "pct_soup_decontX",
+                       "pct_soup_SoupX"
+                     ),
                      geom2 = "boxplot") {
 
 
@@ -121,13 +124,6 @@ qc_plot2 <- function(SO,
     }
   }
 
-  if (length(clustering_cols) != 2) {
-    stop("clustering_cols should be of length 2 containing one resolution for clustering that has been conducted on feature expression (index 1) and one clustering conducted on qc meta data (index 2).")
-  }
-  if (any(!clustering_cols %in% names(SO@meta.data))) {
-    stop("At least one of clustering_cols has not been found in SO@meta.data. Check and fix that.")
-  }
-
   breaks <- c(seq(0, 1e1, 2e0),
               seq(0, 1e2, 2e1),
               seq(0, 1e3, 2e2),
@@ -135,86 +131,101 @@ qc_plot2 <- function(SO,
               seq(0, 1e5, 2e4))
   breaks <- breaks[which(breaks != 0)]
 
+
   qc_p1 <- suppressMessages(feature_plot2(SO,
-                                          features = c(qc_cols, clustering_cols[1]),
+                                          features = c(gsub("_log$", "", qc_cols), "orig.ident", SO@misc$clusterings),
                                           reduction = "UMAP"))
 
-  qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
-                           ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
-    ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
-    ggplot2::geom_jitter(width = 0.1, size = 0.3) +
-    ggplot2::theme_bw() +
-    ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
-                   panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
-                   legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
-    ggplot2::scale_color_manual(values = colrr::col_pal("custom")) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks)) +
-    ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
-    ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)
+  # qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
+  #                          ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clust_name))) +
+  #   ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
+  #   ggplot2::geom_jitter(width = 0.1, size = 0.3) +
+  #   ggplot2::theme_bw() +
+  #   ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
+  #                  panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
+  #                  legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
+  #   ggplot2::scale_color_manual(values = colrr::col_pal("custom")) +
+  #   ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks)) +
+  #   ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
+  #   ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)
 
-  p3_1 <- patchwork::wrap_plots(feature_plot2(SO,
-                                              features = clustering_cols[2],
-                                              reduction = reduction,
-                                              pt.size = 0.5),
-                                freq_pie_chart(SO = SO, meta.col = clustering_cols[2])[["plot"]],
-                                ncol = 1)
-  browser()
-  p3_2 <- feature_plot_stat(SO,
-                            features = "nCount_RNA_log",
-                            meta.col = clustering_cols[2],
-                            geom2 = geom2,
-                            jitterwidth = 0.9,
-                            panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                            axis.title.y = ggplot2::element_blank(),
-                            axis.text.x = ggplot2::element_blank(),
-                            axis.title.x = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nCount_RNA_log))),
-                                                                                                   which(breaks < max(expm1(SO@meta.data$nCount_RNA_log))))]))
+  mc <- names(SO@misc$meta_clusterings)
+  qc_p2 <- purrr::map(stats::setNames(mc, mc), function(red_name) {
+    clust_name <- SO@misc$meta_clusterings[clust_name]
+    p1 <- patchwork::wrap_plots(feature_plot2(SO,
+                                                features = c(clust_name, "orig.ident"),
+                                                reduction = red_name,
+                                                pt.size = 0.5,
+                                                ncol_combine = 1),
+                                  freq_pie_chart(
+                                    SO = SO,
+                                    meta_col = clust_name,
+                                    label_rel_cutoff = 0.05
+                                  )[["plot"]],
+                                  ncol = 1,
+                                  heights = c(0.7,0.3))
+    p2 <- purrr::map(stats::setNames(qc_cols, qc_cols), function(feature) {
+      make_stat_plot(
+        feature = feature,
+        clust_name = clust_name,
+        geom2 = geom2,
+        breaks = breaks
+      )
+    })
 
-  p3_3 <- feature_plot_stat(SO,
-                            features = "nFeature_RNA_log",
-                            meta.col = clustering_cols[2],
-                            geom2 = geom2,
-                            jitterwidth = 0.9,
-                            panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                            axis.title.y = ggplot2::element_blank(),
-                            axis.text.x = ggplot2::element_blank(),
-                            axis.title.x = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nFeature_RNA_log))),
-                                                                                                   which(breaks < max(expm1(SO@meta.data$nFeature_RNA_log))))]))
-
-  p3_4 <- feature_plot_stat(SO,
-                            features = "pct_mt_log",
-                            meta.col = clustering_cols[2],
-                            geom2 = geom2,
-                            jitterwidth = 0.9,
-                            panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                            axis.title.y = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$pct_mt_log))),
-                                                                                                   which(breaks < max(expm1(SO@meta.data$pct_mt_log))))]))
-
-  p3_x <- lapply(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], function(qcf) {
-    p3_x <- feature_plot_stat(SO,
-                              features = qcf,
-                              meta.col = clustering_cols[2],
-                              geom2 = geom2,
-                              jitterwidth = 0.9,
-                              panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                              axis.title.y = ggplot2::element_blank())
-    if (qcf != rev(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))])[1]) {
-      p3_x <-
-        p3_x +
-        ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.title.x = ggplot2::element_blank())
-    }
-    return(p3_x)
+    return(patchwork::wrap_plots(p1, patchwork::wrap_plots(p2, ncol = 2), nrow = 1, widths = c(0.4, 0.6)))
+    #return(list(pheno_clustering = p3_1, meta_boxplots = p3_2))
   })
 
 
-  p3_2 <- patchwork::wrap_plots(p3_2, p3_3, p3_4, ncol = 1)
-  p3_3 <- patchwork::wrap_plots(p3_x, ncol = 1)
-  qc_p3 <- patchwork::wrap_plots(p3_1, p3_2, p3_3, nrow = 1)
 
-  return(list(qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3))
+  # p3_x <- lapply(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], function(qcf) {
+  #   p3_x <- feature_plot_stat(SO,
+  #                             features = qcf,
+  #                             meta_col = clust_name,
+  #                             geom2 = geom2,
+  #                             jitterwidth = 0.9) +
+  #     ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+  #                    axis.title.y = ggplot2::element_blank())
+  #   if (qcf != rev(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))])[1]) {
+  #     p3_x <-
+  #       p3_x +
+  #       ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.title.x = ggplot2::element_blank())
+  #   }
+  #   return(p3_x)
+  # })
+
+  message("save plots with: (replace out and, im_path)")
+  show_command(ggplot2::ggsave(filename = "pheno_qc.png", plot = out[["pheno"]], device = png, path = im_path, width = 10, height = 7))
+  show_command(for (i in names(out[["meta"]])) {
+    ggplot2::ggsave(filename = paste0(i, "_qc.png"), plot = out[["meta"]][[i]], device = png, path = im_path, width = 12, height = 9)
+  })
+
+  return(list(pheno = qc_p1, meta = qc_p2))
 
 }
 
+
+make_stat_plot <- function(feature, clust_name, geom2, breaks) {
+  plot <- feature_plot_stat(SO,
+                            features = feature,
+                            meta_col = clust_name,
+                            geom2 = geom2,
+                            jitterwidth = 0.9) +
+    ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                   axis.title.y = ggplot2::element_blank(),
+                   axis.text.x = ggplot2::element_blank(),
+                   panel.grid.major.x = ggplot2::element_blank(),
+                   axis.title.x = ggplot2::element_blank())
+
+  if (grepl("_log$", feature)) {
+    plot <- plot +
+      ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data[[feature]]))),
+                                                                                                     which(breaks < max(expm1(SO@meta.data[[feature]]))))]))
+  }
+  return(plot)
+}
+
+show_command <- function(expr) {
+  print(substitute(expr))
+}

@@ -35,11 +35,11 @@
 #' @param cells vector of cell names to include, consider the trailing '-1' in cell names
 #' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
 #' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
-#' @param resolution_meta resolution(s) (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (n_PCs_to_meta_clustering)
-#' @param n_PCs_to_meta_clustering how many principle components (PCs) from phenotypic clustering to add to qc meta data;
+#' @param resolution_meta resolution(s) (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (PCs_to_meta_clustering)
+#' @param PCs_to_meta_clustering how many principle components (PCs) from phenotypic clustering to add to qc meta data;
 #' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
 #' phenotypic influence becomes; one or more integers can be supplied to explore the effect; pass 0, to have no PCs included in meta clustering; e.g. when
-#' n_PCs_to_meta_clustering = 3 PCs 1-3 are used, when n_PCs_to_meta_clustering = 1 only PC 1 is used.
+#' PCs_to_meta_clustering = 3 PCs 1-3 are used, when PCs_to_meta_clustering = 1 only PC 1 is used.
 #' @param scDblFinder logical, whether to run doublet detection algorithm from scDblFinder
 #' @param SoupX_return logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
 #' have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
@@ -68,13 +68,13 @@ SO_prep01 <- function(data_dirs,
                       resolution = 0.8,
                       resolution_SoupX = 0.6,
                       resolution_meta = 0.8,
-                      n_PCs_to_meta_clustering = 2,
+                      PCs_to_meta_clustering = 2,
                       scDblFinder = F,
                       min_UMI = 30,
                       min_UMI_var_feat = 10,
                       SoupX = F,
                       decontX = F,
-                      SoupX_return = T,
+                      SoupX_return = F,
                       SoupX_autoEstCont_args = list(),
                       cells = NULL,
                       invert_cells = F,
@@ -87,7 +87,7 @@ SO_prep01 <- function(data_dirs,
 
 
   install_pkgs(SoupX, scDblFinder, decontX)
-  resolution <- checks(resolution_meta, resolution_SoupX, resolution, n_PCs_to_meta_clustering)
+  resolution <- checks(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering)
   batch_corr <- rlang::arg_match(batch_corr)
 
   c(ffbms,
@@ -143,16 +143,17 @@ SO_prep01 <- function(data_dirs,
     message("Preparing Seurat object.")
   }
 
-  SO <- prep_SO(SO_unprocessed = SO,
-                reductions = "umap",
-                nhvf = nhvf,
-                npcs = npcs,
-                min_cells = 1,
-                batch_corr = batch_corr,
-                RunHarmony_args = list(group.by.vars = "orig.ident"),
-                FindClusters_args = list(resolution = resolution),
-                normalization = "LogNormalize",
-                diet_seurat = F)
+  SO <- SO_prep02(SO_unprocessed = SO,
+                  reductions = "umap",
+                  nhvf = nhvf,
+                  npcs = npcs,
+                  min_cells = 1,
+                  batch_corr = batch_corr,
+                  RunHarmony_args = list(group.by.vars = "orig.ident"),
+                  FindClusters_args = list(resolution = resolution),
+                  normalization = "LogNormalize",
+                  diet_seurat = F)
+  SeuratObject::Misc(SO, "clusterings") <- paste0("RNA_snn_res.", resolution)
 
   if (SoupX) {
     # ffmbs and rfbms are paired by name
@@ -171,15 +172,15 @@ SO_prep01 <- function(data_dirs,
                                feature_rm = feature_rm)
 
     # add percentage of soup as meta data, similar to decontX
+
     if (SoupX_return) {
-      SO <- Seurat::AddMetaData(object = SO,
-                                metadata = unlist(unname(sapply(SoupX_results[["SoupX_results"]], "[", "pct_soup_SoupX"))),
-                                col.name = "pct_soup_SoupX")
+      pct_soup_SoupX <- unlist(unname(sapply(SoupX_results[["SoupX_results"]], "[", "pct_soup_SoupX")))
     } else {
-      SO <- Seurat::AddMetaData(object = SO,
-                                metadata = unlist(unname(sapply(SoupX_results, "[", "pct_soup_SoupX"))),
-                                col.name = "pct_soup_SoupX")
+      pct_soup_SoupX <- unlist(unname(sapply(SoupX_results, "[", "pct_soup_SoupX")))
     }
+    SO <- Seurat::AddMetaData(object = SO,
+                              metadata = pct_soup_SoupX,
+                              col.name = "pct_soup_SoupX")
 
   }
 
@@ -193,7 +194,6 @@ SO_prep01 <- function(data_dirs,
     names(SO) <- "original"
   }
 
-
   if (decontX) {
     SO <- run_decontx(SO = SO,
                       resolution = resolution,
@@ -202,7 +202,7 @@ SO_prep01 <- function(data_dirs,
 
   SO <- cluster_on_metadata(SO = SO,
                             batch_corr = batch_corr,
-                            n_PCs_to_meta_clustering = n_PCs_to_meta_clustering,
+                            PCs_to_meta_clustering = PCs_to_meta_clustering,
                             ffbms = ffbms,
                             resolution_meta = resolution_meta)
 
@@ -261,118 +261,6 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 
 
-qc_plots <- function(SO,
-                     qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log", "residuals"),
-                     clustering_cols = c("RNA_snn_res.0.8", "meta_res.0.8_PC2"),
-                     reduction = "umapmetaPC2",
-                     geom2 = "boxplot") {
-
-
-  # extra to do: nCount_RNA_log, nFeature_RNA_log, pct_mt_log - check and calc if needed
-
-  if (any(!qc_cols %in% names(SO@meta.data))) {
-    message(paste(qc_cols[which(!qc_cols %in% names(SO@meta.data))], collapse = ", "), " not found in SO@meta.data. These will be excluded from plotting.")
-    qc_cols <- intersect(qc_cols, names(SO@meta.data))
-    if (length(qc_cols) == 0) {
-      stop("No qc_cols left for plotting.")
-    }
-  }
-
-  if (length(clustering_cols) != 2) {
-    stop("clustering_cols should be of length 2 containing one resolution for clustering that has been conducted on feature expression (index 1) and one clustering conducted on qc meta data (index 2).")
-  }
-  if (any(!clustering_cols %in% names(SO@meta.data))) {
-    stop("At least one of clustering_cols has not been found in SO@meta.data. Check and fix that.")
-  }
-
-  breaks <- c(seq(0, 1e1, 2e0),
-              seq(0, 1e2, 2e1),
-              seq(0, 1e3, 2e2),
-              seq(0, 1e4, 2e3),
-              seq(0, 1e5, 2e4))
-  breaks <- breaks[which(breaks != 0)]
-
-  qc_p1 <- suppressMessages(feature_plot2(SO,
-                                          features = c(qc_cols, clustering_cols[1]),
-                                          reduction = "UMAP"))
-
-  qc_p2 <- ggplot2::ggplot(tidyr::pivot_longer(SO@meta.data[,c(qc_cols, clustering_cols)], cols = dplyr::all_of(qc_cols), names_to = "qc_param", values_to = "value"),
-                           ggplot2::aes(x = !!rlang::sym(clustering_cols[1]), y = value, color = !!rlang::sym(clustering_cols[2]))) +
-    ggplot2::geom_boxplot(color = "grey30", outlier.shape = NA) +
-    ggplot2::geom_jitter(width = 0.1, size = 0.3) +
-    ggplot2::theme_bw() +
-    ggplot2::theme(panel.grid.minor.y = ggplot2::element_blank(), panel.grid.major.x = ggplot2::element_blank(),
-                   panel.grid.minor.x = ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(),
-                   legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank()) +
-    ggplot2::scale_color_manual(values = colrr::col_pal("custom")) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks)) +
-    ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 3))) +
-    ggplot2::facet_wrap(ggplot2::vars(qc_param), scales = "free_y", ncol = 1)
-
-  p3_1 <- patchwork::wrap_plots(feature_plot2(SO,
-                                              features = clustering_cols[2],
-                                              reduction = reduction,
-                                              pt.size = 0.5),
-                                freq_pie_chart(SO = SO, meta.col = clustering_cols[2])[["plot"]],
-                                ncol = 1)
-  p3_2 <- feature_plot_stat(SO,
-                            features = "nCount_RNA_log",
-                            meta_col = clustering_cols[2],
-                            geom2 = geom2,
-                            jitterwidth = 0.9) +
-    ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                   axis.title.y = ggplot2::element_blank(),
-                   axis.text.x = ggplot2::element_blank(),
-                   axis.title.x = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nCount_RNA_log))),
-                                                                                                   which(breaks < max(expm1(SO@meta.data$nCount_RNA_log))))]))
-
-  p3_3 <- feature_plot_stat(SO,
-                            features = "nFeature_RNA_log",
-                            meta_col = clustering_cols[2],
-                            geom2 = geom2,
-                            jitterwidth = 0.9) +
-    ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                   axis.title.y = ggplot2::element_blank(),
-                   axis.text.x = ggplot2::element_blank(),
-                   axis.title.x = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$nFeature_RNA_log))),
-                                                                                                   which(breaks < max(expm1(SO@meta.data$nFeature_RNA_log))))]))
-
-  p3_4 <- feature_plot_stat(SO,
-                            features = "pct_mt_log",
-                            meta_col = clustering_cols[2],
-                            geom2 = geom2,
-                            jitterwidth = 0.9) +
-    ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                   axis.title.y = ggplot2::element_blank()) +
-    ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data$pct_mt_log))),
-                                                                                                   which(breaks < max(expm1(SO@meta.data$pct_mt_log))))]))
-
-  p3_x <- lapply(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))], function(qcf) {
-    p3_x <- feature_plot_stat(SO,
-                              features = qcf,
-                              meta_col = clustering_cols[2],
-                              geom2 = geom2,
-                              jitterwidth = 0.9) +
-      ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                     axis.title.y = ggplot2::element_blank())
-    if (qcf != rev(qc_cols[which(!grepl("nCount_RNA_log|nFeature_RNA_log|pct_mt_log", qc_cols))])[1]) {
-      p3_x <-
-        p3_x +
-        ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.title.x = ggplot2::element_blank())
-    }
-    return(p3_x)
-  })
-
-
-  p3_2 <- patchwork::wrap_plots(p3_2, p3_3, p3_4, ncol = 1)
-  p3_3 <- patchwork::wrap_plots(p3_x, ncol = 1)
-  qc_p3 <- patchwork::wrap_plots(p3_1, p3_2, p3_3, nrow = 1)
-
-  return(list(qc_p1 = qc_p1, qc_p2 = qc_p2, qc_p3 = qc_p3))
-
-}
 
 install_pkgs <- function(SoupX, scDblFinder, decontX) {
   for (p in c("matrixStats", "hdf5r", "uwot", "devtools", "patchwork", "BiocManager")) {
@@ -399,7 +287,7 @@ install_pkgs <- function(SoupX, scDblFinder, decontX) {
   }
 }
 
-checks <- function(resolution_meta, resolution_SoupX, resolution, n_PCs_to_meta_clustering) {
+checks <- function(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering) {
   if (!is.numeric(resolution_meta)) {
     stop("resolution_meta has to be numeric.")
   }
@@ -413,8 +301,8 @@ checks <- function(resolution_meta, resolution_SoupX, resolution, n_PCs_to_meta_
   if (!is.integer(resolution) && dplyr::near(resolution, 1)) {
     resolution <- as.integer(resolution)
   }
-  if (!is.numeric(n_PCs_to_meta_clustering)) {
-    stop("n_PCs_to_meta_clustering should be numeric.")
+  if (!is.numeric(PCs_to_meta_clustering)) {
+    stop("PCs_to_meta_clustering should be numeric.")
   }
   return(resolution)
 }
@@ -682,15 +570,15 @@ run_soupx <- function(ffbms,
       SO_sx <- Seurat::CreateSeuratObject(counts = sx_counts)
       SO_sx@meta.data$orig.ident <- x
 
-      SO_sx <- prep_SO(SO_unprocessed = stats::setNames(list(SO_sx), x),
-                       reductions = "umap",
-                       nhvf = nhvf,
-                       npcs = npcs,
-                       batch_corr = batch_corr,
-                       RunHarmony_args = list(group.by.vars = "orig.ident"),
-                       FindClusters_args = list(resolution = resolution),
-                       normalization = "LogNormalize",
-                       diet_seurat = F)
+      SO_sx <- SO_prep02(SO_unprocessed = stats::setNames(list(SO_sx), x),
+                         reductions = "umap",
+                         nhvf = nhvf,
+                         npcs = npcs,
+                         batch_corr = batch_corr,
+                         RunHarmony_args = list(group.by.vars = "orig.ident"),
+                         FindClusters_args = list(resolution = resolution),
+                         normalization = "LogNormalize",
+                         diet_seurat = F)
 
       SO_sx <- SeuratObject::AddMetaData(object = SO_sx,
                                          metadata = (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(sx_counts))/Matrix::colSums(sc[["toc"]])*100,
@@ -717,22 +605,19 @@ run_soupx <- function(ffbms,
   })
 
   if (SoupX_return) {
-    SOx <- prep_SO(SO_unprocessed = purrr::map(SoupX_results, ~purrr::pluck(.x, "SO")),
-                   reductions = "umap",
-                   nhvf = nhvf,
-                   npcs = npcs,
-                   min_cells = 1,
-                   batch_corr = batch_corr,
-                   RunHarmony_args = list(group.by.vars = "orig.ident"),
-                   FindClusters_args = list(resolution = resolution),
-                   normalization = "LogNormalize",
-                   diet_seurat = F)
+    SOx <- SO_prep02(SO_unprocessed = purrr::map(SoupX_results, ~purrr::pluck(.x, "SO")),
+                     reductions = "umap",
+                     nhvf = nhvf,
+                     npcs = npcs,
+                     min_cells = 1,
+                     batch_corr = batch_corr,
+                     RunHarmony_args = list(group.by.vars = "orig.ident"),
+                     FindClusters_args = list(resolution = resolution),
+                     normalization = "LogNormalize",
+                     diet_seurat = F)
     # rm seurat to save ram
     SoupX_results <- purrr::map(SoupX_results, ~.x[-1])
     SoupX_results <- list(SoupX = SOx, SoupX_results = SoupX_results)
-  } else {
-    # rm seurat to save ram
-    SoupX_results <- purrr::map(SoupX_results, ~.x[-1])
   }
 
   return(SoupX_results)
@@ -764,7 +649,11 @@ run_decontx <- function(SO, resolution, nhvf) {
   return(SO)
 }
 
-cluster_on_metadata <- function(SO, batch_corr, n_PCs_to_meta_clustering, ffbms, resolution_meta) {
+cluster_on_metadata <- function(SO,
+                                batch_corr,
+                                PCs_to_meta_clustering,
+                                ffbms,
+                                resolution_meta) {
   SO <- purrr::map(SO, function(SO) {
 
     # differentiate mouse, human or no MT-genes at all
@@ -814,35 +703,39 @@ cluster_on_metadata <- function(SO, batch_corr, n_PCs_to_meta_clustering, ffbms,
     ## clustering on meta data (quality metrics)
     message("Running dimension reduction and clustering on qc meta data.")
 
-    for (nn in n_PCs_to_meta_clustering) {
+    for (nn in PCs_to_meta_clustering) {
+      meta2 <- dplyr::select(SO@meta.data, dplyr::all_of(qc_cols), residuals)
       if (nn > 0) {
-        if (batch_corr == "harmony" && length(ffbms) > 1) {
-          temp_slot <- "harmony"
-        } else {
-          temp_slot <- "pca"
-        }
-        meta2 <- brathering::scale2(cbind(dplyr::select(SO@meta.data, dplyr::all_of(qc_cols), residuals),
-                                          SO@reductions[[temp_slot]]@cell.embeddings[,1:nn])) # length(ffbms) or length(data_dirs)
-      } else {
-        meta2 <- brathering::scale2(dplyr::select(SO@meta.data, dplyr::all_of(qc_cols), residuals))
+        meta2 <- cbind(meta2, SO@reductions[[ifelse(batch_corr == "harmony" && length(ffbms) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn]) # length(ffbms) or length(data_dirs)
       }
 
-
+      meta2 <- brathering::scale2(meta2)
       #https://datascience.stackexchange.com/questions/27726/when-to-use-cosine-simlarity-over-euclidean-similarity
       # with cosine metric: relative composition is more important
       umap_dims <- uwot::umap(X = meta2, metric = "cosine")
-      colnames(umap_dims) <- c(paste0("meta_UMAP_1_PC", nn), paste0("meta_UMAP_2_PC", nn))
-      SO[[paste0("umapmetaPC", nn)]] <- Seurat::CreateDimReducObject(embeddings = umap_dims, key = paste0("UMAPMETAPC", nn, "_"), assay = "RNA")
+      colnames(umap_dims) <- paste0("meta_PC", nn, "_UMAP_", c(1,2))
+
+      reductioname <- paste0("umapmetaPC", nn)
+      SO[[reductioname]] <- Seurat::CreateDimReducObject(
+        embeddings = umap_dims,
+        key = paste0(toupper(reductioname), "_"),
+        assay = "RNA"
+      )
 
       # fix colnames manually as Seurat::CreateDimReducObject makes a mistake in taking the trailing number of umap_dims-colnames as trailing dim-number
-      colnames(SO@reductions[[paste0("umapmetaPC", nn)]]@cell.embeddings) <- paste0(toupper(paste0("umapmetaPC", nn, "_")), c(1,2))
+      colnames(SO@reductions[[reductioname]]@cell.embeddings) <- paste0(toupper(paste0(reductioname, "_")), c(1,2))
 
       # matrix has to be supplied to FindNeighbors
       clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta2, annoy.metric = "cosine", verbose = F)$snn,
                                        resolution = resolution_meta,
                                        verbose = F)
-      colnames(clusters) <- paste0("meta_", colnames(clusters), "_PC", nn)
+
+      # add reduction belonging to the meta clustering as name
+      metaclustname <- stats::setNames(paste0("meta_PC", nn, "_", colnames(clusters)), reductioname)
+      colnames(clusters) <- metaclustname
       SO <- Seurat::AddMetaData(SO, cbind(umap_dims, clusters))
+
+      suppressWarnings(SeuratObject::Misc(SO, "meta_clusterings") <- c(SeuratObject::Misc(SO, "meta_clusterings"), metaclustname))
     }
 
     return(SO)

@@ -64,7 +64,7 @@
 #' @examples
 #' \dontrun{
 #' }
-prep_SO <- function(SO_unprocessed,
+SO_prep02 <- function(SO_unprocessed,
                     samples = NULL,
                     cells = NULL,
                     min_cells = 50,
@@ -100,7 +100,6 @@ prep_SO <- function(SO_unprocessed,
                     IntegrateData_args = list(),
                     scale_RNA_assay_when_SCT = T,
                     ...) {
-  message("newer function version: scexpr::SO_prep02")
 
   mydots <- list(...)
   options(warn = 1)

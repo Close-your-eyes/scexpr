@@ -347,7 +347,7 @@ feature_plot2 <- function(SO,
     }
     plots <- patchwork::wrap_plots(plots, ncol = ncol_combine, nrow = nrow_combine, guides = combine_guides)
   }
-  if (length(plots) == 1 && !combine) {
+  if ((length(plots) == 1 && !combine) || length(features) == 1) {
     plots <- plots[[1]]
   }
   return(plots)
