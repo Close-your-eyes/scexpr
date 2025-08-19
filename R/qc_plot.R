@@ -97,6 +97,7 @@ qc_plot <- function(SO1,
 #' @param SO
 #' @param qc_cols
 #' @param geom2
+#' @param save_path
 #'
 #' @returns
 #' @export
@@ -111,10 +112,13 @@ qc_plot2 <- function(SO,
                        "pct_soup_decontX",
                        "pct_soup_SoupX"
                      ),
-                     geom2 = "boxplot") {
+                     geom2 = "boxplot",
+                     save_path = NULL,
+                     save_as = c("png", "pdf")) {
 
 
-  # extra to do: nCount_RNA_log, nFeature_RNA_log, pct_mt_log - check and calc if needed
+  # SO@misc data is used here!
+  save_as <- rlang::arg_match(save_as)
 
   if (any(!qc_cols %in% names(SO@meta.data))) {
     message(paste(qc_cols[which(!qc_cols %in% names(SO@meta.data))], collapse = ", "), " not found in SO@meta.data. These will be excluded from plotting.")
@@ -151,7 +155,7 @@ qc_plot2 <- function(SO,
 
   mc <- names(SO@misc$meta_clusterings)
   qc_p2 <- purrr::map(stats::setNames(mc, mc), function(red_name) {
-    clust_name <- SO@misc$meta_clusterings[clust_name]
+    clust_name <- SO@misc$meta_clusterings[red_name]
     p1 <- patchwork::wrap_plots(feature_plot2(SO,
                                                 features = c(clust_name, "orig.ident"),
                                                 reduction = red_name,
@@ -166,6 +170,7 @@ qc_plot2 <- function(SO,
                                   heights = c(0.7,0.3))
     p2 <- purrr::map(stats::setNames(qc_cols, qc_cols), function(feature) {
       make_stat_plot(
+        SO = SO,
         feature = feature,
         clust_name = clust_name,
         geom2 = geom2,
@@ -195,18 +200,52 @@ qc_plot2 <- function(SO,
   #   return(p3_x)
   # })
 
+  qc_p3 <- qc_params_meta_cols(SO, meta_cols = "orig.ident", qc_cols = gsub("_log", "", qc_cols))
+
+
   message("save plots with: (replace out and, im_path)")
   show_command(ggplot2::ggsave(filename = "pheno_qc.png", plot = out[["pheno"]], device = png, path = im_path, width = 10, height = 7))
   show_command(for (i in names(out[["meta"]])) {
     ggplot2::ggsave(filename = paste0(i, "_qc.png"), plot = out[["meta"]][[i]], device = png, path = im_path, width = 12, height = 9)
   })
+  show_command(ggplot2::ggsave(filename = "meta2_qc.png", plot = out[["meta2"]], device = png, path = im_path, width = 5, height = 8))
 
-  return(list(pheno = qc_p1, meta = qc_p2))
+  if (!is.null(save_path)) {
+    ggplot2::ggsave(
+      filename = paste0("pheno_qc.", save_as),
+      plot = qc_p1,
+      device = save_as,
+      path = save_path,
+      width = 10,
+      height = 7
+    )
+    for (i in names(qc_p2)) {
+      ggplot2::ggsave(
+        filename = paste0(i, "_qc.", save_as),
+        plot = qc_p2[[i]],
+        device = save_as,
+        path = save_path,
+        width = 12,
+        height = 9
+      )
+    }
+    ggplot2::ggsave(
+      filename = paste0("meta2_qc.", save_as),
+      plot = qc_p3,
+      device = save_as,
+      path = save_path,
+      width = 4+0.5*length(unique(SO@meta.data$orig.ident)),
+      height = 4+length(qc_cols)
+    )
+  }
+
+  return(list(pheno = qc_p1, meta = qc_p2, meta2 = qc_p3))
 
 }
 
 
-make_stat_plot <- function(feature, clust_name, geom2, breaks) {
+make_stat_plot <- function(SO, feature, clust_name, geom2, breaks) {
+
   plot <- feature_plot_stat(SO,
                             features = feature,
                             meta_col = clust_name,

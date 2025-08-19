@@ -172,10 +172,10 @@ volcano_plot <- function(SO,
   }
 
 
-  p.plot <- match.arg(p.plot, c("adj.p.val", "p.val"))
-  p.adjust <- match.arg(p.adjust, c("bonferroni", "holm", "hochberg", "hommel", "BH", "BY", "fdr", "none"))
-  topn.metric <- match.arg(topn.metric, c("p.value", "fc", "both"))
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL)
+  p.plot <- rlang::arg_match(p.plot)
+  p.adjust <- rlang::arg_match(p.adjust)
+  topn.metric <- rlang::arg_match(topn.metric)
+  SO <- check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
 
   dots <- list(...)
@@ -188,44 +188,49 @@ volcano_plot <- function(SO,
     stop("Same cell names (barcodes) found in positive.group.cells and negative.group.cells. Please change selection or fix SOs with Seurat::RenameCells first.")
   }
 
-  # done like this as cell names in SOs may be subject to prefixing when there are duplicates and .check.and.get.cells is called once
-  temp <- .check.and.get.cells(SO = SO, assay = assay, cells = c(negative.group.cells, positive.group.cells), return.included.cells.only = T)
-
-  ## slow procedure; how to speed up? why needed actually? 2022 11 07
-  # https://stackoverflow.com/questions/35726028/understanding-grep-with-fixed-t-in-r
-  # https://stackoverflow.com/questions/10128617/test-if-characters-are-in-a-string
-
-  'if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
-    pgc <- purrr::map_chr(positive.group.cells, function(x) {
-      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
-      if (length(m) > 1) {
-        stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
-      }
-      return(m)
-    })
-    ngc <- purrr::map_chr(negative.group.cells, function(x) {
-      m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
-      if (length(m) > 1) {
-        stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
-      }
-      return(m)
-    })
-  } else {
-    pgc <- purrr::map_chr(positive.group.cells, function(x) {
-      m <- grep(pattern = x, x = temp, value = T, fixed = T)
-      if (length(m) > 1) {
-        stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
-      }
-      return(m)
-    })
-    ngc <- purrr::map_chr(negative.group.cells, function(x) {
-      m <- grep(pattern = x, x = temp, value = T, fixed = T)
-      if (length(m) > 1) {
-        stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in negative.group.cells is a substring of another cells barcode.")
-      }
-      return(m)
-    })
-  }'
+  # # done like this as cell names in SOs may be subject to prefixing when there are duplicates and .check.and.get.cells is called once
+  # temp <- check.and.get.cells(
+  #   SO = SO,
+  #   assay = assay,
+  #   cells = c(negative.group.cells, positive.group.cells),
+  #   included_only = T
+  # )
+  #
+  # ## slow procedure; how to speed up? why needed actually? 2022 11 07
+  # # https://stackoverflow.com/questions/35726028/understanding-grep-with-fixed-t-in-r
+  # # https://stackoverflow.com/questions/10128617/test-if-characters-are-in-a-string
+  #
+  # if (grepl("SO_[[:digit:]]{1,}_", temp[1])) {
+  #   pgc <- purrr::map_chr(positive.group.cells, function(x) {
+  #     m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+  #     if (length(m) > 1) {
+  #       stop("positive.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+  #     }
+  #     return(m)
+  #   })
+  #   ngc <- purrr::map_chr(negative.group.cells, function(x) {
+  #     m <- grep(pattern = paste0("SO_[[:digit:]]{1,}_", x, "$"), x = temp, value = T)
+  #     if (length(m) > 1) {
+  #       stop("negative.group.cells could not be identified unambigously due to duplicate cell names (barcodes). Please change selection or fix SOs with Seurat::RenameCells first.")
+  #     }
+  #     return(m)
+  #   })
+  # } else {
+  #   pgc <- purrr::map_chr(positive.group.cells, function(x) {
+  #     m <- grep(pattern = x, x = temp, value = T, fixed = T)
+  #     if (length(m) > 1) {
+  #       stop("positive.group.cells could not be identified unambigously. That means one of the barcodes in positive.group.cells is a substring of another cells barcode.")
+  #     }
+  #     return(m)
+  #   })
+  #   ngc <- purrr::map_chr(negative.group.cells, function(x) {
+  #     m <- grep(pattern = x, x = temp, value = T, fixed = T)
+  #     if (length(m) > 1) {
+  #       stop("negative.group.cells could not be identified unambigously. That means one of the barcodes in negative.group.cells is a substring of another cells barcode.")
+  #     }
+  #     return(m)
+  #   })
+  # }
 
   pgc <- positive.group.cells
   ngc <- negative.group.cells
@@ -245,7 +250,10 @@ volcano_plot <- function(SO,
   # call here as DietSO happens below
   if (!interactive.only) {
     feat_plots <- tryCatch({
-      do.call(feature_plot, args = c(list(SO = SO, assay = assay, features = colname), dots[which(names(dots) %in% names(formals(feature_plot)))]))
+      do.call(feature_plot, args = c(
+        list(SO = SO, assay = assay, features = colname),
+        dots[which(names(dots) %in% names(formals(feature_plot)))]
+      ))
     }, error = function(e) {
       NULL
     })
@@ -259,9 +267,14 @@ volcano_plot <- function(SO,
 
   # DietSeurat is slow ?!
   # Seurat::DietSeurat(, assays = assay, counts = F)
-  SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(x, features = intersect(rownames(x), intersect_features), cells = intersect(colnames(x), c(ngc, pgc))), assays = assay, counts = F))
+  SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(
+    x,
+    features = intersect(rownames(x), intersect_features),
+    cells = intersect(colnames(x), c(ngc, pgc))
+  ), assays = assay, counts = F))
   if (length(SO) > 1) {
     # this restores the counts matrix
+    ## fix this like in so_prep
     SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
   } else {
     SO <- SO[[1]]
@@ -270,11 +283,11 @@ volcano_plot <- function(SO,
   # exclude features which are below min.pct.set in both populations
   # = only continue with those which are ">= min.pct" in at least one of them
   if (min.pct > 0) {
-    min.pct_features <- unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) >= min.pct)),
-                                 names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) >= min.pct))))
+    min.pct_features <- unique(c(names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, ngc] != 0)/length(ngc) >= min.pct)),
+                                 names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, pgc] != 0)/length(pgc) >= min.pct))))
   } else if (min.pct == 0) {
-    min.pct_features <- unique(c(names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
-                                 names(which(Matrix::rowSums(Seurat::GetAssayData(SO)[, pgc] != 0)/length(pgc) > min.pct))))
+    min.pct_features <- unique(c(names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
+                                 names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, pgc] != 0)/length(pgc) > min.pct))))
   } else {
     stop("min.pct has to be 0 or greater.")
   }
@@ -493,15 +506,7 @@ volcano_plot <- function(SO,
 
 
   if (!use.MAST && methods::is(assay_data, "Seurat")) {
-    layer <- "data"
-    if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
-      GetAssayData_args <- list(object = assay_data,
-                                layer = layer)
-    } else {
-      GetAssayData_args <- list(object = assay_data,
-                                slot = layer)
-    }
-    assay_data <- Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)
+    assay_data <- SeuratObject::LayerData(assay_data, layer = "data")
   } else if (use.MAST && methods::is(assay_data, "Seurat")) {
     Seurat::Idents(assay_data) <- assay_data@meta.data[,1,drop=T]
     vd <- Seurat::FindMarkers(Seurat::GetAssay(assay_data, Seurat::DefaultAssay(assay_data)),

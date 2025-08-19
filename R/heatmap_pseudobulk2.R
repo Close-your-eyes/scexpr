@@ -134,7 +134,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   ncol = NULL,
                                   nrow = NULL,
                                   override.aes = list(color = "black")
-                                                      #size = c(2,4, 10))
+                                  #size = c(2,4, 10))
                                 ),
                                 theme_args = list(
                                   axis.title = ggplot2::element_blank(),
@@ -215,8 +215,8 @@ heatmap_pseudobulk2 <- function(SO,
   # issue: scaling before vs. after selection for topn features
   # do here before feature selection to not disturb zscoring result e.g.
   # but what if features are selected manually with features argument?
-    # for scaling of each feature it is only relevant that all groups are still included
-    # determine_features does not remove groups but features only
+  # for scaling of each feature it is only relevant that all groups are still included
+  # determine_features does not remove groups but features only
   if (scale != "none") {
     wil_auc <- dplyr::mutate(wil_auc, avgExprScale = dplyr::case_when(
       scale == "zscore" ~ as.vector(scale(avgExpr)),
@@ -245,37 +245,37 @@ heatmap_pseudobulk2 <- function(SO,
   # filter here after feature selection
   wil_auc <- dplyr::filter(wil_auc, group %in% unlist(levels_plot))
 
-  plot <- heatmap_long_df(df = wil_auc,
-                          groups = "group",
-                          features = "feature",
-                          values = values,
-                          dotsizes = if (dotplot) "pct_in" else NULL,
-                          dotsize_range = dotsize_range,
-                          features_topn = NULL,
-                          # irrelevant as features_topn is handled above
-                          #topn_metric
-                          #topn_ties
-                          fill = fill,
-                          color = color,
-                          scale = "none",
-                          featurelabels = featurelabels,
-                          featurelabels_repel = featurelabels_repel,
-                          featuresitalic = featuresitalic,
-                          color_linewidth = color_linewidth,
-                          legendbreaks = legendbreaks,
-                          legendlabels = legendlabels,
-                          colorsteps = colorsteps,
-                          colorsteps_nice = colorsteps_nice,
-                          axes_flip = axes_flip,
-                          group_seplines = group_seplines,
-                          seplines_args = seplines_args,
-                          legend_fill_args = legend_fill_args,
-                          legend_size_args = legend_size_args,
-                          theme_args = theme_args,
-                          repel_args = repel_args,
-                          theme = theme,
-                          feature_order = feature_order,
-                          group_order = group_order)
+  plot <- fcexpr::heatmap_long_df(df = wil_auc,
+                                  groups = "group",
+                                  features = "feature",
+                                  values = values,
+                                  dotsizes = if (dotplot) "pct_in" else NULL,
+                                  dotsize_range = dotsize_range,
+                                  features_topn = NULL,
+                                  # irrelevant as features_topn is handled above
+                                  #topn_metric
+                                  #topn_ties
+                                  fill = fill,
+                                  color = color,
+                                  scale = "none",
+                                  featurelabels = featurelabels,
+                                  featurelabels_repel = featurelabels_repel,
+                                  featuresitalic = featuresitalic,
+                                  color_linewidth = color_linewidth,
+                                  legendbreaks = legendbreaks,
+                                  legendlabels = legendlabels,
+                                  colorsteps = colorsteps,
+                                  colorsteps_nice = colorsteps_nice,
+                                  axes_flip = axes_flip,
+                                  group_seplines = group_seplines,
+                                  seplines_args = seplines_args,
+                                  legend_fill_args = legend_fill_args,
+                                  legend_size_args = legend_size_args,
+                                  theme_args = theme_args,
+                                  repel_args = repel_args,
+                                  theme = theme,
+                                  feature_order = feature_order,
+                                  group_order = group_order)
 
   if (sec_axis) {
     plot <- add_sec_axis(

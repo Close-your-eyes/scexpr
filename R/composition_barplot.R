@@ -293,7 +293,7 @@ composition_barplot <- function(SO,
     # }
   #}
 
-  return(list(data = table, plot = plot, data_total = table0))
+  return(list(plot = plot, data = table, data_total = table0))
 }
 
 plot_label_fun <- function(nudge, size, label_var, name, table_temp, x_cat, y_plot, label_color, plot) {

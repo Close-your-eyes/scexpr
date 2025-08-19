@@ -712,7 +712,7 @@ cluster_on_metadata <- function(SO,
       meta2 <- brathering::scale2(meta2)
       #https://datascience.stackexchange.com/questions/27726/when-to-use-cosine-simlarity-over-euclidean-similarity
       # with cosine metric: relative composition is more important
-      umap_dims <- uwot::umap(X = meta2, metric = "cosine")
+      umap_dims <- suppressWarnings(uwot::umap(X = meta2, metric = "cosine"))
       colnames(umap_dims) <- paste0("meta_PC", nn, "_UMAP_", c(1,2))
 
       reductioname <- paste0("umapmetaPC", nn)

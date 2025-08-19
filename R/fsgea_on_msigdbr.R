@@ -18,6 +18,7 @@
 #' \dontrun{
 #' # get gene sets from msigdbr, split to a named list
 #' gene.sets <- scexpr:::.get.split.msigdbr()
+#' msigdbr::msigdbr_collections()
 #' # provide gene.sets manually and leave use.msigdbr = F in case fgsea_on_msigdbr is called many times with the same gene.sets
 #' }
 fgsea_on_msigdbr <- function(gene.ranks = NULL,
@@ -26,7 +27,7 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
                              return.gene.sets = T,
                              min.padj = 0, # which plots to generate; by default: none
                              use.msigdbr = F,
-                             msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL),
+                             msigdbr_args = list(species = "Homo sapiens", collection = NULL, subcollection = NULL),
                              fgsea_fun = fgsea::fgseaMultilevel,
                              fgsea_args = list(),
                              ...) {

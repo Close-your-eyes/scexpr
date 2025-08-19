@@ -8,11 +8,12 @@ qc_plot2(
   SO,
   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log",
     "pct_soup_decontX", "pct_soup_SoupX"),
-  geom2 = "boxplot"
+  geom2 = "boxplot",
+  save_path = NULL
 )
 }
 \arguments{
-\item{geom2}{}
+\item{save_path}{}
 }
 \description{
 Title
