@@ -10,7 +10,7 @@ SO_prep01(
   npcs = 10,
   resolution = 0.8,
   resolution_SoupX = 0.6,
-  resolution_meta = 0.8,
+  resolution_meta = seq(0.1, 0.8, 0.1),
   PCs_to_meta_clustering = 2,
   scDblFinder = F,
   min_UMI = 30,

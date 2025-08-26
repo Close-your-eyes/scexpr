@@ -31,7 +31,7 @@ feature_plot2(
   col_steps = "auto",
   col_steps_nice = T,
   col_legend_args = list(barwidth = 1, barheight = 8, override.aes = list(size = 4),
-    title.theme = ggtext::element_markdown(), title = "..auto..", order = 1),
+    title = "..auto..", order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "auto",
   shape_legend_args = list(override.aes = list(size = 4), order = 2),
@@ -41,19 +41,25 @@ feature_plot2(
   feature_cut = NULL,
   feature_cut_expr = 0,
   freq_plot = "..auto..",
-  freq_pos = c(-Inf, Inf),
+  freq_pos = c(Inf, Inf),
   freq_size = 4,
+  freq_col = "..auto..",
   name_anno = "..auto..",
   name_anno_pos = c("..auto..", "title", "annotation"),
-  name_anno_args = list(x = Inf, y = Inf, hjust = 1.1, vjust = 1.25, color = NA, fill =
-    NA, label.color = NA, size = 4, text.color = "black"),
-  theme = ggplot2::theme_bw(),
+  name_anno_args = list(x = -Inf, y = Inf, hjust = 0, vjust = 1.25, color = NA, fill =
+    NA, label.color = NA, size = 4, text.color = "..auto.."),
+  theme = colrr::theme_material(white = T, legend_tight = T, text_fun =
+    ggplot2::element_text),
   theme_args = list(axis.ticks = ggplot2::element_blank(), axis.text.x =
     ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.title.x =
     ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), legend.background = ggplot2::element_blank(),
-    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank(),
-    title = ggtext::element_markdown()),
+    legend.key.size = grid::unit(0.3, "cm"), legend.key = ggplot2::element_blank(), title
+    = ggtext::element_markdown(), plot.title = ggplot2::element_text(margin =
+    ggplot2::margin(b = 0, unit = "pt")), strip.text.x = ggplot2::element_text(margin =
+    ggplot2::margin(0, 
+     0, 0, 0, unit = "pt")), plot.margin = grid::unit(c(1, 1, 1,
+    1), "pt"), panel.spacing = grid::unit(2, "pt")),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,
@@ -149,7 +155,7 @@ see ggplot2::scale_color_stepsn}
 
 \item{col_legend_args}{arguments to ggplot2::guide_colorsteps,
 ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-continuous or discrete legend}
+continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
 
 \item{legendbreaks}{a single number, a vector of explicit breaks, or "auto"
 for ggplot default or "minmidmax" for three breaks at minimum, middle and
@@ -171,6 +177,8 @@ for decision based on number of SOs}
 \item{freq_pos}{where to plot, xy coordinates}
 
 \item{freq_size}{font size of frequency annotation}
+
+\item{freq_col}{}
 
 \item{name_anno}{name of the plot, any string possible, understands glue
 syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
@@ -228,8 +236,6 @@ outlier points to avoid ugly contours? uses brathering::outlier}
 \item{contour_rm_lowfreq_subcluster}{groups in feature_contour are checked for
 split clusters with diptest and mclust, do remove low frequency subclusters
 to avoid ugly contours?}
-
-\item{contour_multi_max}{}
 
 \item{contour_col_pal_args}{discrete colors of contours, see col_pal_c_args}
 

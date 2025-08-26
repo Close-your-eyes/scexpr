@@ -297,14 +297,15 @@ SO_prep02 <- function(SO_unprocessed,
   }
 
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d_%H%M%S")
-  ext <- ifelse(!requireNamespace("zap", quietly = T), "rds", "zap")
+  #ext <- ifelse(!requireNamespace("zap", quietly = T), "rds", "zap")
+  ext <- "rds"
   save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".", ext), sep = "_")
   Seurat::Misc(SO, "object_name") <- save.name
 
   if (!is.null(save_path)) {
     dir.create(save_path, showWarnings = F, recursive = T)
     if (ext == "rds") {
-      saveRDS(SO, compress = F, file = file.path(save_path, save.name))
+      saveRDS(SO, compress = T, file = file.path(save_path, save.name))
     } else if (ext == "zap") {
       zap::zap_write(SO, dst = file.path(save_path, save.name), compress = "zstd")
     }

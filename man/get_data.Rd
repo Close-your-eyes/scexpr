@@ -96,7 +96,7 @@ cells with UMI>feature_cut_expr are excluded and get col_ex_cells}
 are excluded and get col_ex_cells as color, passed to scexpr::get_data}
 }
 \value{
-a data frame
+a list of data frame
 }
 \description{
 Get data frame for plotting from Seurat object(s)

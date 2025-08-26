@@ -253,6 +253,7 @@ check.aliases <- function(feature, feature.aliases, data) {
 
 get.freqs2 <- function(data) {
   library(zeallot)
+
   freq.expr.by.split.SO <- dplyr::group_by(data, split_feature, SO.split)
   freq.expr.by.split <- dplyr::group_by(data, split_feature)
   freq.expr.by.SO <- dplyr::group_by(data, SO.split)
@@ -524,7 +525,7 @@ add_color_scale <- function(plot,
         if (attr(plot[["data"]], "feature_type") == "gene") {
           if (!is.null(attr(plot[["data"]], "layer"))) {
             if (attr(plot[["data"]], "layer") == "data") {
-              col_legend_args[["title"]] <- "log (UMI)"
+              col_legend_args[["title"]] <- "log<br>UMI"
             } else if (attr(plot[["data"]], "layer") == "counts") {
               col_legend_args[["title"]] <- "UMI"
             } else {
@@ -554,7 +555,7 @@ add_color_scale <- function(plot,
         } else if (legendlabels != "auto" && (qmin > 0 || qmax < 1)) {
           message("qmax and/or qmin nor shown in legend.")
         }
-        scale_color <- fcexpr:::colorscale_heuristic(colorscale_values = plot[["data"]][["feature"]],
+        scale_color <- fcexpr:::colorscale_heuristic(colorscale_values = plot[["data"]][["feature"]], # fcexpr:::
                                                      values_zscored = F,
                                                      colorsteps = col_steps,
                                                      legendbreaks = legendbreaks,
@@ -647,6 +648,7 @@ add_facet <- function(plot,
   } else {
     # no facetting
   }
+
   return(plot)
 }
 
@@ -939,8 +941,15 @@ add_contour <- function(plot,
                         contour_fun = ggplot2::geom_density2d,
                         contour_path_label = NULL,
                         finalize_plotting_expr_freq_labels = F) {
-  dtach <- !"mclust" %in% .packages()
-  null <- capture.output(library(mclust))
+
+
+  if (contour_multi_try) {
+    dtach <- !"mclust" %in% .packages()
+    null <- capture.output(library(mclust))
+  } else {
+    dtach <- F
+  }
+
   # use all cells across split_by to assign contours? (in other words: same contour in every facet based on all cells, irrespective of split_by)
 
   label_center_fun <- rlang::arg_match(label_center_fun)
@@ -1140,7 +1149,9 @@ add_contour <- function(plot,
   } else {
 
     for (i in unique(data[["contour_feature"]])) {
+      i <- as.character(i)
       for (j in unique(data[which(data[["contour_feature"]] == i), "contour_feature_split",drop=T])) {
+        j <- as.character(j)
         if (!identical(ggplot2::geom_density_2d, contour_fun) && !is.null(contour_path_label)) {
           # geomtextpath::geom_labeldensity2d does not allow for arbitrary label, hence: calculate paths by hand with
           # brathering::contour_est and use ...
@@ -1172,6 +1183,7 @@ add_contour <- function(plot,
         } else {
           #ggplot2::geom_density2d
           #contour_fun <- match.fun(contour_fun)
+
           plot <-
             plot +
             Gmisc::fastDoCall(contour_fun, args = c(

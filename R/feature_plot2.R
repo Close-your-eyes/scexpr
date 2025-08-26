@@ -38,7 +38,7 @@
 #' see ggplot2::scale_color_stepsn
 #' @param col_legend_args arguments to ggplot2::guide_colorsteps,
 #' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-#' continuous or discrete legend
+#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
 #' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
 #' for ggplot default or "minmidmax" for three breaks at minimum, middle and
 #' maximum of value range
@@ -119,6 +119,7 @@
 #' @param label_multi_max
 #' @param contour_multi_try
 #' @param contour_multi_max
+#' @param freq_col
 #'
 #' @return
 #' @export
@@ -158,7 +159,6 @@ feature_plot2 <- function(SO,
                           col_legend_args = list(barwidth = 1,
                                                  barheight = 8,
                                                  override.aes = list(size = 4),
-                                                 title.theme = ggtext::element_markdown(),
                                                  title = "..auto..",
                                                  order = 1),
                           legendbreaks = "minmidmax",
@@ -172,21 +172,26 @@ feature_plot2 <- function(SO,
                           feature_cut_expr = 0,
 
                           freq_plot = "..auto..",
-                          freq_pos = c(-Inf, Inf),
+                          freq_pos = c(Inf, Inf),
                           freq_size = 4,
+                          freq_col = "..auto..",
                           name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
                           name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
-                          name_anno_args = list(x = Inf,
+                          name_anno_args = list(x = -Inf,
                                                 y = Inf,
-                                                hjust = 1.1,
+                                                hjust = 0, # 1.1,
                                                 vjust = 1.25,
                                                 color = NA,
                                                 fill = NA,
                                                 label.color = NA,
                                                 size = 4,
-                                                text.color = "black"),
+                                                text.color = "..auto.."),
 
-                          theme = ggplot2::theme_bw(),
+                          theme = colrr::theme_material(
+                            white = T,
+                            legend_tight = T,
+                            text_fun = ggplot2::element_text
+                          ),
                           theme_args = list(axis.ticks = ggplot2::element_blank(),
                                             axis.text.x = ggplot2::element_blank(),
                                             axis.text.y = ggplot2::element_blank(),
@@ -194,9 +199,13 @@ feature_plot2 <- function(SO,
                                             axis.title.y = ggplot2::element_blank(),
                                             panel.grid = ggplot2::element_blank(),
                                             legend.background = ggplot2::element_blank(),
-                                            legend.key.size = ggplot2::unit(0.3, "cm"),
+                                            legend.key.size = grid::unit(0.3, "cm"),
                                             legend.key = ggplot2::element_blank(),
-                                            title = ggtext::element_markdown()),
+                                            title = ggtext::element_markdown(),
+                                            plot.title = ggplot2::element_text(margin = ggplot2::margin(b = 0, unit = "pt")),
+                                            strip.text.x = ggplot2::element_text(margin = ggplot2::margin(0,0,0,0, unit = "pt")),
+                                            plot.margin = grid::unit(c(1,1,1,1), "pt"),
+                                            panel.spacing = grid::unit(2, "pt")),
 
                           facet_scales = c("fixed", "free", "free_x", "free_y"),
                           facet_grid_row_var = NULL,
@@ -287,6 +296,7 @@ feature_plot2 <- function(SO,
                                                            freq_size = freq_size,
                                                            freq_pos = freq_pos,
                                                            freq_plot = freq_plot,
+                                                           freq_col = freq_col,
                                                            name_anno = name_anno,
                                                            name_anno_pos = name_anno_pos,
                                                            name_anno_args = name_anno_args,

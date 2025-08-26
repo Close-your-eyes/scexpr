@@ -21,7 +21,7 @@
 #' see ggplot2::scale_color_stepsn
 #' @param col_legend_args arguments to ggplot2::guide_colorsteps,
 #' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-#' continuous or discrete legend
+#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
 #' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
 #' for ggplot default or "minmidmax" for three breaks at minimum, middle and
 #' maximum of value range
@@ -93,6 +93,10 @@
 #' @param plot_all_across_split do plot all cells across feature_split in
 #' col_split?
 #' @param order_discr_explicit
+#' @param freq_col
+#' @param label_multi_max
+#' @param contour_multi_try
+#' @param contour_multi_max
 #'
 #' @return
 #' @export
@@ -116,7 +120,6 @@ feature_plot_data <- function(data,
                               col_legend_args = list(barwidth = 1,
                                                      barheight = 8,
                                                      override.aes = list(size = 4),
-                                                     title.theme = ggtext::element_markdown(),
                                                      title = "..auto..",
                                                      order = 1),
                               legendbreaks = "minmidmax",
@@ -126,30 +129,41 @@ feature_plot_data <- function(data,
                               shape_legend_hide = F,
                               feature_alias = NULL,
 
-                              freq_plot = "..auto..",
-                              freq_pos = c(-Inf, Inf),
-                              freq_size = 4,
-                              name_anno = "..auto..",
-                              name_anno_pos = c("..auto..", "title", "annotation"),
-                              name_anno_args = list(x = Inf,
-                                                    y = Inf,
-                                                    hjust = 1.1,
-                                                    vjust = 1.25,
-                                                    color = NA,
-                                                    size = 4,
-                                                    text.color = "black"),
+                          freq_plot = "..auto..",
+                          freq_pos = c(Inf, Inf),
+                          freq_size = 4,
+                          freq_col = "..auto..",
+                          name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
+                          name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
+                          name_anno_args = list(x = -Inf,
+                                                y = Inf,
+                                                hjust = 0, # 1.1,
+                                                vjust = 1.25,
+                                                color = NA,
+                                                fill = NA,
+                                                label.color = NA,
+                                                size = 4,
+                                                text.color = "..auto.."),
 
-                              theme = ggplot2::theme_bw(),
-                              theme_args = list(axis.ticks = ggplot2::element_blank(),
-                                                axis.text.x = ggplot2::element_blank(),
-                                                axis.text.y = ggplot2::element_blank(),
-                                                axis.title.x = ggplot2::element_blank(),
-                                                axis.title.y = ggplot2::element_blank(),
-                                                panel.grid = ggplot2::element_blank(),
-                                                legend.background = ggplot2::element_blank(),
-                                                legend.key.size = ggplot2::unit(0.3, "cm"),
-                                                legend.key = ggplot2::element_blank(),
-                                                title = ggtext::element_markdown()),
+                          theme = colrr::theme_material(
+                            white = T,
+                            legend_tight = T,
+                            text_fun = ggplot2::element_text
+                          ),
+                          theme_args = list(axis.ticks = ggplot2::element_blank(),
+                                            axis.text.x = ggplot2::element_blank(),
+                                            axis.text.y = ggplot2::element_blank(),
+                                            axis.title.x = ggplot2::element_blank(),
+                                            axis.title.y = ggplot2::element_blank(),
+                                            panel.grid = ggplot2::element_blank(),
+                                            legend.background = ggplot2::element_blank(),
+                                            legend.key.size = grid::unit(0.3, "cm"),
+                                            legend.key = ggplot2::element_blank(),
+                                            title = ggtext::element_markdown(),
+                                            plot.title = ggplot2::element_text(margin = ggplot2::margin(b = 0, unit = "pt")),
+                                            strip.text.x = ggplot2::element_text(margin = ggplot2::margin(0,0,0,0, unit = "pt")),
+                                            plot.margin = grid::unit(c(1,1,1,1), "pt"),
+                                            panel.spacing = grid::unit(2, "pt")),
 
                               facet_scales = c("fixed", "free", "free_x", "free_y"),
                               facet_grid_row_var = NULL,
@@ -171,31 +185,31 @@ feature_plot_data <- function(data,
                                 color = "black",
                                 label.padding = ggplot2::unit(rep(1/20,4), "lines")),
 
-                              contour_filter_cells = T,
-                              contour_rm_outlier = F,
-                              contour_rm_lowfreq_subcluster = F,
-                              contour_multi_try = F,
-                              contour_multi_max = 3,
-                              contour_col_pal_args = list(name = "custom"),
-                              contour_args = list(
-                                contour_var = "ndensity",
-                                breaks = 0.3,
-                                linewidth = 0.5
-                              ),
-                              contour_expr_freq = F,
-                              contour_label_nudge = list(),
-                              contour_label_args = list(
-                                label.colour = NA,
-                                fill = "white",
-                                size = 4,
-                                color = "black",
-                                label.padding = ggplot2::unit(rep(1/20,4), "lines")),
-                              contour_same_across_split = T,
-                              contour_ggnewscale = F,
-                              contour_fun = ggplot2::geom_density2d,
-                              contour_path_label = NULL,
-                              order_discr_explicit = NULL,
-                              plot_all_across_split = F) {
+                          contour_filter_cells = T,
+                          contour_rm_outlier = F,
+                          contour_rm_lowfreq_subcluster = F,
+                          contour_multi_try = F,
+                          contour_multi_max = 3,
+                          contour_col_pal_args = list(name = "custom"),
+                          contour_args = list(
+                            contour_var = "ndensity",
+                            breaks = 0.3,
+                            linewidth = 0.5
+                          ), # arguments to geom_density_2d
+                          contour_label_nudge = list(),
+                          contour_label_args = list(
+                            label.colour = NA,
+                            fill = "white",
+                            size = 4,
+                            color = "black",
+                            label.padding = ggplot2::unit(rep(1/20,4), "lines")),
+                          contour_same_across_split = T,
+                          contour_expr_freq = F,
+                          contour_ggnewscale = F,
+                          contour_fun = ggplot2::geom_density2d,
+                          contour_path_label = NULL,
+                          order_discr_explicit = NULL,
+                          plot_all_across_split = F) {
 
   if (!is.data.frame(data)) {
     stop("data must be data frame from scexpr::get_data")
@@ -220,6 +234,9 @@ feature_plot_data <- function(data,
         if (nlevels(data[["SO.split"]]) > 1) {
           name_anno_pos <- "title"
         } else if (nlevels(data[["SO.split"]]) == 1) {
+          name_anno_pos <- "annotation"
+        } else {
+          # not really needed, but anyway
           name_anno_pos <- "annotation"
         }
       }
@@ -252,6 +269,10 @@ feature_plot_data <- function(data,
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(attr(data, "dim1")), y = !!rlang::sym(attr(data, "dim2")))) +
     ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells)
 
+
+  plot <- plot + theme
+  plot <- plot + Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
+
   if (attr(data, "feature_type") == "gene") {
     freqs <- get.freqs2(data = data)
     plot <- do.call(feature_plot_gene, args = list(plot = plot,
@@ -264,6 +285,7 @@ feature_plot_data <- function(data,
                                                    freq_plot = freq_plot,
                                                    freq_pos = freq_pos,
                                                    freq_size = freq_size,
+                                                   freq_col = freq_col,
                                                    col_split = col_split,
                                                    plot_all_across_split = plot_all_across_split))
   } else {
@@ -274,9 +296,6 @@ feature_plot_data <- function(data,
                                                    col_split = col_split,
                                                    plot_all_across_split = plot_all_across_split))
   }
-
-  plot <- plot + theme
-  plot <- plot + Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
 
   plot <-
     plot +
@@ -318,6 +337,11 @@ feature_plot_data <- function(data,
     }
     if ("annotation" %in% name_anno_pos) {
       library(ggtext)
+      if (!"text.color" %in% names(name_anno_args)) {
+        name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
+      } else if (name_anno_args[["text.color"]] == "..auto..") {
+        name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
+      }
       plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
                                                                         label = title),
                                                                    name_anno_args))

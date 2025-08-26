@@ -9,7 +9,8 @@ feature_plot_gene <- function(plot,
                               freq_plot = T,
                               plot_all_across_split = F,
                               freq_pos = c(-Inf, Inf),
-                              freq_size = 4) {
+                              freq_size = 4,
+                              freq_col = "black") {
 
   shapeby <- tryCatch(rlang::sym(attr(plot[["data"]], "shape_feature")), error = function(e) NULL)
 
@@ -59,6 +60,7 @@ feature_plot_gene <- function(plot,
     plot <- plot + ggrepel::geom_text_repel(
       data = freqs2,
       size = freq_size,
+      color = ifelse(freq_col == "..auto..", brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]]), freq_col),
       ggplot2::aes(
         label = freq2,
         x = freq_pos[1],

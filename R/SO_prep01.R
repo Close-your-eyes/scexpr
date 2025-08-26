@@ -67,7 +67,7 @@ SO_prep01 <- function(data_dirs,
                       npcs = 10,
                       resolution = 0.8,
                       resolution_SoupX = 0.6,
-                      resolution_meta = 0.8,
+                      resolution_meta = seq(0.1,0.8,0.1),
                       PCs_to_meta_clustering = 2,
                       scDblFinder = F,
                       min_UMI = 30,
@@ -294,13 +294,13 @@ checks <- function(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_cl
   if (!is.numeric(resolution_SoupX) || length(resolution_SoupX) != 1) {
     stop("resolution_SoupX has to be numeric and of length 1.")
   }
-  if (!is.numeric(resolution) || length(resolution) != 1) {
-    stop("resolution has to be numeric and of length 1.")
+  if (!is.numeric(resolution)) {
+    stop("resolution has to be numeric.")
   }
-  # resolution <- as.numeric(gsub("^1.0$", "1", resolution))
-  if (!is.integer(resolution) && dplyr::near(resolution, 1)) {
-    resolution <- as.integer(resolution)
-  }
+  resolution <- as.numeric(gsub("^1.0$", "1", resolution))
+  # if (!is.integer(resolution) && dplyr::near(resolution, 1)) {
+  #   resolution <- as.integer(resolution)
+  # }
   if (!is.numeric(PCs_to_meta_clustering)) {
     stop("PCs_to_meta_clustering should be numeric.")
   }
@@ -395,7 +395,11 @@ read_10X_data <- function(path, cells, min_UMI, verbose = T, name) {
   }
 
   # change cell names here to avoid duplicate names from multiple samples
-  colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+  # but only if not already there
+  if (!all(grepl(paste0("^", name), colnames(filt_data)))) {
+    colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+  }
+
 
   return(filt_data)
 }
@@ -729,6 +733,10 @@ cluster_on_metadata <- function(SO,
       clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta2, annoy.metric = "cosine", verbose = F)$snn,
                                        resolution = resolution_meta,
                                        verbose = F)
+      nclust <- apply(clusters, 2, function(x) length(unique(x)))
+      candidates <- names(nclust)[which(dplyr::between(nclust, 1,12))]
+      choice <- ifelse(!length(candidates), names(nlust)[1], candidates[length(candidates)])
+      clusters <- clusters[,choice,drop = F]
 
       # add reduction belonging to the meta clustering as name
       metaclustname <- stats::setNames(paste0("meta_PC", nn, "_", colnames(clusters)), reductioname)

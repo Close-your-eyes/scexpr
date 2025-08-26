@@ -9,7 +9,8 @@ qc_plot2(
   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log",
     "pct_soup_decontX", "pct_soup_SoupX"),
   geom2 = "boxplot",
-  save_path = NULL
+  save_path = NULL,
+  save_as = c("png", "pdf")
 )
 }
 \arguments{

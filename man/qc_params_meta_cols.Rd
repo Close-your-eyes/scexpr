@@ -6,10 +6,10 @@
 \usage{
 qc_params_meta_cols(
   SO,
-  qc.cols = c("nFeature_RNA", "nCount_RNA", "pct_mt"),
-  meta.cols,
-  theme = ggplot2::theme_bw(),
-  ...
+  cells = NULL,
+  meta_cols,
+  qc_cols = c("nFeature_RNA", "nCount_RNA", "pct_mt"),
+  theme = ggplot2::theme_bw()
 )
 }
 \arguments{

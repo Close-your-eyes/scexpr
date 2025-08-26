@@ -36,7 +36,7 @@
 #' cells with UMI>feature_cut_expr are excluded and get col_ex_cells
 #' @param feature_cut_expr numeric vector of cutoff expressions
 #'
-#' @return a data frame
+#' @return a list of data frame
 #' @export
 #'
 #' @examples
@@ -67,6 +67,8 @@ get_data <- function(SO,
                      feature_cut = NULL,
                      feature_cut_expr = 0,
                      feature_ex = NULL) {
+
+
 
   if (missing(SO)) {stop("Seurat object missing.")}
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
@@ -107,17 +109,18 @@ get_data <- function(SO,
   gene_features <- feature[which(feature %in% all_gene_features)]
   meta_features <- feature[which(feature %in% all_meta_features)]
 
-  if (length(missing_features) > 0) {
+  if (length(missing_features)) {
     message("Feature(s) ", paste(missing_features, collapse = ", "), " not found.")
     feature <- setdiff(feature, missing_features)
   }
-  if (length(double_features) > 0) {
+  if (length(double_features)) {
     message("Feature(s) ", paste(double_features, collapse = ", "), " found in expression and meta data. This is not handled at the moment and filtered. Consider renaming the column of meta data.")
     feature <- setdiff(feature, double_features)
   }
-  if (length(feature) == 0) {
+  if (!length(feature)) {
     stop("No feature left.")
   }
+
 
   data <- purrr::map_dfr(SO, function(x) {
 
@@ -146,7 +149,12 @@ get_data <- function(SO,
         names(x@reductions)[which.min(utils::adist(z, names(x@reductions), ignore.case = T))]
       })))
       for (i in reduction) {
-        data <- cbind(data, Seurat::Embeddings(x, reduction = i))
+        # valid umap colnames can be umap_1 but also UMAP_1
+        # is case of multi-SO this could cause incompatability
+        # so always to lower
+        red <- Seurat::Embeddings(x, reduction = i)
+        colnames(red) <- tolower(colnames(red))
+        data <- cbind(data, red)
       }
     }
 
@@ -173,6 +181,7 @@ get_data <- function(SO,
     data <- tibble::rownames_to_column(data, "id")
     return(data)
   }, .id = "SO.split")
+
   # ensure that facet ordering is according to the order of SO objects provided
   data$SO.split <- factor(data$SO.split, levels = names(SO))
   data <- dplyr::relocate(data, SO.split, .after = dplyr::last_col())
@@ -315,6 +324,7 @@ get_data <- function(SO,
     attr(data[[i]], "qmin") <- qmin
     attr(data[[i]], "qmax") <- qmax
     if (!is.null(reduction)) {
+      reduction <- tolower(reduction)
       attr(data[[i]], "dim1") <- paste0(reduction, "_", dims[1])
       attr(data[[i]], "dim2") <- paste0(reduction, "_", dims[2])
     }

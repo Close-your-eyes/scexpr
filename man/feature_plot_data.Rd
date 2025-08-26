@@ -19,26 +19,32 @@ feature_plot_data(
   col_steps = "auto",
   col_steps_nice = T,
   col_legend_args = list(barwidth = 1, barheight = 8, override.aes = list(size = 4),
-    title.theme = ggtext::element_markdown(), title = "..auto..", order = 1),
+    title = "..auto..", order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "auto",
   shape_legend_args = list(override.aes = list(size = 4), order = 2),
   shape_legend_hide = F,
   feature_alias = NULL,
   freq_plot = "..auto..",
-  freq_pos = c(-Inf, Inf),
+  freq_pos = c(Inf, Inf),
   freq_size = 4,
+  freq_col = "..auto..",
   name_anno = "..auto..",
   name_anno_pos = c("..auto..", "title", "annotation"),
-  name_anno_args = list(x = Inf, y = Inf, hjust = 1.1, vjust = 1.25, color = NA, size =
-    4, text.color = "black"),
-  theme = ggplot2::theme_bw(),
+  name_anno_args = list(x = -Inf, y = Inf, hjust = 0, vjust = 1.25, color = NA, fill =
+    NA, label.color = NA, size = 4, text.color = "..auto.."),
+  theme = colrr::theme_material(white = T, legend_tight = T, text_fun =
+    ggplot2::element_text),
   theme_args = list(axis.ticks = ggplot2::element_blank(), axis.text.x =
     ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.title.x =
     ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), legend.background = ggplot2::element_blank(),
-    legend.key.size = ggplot2::unit(0.3, "cm"), legend.key = ggplot2::element_blank(),
-    title = ggtext::element_markdown()),
+    legend.key.size = grid::unit(0.3, "cm"), legend.key = ggplot2::element_blank(), title
+    = ggtext::element_markdown(), plot.title = ggplot2::element_text(margin =
+    ggplot2::margin(b = 0, unit = "pt")), strip.text.x = ggplot2::element_text(margin =
+    ggplot2::margin(0, 
+     0, 0, 0, unit = "pt")), plot.margin = grid::unit(c(1, 1, 1,
+    1), "pt"), panel.spacing = grid::unit(2, "pt")),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,
@@ -60,11 +66,11 @@ feature_plot_data(
   contour_multi_max = 3,
   contour_col_pal_args = list(name = "custom"),
   contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 0.5),
-  contour_expr_freq = F,
   contour_label_nudge = list(),
   contour_label_args = list(label.colour = NA, fill = "white", size = 4, color = "black",
     label.padding = ggplot2::unit(rep(1/20, 4), "lines")),
   contour_same_across_split = T,
+  contour_expr_freq = F,
   contour_ggnewscale = F,
   contour_fun = ggplot2::geom_density2d,
   contour_path_label = NULL,
@@ -107,7 +113,7 @@ see ggplot2::scale_color_stepsn}
 
 \item{col_legend_args}{arguments to ggplot2::guide_colorsteps,
 ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-continuous or discrete legend}
+continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
 
 \item{legendbreaks}{a single number, a vector of explicit breaks, or "auto"
 for ggplot default or "minmidmax" for three breaks at minimum, middle and
@@ -187,12 +193,11 @@ outlier points to avoid ugly contours? uses brathering::outlier}
 split clusters with diptest and mclust, do remove low frequency subclusters
 to avoid ugly contours?}
 
+\item{contour_multi_max}{}
+
 \item{contour_col_pal_args}{discrete colors of contours, see col_pal_c_args}
 
 \item{contour_args}{arguments to geom_density_2d}
-
-\item{contour_expr_freq}{do plot expression frequency per group/cluster of
-feature_contour}
 
 \item{contour_label_nudge}{one xy value pair to nudge contour_expr_freq
 labels}
@@ -202,6 +207,9 @@ contour_expr_freq}
 
 \item{contour_same_across_split}{have the same contours across feature_split
 facets}
+
+\item{contour_expr_freq}{do plot expression frequency per group/cluster of
+feature_contour}
 
 \item{contour_ggnewscale}{use ggnewscale for colored contours}
 
@@ -213,8 +221,6 @@ contour_path_label}
 \item{contour_path_label}{if geomtextpath used as contour_fun,
 what label to draw, could be an attached meta feature that is unique to each
 group or expression frequency via: 'pct'}
-
-\item{order_discr_explicit}{}
 
 \item{plot_all_across_split}{do plot all cells across feature_split in
 col_split?}
