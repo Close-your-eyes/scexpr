@@ -28,12 +28,12 @@
 #' # simply expm1 from data slot, see ?Seurat::SCTransform
 #' }
 reverse_lognorm <- function(SO,
-                            assay = c("RNA", "SCT"),
+                            assay = "RNA",
                             nCount_RNA = Seurat::Misc(SO, slot = "RNA_count_colSums"),
                             scale.factor = 10000,
                             return.SO = T) {
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
+  assay <- match.arg(assay, names(SO@assays))
 
   layer <- "data"
   if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {

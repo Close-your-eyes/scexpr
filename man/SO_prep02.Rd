@@ -10,6 +10,7 @@ SO_prep02(
   cells = NULL,
   min_cells = 50,
   downsample = 1,
+  downsample_method = c("uniform", "leverage"),
   export_prefix = NULL,
   reductions = c("umap"),
   nhvf = 800,
@@ -20,6 +21,7 @@ SO_prep02(
   vars.to.regress = NULL,
   seeed = 42,
   save_path = NULL,
+  save_ext = c("rds", "zap"),
   celltype_refs = NULL,
   celltype_label = "label.main",
   celltype_ref_clusters = NULL,
@@ -32,7 +34,7 @@ SO_prep02(
   RunUMAP_args = list(),
   RunTSNE_args = list(theta = 0),
   FindNeighbors_args = list(),
-  FindClusters_args = list(resolution = seq(0.1, 1, 0.1)),
+  FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
   RunHarmony_args = list(group.by.vars = "orig.ident"),
   SOM_args = list(),
   GQTSOM_args = list(),
@@ -40,6 +42,7 @@ SO_prep02(
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
   scale_RNA_assay_when_SCT = T,
+  join_layers = T,
   ...
 )
 }
@@ -107,7 +110,7 @@ exclude T cell receptor gene segments}
 
 \item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
 
-\item{...}{}
+\item{scale_RNA_assay_when_SCT}{}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file

@@ -14,7 +14,7 @@
 #'
 #' @examples
 clustering_volcanos <- function(SO,
-                                assay = c("RNA", "SCT"),
+                                assay = "RNA",
                                 cluster.meta.cols,
                                 reduction = "UMAP",
                                 clustree.prefix = NULL,
@@ -34,7 +34,7 @@ clustering_volcanos <- function(SO,
   SO <- .check.SO(SO, length = 1)
   reduction <- .check.reduction(SO, reduction = reduction)
   cluster.meta.cols <- .check.features(SO, features = cluster.meta.cols, rownames = F)
-  assay <- match.arg(assay, c("RNA", "SCT"))
+  assay <- match.arg(assay, names(SO@assays))
   lapply_fun <- match.fun(lapply_fun)
 
   if (is.null(save.path)) {

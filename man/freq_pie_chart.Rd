@@ -33,6 +33,8 @@ freq_pie_chart(
 \item{SO}{Seurat object or data frame}
 
 \item{meta_col}{column from meta data to use}
+
+\item{theme_args}{}
 }
 \description{
 Title

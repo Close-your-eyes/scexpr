@@ -30,7 +30,7 @@
 #' }
 feature_correlation <- function(SO,
                                 features,
-                                assay = c("RNA", "SCT"),
+                                assay = "RNA",
                                 method = c("pearson", "spearman", "kendall"),
                                 cells = NULL,
                                 min.pct = 0.1,
@@ -56,9 +56,9 @@ feature_correlation <- function(SO,
     stop("Please provide features.")
   }
   dots <- list(...)
-  assay <- match.arg(assay, c("RNA", "SCT"))
-  method <- match.arg(method, c("pearson", "spearman", "kendall"))
-  bar.fill <- match.arg(bar.fill, c("correlation_sign", "ref_feature_pct", "none"))
+  assay <- match.arg(assay, names(SO@assays))
+  method <- rlang::arg_match(method)
+  bar.fill <- rlang::arg_match(bar.fill)
 
   if (length(topn) != 2 || !is.numeric(topn)) {
     warning("topn should be a numeric vector of length 2, providing the numbers of lowest ranked features (index 1) and highest ranked features (index 2) with respect to correlation. Will be set to default c(10,10)")
@@ -249,12 +249,12 @@ filter_feature <- function(SO,
 pct_feature <- function(SO,
                         features,
                         cells = NULL,
-                        assay = c("RNA", "SCT")) {
+                        assay = "RNA") {
 
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
   #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first
-  assay <- match.arg(assay, c("RNA", "SCT"))
+  assay <- match.arg(assay, names(SO@assays))
 
   ## case of dichtomous meta.col
   features <- features[which(features %in% rownames(Seurat::GetAssayData(SO, assay = assay)))]

@@ -35,10 +35,11 @@
 feature_plot_stat <- function(SO,
                               features,
                               meta_col,
-                              assay = c("RNA", "SCT"),
+                              assay = "RNA",
                               geom1 = c("jitter", "point"),
                               geom2 = c("boxplot", "violin", "none"),
                               jitterwidth = 0.2,
+                              dodgewidth = 0.9,
                               label.size = 4,
                               plot.expr.freq = F,
                               expr.freq.decimals = 2,
@@ -51,8 +52,9 @@ feature_plot_stat <- function(SO,
                               legend.title = "SO.split",
                               split.by = NULL,
                               pt.size = 0.5,
-                              col.pal = "custom",
-                              col.pal.dir = 1,
+                              col.pal = colrr::col_pal("custom"),
+                              col.na = "grey50",
+                              col_pal_args = list(missing_fct_to_na = T),
                               feature.aliases = NULL,
                               feature_cut = NULL,
                               feature_cut_expr = 0,
@@ -72,11 +74,11 @@ feature_plot_stat <- function(SO,
     message("split.by requires testing.")
   }
 
-  assay <- rlang::arg_match(assay)
   geom1 <- rlang::arg_match(geom1)
   geom2 <- rlang::arg_match(geom2)
 
   SO <- check.SO(SO = SO, assay = assay)
+  assay <- Seurat::DefaultAssay(SO[[1]])
   features <- check.features(SO = SO, features = features, meta.data = T)
   if (length(meta_col) > 1) {
     stop("Please provide only one meta_col.")
@@ -108,9 +110,9 @@ feature_plot_stat <- function(SO,
   if (plot.expr.freq) {
     stat <-
       data %>%
-      dplyr::mutate(max.feat.expr = max(expr), .by = feature_split) %>%
+      dplyr::mutate(max.feat.expr = max(feature), .by = feature_split) %>%
       dplyr::group_by(dplyr::across(dplyr::all_of(c("feature_split", meta_col, "SO.split", "max.feat.expr")))) %>%
-      dplyr::summarise(pct.expr = sum(expr > 0)/dplyr::n(), .groups = "drop") %>%
+      dplyr::summarise(pct.expr = sum(feature > 0)/dplyr::n(), .groups = "drop") %>%
       dplyr::mutate(pct.expr.adjust.pct = dplyr::case_when(pct.expr == 0 ~ "0 %",
                                                            pct.expr > 0 & pct.expr < 0.01 ~ "> 1 %",
                                                            pct.expr >= 0.01 ~ paste0(round(pct.expr*100, expr.freq.decimals), " %"))) %>%
@@ -123,7 +125,7 @@ feature_plot_stat <- function(SO,
 
 
   if (!plot.non.expr) {
-    data <- dplyr::filter(data, expr > 0)
+    data <- dplyr::filter(data, feature > 0)
   }
 
 
@@ -132,16 +134,19 @@ feature_plot_stat <- function(SO,
                   "boxplot" = ggplot2::geom_boxplot,
                   "none" = ggplot2::geom_blank)
   color_aes <- ifelse(length(SO) > 1, legend.title, meta_col)
-  geom1pos <- if (geom1 == "jitter" && jitterwidth > 0) ggplot2::position_jitterdodge(jitter.width = jitterwidth, dodge.width = 0.75) else ggplot2::position_dodge(width = 0.75)
-  if (length(col.pal) == 1 && !col.pal %in% grDevices::colors()) {
-    col.pal <- colrr::col_pal(name = col.pal, direction = col.pal.dir)
-  }
+  geom1pos <- if (geom1 == "jitter" && jitterwidth > 0) ggplot2::position_jitterdodge(jitter.width = jitterwidth, dodge.width = dodgewidth) else ggplot2::position_dodge(width = dodgewidth)
+
+  col.pal <- colrr::make_col_pal(col_vec = col.pal,
+                                 fct_lvls = if (is.factor(data[[color_aes]])) levels(data[[color_aes]]) else unique(data[[color_aes]]),
+                                 missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_args), col_pal_args[["missing_fct_to_na"]], T),
+                                 col_pal_args = col_pal_args[-which(names(col_pal_args) %in% c("name", "missing_fct_to_na"))])
 
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +
     ggplot2::geom_point(size = pt.size, position = geom1pos) +
-    suppressWarnings(Gmisc::fastDoCall(geom2, args = list(outlier.shape = NA, position = ggplot2::position_dodge(width = 0.75)))) +
-    ggplot2::scale_color_manual(values = col.pal) +
+    suppressWarnings(Gmisc::fastDoCall(geom2, args = list(outlier.shape = NA, position = ggplot2::position_dodge(width = dodgewidth)))) +
+    ggplot2::scale_color_manual(values = col.pal,
+                                na.value = col.na) +
     theme +
     Gmisc::fastDoCall(ggplot2::facet_wrap, args = c(list(facets = ggplot2::vars(feature_split)), facetting_args))
 

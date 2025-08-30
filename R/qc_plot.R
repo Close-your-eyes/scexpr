@@ -157,17 +157,22 @@ qc_plot2 <- function(SO,
   qc_p2 <- purrr::map(stats::setNames(mc, mc), function(red_name) {
     clust_name <- SO@misc$meta_clusterings[red_name]
     p1 <- patchwork::wrap_plots(feature_plot2(SO,
-                                                features = c(clust_name, "orig.ident"),
-                                                reduction = red_name,
-                                                pt.size = 0.5,
-                                                ncol_combine = 1),
-                                  freq_pie_chart(
-                                    SO = SO,
-                                    meta_col = clust_name,
-                                    label_rel_cutoff = 0.05
-                                  )[["plot"]],
-                                  ncol = 1,
-                                  heights = c(0.7,0.3))
+                                              features = clust_name,
+                                              reduction = red_name,
+                                              pt.size = 0.5,
+                                              col_pal_d_args = list(name = SO@misc$clustering_colors)),
+                                feature_plot2(SO,
+                                              features = "orig.ident",
+                                              reduction = red_name,
+                                              pt.size = 0.5,
+                                              col_pal_d_args = list(name = SO@misc$orig.ident_colors)),
+                                freq_pie_chart(
+                                  SO = SO,
+                                  meta_col = clust_name,
+                                  fill = SO@misc$clustering_colors,
+                                  label_rel_cutoff = 0.05)[["plot"]],
+                                ncol = 1,
+                                heights = c(0.35,0.35,0.3))
     p2 <- purrr::map(stats::setNames(qc_cols, qc_cols), function(feature) {
       make_stat_plot(
         SO = SO,
@@ -248,9 +253,10 @@ make_stat_plot <- function(SO, feature, clust_name, geom2, breaks) {
 
   plot <- feature_plot_stat(SO,
                             features = feature,
+                            col.pal = SO@misc$clustering_colors,
                             meta_col = clust_name,
                             geom2 = geom2,
-                            jitterwidth = 0.9) +
+                            jitterwidth = 0.3) +
     ggplot2::theme(panel.grid.major.y = ggplot2::element_line(color = "grey95"),
                    axis.title.y = ggplot2::element_blank(),
                    axis.text.x = ggplot2::element_blank(),

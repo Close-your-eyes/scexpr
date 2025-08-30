@@ -486,17 +486,18 @@ get_col_pal <- function(data,
                         col_pal_d_args) {
 
   if (is.numeric(data[["feature"]])) {
-    if (length(col_pal_c_args[["name"]]) == 1 && !col_pal_c_args[["name"]] %in% grDevices::colors()) {
-      col.pal <- do.call(what = colrr::col_pal, args = col_pal_c_args)
-    } else {
-      col.pal <- col_pal_c_args[["name"]]
-    }
+    col.pal <- colrr::make_col_pal(col_vec = col_pal_c_args[["name"]],
+                                   col_pal_args = col_pal_c_args[-which(names(col_pal_c_args) == "name")])
   } else {
-    if (length(col_pal_d_args[["name"]]) == 1 && !col_pal_d_args[["name"]] %in% grDevices::colors()) {
-      col.pal <- do.call(what = colrr::col_pal, args = c(list(n = nlevels(as.factor(data[["feature"]]))), col_pal_d_args))
-    } else {
-      col.pal <- col_pal_d_args[["name"]]
-    }
+    col.pal <- colrr::make_col_pal(col_vec = col_pal_d_args[["name"]],
+                                   fct_lvls = levels(as.factor(data[["feature"]])),
+                                   missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_d_args), col_pal_d_args[["missing_fct_to_na"]], T),
+                                   col_pal_args = col_pal_d_args[-which(names(col_pal_d_args) %in% c("name", "missing_fct_to_na"))])
+    # if (length(col_pal_d_args[["name"]]) == 1 && !col_pal_d_args[["name"]] %in% grDevices::colors()) {
+    #   col.pal <- do.call(what = colrr::col_pal, args = c(list(n = nlevels(as.factor(data[["feature"]]))), col_pal_d_args))
+    # } else {
+    #   col.pal <- col_pal_d_args[["name"]]
+    # }
   }
   return(col.pal)
 }
@@ -620,6 +621,7 @@ add_facet <- function(plot,
       ggplot2::vars(...),
       labeller = ggplot2::label_wrap_gen(multi_line = F),
       scales = facet_scales,
+      axes = "all",
       nrow = nrow_inner,
       ncol = ncol_inner
     )}
@@ -628,6 +630,7 @@ add_facet <- function(plot,
     wrap_by <- function(...) {ggplot2::facet_grid(
       cols = ggplot2::vars(...),
       rows = ggplot2::vars(facet_grid_row),
+      axes = "all",
       labeller = ggplot2::label_wrap_gen(multi_line = F),
       scales = facet_scales
     )}

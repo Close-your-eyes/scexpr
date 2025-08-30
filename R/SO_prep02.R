@@ -56,6 +56,8 @@
 #' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
 #' @param RunPCA_args
 #' @param ...
+#' @param downsample_method
+#' @param scale_RNA_assay_when_SCT
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -65,41 +67,44 @@
 #' \dontrun{
 #' }
 SO_prep02 <- function(SO_unprocessed,
-                    samples = NULL,
-                    cells = NULL,
-                    min_cells = 50,
-                    downsample = 1,
-                    export_prefix = NULL,
-                    reductions = c("umap"),
-                    nhvf = 800,
-                    npcs = 20,
-                    normalization = c("SCT", "LogNormalize"),
-                    hvf_determination_before_merge = F,
-                    batch_corr = c("harmony", "integration", "none"),
-                    vars.to.regress = NULL,
-                    seeed = 42,
-                    save_path = NULL,
-                    celltype_refs = NULL, # list of celldex::objects
-                    celltype_label = "label.main",
-                    celltype_ref_clusters = NULL,
-                    diet_seurat = F,
-                    var_feature_filter = NULL,
-                    verbose = F,
-                    FindVariableFeatures_args = list(),
-                    SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
-                    RunPCA_args = list(),
-                    RunUMAP_args = list(),
-                    RunTSNE_args = list(theta = 0),
-                    FindNeighbors_args = list(),
-                    FindClusters_args = list(resolution = seq(0.1,1,0.1)),
-                    RunHarmony_args = list(group.by.vars = "orig.ident"),
-                    SOM_args = list(),
-                    GQTSOM_args = list(),
-                    EmbedSOM_args = list(),
-                    FindIntegrationAnchors_args = list(reduction = "rpca"),
-                    IntegrateData_args = list(),
-                    scale_RNA_assay_when_SCT = T,
-                    ...) {
+                      samples = NULL,
+                      cells = NULL,
+                      min_cells = 50,
+                      downsample = 1,
+                      downsample_method = c("uniform", "leverage"),
+                      export_prefix = NULL,
+                      reductions = c("umap"),
+                      nhvf = 800,
+                      npcs = 20,
+                      normalization = c("SCT", "LogNormalize"),
+                      hvf_determination_before_merge = F,
+                      batch_corr = c("harmony", "integration", "none"),
+                      vars.to.regress = NULL,
+                      seeed = 42,
+                      save_path = NULL,
+                      save_ext = c("rds", "zap"),
+                      celltype_refs = NULL, # list of celldex::objects
+                      celltype_label = "label.main",
+                      celltype_ref_clusters = NULL,
+                      diet_seurat = F,
+                      var_feature_filter = NULL,
+                      verbose = F,
+                      FindVariableFeatures_args = list(),
+                      SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
+                      RunPCA_args = list(),
+                      RunUMAP_args = list(),
+                      RunTSNE_args = list(theta = 0),
+                      FindNeighbors_args = list(),
+                      FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
+                      RunHarmony_args = list(group.by.vars = "orig.ident"),
+                      SOM_args = list(),
+                      GQTSOM_args = list(),
+                      EmbedSOM_args = list(),
+                      FindIntegrationAnchors_args = list(reduction = "rpca"),
+                      IntegrateData_args = list(),
+                      scale_RNA_assay_when_SCT = T,
+                      join_layers = T,
+                      ...) {
 
   mydots <- list(...)
   options(warn = 1)
@@ -107,6 +112,8 @@ SO_prep02 <- function(SO_unprocessed,
   reductions <- match.arg(tolower(reductions), c("umap", "som", "gqtsom", "tsne"), several.ok = T)
   normalization <- rlang::arg_match(normalization)
   batch_corr <- rlang::arg_match(batch_corr)
+  downsample_method <- rlang::arg_match(downsample_method)
+  save_ext <- rlang::arg_match(save_ext)
 
   if (!requireNamespace("BiocManager", quietly = TRUE)) {
     utils::install.packages("BiocManager")
@@ -138,11 +145,20 @@ SO_prep02 <- function(SO_unprocessed,
                               batch_corr,
                               normalization,
                               FindClusters_args)
+
   c(SO_unprocessed, samples) %<-% check_SO_unprocessed_and_samples(SO_unprocessed,
                                                                    samples,
                                                                    batch_corr,
-                                                                   RunHarmony_args)
-  SO_unprocessed <- subset_SO_unprocessed(SO_unprocessed, cells, downsample, min_cells)
+                                                                   RunHarmony_args,
+                                                                   verbose)
+
+  SO_unprocessed <- subset_SO_unprocessed(
+    SO_unprocessed = SO_unprocessed,
+    cells = cells,
+    downsample = downsample,
+    min_cells = min_cells,
+    downsample_method = downsample_method)
+
   if (length(SO_unprocessed) == 1) {batch_corr <- "none"}
 
   SCtransform_args <- check_SCtransform_args(SCtransform_args,
@@ -200,6 +216,8 @@ SO_prep02 <- function(SO_unprocessed,
                                     IntegrateData_args,
                                     hvf_determination_before_merge,
                                     scale_RNA_assay_when_SCT,
+                                    FindIntegrationAnchors_args,
+                                    RunPCA_args,
                                     npcs)
     }
   }
@@ -279,16 +297,52 @@ SO_prep02 <- function(SO_unprocessed,
                                                                reduction = red,
                                                                verbose = verbose),
                                                           FindNeighbors_args))
+
+  names_wo_clust <- names(SO@meta.data)
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   SO <- Gmisc::fastDoCall(Seurat::FindClusters, args = c(list(object = SO,
                                                               verbose = verbose),
                                                          FindClusters_args))
+
+  # add clusterings and their colors to Misc
+  names_w_clust <- names(SO@meta.data)
+  SeuratObject::Misc(SO, "clusterings") <- setdiff(names_w_clust, names_wo_clust)
+  try(expr = {
+    all_cluster <- unique(unname(unlist(SO@meta.data[,SeuratObject::Misc(SO, "clusterings")])))
+    all_cluster <- all_cluster[order(as.numeric(all_cluster))]
+    SeuratObject::Misc(SO, "clustering_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(all_cluster))), nm = all_cluster)
+  }, silent = T)
+  origids <- sort(unique(SO@meta.data$orig.ident))
+  SeuratObject::Misc(SO, "orig.ident_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(origids))), nm = origids)
+
+  # add meta cols
+  try(expr = {
+    # when metacols exist from SO_prep01 rownames_toCol throws error
+    newmeta <- tibble::rownames_to_column(SO@meta.data, "id") |> dplyr::select(id)
+    rownames(newmeta) <- newmeta$id
+    newmeta$barcode <- stringr::str_extract(newmeta$id, "[ATCG]{1,}-1$")
+    newmeta$prefix <- stringr::str_replace(newmeta$id, newmeta$barcode, "")
+    newmeta$prefix <- gsub("_{1,}$", "", newmeta$prefix)
+    newmeta$prefix <- gsub("\\.{1,}$", "", newmeta$prefix)
+    newmeta$prefix <- gsub("-{1,}$", "", newmeta$prefix)
+    SO <- SeuratObject::AddMetaData(SO, newmeta)
+  }, silent = T)
+
+
+
 
   SO <- run_celltyping(SO,
                        celltype_refs,
                        celltype_ref_clusters,
                        celltype_label)
 
+  if (join_layers) {
+    for (i in names(SO@assays)) {
+      try({
+        SO <- SeuratObject::JoinLayers(SO, assay = i)
+      }, silent = T)
+    }
+  }
 
   # remove counts as they can be recalculated with rev_lognorm
   if (diet_seurat) {
@@ -296,17 +350,18 @@ SO_prep02 <- function(SO_unprocessed,
     SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   }
 
+  if (verbose) {
+    message("saving to disk.")
+  }
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d_%H%M%S")
-  #ext <- ifelse(!requireNamespace("zap", quietly = T), "rds", "zap")
-  ext <- "rds"
-  save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".", ext), sep = "_")
+  save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".", save_ext), sep = "_")
   Seurat::Misc(SO, "object_name") <- save.name
 
   if (!is.null(save_path)) {
     dir.create(save_path, showWarnings = F, recursive = T)
-    if (ext == "rds") {
+    if (save_ext == "rds") {
       saveRDS(SO, compress = T, file = file.path(save_path, save.name))
-    } else if (ext == "zap") {
+    } else if (save_ext == "zap") {
       zap::zap_write(SO, dst = file.path(save_path, save.name), compress = "zstd")
     }
     message(paste0("SO saved to: ", save_path, " as ", save.name, "."))
@@ -448,7 +503,8 @@ check_celltype_ref_clusters <- function(celltype_ref_clusters,
 check_SO_unprocessed_and_samples <- function(SO_unprocessed,
                                              samples,
                                              batch_corr,
-                                             RunHarmony_args) {
+                                             RunHarmony_args,
+                                             verbose) {
   if (methods::is(SO_unprocessed, "list")) {
     SO_unprocessed <- SO_unprocessed
   } else if (methods::is(SO_unprocessed, "character")) {
@@ -476,6 +532,14 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
   }
 
 
+  # create objects from scratch to rm all previous traces like commands or so
+  SO_unprocessed <- purrr::map(SO_unprocessed, function(x) {
+   SeuratObject::LayerData(object = x, layer = "counts", assay = "RNA") |>
+      SeuratObject::CreateSeuratObject() |>
+      SeuratObject::AddMetaData(x@meta.data) |>
+      Seurat::NormalizeData(verbose = verbose, assay = "RNA")
+  })
+
   if (is.null(samples)) {
     samples <- names(SO_unprocessed)
   } else {
@@ -499,7 +563,8 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
 subset_SO_unprocessed <- function(SO_unprocessed,
                                   cells,
                                   downsample,
-                                  min_cells) {
+                                  min_cells,
+                                  downsample_method) {
 
   if (!is.null(cells)) {
     SO_unprocessed <- lapply(SO_unprocessed, function(x) {
@@ -519,8 +584,6 @@ subset_SO_unprocessed <- function(SO_unprocessed,
     }
   }
 
-  ## use downsample method from Seurat dev package?!
-  # ?Seurat::SketchData()
   if (downsample > 1 && downsample < min_cells) {
     message("downsample set to min_cells.")
     downsample <- min_cells
@@ -531,11 +594,41 @@ subset_SO_unprocessed <- function(SO_unprocessed,
     }
   }
 
-  if (downsample < 1) {
-    SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(x, cells = sample(Seurat::Cells(x), as.integer(downsample*length(Seurat::Cells(x))), replace = FALSE)))
-  } else if (downsample > 1) {
-    SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(x, cells = sample(Seurat::Cells(x), downsample, replace = FALSE)))
+  if (downsample_method == "uniform") {
+    if (downsample < 1) {
+      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(x, cells = sample(Seurat::Cells(x), size = as.integer(downsample*length(Seurat::Cells(x))), replace = FALSE)))
+    } else if (downsample > 1) {
+      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(x, cells = sample(Seurat::Cells(x), size = downsample, replace = FALSE)))
+    }
   }
+  if (downsample_method == "leverage") {
+    if (downsample < 1) {
+      ncells <- purrr::map(SO_unprocessed, ~as.integer(downsample*length(Seurat::Cells(.x))))
+    } else if (downsample > 1) {
+      ncells <- rep(downsample, length(SO_unprocessed))
+    }
+    # reduce var feature to avoid error in leverage calc; SketchData caused errors, so do it manually
+    # no zero variance columns!
+    lvs <- purrr::map(SO_unprocessed, function(x) {
+      tryCatch(
+        expr = {
+          x <- Seurat::FindVariableFeatures(x, nfeatures = 500, verbose = F)
+          lvs <- Seurat::LeverageScore(SeuratObject::LayerData(x, layer = "data")[Seurat::VariableFeatures(x),], verbose = F)
+        },
+        error = function(err) {
+          x <- Seurat::FindVariableFeatures(x, nfeatures = 200, verbose = F)
+          lvs <- Seurat::LeverageScore(SeuratObject::LayerData(x, layer = "data")[Seurat::VariableFeatures(x),], verbose = F)
+        }
+      )
+      return(lvs)
+    })
+    SO_unprocessed <- purrr::pmap(list(SO_unprocessed, ncells, lvs),
+                                  function(x, y, z) subset(
+                                    x,
+                                    cells = sample(Seurat::Cells(x), size = y, replace = F, prob = z)
+                                  ))
+  }
+
 
   # remove samples with insufficient number of cells
   rm.nm <- names(SO_unprocessed[which(sapply(SO_unprocessed, function(x){length(Seurat::Cells(x)) < min_cells}))])
@@ -646,12 +739,13 @@ make_so_single <- function(SO_unprocessed,
 }
 
 check_FindIntegrationAnchors_args <- function(FindIntegrationAnchors_args,
-                                              anchor_features,
+                                              anchor.features,
                                               k.filter,
-                                              k.score) {
+                                              k.score,
+                                              npcs) {
   FindIntegrationAnchors_args <- FindIntegrationAnchors_args[which(!names(FindIntegrationAnchors_args) %in% c("object.list", "normalization.method", "verbose"))]
   if (!"anchor.features" %in% names(FindIntegrationAnchors_args)) {
-    FindIntegrationAnchors_args <- c(list(anchor_features = anchor_features), FindIntegrationAnchors_args)
+    FindIntegrationAnchors_args <- c(list(anchor.features = anchor.features), FindIntegrationAnchors_args)
   }
   if (!"k.filter" %in% names(FindIntegrationAnchors_args)) {
     FindIntegrationAnchors_args <- c(list(k.filter = k.filter), FindIntegrationAnchors_args)
@@ -661,6 +755,10 @@ check_FindIntegrationAnchors_args <- function(FindIntegrationAnchors_args,
   }
   if (!"reduction" %in% names(FindIntegrationAnchors_args)) {
     FindIntegrationAnchors_args <- c(list(reduction = "rpca"), FindIntegrationAnchors_args)
+  }
+  # https://github.com/satijalab/seurat/issues/4262
+  if (!"dims" %in% names(FindIntegrationAnchors_args)) {
+    FindIntegrationAnchors_args <- c(list(dims = 1:npcs), FindIntegrationAnchors_args)
   }
   return(FindIntegrationAnchors_args)
 }
@@ -677,6 +775,8 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                     IntegrateData_args,
                                     hvf_determination_before_merge,
                                     scale_RNA_assay_when_SCT,
+                                    FindIntegrationAnchors_args,
+                                    RunPCA_args,
                                     npcs) {
 
   k.filter <- as.integer(min(200, min(sapply(SO_unprocessed, ncol))/2))
@@ -705,11 +805,11 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                FindVariableFeatures_args = FindVariableFeatures_args)
     }
 
-    anchor_features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
+    anchor.features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
                                                          verbose = verbose,
                                                          nfeatures = nhvf)
     SO_unprocessed <- Seurat::PrepSCTIntegration(object.list = SO_unprocessed,
-                                                 anchor.features = anchor_features,
+                                                 anchor.features = anchor.features,
                                                  verbose = verbose)
   } else {
     SO_unprocessed <- lapply(SO_unprocessed,
@@ -723,38 +823,56 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                                                FindVariableFeatures_args))
     })
     #SO_unprocessed <- lapply(SO_unprocessed, FUN = Seurat::FindVariableFeatures, assay = "RNA", selection.method = "vst", nfeatures = nhvf, verbose = verbose)
-    anchor_features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
+    anchor.features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
                                                          nfeatures = nhvf,
                                                          verbose = verbose)
   }
-  FindIntegrationAnchors_args <- check_FindIntegrationAnchors_args(FindIntegrationAnchors_args,
-                                                                   anchor_features,
-                                                                   k.filter,
-                                                                   k.score)
 
-  if (FindIntegrationAnchors_args[["reduction"]] == "rpca") {
-    if (normalization == "SCT") {
-      ## does passing RunPCA_args like this cause an error?
-      SO_unprocessed <- lapply(SO_unprocessed,
-                               FUN = Seurat::RunPCA,
-                               assay = "SCT",
-                               npcs = npcs,
-                               seed.use = seeed,
-                               features = anchor_features,
-                               verbose = verbose,
-                               unlist(RunPCA_args))
-    }
-  } else {
-    SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-      x <- Seurat::ScaleData(x, features = anchor_features, verbose = verbose)
-      x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
-                                                           npcs = npcs,
-                                                           seed.use = seeed,
-                                                           verbose = verbose),
-                                                      RunPCA_args))
-      return(x)
-    })
-  }
+  FindIntegrationAnchors_args <- check_FindIntegrationAnchors_args(FindIntegrationAnchors_args,
+                                                                   anchor.features,
+                                                                   k.filter,
+                                                                   k.score,
+                                                                   npcs)
+
+
+
+  # if (FindIntegrationAnchors_args[["reduction"]] == "rpca") {
+  #   if (normalization == "SCT") {
+  #     SO_unprocessed <- lapply(SO_unprocessed, function(x) {
+  #       x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
+  #                                                            npcs = npcs,
+  #                                                            seed.use = seeed,
+  #                                                            assay = "SCT",
+  #                                                            features = anchor.features,
+  #                                                            verbose = verbose),
+  #                                                       RunPCA_args))
+  #       return(x)
+  #     })
+  #   }
+  # } else {
+  #   SO_unprocessed <- lapply(SO_unprocessed, function(x) {
+  #     x <- Seurat::ScaleData(x, features = anchor.features, verbose = verbose)
+  #     x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
+  #                                                          npcs = npcs,
+  #                                                          seed.use = seeed,
+  #                                                          verbose = verbose),
+  #                                                     RunPCA_args))
+  #     return(x)
+  #   })
+  # }
+
+  SO_unprocessed <- lapply(SO_unprocessed, function(x) {
+    x <- Seurat::ScaleData(x, features = anchor.features, assay = "RNA", verbose = verbose)
+    x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
+                                                         npcs = npcs,
+                                                         seed.use = seeed,
+                                                         features = anchor.features,
+                                                         # switch(normalization, SCT = "SCT", LogNormalize = "RNA")
+                                                         assay = ifelse(normalization == "SCT", "SCT", "RNA"),
+                                                         verbose = verbose),
+                                                    RunPCA_args))
+    return(x)
+  })
 
   anchorset <- Gmisc::fastDoCall(Seurat::FindIntegrationAnchors, args = c(list(object.list = SO_unprocessed,
                                                                                normalization.method = normalization,
@@ -764,7 +882,8 @@ make_so_multi_integrate <- function(SO_unprocessed,
   IntegrateData_args <- IntegrateData_args[which(!names(IntegrateData_args) %in% c("anchorset", "new.assay.name", "normalization.method", "verbose"))]
   if (!"features.to.integrate" %in% names(IntegrateData_args)) {
     IntegrateData_args <- c(list(features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]],
-                                                                                       assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))), IntegrateData_args)
+                                                                                       assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))),
+                            IntegrateData_args)
   }
   if (!"k.weight" %in% names(IntegrateData_args)) {
     IntegrateData_args <- c(list(k.weight = k.filter), IntegrateData_args)
@@ -775,9 +894,9 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                                                verbose = verbose),
                                                           IntegrateData_args))
   Seurat::DefaultAssay(SO) <- "integrated"
-  Seurat::VariableFeatures(SO) <- anchor_features
+  Seurat::VariableFeatures(SO) <- anchor.features
 
-  if (normalization == "SCT" && (hvf_determination_before_merge || batch_corr == "integration")) {
+  if (normalization == "SCT" && hvf_determination_before_merge) { # || batch_corr == "integration"
     ## see https://satijalab.org/seurat/articles/sctransform_v2_vignette.html
     SO <- Seurat::PrepSCTFindMarkers(SO,
                                      assay = "SCT",
@@ -848,7 +967,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                  FindVariableFeatures_args = FindVariableFeatures_args)
       }
 
-      anchor_features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
+      anchor.features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
                                                            assay = rep("SCT", length(SO_unprocessed)),
                                                            nfeatures = nhvf,
                                                            fvf.nfeatures = nhvf)
@@ -860,7 +979,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                                  seed.use = seeed,
                                                                  verbose = verbose),
                                                             SCtransform_args))
-      Seurat::VariableFeatures(SO) <- anchor_features
+      Seurat::VariableFeatures(SO) <- anchor.features
     } else {
       SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
@@ -914,14 +1033,14 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                  SCtransform_args = SCtransform_args,
                                  FindVariableFeatures_args = FindVariableFeatures_args)
       }
-      anchor_features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
+      anchor.features <- Seurat::SelectIntegrationFeatures(SO_unprocessed,
                                                            assay = rep("RNA", length(SO_unprocessed)),
                                                            nfeatures = nhvf,
                                                            verbose = verbose)
       SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
-      Seurat::VariableFeatures(SO) <- anchor_features
+      Seurat::VariableFeatures(SO) <- anchor.features
     } else {
       SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))

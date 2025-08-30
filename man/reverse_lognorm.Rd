@@ -6,7 +6,7 @@
 \usage{
 reverse_lognorm(
   SO,
-  assay = c("RNA", "SCT"),
+  assay = "RNA",
   nCount_RNA = Seurat::Misc(SO, slot = "RNA_count_colSums"),
   scale.factor = 10000,
   return.SO = T

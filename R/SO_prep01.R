@@ -153,7 +153,7 @@ SO_prep01 <- function(data_dirs,
                   FindClusters_args = list(resolution = resolution),
                   normalization = "LogNormalize",
                   diet_seurat = F)
-  SeuratObject::Misc(SO, "clusterings") <- paste0("RNA_snn_res.", resolution)
+  suppressWarnings(SeuratObject::Misc(SO, "clusterings") <- paste0("RNA_snn_res.", resolution))
 
   if (SoupX) {
     # ffmbs and rfbms are paired by name

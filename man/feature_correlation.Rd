@@ -7,7 +7,7 @@
 feature_correlation(
   SO,
   features,
-  assay = c("RNA", "SCT"),
+  assay = "RNA",
   method = c("pearson", "spearman", "kendall"),
   cells = NULL,
   min.pct = 0.1,

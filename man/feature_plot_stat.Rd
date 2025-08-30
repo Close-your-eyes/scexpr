@@ -8,7 +8,7 @@ feature_plot_stat(
   SO,
   features,
   meta_col,
-  assay = c("RNA", "SCT"),
+  assay = "RNA",
   geom1 = c("jitter", "point"),
   geom2 = c("boxplot", "violin", "none"),
   jitterwidth = 0.2,

@@ -6,7 +6,7 @@
 \usage{
 clustering_volcanos(
   SO,
-  assay = c("RNA", "SCT"),
+  assay = "RNA",
   cluster.meta.cols,
   reduction = "UMAP",
   clustree.prefix = NULL,
