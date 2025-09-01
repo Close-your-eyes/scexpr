@@ -285,7 +285,8 @@ get_data <- function(SO,
       #x[["feature"]] <- factor(x[["feature"]], exclude = c())
 
       if (anyNA(x[["feature"]])) {
-        na_replace <- "NA"
+
+        na_replace <- "_NA_"
         while(na_replace %in% unique(x[["feature"]])) {
           na_replace <- paste(c(na_replace, na_replace), collapse = "_")
         }
@@ -294,17 +295,20 @@ get_data <- function(SO,
           level_order <- levels(x[["feature"]])
           x[["feature"]] <- as.character(x[["feature"]])
         }
-        x[which(is.na(x[["feature"]])),1] <- na_replace
+        x[which(is.na(x[["feature"]])),"feature"] <- na_replace
         x <- dplyr::bind_rows(split(x, x[["feature"]])[names(sort(table(x[["feature"]]), decreasing = T))])
-        x[which(x[["feature"]] == na_replace),1] <- NA
+        x[which(x[["feature"]] == na_replace),"feature"] <- NA
         if (bury_NA) {
           x <- rbind(x[which(is.na(x[["feature"]])),], x[which(!is.na(x[["feature"]])),])
         }
         if (!is.null(level_order)) {
           x[["feature"]] <- factor(x[["feature"]], levels = level_order)
         }
+
       } else {
+
         x <- dplyr::bind_rows(split(x, x[["feature"]])[names(sort(table(x[["feature"]]), decreasing = T))])
+
       }
     } else if (!is.numeric(x[["feature"]]) && is.logical(order_discr) && shuffle) {
       x <- x[sample(1:nrow(x)),]

@@ -76,7 +76,6 @@
 #' return these values
 #' @param use.limma logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
 #' which relies on values returned from limma
-#' @param ... arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()[c(2,3)]), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc
 #' @param use.MAST use MAST for testing for DE genes
 #'
 #' @importFrom magrittr %>%
@@ -127,7 +126,9 @@ volcano_plot <- function(SO,
                          use.limma = F,
                          use.MAST = F,
                          MAST.logfc.threshold = 0,
-                         ...) {
+                         feature_plot_args = list(col_pal_d_args = list(name = stats::setNames(colrr::col_pal("custom")[2:3],
+                                                                                               c(negative.group.name, positive.group.name)),
+                                                                        missing_fct_to_na = F))) {
 
   default_warn <- getOption("warn")
   options(warn = 1)
@@ -177,8 +178,7 @@ volcano_plot <- function(SO,
   topn.metric <- rlang::arg_match(topn.metric)
   SO <- check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
-
-  dots <- list(...)
+  min.pct <- max(0, min.pct)
 
   # label.features
   # add option to label all features indicated with p.cut and fc.cut
@@ -237,10 +237,10 @@ volcano_plot <- function(SO,
 
 
   # make meta data column in SOs to identify ngc and pgc
-  colname <- paste0("cellident_", format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d%H%M%S"))
+  #colname <- paste0("cellident_", format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%Y%m%d%H%M%S"))
+  colname <- "volcano_groups"
   SO <- lapply(SO, function(x) {
-    x@meta.data[,colname] <- ifelse(!rownames(x@meta.data) %in% c(pgc, ngc),
-                                    "other",
+    x@meta.data[,colname] <- ifelse(!rownames(x@meta.data) %in% c(pgc, ngc), "other",
                                     ifelse(rownames(x@meta.data) %in% pgc,
                                            positive.group.name,
                                            negative.group.name))
@@ -250,10 +250,10 @@ volcano_plot <- function(SO,
   # call here as DietSO happens below
   if (!interactive.only) {
     feat_plots <- tryCatch({
-      do.call(feature_plot, args = c(
-        list(SO = SO, assay = assay, features = colname),
-        dots[which(names(dots) %in% names(formals(feature_plot)))]
-      ))
+
+      do.call(feature_plot2,
+              args = c(list(SO = SO, features = colname),
+                       feature_plot_args))
     }, error = function(e) {
       NULL
     })
@@ -262,7 +262,7 @@ volcano_plot <- function(SO,
   intersect_features <- Reduce(intersect, lapply(SO, rownames))
   nonintersect_features <- lapply(SO, function(x) setdiff(rownames(x), intersect_features))
   if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
-    warning("Different features across SOs detected. Will carry on with common ones only.")
+    message("Different features across SOs detected. Will carry on with common ones only.")
   }
 
   # DietSeurat is slow ?!
@@ -282,15 +282,15 @@ volcano_plot <- function(SO,
 
   # exclude features which are below min.pct.set in both populations
   # = only continue with those which are ">= min.pct" in at least one of them
+
   if (min.pct > 0) {
-    min.pct_features <- unique(c(names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, ngc] != 0)/length(ngc) >= min.pct)),
-                                 names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, pgc] != 0)/length(pgc) >= min.pct))))
+    comparefun <- `>=`
   } else if (min.pct == 0) {
-    min.pct_features <- unique(c(names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, ngc] != 0)/length(ngc) > min.pct)),
-                                 names(which(Matrix::rowSums(SeuratObject::LayerData(SO)[, pgc] != 0)/length(pgc) > min.pct))))
-  } else {
-    stop("min.pct has to be 0 or greater.")
+    comparefun <- `>`
   }
+  min.pct_features <- unique(c(names(which(comparefun(Matrix::rowSums(SeuratObject::LayerData(SO)[, ngc] != 0)/length(ngc), min.pct))),
+                               names(which(comparefun(Matrix::rowSums(SeuratObject::LayerData(SO)[, pgc] != 0)/length(pgc), min.pct)))))
+
   min.pct_features_removed <- setdiff(intersect_features, min.pct_features)
   SO <- Seurat::DietSeurat(SO, assays = assay, features = min.pct_features, counts = F)
 
@@ -480,7 +480,7 @@ volcano_plot <- function(SO,
 
   options(warn = default_warn)
   return(list(plot = vp,
-              data = vd,
+              data = as.data.frame(vd) |> tibble::rownames_to_column("feature"),
               feat.plots = feat_plots,
               gsea = gsea,
               intersect_features = intersect_features,
