@@ -124,25 +124,17 @@ get_data <- function(SO,
 
   data <- purrr::map_dfr(SO, function(x) {
 
-    if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
-      GetAssayData_args <- list(object = x,
-                                layer = layer,
-                                assay = assay)
-    } else {
-      GetAssayData_args <- list(object = x,
-                                slot = layer,
-                                assay = assay)
-    }
-
-    data <- cbind(data.frame(t(as.matrix(Gmisc::fastDoCall(
-      what = Seurat::GetAssayData,
-      args = GetAssayData_args
-    )[gene_features,,drop = F])), check.names = F),
-    data.frame(
-      x@meta.data[,meta_features,drop = F],
-      stringsAsFactors = F,
-      check.names = F
-    ))
+    data <- cbind(
+      get_layer(obj = x,
+                assay = assay,
+                layer = layer,
+                features = gene_features,
+                transpose = T,
+                as = "df"),
+      data.frame(x@meta.data[,meta_features,drop = F],
+                 stringsAsFactors = F,
+                 check.names = F)
+    )
 
     if (!is.null(reduction)) {
       reduction <- unique(unlist(lapply(reduction, function(z) {

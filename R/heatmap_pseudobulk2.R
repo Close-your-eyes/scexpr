@@ -548,10 +548,9 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
 
 determine_features <- function(SO, assay, features, levels_plot, meta_col, feature_order) {
 
-  presto_feat <- unique(unlist(purrr::map(SO, ~names(which(Matrix::rowSums(Gmisc::fastDoCall(what = SeuratObject::LayerData,
-                                                                                             args = list(object = .x,
-                                                                                                         layer = "data",
-                                                                                                         assay = assay))) > 0)))))
+
+
+  presto_feat <- unique(unlist(purrr::map(SO, ~names(which(Matrix::rowSums(get_layer(obj = .x, layer = "data", assay = assay)) > 0)))))
   if (!is.null(features)) {
     features <- check.features(SO = SO, features = unique(features), meta.data = F)
     if (any(!features %in% presto_feat)) {
@@ -562,11 +561,7 @@ determine_features <- function(SO, assay, features, levels_plot, meta_col, featu
 
   # by default, presto gives deviating results with respect to avgExpr and logFC
   # use expm1 to match results Seurats procedure, see example below (comparison of presto and Seurat)
-  wil_auc_raw <- presto::wilcoxauc(X = Gmisc::fastDoCall(cbind, purrr::map(SO, ~expm1(Gmisc::fastDoCall(what = SeuratObject::LayerData,
-                                                                                                        args = list(object = .x,
-                                                                                                                    layer = "data",
-                                                                                                                    features = presto_feat,
-                                                                                                                    assay = assay))))),
+  wil_auc_raw <- presto::wilcoxauc(X = Gmisc::fastDoCall(cbind, purrr::map(SO, ~expm1(get_layer(obj = .x, layer = "data", assay = assay, features = presto_feat)))),
                                    y = unlist(purrr::pmap(list(x = SO, y = meta_col), function(x,y) x@meta.data[,y,drop=T]), use.names = F))
 
   if (is.null(features)) {

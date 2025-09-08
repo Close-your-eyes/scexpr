@@ -28,12 +28,19 @@ countmat_to_hdf5 <- function(mat,
                              sub_dir = "filtered_feature_bc_matrix",
                              types = c("sparse", "HDF5"),
                              ...) {
+  if (!requireNamespace("DropletUtils", quietly = T)) {
+    BiocManager::install("DropletUtils")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
+
   types <- rlang::arg_match(types, multiple = T)
   types <- sort(types, decreasing = T) # write sparse first
 
   if (!is.null(colsplit)) {
-    mat <- split_mat(
-      x = count_matrix,
+    mat <- brathering::split_mat(
+      x = mat,
       f = colsplit,
       byrow = F
     )

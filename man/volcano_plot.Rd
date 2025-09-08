@@ -47,7 +47,9 @@ volcano_plot(
   use.limma = F,
   use.MAST = F,
   MAST.logfc.threshold = 0,
-  ...
+  feature_plot_args = list(col_pal_d_args = list(name =
+    stats::setNames(colrr::col_pal("custom")[2:3], c(negative.group.name,
+    positive.group.name)), missing_fct_to_na = F))
 )
 }
 \arguments{
@@ -166,8 +168,6 @@ return these values}
 which relies on values returned from limma}
 
 \item{use.MAST}{use MAST for testing for DE genes}
-
-\item{...}{arguments to scexpr::feature_plot like  col.pal.d = setNames(c("grey90", scexpr::col_pal()\link{c(2,3)}), c("other", "name1", "name2")), order.discrete = "^other", plot.title = F, etc}
 }
 \description{
 Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects

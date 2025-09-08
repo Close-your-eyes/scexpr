@@ -55,6 +55,8 @@
 #' @param rfbms named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs
 #' @param batch_corr which batch correction to apply for integration of different samples
 #' @param diet_seurat
+#' @param SoupX_autoEstCont_args
+#' @param sample_prefix_to_cell_id
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -83,7 +85,8 @@ SO_prep01 <- function(data_dirs,
                       ffbms = NULL,
                       rfbms = NULL,
                       batch_corr = c("harmony", "none"),
-                      diet_seurat = T) {
+                      diet_seurat = T,
+                      sample_prefix_to_cell_id = T) {
 
 
   install_pkgs(SoupX, scDblFinder, decontX)
@@ -115,7 +118,8 @@ SO_prep01 <- function(data_dirs,
     SO <- read_10X_data(path = ffbms[x],
                         cells = cells,
                         min_UMI = min_UMI,
-                        name = x)
+                        name = x,
+                        sample_prefix_to_cell_id = sample_prefix_to_cell_id)
 
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
       SO <- aggregate_or_remove_features(filt_data = SO,
@@ -316,7 +320,8 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
 
   # filter out cells which have library size of zero to enable scDblFinder without error
   # https://github.com/plger/scDblFinder/issues/55
-  factors <- scuttle::librarySizeFactors(SeuratObject::LayerData(SO, layer = "counts", assay = "RNA")[var_feat,])
+
+  factors <- scuttle::librarySizeFactors(get_layer(obj = SO, assay = "RNA", layer = "counts", features = var_feat))
   zero_libsize_cells <- names(which(factors == 0))
   if (length(zero_libsize_cells) > 0) {
     message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are removed to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
@@ -324,21 +329,26 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
   }
 
   if (!is.null(min_UMI_var_feat)) {
-    UMI_sum <- Matrix::colSums(SeuratObject::LayerData(SO, layer = "counts", assay = "RNA")[var_feat,])
+    UMI_sum <- Matrix::colSums(get_layer(obj = SO, assay = "RNA", layer = "counts", features = var_feat))
     if (any(UMI_sum < min_UMI_var_feat)) {
       message(sum(UMI_sum < min_UMI_var_feat), " cells removed for having less UMI in variable features as min_UMI_var_feat. See https://github.com/LTLA/BiocNeighbors/issues/24.")
     }
     SO <- subset(SO, cells = names(UMI_sum[which(UMI_sum >= min_UMI_var_feat)]))
   }
   # scDblFinder
-  SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = SeuratObject::LayerData(SO, layer = "counts", assay = "RNA"),
+  SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = get_layer(obj = SO, assay = "RNA", layer = "counts"),
                                                                subset.row = var_feat,
                                                                dims = npcs)
   SO@meta.data$dbl_score_log <- log1p(SO@meta.data$dbl_score)
   return(SO)
 }
 
-read_10X_data <- function(path, cells, min_UMI, verbose = T, name) {
+read_10X_data <- function(path,
+                          cells,
+                          min_UMI,
+                          verbose = T,
+                          name,
+                          sample_prefix_to_cell_id = T) {
 
   h5files <- list.files(path, pattern = "\\.h5$", full.names = T)
   if (length(h5files)) {
@@ -396,10 +406,11 @@ read_10X_data <- function(path, cells, min_UMI, verbose = T, name) {
 
   # change cell names here to avoid duplicate names from multiple samples
   # but only if not already there
-  if (!all(grepl(paste0("^", name), colnames(filt_data)))) {
-    colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+  if (sample_prefix_to_cell_id) {
+    if (!all(grepl(paste0("^", name), colnames(filt_data)))) {
+      colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+    }
   }
-
 
   return(filt_data)
 }
@@ -631,7 +642,7 @@ run_decontx <- function(SO, resolution, nhvf) {
   message("Running decontX.")
   SO <- purrr::map(SO, function(SO) {
     ## multi dirs: split matrix
-    split_mats <- brathering::split_mat(x = SeuratObject::LayerData(SO, assay = "RNA", layer = "counts"),
+    split_mats <- brathering::split_mat(x = get_layer(obj = SO, assay = "RNA", layer = "counts"),
                                         f = SO@meta.data$orig.ident,
                                         byrow = F)
     split_idents <- split(x = SO@meta.data[[paste0("RNA_snn_res.", resolution)]],

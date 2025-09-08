@@ -346,7 +346,7 @@ SO_prep02 <- function(SO_unprocessed,
 
   # remove counts as they can be recalculated with rev_lognorm
   if (diet_seurat) {
-    Seurat::Misc(SO, slot = "RNA_count_colSums") <- unname(Matrix::colSums(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)))
+    Seurat::Misc(SO, slot = "RNA_count_colSums") <- Matrix::colSums(get_layer(obj = SO, layer = data, assay = "RNA"))
     SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   }
 
@@ -534,7 +534,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
 
   # create objects from scratch to rm all previous traces like commands or so
   SO_unprocessed <- purrr::map(SO_unprocessed, function(x) {
-   SeuratObject::LayerData(object = x, layer = "counts", assay = "RNA") |>
+    get_layer(obj = x, assay = "RNA", layer = "counts") |>
       SeuratObject::CreateSeuratObject() |>
       SeuratObject::AddMetaData(x@meta.data) |>
       Seurat::NormalizeData(verbose = verbose, assay = "RNA")
@@ -613,11 +613,11 @@ subset_SO_unprocessed <- function(SO_unprocessed,
       tryCatch(
         expr = {
           x <- Seurat::FindVariableFeatures(x, nfeatures = 500, verbose = F)
-          lvs <- Seurat::LeverageScore(SeuratObject::LayerData(x, layer = "data")[Seurat::VariableFeatures(x),], verbose = F)
+          lvs <- Seurat::LeverageScore(get_layer(obj = x, assay = "RNA", layer = "data", features = Seurat::VariableFeatures(x)), verbose = F)
         },
         error = function(err) {
           x <- Seurat::FindVariableFeatures(x, nfeatures = 200, verbose = F)
-          lvs <- Seurat::LeverageScore(SeuratObject::LayerData(x, layer = "data")[Seurat::VariableFeatures(x),], verbose = F)
+          lvs <- Seurat::LeverageScore(get_layer(obj = x, assay = "RNA", layer = "data", features = Seurat::VariableFeatures(x)), verbose = F)
         }
       )
       return(lvs)
@@ -881,8 +881,8 @@ make_so_multi_integrate <- function(SO_unprocessed,
 
   IntegrateData_args <- IntegrateData_args[which(!names(IntegrateData_args) %in% c("anchorset", "new.assay.name", "normalization.method", "verbose"))]
   if (!"features.to.integrate" %in% names(IntegrateData_args)) {
-    IntegrateData_args <- c(list(features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]],
-                                                                                       assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))),
+    IntegrateData_args <- c(list(features.to.integrate = rownames(get_layer(obj = SO_unprocessed[[1]],
+                                                                            assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))),
                             IntegrateData_args)
   }
   if (!"k.weight" %in% names(IntegrateData_args)) {
@@ -972,7 +972,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                            nfeatures = nhvf,
                                                            fvf.nfeatures = nhvf)
 
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
+      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
@@ -981,7 +981,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                             SCtransform_args))
       Seurat::VariableFeatures(SO) <- anchor.features
     } else {
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
+      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
@@ -1037,12 +1037,12 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                            assay = rep("RNA", length(SO_unprocessed)),
                                                            nfeatures = nhvf,
                                                            verbose = verbose)
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
+      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
       Seurat::VariableFeatures(SO) <- anchor.features
     } else {
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, Seurat::GetAssayData, layer = "counts")),
+      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
@@ -1097,20 +1097,10 @@ run_celltyping <- function(SO,
     refs <- SO@meta.data[,celltype_ref_clusters]
   }
 
-  layer <- "data"
-  if (utils::compareVersion(as.character(SO@version), "4.9.9") == 1) {
-    GetAssayData_args <- list(object = SO,
-                              layer = layer,
-                              assay = "RNA")
-  } else {
-    GetAssayData_args <- list(object = SO,
-                              slot = layer,
-                              assay = "RNA")
-  }
 
   for (i in seq_along(celltype_refs)) {
     for (j in seq_along(celltype_label[[i]])) {
-      celltypes <- SingleR::SingleR(test = Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args),
+      celltypes <- SingleR::SingleR(test = get_layer(obj = SO, layer = data, assay = "RNA"),
                                     ref = celltype_refs[[i]],
                                     labels = celltype_refs[[i]]@colData@listData[[celltype_label[[i]][j]]],
                                     clusters = refs)

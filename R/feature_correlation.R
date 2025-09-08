@@ -69,12 +69,20 @@ feature_correlation <- function(SO,
   features <- .check.features(SO = SO, features = unique(features), meta.data = F, meta.data.numeric = T)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
 
-  ref_mat <- as.matrix(Seurat::GetAssayData(SO, assay = assay)[filter_feature(SO = SO, assay = assay, min.pct = min.pct, cells = cells), cells, drop=F])
+  ref_mat <- get_layer(obj = SO,
+                       assay = assay,
+                       cells = cells,
+                       features = filter_feature(SO = SO, assay = assay, min.pct = min.pct, cells = cells),
+                       as = "dense")
 
   # putative dichotomous meta features which are TRUE / FALSE: they are coerced to 1 / 0
   # applying pearson correlation of a 0/1 dichotomous variable and a numeric one is called point-biseral correlation
-  mat <- rbind(as.matrix(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(SO))], cells, drop=F]),
-                         as.matrix(t(SO@meta.data[cells,features[which(features %in% names(SO@meta.data))], drop = F])))
+  mat <- rbind(get_layer(obj = SO,
+                         assay = assay,
+                         cells = cells,
+                         features = intersect(features, rownames(SO)),
+                         as = "dense"),
+               as.matrix(t(SO@meta.data[cells,features[which(features %in% names(SO@meta.data))], drop = F])))
 
   if (!"ci" %in% names(dots)) {
     ci <- F
@@ -229,16 +237,16 @@ feature_correlation <- function(SO,
 
 
 filter_feature <- function(SO,
-                           assay = c("RNA", "SCT"),
+                           assay = "RNA",
                            cells = NULL,
                            min.pct = 0.1) {
-
+  # needs checking
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
-  assay <- match.arg(assay, c("RNA", "SCT"))
 
   # filter non expressed features first
-  f1 <- names(which(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[,cells]) > 0))
+
+  f1 <- names(which(Matrix::rowSums(get_layer(obj = SO, assay = assay, cells = cells)) > 0))
   # get those above min.pct
   f2 <- names(which(pct_feature(SO = SO, assay = assay, features = f1, cells = cells) >= min.pct))
 
@@ -251,15 +259,15 @@ pct_feature <- function(SO,
                         cells = NULL,
                         assay = "RNA") {
 
+  # needs checking
   SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
   cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
   #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first
-  assay <- match.arg(assay, names(SO@assays))
 
   ## case of dichtomous meta.col
-  features <- features[which(features %in% rownames(Seurat::GetAssayData(SO, assay = assay)))]
+  features <- intersect(feaures, rownames(get_layer(obj = SO, assay = assay)))
 
-  return(Matrix::rowSums(Seurat::GetAssayData(SO, assay = assay)[features[which(features %in% rownames(Seurat::GetAssayData(SO, assay = assay)))], cells, drop=F] > 0)/length(cells))
+  return(Matrix::rowSums(get_layer(obj = SO, assay = assay, cells = cells, features = features) > 0)/length(cells))
 }
 
 .reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {

@@ -32,23 +32,21 @@ check.SO <- function(SO,
   }
 
   ## check if data has been scaled (compare to counts)
-  equal_slots <- unlist(lapply(SO, function(x) {
-    if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
-      GetAssayData_args1 <- list(object = x, layer = "data", assay = assay)
-      GetAssayData_args2 <- list(object = x, layer = "counts", assay = assay)
-    } else {
-      GetAssayData_args1 <- list(object = x, slot = "data", assay = assay)
-      GetAssayData_args2 <- list(object = x, slot = "counts", assay = assay)
-    }
-    identical(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args1),
-              Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args2))
-
-  }))
-  if (any(equal_slots) && length(SO) > 1) {
-    message("Data slot in at least one SO is equal to the counts slot. You may want to normalize.")
-  } else if (any(equal_slots)) {
-    message("Data slot is equal to the counts slot. You may want to normalize.")
-  }
+  # equal_slots <- unlist(lapply(SO, function(x) {
+  #
+  #   identical(get_layer(obj = x,
+  #                       assay = assay,
+  #                       layer = "counts"),
+  #             get_layer(obj = x,
+  #                       assay = assay,
+  #                       layer = "data"))
+  # }))
+  #
+  # if (any(equal_slots) && length(SO) > 1) {
+  #   message("Data slot in at least one SO is equal to the counts slot. You may want to normalize.")
+  # } else if (any(equal_slots)) {
+  #   message("Data slot is equal to the counts slot. You may want to normalize.")
+  # }
 
   if (!is.null(cells)) {
     allcells <- unique(unlist(purrr::map(SO, Seurat::Cells)))
@@ -197,19 +195,11 @@ check.and.get.cells <- function(SO,
   ## cells excluded due to expression of an unwanted gene
   if (!is.null(feature_ex)) {
     exclude.cells <- unlist(lapply(SO, function(x) names(which(Matrix::colSums(do.call(cbind, lapply(SO, function(x) {
-      if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
-        GetAssayData_args <- list(object = x,
-                                  layer = "data",
-                                  assay = assay)
-      } else {
-        GetAssayData_args <- list(object = x,
-                                  slot = "data",
-                                  assay = assay)
-      }
-      Gmisc::fastDoCall(
-        what = Seurat::GetAssayData,
-        args = GetAssayData_args
-      )[feature_ex,,drop=F]
+
+      get_layer(obj = x,
+                assay = assay,
+                layer = "data",
+                features = feature_ex)
 
     }))) > 0))))
     all.cells[which(names(all.cells) %in% exclude.cells)] <- 0

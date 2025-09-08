@@ -11,7 +11,9 @@ feature_plot_stat(
   assay = "RNA",
   geom1 = c("jitter", "point"),
   geom2 = c("boxplot", "violin", "none"),
+  plot_first = c("geom1", "geom2"),
   jitterwidth = 0.2,
+  dodgewidth = 0.9,
   label.size = 4,
   plot.expr.freq = F,
   expr.freq.decimals = 2,
@@ -24,14 +26,16 @@ feature_plot_stat(
   legend.title = "SO.split",
   split.by = NULL,
   pt.size = 0.5,
-  col.pal = "custom",
-  col.pal.dir = 1,
+  col.pal = colrr::col_pal("custom"),
+  col.na = "grey50",
+  col_pal_args = list(missing_fct_to_na = T),
   feature.aliases = NULL,
   feature_cut = NULL,
   feature_cut_expr = 0,
   feature_ex = NULL,
   theme = ggplot2::theme_bw(),
-  facetting_args = list(scales = "free_y")
+  geom2_args = list(outlier.shape = NA),
+  facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins")
 )
 }
 \arguments{

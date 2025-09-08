@@ -38,6 +38,7 @@ feature_plot_stat <- function(SO,
                               assay = "RNA",
                               geom1 = c("jitter", "point"),
                               geom2 = c("boxplot", "violin", "none"),
+                              plot_first = c("geom1", "geom2"),
                               jitterwidth = 0.2,
                               dodgewidth = 0.9,
                               label.size = 4,
@@ -60,7 +61,10 @@ feature_plot_stat <- function(SO,
                               feature_cut_expr = 0,
                               feature_ex = NULL,
                               theme = ggplot2::theme_bw(),
-                              facetting_args = list(scales = "free_y")) {
+                              geom2_args = list(outlier.shape = NA),
+                              facetting_args = list(scales = "free_y",
+                                                    axes = "all",
+                                                    axis.labels = "margins")) {
 
   # add option to plot facet labels in italics
 
@@ -76,6 +80,7 @@ feature_plot_stat <- function(SO,
 
   geom1 <- rlang::arg_match(geom1)
   geom2 <- rlang::arg_match(geom2)
+  plot_first <- rlang::arg_match(plot_first)
 
   SO <- check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
@@ -143,12 +148,23 @@ feature_plot_stat <- function(SO,
 
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +
-    ggplot2::geom_point(size = pt.size, position = geom1pos) +
-    suppressWarnings(Gmisc::fastDoCall(geom2, args = list(outlier.shape = NA, position = ggplot2::position_dodge(width = dodgewidth)))) +
-    ggplot2::scale_color_manual(values = col.pal,
-                                na.value = col.na) +
+    ggplot2::scale_color_manual(values = col.pal, na.value = col.na) +
     theme +
     Gmisc::fastDoCall(ggplot2::facet_wrap, args = c(list(facets = ggplot2::vars(feature_split)), facetting_args))
+
+  if (plot_first == "geom1") {
+    plot <- plot +
+      ggplot2::geom_point(size = pt.size, position = geom1pos) +
+      suppressWarnings(Gmisc::fastDoCall(geom2, args = c(list(position = ggplot2::position_dodge(width = dodgewidth)),
+                                                         geom2_args)))
+  } else if (plot_first == "geom2") {
+    plot <- plot +
+      suppressWarnings(Gmisc::fastDoCall(geom2, args = c(list(position = ggplot2::position_dodge(width = dodgewidth)),
+                                                         geom2_args))) +
+      ggplot2::geom_point(size = pt.size, position = geom1pos)
+  }
+
+
 
   ##ggforce::geom_sina()
 

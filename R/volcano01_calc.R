@@ -28,6 +28,7 @@
 #' @examples
 volcano01_calc <- function(SO,
                            assay = "RNA",
+                           layer = "data",
                            neg_cells,
                            pos_cells,
                            neg_name = "negative.group",
@@ -114,14 +115,17 @@ volcano01_calc <- function(SO,
   } else if (min_pct == 0) {
     comparefun <- `>`
   }
-  min_pct_features <- unique(c(names(which(comparefun(Matrix::rowSums(SeuratObject::LayerData(SO)[, ngc] != 0)/length(ngc), min_pct))),
-                               names(which(comparefun(Matrix::rowSums(SeuratObject::LayerData(SO)[, pgc] != 0)/length(pgc), min_pct)))))
+
+  min_pct_features <- unique(c(names(which(comparefun(Matrix::rowSums(get_layer(obj = SO, assay = assay, layer = layer, cells = ngc) != 0)/length(ngc), min_pct))),
+                               names(which(comparefun(Matrix::rowSums(get_layer(obj = SO, assay = assay, layer = layer, cells = pgc) != 0)/length(pgc), min_pct)))))
 
   min_pct_features_removed <- setdiff(intersect_features, min_pct_features)
   SO <- Seurat::DietSeurat(SO, assays = assay, features = min_pct_features, counts = F)
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
+  # DefaultAssay set above
   vd <- calculate_DEG(SO = SO,
+                      layer = layer,
                       ngc = ngc,
                       pgc = pgc,
                       pgn = pos_name[1],
@@ -155,6 +159,7 @@ volcano01_calc <- function(SO,
 calculate_DEG <- function(SO,
                           ngc,
                           pgc,
+                          layer = "data",
                           pgn = "positive",
                           ngn = "negative",
                           n.feat.for.p.adj = NULL,
@@ -182,8 +187,11 @@ calculate_DEG <- function(SO,
     names(df)[which(names(df) == "pct.1")] <- paste0("pct.", pgn)
     names(df)[which(names(df) == "pct.2")] <- paste0("pct.", ngn)
 
-    SO <- SeuratObject::LayerData(SO, layer = "data")
-    SO <- expm1(SO) + 1
+    SO <- get_layer(obj = SO, layer = layer)
+    SO <- expm1(SO) + 1 # actually works only for data slot
+    if (layer != "data") {
+      message("calculate_DEG: layer != 'data'. log expression values in returned df may be imprecise.")
+    }
     apm <- Matrix::rowMeans(SO[, pgc])
     anm <- Matrix::rowMeans(SO[, ngc])
 
@@ -202,7 +210,7 @@ calculate_DEG <- function(SO,
       BiocManager::install("limma")
     }
 
-    SO <- SeuratObject::LayerData(SO, layer = "data")
+    SO <- get_layer(obj = SO, layer = layer)
 
     message("(i) limma: p_adj ignored. (ii) caution: limma calculates log2.fc differently as Seurat, see here: https://support.bioconductor.org/p/82478/ ")
     df <- limma::topTable(limma::eBayes(limma::lmFit(
@@ -233,7 +241,7 @@ calculate_DEG <- function(SO,
       utils::install.packages("matrixTests")
     }
 
-    SO <- SeuratObject::LayerData(SO, layer = "data")
+    SO <- get_layer(obj = SO, layer = layer)
 
     SO <- expm1(SO) + 1
     p <- matrixTests::row_wilcoxon_twosample(as.matrix(SO[, ngc]), as.matrix(SO[, pgc]))$pvalue

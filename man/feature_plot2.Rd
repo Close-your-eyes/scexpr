@@ -27,7 +27,7 @@ feature_plot2(
   col_na = "grey50",
   col_binary = F,
   col_pal_c_args = list(name = "spectral", direction = -1),
-  col_pal_d_args = list(name = "custom"),
+  col_pal_d_args = list(name = "custom", missing_fct_to_na = T),
   col_steps = "auto",
   col_steps_nice = T,
   col_legend_args = list(barwidth = 1, barheight = 8, override.aes = list(size = 4),
@@ -57,8 +57,8 @@ feature_plot2(
     legend.key.size = grid::unit(0.3, "cm"), legend.key = ggplot2::element_blank(), title
     = ggtext::element_markdown(), plot.title = ggplot2::element_text(margin =
     ggplot2::margin(b = 0, unit = "pt")), strip.text.x = ggplot2::element_text(margin =
-    ggplot2::margin(0, 
-     0, 0, 0, unit = "pt")), plot.margin = grid::unit(c(1, 1, 1,
+    ggplot2::margin(2, 
+     0, 2, 0, unit = "pt")), plot.margin = grid::unit(c(1, 1, 1,
     1), "pt"), panel.spacing = grid::unit(2, "pt")),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,

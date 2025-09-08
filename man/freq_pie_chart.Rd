@@ -9,6 +9,7 @@ freq_pie_chart(
   meta_col,
   order = T,
   fill = colrr::col_pal("custom"),
+  fill_na = "grey50",
   color = "white",
   radius_inside = 0.3,
   label_outside = c("none", "abs", "rel"),
@@ -26,7 +27,8 @@ freq_pie_chart(
   legend_title = NULL,
   theme_args = list(panel.grid = ggplot2::element_blank(), axis.title =
     ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.ticks =
-    ggplot2::element_blank())
+    ggplot2::element_blank()),
+  col_pal_args = list(missing_fct_to_na = T)
 )
 }
 \arguments{

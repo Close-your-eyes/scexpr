@@ -35,27 +35,22 @@ reverse_lognorm <- function(SO,
 
   assay <- match.arg(assay, names(SO@assays))
 
-  layer <- "data"
-  if (utils::compareVersion(as.character(x@version), "4.9.9") == 1) {
-    GetAssayData_args <- list(object = SO,
-                              layer = layer,
-                              assay = assay)
-  } else {
-    GetAssayData_args <- list(object = SO,
-                              slot = layer,
-                              assay = assay)
-  }
+  ## lognorm forward:
+  # csums <- Matrix::colSums(counts)
+  # xx <- sweep(counts, 2, csums, "/")
+  # xx <- xx*1e4
+  # data <- log1p(xx)
 
   if (assay == "RNA") {
     if (is.null(nCount_RNA)) {
       warning("Misc slot in SO not found. Assuming lowest value > 0 per column to represent UMI = 1 originally.")
-      nCount_RNA <- apply(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args), 2, function(x) min(x[which(x > 0)]))
+      nCount_RNA <- apply(SeuratObject::LayerData(SO, layer = "data", assay = assay), 2, function(x) min(x[which(x > 0)]))
       nCount_RNA <- unname(1 / (expm1(nCount_RNA) / 10000))
     } else {
       if (!is.vector(nCount_RNA)) {
         stop("nCount_RNA must be a vector.")
       }
-      if (length(nCount_RNA) != ncol(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args))) {
+      if (length(nCount_RNA) != ncol(SeuratObject::LayerData(SO, layer = "data", assay = assay))) {
         stop("length(nCount_RNA) != ncol(GetAssayData(SO, slot = 'data', assay = 'RNA'))")
       }
     }
@@ -64,10 +59,10 @@ reverse_lognorm <- function(SO,
       if (any(dim(SO@assays[["RNA"]]@counts) != c(0, 0))) {
         warning("Counts slot of RNA assay has not been empty before and will be overwritten.")
       }
-      SO@assays[["RNA"]]@counts <- sweep(expm1(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args))/scale.factor, 2, nCount_RNA, FUN = '*')
+      SO@assays[["RNA"]]@counts <- sweep(expm1(SeuratObject::LayerData(SO, layer = "data", assay = assay))/scale.factor, 2, nCount_RNA, FUN = '*')
       return(SO)
     } else {
-      return(sweep(expm1(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args))/scale.factor, 2, nCount_RNA, FUN = '*'))
+      return(sweep(expm1(SeuratObject::LayerData(SO, layer = "data", assay = assay))/scale.factor, 2, nCount_RNA, FUN = '*'))
     }
   }
 
@@ -76,10 +71,10 @@ reverse_lognorm <- function(SO,
       if (any(dim(SO@assays[["SCT"]]@counts) != c(0,0))) {
         warning("Counts slot of SCT assay has not been empty before and will be overwritten.")
       }
-      SO@assays[["SCT"]]@counts <- expm1(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args))
+      SO@assays[["SCT"]]@counts <- expm1(SeuratObject::LayerData(SO, layer = "data", assay = assay))
       return(SO)
     } else {
-      return(expm1(Gmisc::fastDoCall(what = Seurat::GetAssayData, args = GetAssayData_args)))
+      return(expm1(SeuratObject::LayerData(SO, layer = "data", assay = assay)))
     }
   }
 

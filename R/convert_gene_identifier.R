@@ -29,9 +29,6 @@ convert_gene_identifier <- function (idents,
   if (!requireNamespace("BiocManager", quietly = T)) {
     utils::install.packages("BiocManager")
   }
-  if (!requireNamespace("BiocManager", quietly = T)) {
-    utils::install.packages("BiocManager")
-  }
   if (!requireNamespace("limma", quietly = T)) {
     BiocManager::install("limma")
   }
