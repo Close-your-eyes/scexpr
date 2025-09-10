@@ -123,7 +123,6 @@ get_data <- function(SO,
 
 
   data <- purrr::map_dfr(SO, function(x) {
-
     data <- cbind(
       get_layer(obj = x,
                 assay = assay,

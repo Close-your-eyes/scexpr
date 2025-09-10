@@ -32,6 +32,26 @@ get_layer <- function(obj,
   as <- rlang::arg_match(as)
   assay <- rlang::arg_match(assay, names(obj@assays))
 
+  if (!is.null(features) && !length(features)) {
+    # empty gene_features argument in get_data, e.g.
+    mat <- matrix(nrow = 0, ncol = ncol(obj)) # n cells
+    if (transpose) {
+      mat <- t(mat)
+    }
+    if (as == "df") {
+      return(data.frame(mat))
+    }
+    if (as == "dense") {
+      return(mat)
+    }
+    if (as == "sparse") {
+      library(Matrix)
+      return(methods::as(mat, "sparseMatrix"))
+    }
+  }
+
+
+
   if (utils::compareVersion(as.character(obj@version), "4.9.9") == 1) {
 
     x <- tryCatch(expr = {

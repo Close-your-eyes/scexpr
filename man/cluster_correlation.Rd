@@ -13,6 +13,7 @@ cluster_correlation(
   complement.levels = F,
   split.by = NULL,
   avg.expr,
+  log_avg_expr = F,
   method = c("pearson", "spearman", "kendall"),
   corr.in.percent = FALSE,
   min.cells = 20,
@@ -59,6 +60,8 @@ to calculate and return a correlation coefficient}
 unique values only}
 
 \item{aspect.ratio}{aspect ratio of matrix plot}
+
+\item{mid.white.strech.length}{}
 }
 \value{
 list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression

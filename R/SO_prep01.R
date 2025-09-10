@@ -213,6 +213,12 @@ SO_prep01 <- function(data_dirs,
 
   if (diet_seurat) {
     SO <- lapply(SO, function(SO) Seurat::DietSeurat(SO, dimreducs = c(names(SO@reductions))))
+
+    SO <- lapply(SO, function(SO) {
+      SO@assays[["RNA"]]@layers[["data"]] <- NULL
+      SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
+      return(SO)
+    })
   }
 
   message("Run scexpr::qc_plot2() on the Seurat object for visualization of clustering on phenotype and qc data.")

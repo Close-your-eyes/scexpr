@@ -449,8 +449,10 @@ get_title <- function(feature_ex = NULL,
 }
 
 
-get_legend_text <- function(data) {
+get_legend_text <- function(data,
+                            type = c("gene", "meta")) {
 
+  type <- rlang::arg_match(type)
   if (is.numeric(data[["feature"]])) {
     if (all(data[which(data[["cells"]] == 1),"feature"] == 0)) {
       scale.max <- 0
@@ -459,7 +461,12 @@ get_legend_text <- function(data) {
     } else {
 
       scale.max <- max(data[intersect(which(data[["cells"]] == 1), which(is.finite(data[["feature"]]))), "feature"], na.rm = T)
-      scale.min <- min(data[Reduce(intersect, list(which(data[["feature"]] != 0), which(data[["cells"]] == 1), which(is.finite(data[["feature"]])))), "feature"], na.rm = T) # != 0 for module scores
+      if (type == "gene") {
+        scale.min <- min(data[Reduce(intersect, list(which(data[["feature"]] != 0), which(data[["cells"]] == 1), which(is.finite(data[["feature"]])))), "feature"], na.rm = T) # != 0 for module scores
+      } else {
+        scale.min <- min(data[Reduce(intersect, list(which(data[["cells"]] == 1), which(is.finite(data[["feature"]])))), "feature"], na.rm = T) # != 0 for module scores
+      }
+
       scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
       scale.max <- as.numeric(format(brathering::floor2(scale.max, 0.1), nsmall = 1))
@@ -528,7 +535,9 @@ add_color_scale <- function(plot,
         }
 
       }
-      c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]])
+
+      c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]],
+                                                              type = attr(plot[["data"]], "feature_type"))
       qmin <- attr(plot[["data"]], "qmin")
       qmax <- attr(plot[["data"]], "qmax")
 
@@ -1486,4 +1495,23 @@ feat.check <- function(SO, features, rownames, meta.data, ignore.case, meta.data
       grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
     }))
   }))
+}
+
+
+.check.levels <- function(SO, meta.col, levels = NULL, append_by_missing = F) {
+  if (any(is.null(levels)) || any(is.na(levels))) {
+    levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
+    if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
+      levels <- as.character(sort(as.numeric(unique(levels))))
+    }
+  } else {
+    if (any(!levels %in% unique(SO@meta.data[,meta.col,drop=T]))) {
+      print(paste0("levels not found in meta.col: ", paste(levels[which(!levels %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
+    }
+    levels <- as.character(unique(levels[which(levels %in% unique(SO@meta.data[,meta.col,drop=T]))]))
+  }
+  if (append_by_missing) {
+    levels <- c(levels, as.character(unique(SO@meta.data[,meta.col,drop=T])[which(!as.character(unique(SO@meta.data[,meta.col,drop=T])) %in% levels)]))
+  }
+  return(levels)
 }

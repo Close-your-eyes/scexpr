@@ -29,6 +29,8 @@
 #' @param lower.triangle.only return the lower triangle of correlation matrix which will contain
 #' unique values only
 #' @param aspect.ratio aspect ratio of matrix plot
+#' @param log_avg_expr
+#' @param mid.white.strech.length
 #'
 #' @return list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
@@ -42,6 +44,7 @@ cluster_correlation <- function(SO,
                                 complement.levels = F,
                                 split.by = NULL,
                                 avg.expr,
+                                log_avg_expr = F,
                                 method = c("pearson","spearman", "kendall"),
                                 corr.in.percent = FALSE,
                                 min.cells = 20,
@@ -92,14 +95,14 @@ cluster_correlation <- function(SO,
 
 
   ## names for SO are very important below. missing names will cause errors.
-  SO <- .check.SO(SO, assay = assay, length = 2)
+  SO <- check.SO(SO, assay = assay, length = 2)
   assay <- match.arg(assay, Reduce(intersect, lapply(SO, function(x) names(x@assays))))
-  method <- match.arg(method, c("pearson", "kendall", "spearman"))
+  method <- rlang::arg_match(method)
   if (!is.null(split.by) && method != "pearson") {
     warning("Averaging correlation values may only be valid for pearson. See https://stats.stackexchange.com/questions/8019/averaging-correlation-values?noredirect=1&lq=1 .")
   }
-  meta.cols[1] <- .check.features(SO[[1]], features = meta.cols[1], rownames = F)
-  meta.cols[2] <- .check.features(SO[[2]], features = meta.cols[2], rownames = F)
+  meta.cols[1] <- check.features(SO[[1]], features = meta.cols[1], rownames = F)
+  meta.cols[2] <- check.features(SO[[2]], features = meta.cols[2], rownames = F)
 
   if (length(features) == 1 && features == "all") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
@@ -157,10 +160,17 @@ cluster_correlation <- function(SO,
 
 
   if (missing(avg.expr)) {
-    avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, slot = "data", verbose = F)[[assay]]))
+    avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ as.matrix(Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, layer = "data", verbose = F)[[assay]])))
   } else {
     avg.expr <- purrr::map(.x = avg.expr, .f = ~ purrr::map(.x = .x, .f = ~ .x[features,,drop=F]))
   }
+
+  # reverse seurat column renaming with leading g
+  avg.expr <- purrr::map(avg.expr, function(x) {
+    rename <- grepl("^g[[:digit:]]{1,}$", colnames(x[[1]]))
+    colnames(x[[1]])[which(rename)] <- gsub("^g", "", colnames(x[[1]])[which(rename)])
+    return(x)
+  })
 
   # if one level in meta.col only, Seurat writes 'all' as column name but not the actual level, fix that
   for (i in seq_along(avg.expr)) {
@@ -171,6 +181,13 @@ cluster_correlation <- function(SO,
 
   # filter for levels
   avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) {purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F])})
+
+
+  # corr in log space?
+  if (log_avg_expr) {
+    avg.expr <- purrr::map(avg.expr, ~list(log1p(.x[[1]])))
+  }
+
 
   if (!is.null(split.by)) {
 
@@ -216,10 +233,14 @@ cluster_correlation <- function(SO,
       as.data.frame()
 
     ## filter clusters with n cells below threshold
+
     for (i in 1:nrow(n_cell_df_nest)) {
       avg.expr[[n_cell_df_nest[i,"SO"]]] <-
         avg.expr[[n_cell_df_nest[i,"SO"]]][,n_cell_df_nest[[i,"meta_col_levels"]],drop=F]
     }
+
+    # same row order
+    avg.expr[[1]] <- avg.expr[[1]][rownames(avg.expr[[2]]),]
 
     # calculate correlations
     if (method == "pearson") {
@@ -266,6 +287,8 @@ cluster_correlation <- function(SO,
       cm <- stats::cor(x = avg.expr[[1]], y = avg.expr[[2]], method = method)
     }
 
+
+
     # order columns and rows to get the right elements filtered in case of lower.triangle.only
     cm <- cm[levels[[1]], levels[[2]],drop=F]
 
@@ -283,7 +306,8 @@ cluster_correlation <- function(SO,
     # names(cm.melt)[1:2] <- c("Var2", "Var1")
     # why? or transpose cm?
 
-    if (method != "pearson") {
+    #if (method == method) { #if (method != "pearson") {
+      if (method != "pearson") {
       lms_or_ranks <- lapply(1:nrow(cm.melt), function(x) {
         ranks <- data.frame(avg.expr[[1]][,as.character(cm.melt[x, "Var1"])], avg.expr[[2]][,as.character(cm.melt[x, "Var2"])])
         names(ranks) <- c(paste0(names(SO)[1], "___", cm.melt[x, "Var1"]), paste0(names(SO)[2], "___", cm.melt[x, "Var2"]))

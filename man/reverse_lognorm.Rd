@@ -2,41 +2,43 @@
 % Please edit documentation in R/reverse_lognorm.R
 \name{reverse_lognorm}
 \alias{reverse_lognorm}
-\title{Title}
+\title{Recreate counts layer from data layer}
 \usage{
 reverse_lognorm(
   SO,
   assay = "RNA",
   nCount_RNA = Seurat::Misc(SO, slot = "RNA_count_colSums"),
-  scale.factor = 10000,
-  return.SO = T
+  scale.factor = 10000
 )
 }
 \arguments{
-\item{colsSums}{}
+\item{SO}{Seurat object}
+
+\item{assay}{assay to use}
+
+\item{nCount_RNA}{vector of colsums of RNA counts (lib sizes)}
+
+\item{scale.factor}{factor as in Seurat::LogNormalize}
+}
+\value{
+counts matrix to write to assay slot
 }
 \description{
-Title
+Remove counts layer to save memory. Recreate it when needed.
 }
 \examples{
 \dontrun{
-#### for RNA assay:
-# Default LogNormalize from Seurat does this:
-nCount_RNA <- Matrix::colSums(GetAssayData(SO, slot = "counts", assay = "RNA"))
-# devide each column by corresponding index in nCount_RNA
-norm_UMI <- sweep(Seurat::GetAssayData(SO, slot = "counts", assay = "RNA"), 2, nCount_RNA, FUN = `/`) ## test if backticks works
-norm_UMI <- norm_UMI*10000
-lognorm_UMI <- log1p(norm_UMI)
+  ## lognorm forward:
+csums <- Matrix::colSums(counts)
+xx <- sweep(counts, 2, csums, "/")
+xx <- xx*1e4
+data <- log1p(xx)
 
-# to reverse (data --> Counts) one needs original nCount_RNA (colSums)
-# this must be saved (e.g. Misc slot) before deleting the Count slot
-# if not provided one could assume that the lowest norm_UMI
-# per column equals to 1 UMI originally
-norm_UMI <- expm1(GetAssayData(SO, slot = "data", assay = "RNA")) #lognorm_UMI
-norm_UMI <- norm_UMI/10000
-UMI_count <- sweep(norm_UMI, 2, nCount_RNA, FUN = '*')
-
-#### for SCT assay:
+## SCT reverse:
 # simply expm1 from data slot, see ?Seurat::SCTransform
+
+# compare count matrices
+rmse <- scexpr:::rmse_sparse(count_re, counts_orig)
+equal <- all.equal(count_re, counts_orig)
 }
 }

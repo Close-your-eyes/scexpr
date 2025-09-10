@@ -345,8 +345,8 @@ SO_prep02 <- function(SO_unprocessed,
   }
 
   # remove counts as they can be recalculated with rev_lognorm
+  Seurat::Misc(SO, slot = "RNA_count_colSums") <- Matrix::colSums(get_layer(obj = SO, layer = "counts", assay = "RNA"))
   if (diet_seurat) {
-    Seurat::Misc(SO, slot = "RNA_count_colSums") <- Matrix::colSums(get_layer(obj = SO, layer = data, assay = "RNA"))
     SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   }
 

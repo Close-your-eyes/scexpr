@@ -600,24 +600,6 @@ heatmap_pseudobulk <- function(SO,
   return(list(plot = heatmap.plot, data = wil_auc, complete_data = wil_auc_raw, hlines = hlines))
 }
 
-.check.levels <- function(SO, meta.col, levels = NULL, append_by_missing = F) {
-  if (any(is.null(levels)) || any(is.na(levels))) {
-    levels <- as.character(unique(SO@meta.data[,meta.col,drop=T]))
-    if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
-      levels <- as.character(sort(as.numeric(unique(levels))))
-    }
-  } else {
-    if (any(!levels %in% unique(SO@meta.data[,meta.col,drop=T]))) {
-      print(paste0("levels not found in meta.col: ", paste(levels[which(!levels %in% unique(SO@meta.data[,meta.col,drop=T]))], collapse = ", ")))
-    }
-    levels <- as.character(unique(levels[which(levels %in% unique(SO@meta.data[,meta.col,drop=T]))]))
-  }
-  if (append_by_missing) {
-    levels <- c(levels, as.character(unique(SO@meta.data[,meta.col,drop=T])[which(!as.character(unique(SO@meta.data[,meta.col,drop=T])) %in% levels)]))
-  }
-  return(levels)
-}
-
 feature_order_fun <- function(wil_auc_raw,
                               topn.features,
                               break.ties,
