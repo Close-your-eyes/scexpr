@@ -1100,7 +1100,7 @@ run_celltyping <- function(SO,
 
   for (i in seq_along(celltype_refs)) {
     for (j in seq_along(celltype_label[[i]])) {
-      celltypes <- SingleR::SingleR(test = get_layer(obj = SO, layer = data, assay = "RNA"),
+      celltypes <- SingleR::SingleR(test = get_layer(obj = SO, layer = "data", assay = "RNA"),
                                     ref = celltype_refs[[i]],
                                     labels = celltype_refs[[i]]@colData@listData[[celltype_label[[i]][j]]],
                                     clusters = refs)

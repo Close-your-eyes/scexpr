@@ -15,6 +15,7 @@ cluster_correlation(
   avg.expr,
   log_avg_expr = F,
   method = c("pearson", "spearman", "kendall"),
+  use_lm_for_pearson = F,
   corr.in.percent = FALSE,
   min.cells = 20,
   round.corr = 2,
@@ -29,9 +30,9 @@ cluster_correlation(
 \item{meta.cols}{character vector of length 2, indicating the column names of meta.data in SO[\link{1}] and SO[\link{2}] to use for comparison,
 e.g. the clustering columns in both SOs}
 
-\item{features}{features to use for correlation calculation; will always be reduced to intersecting features between SOs;
-if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
-or a vector of features}
+\item{features}{features to use for correlation calculation; vector of features, pca, or all.
+will always be reduced to intersecting features between SOs;
+if all, all intersecting features in assay are used; if pca, intersecting rownames of feature.loadings in pca-reduction;}
 
 \item{assay}{which assay to obtain expression values from}
 
@@ -44,10 +45,15 @@ can be incomplete e.g. if order matters only for some levels, if complement.leve
 individual correlation coefficients are averaged after fishers z-transformation (atanh) and then
 transformed back (tanh)}
 
-\item{avg.expr}{avg.expr from a previous return list of cluster_correlation_matrix; e.g. provide that to  only change axis
-orders or similar but avoid repeated calculation}
+\item{avg.expr}{avg.expr from a previous return list of cluster_correlation_matrix;
+provide that to  only change axis orders or similar but avoid repeated calculation}
+
+\item{log_avg_expr}{Seurats output of AvgExpr is in linear space, make it
+log1p before correlation calc? only relevant for pearson}
 
 \item{method}{which correlation metric to calculate, passed to stats::cor}
+
+\item{use_lm_for_pearson}{use lm function instead of cor when method is pearson}
 
 \item{corr.in.percent}{display correlation in percent (TRUE, T) or as a fraction (FALSE, F)}
 
@@ -60,8 +66,6 @@ to calculate and return a correlation coefficient}
 unique values only}
 
 \item{aspect.ratio}{aspect ratio of matrix plot}
-
-\item{mid.white.strech.length}{}
 }
 \value{
 list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression

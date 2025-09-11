@@ -9,15 +9,15 @@
 #' @param SO named list of exactly 2 Seurat objects; you may also pass the same object twice to have an intra-comparison
 #' @param meta.cols character vector of length 2, indicating the column names of meta.data in SO[[1]] and SO[[2]] to use for comparison,
 #' e.g. the clustering columns in both SOs
-#' @param features features to use for correlation calculation; will always be reduced to intersecting features between SOs;
-#' if all, all intersecting features in assay are considered; if pca, intersecting rownames of feature.loadings in pca-reduction;
-#' or a vector of features
+#' @param features features to use for correlation calculation; vector of features, pca, or all.
+#' will always be reduced to intersecting features between SOs;
+#' if all, all intersecting features in assay are used; if pca, intersecting rownames of feature.loadings in pca-reduction;
 #' @param assay which assay to obtain expression values from
 #' @param levels list of length 2 indicating the factor levels in meta.cols to include; this also defines axis orders;
 #' can be incomplete e.g. if order matters only for some levels, if complement.levels = T the missing levels are added randomly
 #' @param complement.levels add all missing levels in random order
-#' @param avg.expr avg.expr from a previous return list of cluster_correlation_matrix; e.g. provide that to  only change axis
-#' orders or similar but avoid repeated calculation
+#' @param avg.expr avg.expr from a previous return list of cluster_correlation_matrix;
+#' provide that to  only change axis orders or similar but avoid repeated calculation
 #' @param method which correlation metric to calculate, passed to stats::cor
 #' @param corr.in.percent display correlation in percent (TRUE, T) or as a fraction (FALSE, F)
 #' @param round.corr decimal places to round correlation values to
@@ -29,8 +29,10 @@
 #' @param lower.triangle.only return the lower triangle of correlation matrix which will contain
 #' unique values only
 #' @param aspect.ratio aspect ratio of matrix plot
-#' @param log_avg_expr
+#' @param log_avg_expr Seurats output of AvgExpr is in linear space, make it
+#' log1p before correlation calc? only relevant for pearson
 #' @param mid.white.strech.length
+#' @param use_lm_for_pearson use lm function instead of cor when method is pearson
 #'
 #' @return list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 #' @export
@@ -46,6 +48,7 @@ cluster_correlation <- function(SO,
                                 avg.expr,
                                 log_avg_expr = F,
                                 method = c("pearson","spearman", "kendall"),
+                                use_lm_for_pearson = F,
                                 corr.in.percent = FALSE,
                                 min.cells = 20,
                                 round.corr = 2,
@@ -118,6 +121,8 @@ cluster_correlation <- function(SO,
   # https://stats.stackexchange.com/questions/8019/averaging-correlation-values
 
   #split.by<-"Pat"
+
+  ### list of list, in case splitting is performed
   if (!is.null(split.by)) {
     split.by <- .check.features(SO, features = split.by, rownames = F)
     intersect_levels <- intersect(SO[[1]]@meta.data[,split.by], SO[[2]]@meta.data[,split.by])
@@ -154,15 +159,39 @@ cluster_correlation <- function(SO,
     print(n_cell_df[which(n_cell_df[,"n_cells",drop=T] < min.cells),])
   }
 
-  ## works
-  #avg.expr2 <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ Seurat::AverageExpression(.x, assays = assay, group.by = .y, slot = "data", verbose = F)[[assay]]))
-  #identical(Seurat::AverageExpression(SO[[1]][[1]], assays = assay, group.by = meta.cols[[1]], slot = "data", verbose = F)[[assay]], avg.expr2[[1]][[1]])
+  ### this is how Seurat::AverageExpression averages
+  # laydat <- get_layer(SO[[1]][[1]], assay = "RNA", layer = "data", features = features)
+  # laydat <- expm1(laydat) # reverse to non-log space
+  # splitvar <- SO[[1]][[1]]@meta.data$SCT_snn_res.0.4
+  # laydat <- brathering::split_mat(laydat, f = splitvar, byrow = F)
+  # avgs <- purrr::map(laydat, Matrix::rowMeans) # plain arithmetic mean
+  # avgs <- do.call(cbind, avgs)
+  # avgs <- avgs[rownames(avg.expr[[1]][[1]]),]
+  # # compare
+  # all.equal(avgs, avg.expr[[1]][[1]])
+  # all(dplyr::near(avgs[,1], avg.expr[[1]][[1]][,1]))
 
+  ### Aggregate just sums counts
+  # xx <- Matrix::rowSums(as.matrix(Seurat::AggregateExpression(SO[[1]][[1]], assays = assay)[[assay]]))
+  # xx2 <- Matrix::rowSums(get_layer(SO[[1]][[1]], assay = "RNA", layer = "counts"))
 
   if (missing(avg.expr)) {
-    avg.expr <- purrr::map2(.x = SO, .y = meta.cols, .f = ~ purrr::map2(.x = .x, .y = .y, .f = ~ as.matrix(Seurat::AverageExpression(.x, assays = assay, features = features, group.by = .y, layer = "data", verbose = F)[[assay]])))
+    avg.expr <- purrr::map2(.x = SO,
+                            .y = meta.cols,
+                            .f = ~ purrr::map2(.x = .x,
+                                               .y = .y,
+                                               .f = ~as.matrix(Seurat::AverageExpression(
+                                                 .x,
+                                                 assays = assay,
+                                                 features = features,
+                                                 group.by = .y,
+                                                 layer = "data",
+                                                 verbose = F
+                                               )[[assay]])))
   } else {
-    avg.expr <- purrr::map(.x = avg.expr, .f = ~ purrr::map(.x = .x, .f = ~ .x[features,,drop=F]))
+    # filter for features only
+    avg.expr <- purrr::map(.x = avg.expr,
+                           .f = ~ purrr::map(.x = .x, .f = ~.x[features,,drop=F]))
   }
 
   # reverse seurat column renaming with leading g
@@ -180,14 +209,15 @@ cluster_correlation <- function(SO,
   }
 
   # filter for levels
-  avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) {purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F])})
+  avg.expr <- purrr::map2(.x = avg.expr, .y = levels, function(x,y) purrr::map(.x = x, .f = ~ .x[,which(colnames(.x) %in% y),drop=F]))
 
-
-  # corr in log space?
+  # optional: average values to log space
   if (log_avg_expr) {
-    avg.expr <- purrr::map(avg.expr, ~list(log1p(.x[[1]])))
+    avg.expr <- purrr::map(avg.expr, ~purrr::map(.x, log1p))
   }
 
+  # same row order between seurat objects
+  avg.expr[[1]] <- purrr::map(avg.expr[[1]], ~.x[rownames(avg.expr[[2]][[1]]), ])
 
   if (!is.null(split.by)) {
 
@@ -195,10 +225,10 @@ cluster_correlation <- function(SO,
     lms_or_ranks <- NULL
 
     n_cell_df_nest <-
-      n_cell_df %>%
-      dplyr::filter(n_cells >= min.cells) %>%
-      dplyr::group_by(SO, !!rlang::sym(split.by)) %>%
-      dplyr::summarise(meta_col_levels = list(meta_col_level), .groups = "drop") %>%
+      n_cell_df |>
+      dplyr::filter(n_cells >= min.cells) |>
+      dplyr::group_by(SO, !!rlang::sym(split.by)) |>
+      dplyr::summarise(meta_col_levels = list(meta_col_level), .groups = "drop") |>
       as.data.frame()
 
     ## filter clusters with n cells below threshold
@@ -223,13 +253,14 @@ cluster_correlation <- function(SO,
     }))
 
   } else {
+
     avg.expr <- purrr::flatten(avg.expr)
 
     n_cell_df_nest <-
-      n_cell_df %>%
-      dplyr::filter(n_cells >= min.cells) %>%
-      dplyr::group_by(SO) %>%
-      dplyr::summarise(meta_col_levels = list(meta_col_level), .groups = "drop") %>%
+      n_cell_df |>
+      dplyr::filter(n_cells >= min.cells) |>
+      dplyr::group_by(SO) |>
+      dplyr::summarise(meta_col_levels = list(meta_col_level), .groups = "drop") |>
       as.data.frame()
 
     ## filter clusters with n cells below threshold
@@ -237,13 +268,11 @@ cluster_correlation <- function(SO,
     for (i in 1:nrow(n_cell_df_nest)) {
       avg.expr[[n_cell_df_nest[i,"SO"]]] <-
         avg.expr[[n_cell_df_nest[i,"SO"]]][,n_cell_df_nest[[i,"meta_col_levels"]],drop=F]
+
     }
 
-    # same row order
-    avg.expr[[1]] <- avg.expr[[1]][rownames(avg.expr[[2]]),]
-
     # calculate correlations
-    if (method == "pearson") {
+    if (method == "pearson" && use_lm_for_pearson) {
       # for pearson correlation, also a linear correlation is feasible
       # this also allows for analysis of residuals
       # https://sebastianraschka.com/faq/docs/pearson-r-vs-linear-regr.html
@@ -287,7 +316,7 @@ cluster_correlation <- function(SO,
       cm <- stats::cor(x = avg.expr[[1]], y = avg.expr[[2]], method = method)
     }
 
-
+    #tt <- dismay::kendall_zi(cbind(avg.expr[[1]][,1], avg.expr[[2]][,2]))
 
     # order columns and rows to get the right elements filtered in case of lower.triangle.only
     cm <- cm[levels[[1]], levels[[2]],drop=F]
@@ -306,8 +335,7 @@ cluster_correlation <- function(SO,
     # names(cm.melt)[1:2] <- c("Var2", "Var1")
     # why? or transpose cm?
 
-    #if (method == method) { #if (method != "pearson") {
-      if (method != "pearson") {
+    if (method != "pearson" || (method == "pearson" && !use_lm_for_pearson)) {
       lms_or_ranks <- lapply(1:nrow(cm.melt), function(x) {
         ranks <- data.frame(avg.expr[[1]][,as.character(cm.melt[x, "Var1"])], avg.expr[[2]][,as.character(cm.melt[x, "Var2"])])
         names(ranks) <- c(paste0(names(SO)[1], "___", cm.melt[x, "Var1"]), paste0(names(SO)[2], "___", cm.melt[x, "Var2"]))
@@ -315,11 +343,11 @@ cluster_correlation <- function(SO,
         name2 <- paste0(names(SO)[2], "___", cm.melt[x, "Var2"], "_", "rank")
 
         ranks <-
-          ranks %>%
+          ranks |>
           dplyr::mutate({{name1}} := dplyr::dense_rank(!!rlang::sym(paste0(names(SO)[1], "___", as.character(cm.melt[x, "Var1"])))),
-                        {{name2}} := dplyr::dense_rank(!!rlang::sym(paste0(names(SO)[2], "___", as.character(cm.melt[x, "Var2"]))))) %>%
-          dplyr::mutate(rank_diff = !!rlang::sym(name1) - !!rlang::sym(name2)) %>%
-          dplyr::mutate(abs_rank_diff = abs(rank_diff)) %>%
+                        {{name2}} := dplyr::dense_rank(!!rlang::sym(paste0(names(SO)[2], "___", as.character(cm.melt[x, "Var2"]))))) |>
+          dplyr::mutate(rank_diff = !!rlang::sym(name1) - !!rlang::sym(name2)) |>
+          dplyr::mutate(abs_rank_diff = abs(rank_diff)) |>
           dplyr::arrange(rank_diff)
 
         names(ranks)[3:4] <- paste0(c(cm.melt[x, "Var1"], cm.melt[x, "Var2"]), "_rank")
@@ -350,22 +378,22 @@ cluster_correlation <- function(SO,
     cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = format(round(value, round.corr), nsmall = round.corr)))
   }
 
-  # dot plot of genes
-  '  avg.expr <- lapply(avg.expr, function(x) reshape2::melt(as.matrix(x)))
-  names(avg.expr[[1]]) <- c("Gene.symbol", "cluster.x", "avg.expr.x")
-  names(avg.expr[[2]]) <- c("Gene.symbol", "cluster.y", "avg.expr.y")
+  ## dot plot of genes
+  # avg.expr <- lapply(avg.expr, function(x) reshape2::melt(as.matrix(x)))
+  # names(avg.expr[[1]]) <- c("Gene.symbol", "cluster.x", "avg.expr.x")
+  # names(avg.expr[[2]]) <- c("Gene.symbol", "cluster.y", "avg.expr.y")
+  #
+  # dot.plot.matrix.df <- left_join(avg.expr[[1]], avg.expr[[2]], by = "Gene.symbol")
+  #
+  # dot.plot.matrix <- ggplot(dot.plot.matrix.df, aes(x = scales::squish(avg.expr.x, c(0.001,100000)), y = scales::squish(avg.expr.y, c(0.001,100000)))) +
+  #   geom_point(size = 0.2) +
+  #   theme_bw() +
+  #   theme(axis.title = element_blank(), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
+  #   scale_x_log10() +
+  #   scale_y_log10() +
+  #   facet_grid(rows = vars(cluster.x), cols = vars(cluster.y), scales = "free")
 
-  dot.plot.matrix.df <- left_join(avg.expr[[1]], avg.expr[[2]], by = "Gene.symbol")
-
-  dot.plot.matrix <- ggplot(dot.plot.matrix.df, aes(x = scales::squish(avg.expr.x, c(0.001,100000)), y = scales::squish(avg.expr.y, c(0.001,100000)))) +
-    geom_point(size = 0.2) +
-    theme_bw() +
-    theme(axis.title = element_blank(), axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) +
-    scale_x_log10() +
-    scale_y_log10() +
-    facet_grid(rows = vars(cluster.x), cols = vars(cluster.y), scales = "free")'
-
-  if (method == "pearson") {
+  if (method == "pearson" && use_lm_for_pearson) {
     return(list(plot = cm.plot, data = cm.melt, avg.expr = avg.expr, lms = lms_or_ranks))
   } else {
     return(list(plot = cm.plot, data = cm.melt, avg.expr = avg.expr, ranks = lms_or_ranks))

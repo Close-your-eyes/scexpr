@@ -67,10 +67,11 @@ convert_gene_ident <- function(x,
   res$description <- sapply(strsplit(res$description, " \\[Source"), "[", 1)
 
   res2 <- res |>
-    dplyr::group_by(input, hgnc_symbol, gene_biotype, description, GRCh) |>
+    dplyr::group_by(input, hgnc_symbol, description, GRCh) |>
     dplyr::summarise(ensembl_gene_id = paste(unique(ensembl_gene_id), collapse = ","),
                      external_gene_name = paste(unique(external_gene_name), collapse = ","),
                      external_synonym = paste(unique(external_synonym), collapse = ","),
+                     gene_biotype = paste(unique(gene_biotype), collapse = ","),
                      .groups = "drop")
 
   return(list(long = res, short = res2, unmapped = x))
