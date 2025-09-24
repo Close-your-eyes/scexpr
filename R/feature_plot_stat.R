@@ -66,6 +66,10 @@ feature_plot_stat <- function(SO,
                                                     axes = "all",
                                                     axis.labels = "margins")) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
+
   # add option to plot facet labels in italics
 
   if (missing(SO)) {

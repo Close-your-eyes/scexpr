@@ -129,41 +129,41 @@ feature_plot_data <- function(data,
                               shape_legend_hide = F,
                               feature_alias = NULL,
 
-                          freq_plot = "..auto..",
-                          freq_pos = c(Inf, Inf),
-                          freq_size = 4,
-                          freq_col = "..auto..",
-                          name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
-                          name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
-                          name_anno_args = list(x = -Inf,
-                                                y = Inf,
-                                                hjust = 0, # 1.1,
-                                                vjust = 1.25,
-                                                color = NA,
-                                                fill = NA,
-                                                label.color = NA,
-                                                size = 4,
-                                                text.color = "..auto.."),
+                              freq_plot = "..auto..",
+                              freq_pos = c(Inf, Inf),
+                              freq_size = 4,
+                              freq_col = "..auto..",
+                              name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
+                              name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
+                              name_anno_args = list(x = -Inf,
+                                                    y = Inf,
+                                                    hjust = 0, # 1.1,
+                                                    vjust = 1.25,
+                                                    color = NA,
+                                                    fill = NA,
+                                                    label.color = NA,
+                                                    size = 4,
+                                                    text.color = "..auto.."),
 
-                          theme = colrr::theme_material(
-                            white = T,
-                            legend_tight = T,
-                            text_fun = ggplot2::element_text
-                          ),
-                          theme_args = list(axis.ticks = ggplot2::element_blank(),
-                                            axis.text.x = ggplot2::element_blank(),
-                                            axis.text.y = ggplot2::element_blank(),
-                                            axis.title.x = ggplot2::element_blank(),
-                                            axis.title.y = ggplot2::element_blank(),
-                                            panel.grid = ggplot2::element_blank(),
-                                            legend.background = ggplot2::element_blank(),
-                                            legend.key.size = grid::unit(0.3, "cm"),
-                                            legend.key = ggplot2::element_blank(),
-                                            title = ggtext::element_markdown(),
-                                            plot.title = ggplot2::element_text(margin = ggplot2::margin(b = 0, unit = "pt")),
-                                            strip.text.x = ggplot2::element_text(margin = ggplot2::margin(0,0,0,0, unit = "pt")),
-                                            plot.margin = grid::unit(c(1,1,1,1), "pt"),
-                                            panel.spacing = grid::unit(2, "pt")),
+                              theme = colrr::theme_material(
+                                white = T,
+                                legend_tight = T,
+                                text_fun = ggplot2::element_text
+                              ),
+                              theme_args = list(axis.ticks = ggplot2::element_blank(),
+                                                axis.text.x = ggplot2::element_blank(),
+                                                axis.text.y = ggplot2::element_blank(),
+                                                axis.title.x = ggplot2::element_blank(),
+                                                axis.title.y = ggplot2::element_blank(),
+                                                panel.grid = ggplot2::element_blank(),
+                                                legend.background = ggplot2::element_blank(),
+                                                legend.key.size = grid::unit(0.3, "cm"),
+                                                legend.key = ggplot2::element_blank(),
+                                                title = ggtext::element_markdown(),
+                                                plot.title = ggplot2::element_text(margin = ggplot2::margin(b = 0, unit = "pt")),
+                                                strip.text.x = ggplot2::element_text(margin = ggplot2::margin(0,0,0,0, unit = "pt")),
+                                                plot.margin = grid::unit(c(1,1,1,1), "pt"),
+                                                panel.spacing = grid::unit(2, "pt")),
 
                               facet_scales = c("fixed", "free", "free_x", "free_y"),
                               facet_grid_row_var = NULL,
@@ -185,31 +185,38 @@ feature_plot_data <- function(data,
                                 color = "black",
                                 label.padding = ggplot2::unit(rep(1/20,4), "lines")),
 
-                          contour_filter_cells = T,
-                          contour_rm_outlier = F,
-                          contour_rm_lowfreq_subcluster = F,
-                          contour_multi_try = F,
-                          contour_multi_max = 3,
-                          contour_col_pal_args = list(name = "custom"),
-                          contour_args = list(
-                            contour_var = "ndensity",
-                            breaks = 0.3,
-                            linewidth = 0.5
-                          ), # arguments to geom_density_2d
-                          contour_label_nudge = list(),
-                          contour_label_args = list(
-                            label.colour = NA,
-                            fill = "white",
-                            size = 4,
-                            color = "black",
-                            label.padding = ggplot2::unit(rep(1/20,4), "lines")),
-                          contour_same_across_split = T,
-                          contour_expr_freq = F,
-                          contour_ggnewscale = F,
-                          contour_fun = ggplot2::geom_density2d,
-                          contour_path_label = NULL,
-                          order_discr_explicit = NULL,
-                          plot_all_across_split = F) {
+                              contour_filter_cells = T,
+                              contour_rm_outlier = F,
+                              contour_rm_lowfreq_subcluster = F,
+                              contour_multi_try = F,
+                              contour_multi_max = 3,
+                              contour_col_pal_args = list(name = "custom"),
+                              contour_args = list(
+                                contour_var = "ndensity",
+                                breaks = 0.3,
+                                linewidth = 0.5
+                              ), # arguments to geom_density_2d
+                              contour_label_nudge = list(),
+                              contour_label_args = list(
+                                label.colour = NA,
+                                fill = "white",
+                                size = 4,
+                                color = "black",
+                                label.padding = ggplot2::unit(rep(1/20,4), "lines")),
+                              contour_same_across_split = T,
+                              contour_expr_freq = F,
+                              contour_ggnewscale = F,
+                              contour_fun = ggplot2::geom_density2d,
+                              contour_path_label = NULL,
+                              order_discr_explicit = NULL,
+                              plot_all_across_split = F) {
+
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   if (!is.data.frame(data)) {
     stop("data must be data frame from scexpr::get_data")
@@ -322,17 +329,38 @@ feature_plot_data <- function(data,
                           col_binary = col_binary)
 
   if (!is.null(name_anno_pos)) {
-    title <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
-                       feature_cut = attr(data, "feature_cut", exact = T),
-                       feature_cut_expr = attr(data, "feature_cut_expr"),
-                       freq = freqs[["freq.expr"]][["freq2"]],
-                       feature_italic = attr(data, "feature_type") == "gene",
-                       feature = attr(data, "feature"),
-                       name_anno = name_anno,
-                       #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
-                       markdown = T)
+    title_freq_df <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
+                               feature_cut = attr(data, "feature_cut", exact = T),
+                               feature_cut_expr = attr(data, "feature_cut_expr"),
+                               freq_df = freqs[["freq.expr"]],
+                               feature_italic = attr(data, "feature_type") == "gene",
+                               feature = attr(data, "feature"),
+                               name_anno = name_anno,
+                               #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
+                               markdown = T)
+
+    freq_df <-
+      if (nlevels(data$SO.split) > 1 && nlevels(data$split_feature) > 1) {
+        freqs$freq.expr.by.split.SO
+      } else if (nlevels(data$SO.split) > 1 && nlevels(data$split_feature) == 1) {
+        freqs$freq.expr.by.SO
+      }  else if (nlevels(data$SO.split) == 1 && nlevels(data$split_feature) > 1) {
+        freqs$freq.expr.by.split
+      } else {
+        freqs$freq.expr
+      }
+    annotation_freq_df <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
+                                    feature_cut = attr(data, "feature_cut", exact = T),
+                                    feature_cut_expr = attr(data, "feature_cut_expr"),
+                                    freq_df = freq_df,
+                                    feature_italic = attr(data, "feature_type") == "gene",
+                                    feature = attr(data, "feature"),
+                                    name_anno = name_anno,
+                                    #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
+                                    markdown = T)
+
     if ("title" %in% name_anno_pos) {
-      plot <- plot + ggplot2::labs(title = title)
+      plot <- plot + ggplot2::labs(title = title_freq_df$freq3)
       #plot <- plot + ggplot2::labs(title = substitute(paste(x, sep = ""), list(x = title)))
     }
     if ("annotation" %in% name_anno_pos) {
@@ -342,9 +370,20 @@ feature_plot_data <- function(data,
       } else if (name_anno_args[["text.color"]] == "..auto..") {
         name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
       }
-      plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
-                                                                        label = title),
-                                                                   name_anno_args))
+
+      ## cange this somewhen
+      if (is.data.frame(annotation_freq_df)) {
+        annotation_freq_df <- annotation_freq_df |>
+          dplyr::mutate(!!attr(data, "dim1") := name_anno_args$x,
+                        !!attr(data, "dim2") := name_anno_args$y)
+        name_anno_args <- c(name_anno_args,
+                            list(data = annotation_freq_df, mapping = aes(label = freq3)))
+        plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = name_anno_args)
+      } else {
+        plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
+                                                                          label = annotation_freq_df$freq3),
+                                                                     name_anno_args))
+      }
     }
   }
 

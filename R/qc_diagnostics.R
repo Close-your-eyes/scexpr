@@ -88,6 +88,9 @@ qc_diagnostic <- function(data_dirs,
 
   message("newer function version: scexpr::SO_prep01")
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
   if (!requireNamespace("matrixStats", quietly = T)) {
     utils::install.packages("matrixStats")
   }

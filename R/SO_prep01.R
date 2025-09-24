@@ -645,6 +645,9 @@ run_soupx <- function(ffbms,
 }
 
 run_decontx <- function(SO, resolution, nhvf) {
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
   message("Running decontX.")
   SO <- purrr::map(SO, function(SO) {
     ## multi dirs: split matrix
@@ -675,6 +678,9 @@ cluster_on_metadata <- function(SO,
                                 PCs_to_meta_clustering,
                                 ffbms,
                                 resolution_meta) {
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
   SO <- purrr::map(SO, function(SO) {
 
     # differentiate mouse, human or no MT-genes at all

@@ -28,7 +28,7 @@
 #'
 #' @examples
 prep_data_df_wide <- function(data,
-                              feature,
+                              feature = NULL,
                               reduction = c("umap_1", "umap_2"),
                               qmin = 0,
                               qmax = 1,
@@ -52,14 +52,24 @@ prep_data_df_wide <- function(data,
     qmin <- qmin/100
   }
 
+  data <- as.data.frame(data)
+
+  reduction <- grep(paste(reduction, collapse = "|"), names(data), value = T, ignore.case = T)
+  if (any(!reduction %in% names(data))) {
+    stop("At least one of reduction not found.")
+  }
+  if (length(reduction) > 2) {
+    stop("length of reduction > 2: ", paste(reduction, collapse = ", "))
+  }
+
+  if (is.null(feature)) {
+    feature <- setdiff(names(data), reduction)
+  }
+
   data <- tibble::rownames_to_column(data, "id")
   data[["SO.split"]] <- 1
   data[["SO.split"]] <- factor(data[["SO.split"]], levels = 1)
   data[["cells"]] <- 1 # option to provide from outside?
-
-  if (any(!reduction %in% names(data))) {
-    stop("At least one of reduction not found.")
-  }
 
   if (!is.null(label_feature)) {
     if (!label_feature %in% names(data)) {
@@ -117,18 +127,21 @@ prep_data_df_wide <- function(data,
   if (qmin > 0 || qmax < 1) {
     data <- purrr::map(data, function(x) {
       if (is.numeric(x[["feature"]])) {
-        if (all(x[["feature"]] >= 0)) { # > 0 or >= 0 ?!
-          # expression is always greater than 0 and non-expresser are excluded
-          inds <- which(x[["feature"]] > 0)
-          x[["feature"]][inds] <- scales::squish(
-            x[["feature"]][inds],
-            range = c(stats::quantile(x[["feature"]][inds], qmin),
-                      stats::quantile(x[["feature"]][inds], qmax))
-          )
-        } else {
-          # e.g. for module scores below 0
-          x[["feature"]] <- scales::squish(x[["feature"]], range = c(stats::quantile(x[["feature"]], qmin), stats::quantile(x[["feature"]], qmax)))
-        }
+        x[["feature"]] <- scales::squish(x[["feature"]], range = c(stats::quantile(x[["feature"]], qmin), stats::quantile(x[["feature"]], qmax)))
+        
+        ## dont do this here as non scrnaseq data are provided
+        # if (all(x[["feature"]] >= 0)) { # > 0 or >= 0 ?!
+        #   # expression is always greater than 0 and non-expresser are excluded
+        #   inds <- which(x[["feature"]] > 0)
+        #   x[["feature"]][inds] <- scales::squish(
+        #     x[["feature"]][inds],
+        #     range = c(stats::quantile(x[["feature"]][inds], qmin),
+        #               stats::quantile(x[["feature"]][inds], qmax))
+        #   )
+        # } else {
+        #   # e.g. for module scores below 0
+        #   x[["feature"]] <- scales::squish(x[["feature"]], range = c(stats::quantile(x[["feature"]], qmin), stats::quantile(x[["feature"]], qmax)))
+        # }
       }
       return(x)
     })

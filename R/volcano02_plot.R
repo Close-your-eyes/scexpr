@@ -75,7 +75,9 @@ volcano02_plot <- function(vd,
                            geom_text_repel_args = list(fontface = "italic",
                                                        max.overlaps = 50)) {
 
-
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
 
   x <- match.arg(x, colnames(vd))
   y <- match.arg(y, colnames(vd)) #c("adj.p.val", "p.val")

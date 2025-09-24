@@ -353,11 +353,16 @@ get.freqs <- function(data,
 get_title <- function(feature_ex = NULL,
                       feature_cut = NULL,
                       feature_cut_expr = 0,
-                      freq = NULL,
+                      freq_df = NULL,
                       feature_italic = T,
                       feature = "FCMR",
                       name_anno = "{feature} ({freq}) in {feature_cut_ex}",
                       markdown = F) {
+
+  if (!markdown) {
+    markdown <- T
+    message("currently markdown has to be TRUE.")
+  }
   if (!is.null(feature_ex)) {
     feature_ex <- paste(feature_ex, collapse = "&")
   }
@@ -368,18 +373,24 @@ get_title <- function(feature_ex = NULL,
     feature_cut_expr <- paste(feature_cut_expr, collapse = "&")
   }
 
+  freq <- freq_df$freq2
   if (markdown) {
+
+
     if (feature_italic) {feature <- paste0("*", feature, "*")}
     if (!is.null(feature_cut)) {feature_cut <- paste0("*", feature_cut, "*>", feature_cut_expr)} #else {feature_cut <- ""}
     if (!is.null(feature_ex)) {feature_ex <- paste0("*", feature_ex, "*=0")} #else {feature_ex <- ""}
     feature_cut_ex <- paste(c(feature_cut, feature_ex), collapse = " & ")
 
     title <- glue::glue(name_anno, .null = "")
+
     # replacing default left overs when feature_ex and feature_cut are NULL
-    title <- gsub(" in ", "", title)
+    title <- gsub(" in $", "", title)
+    title <- gsub("^ in ", "", title)
     title <- gsub("\\(\\)", "", title)
     title <- gsub(" {2,}", " ", title)
     title <- trimws(title)
+    freq_df$freq3 <- title
 
     #title <- trimws(paste0(feature, feature_cut_ex_freq))
   } else {
@@ -445,12 +456,15 @@ get_title <- function(feature_ex = NULL,
     # use plot <- plot + ggplot2::labs(title = substitute(paste(x, sep = ""), list(x = title)))
   }
 
-  return(title)
+  return(freq_df)
 }
 
 
 get_legend_text <- function(data,
                             type = c("gene", "meta")) {
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   type <- rlang::arg_match(type)
   if (is.numeric(data[["feature"]])) {
@@ -469,9 +483,18 @@ get_legend_text <- function(data,
 
       scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
-      scale.max <- as.numeric(format(brathering::floor2(scale.max, 0.1), nsmall = 1))
-      scale.min <- as.numeric(format(brathering::ceiling2(scale.min, 0.1), nsmall = 1))
-      scale.mid <- as.numeric(format(round(scale.mid, 1), nsmall = 1))
+      # find the largest absolute value
+      max_val <- abs(scale.max)
+
+      # compute how many decimals are needed:
+      # if max_val = 0.8 → floor(log10(0.8)) = -1 → need 1 decimal
+      # if max_val = 0.07 → floor(log10(0.07)) = -2 → need 2 decimals, etc.
+      decimals <- max(0, -floor(log10(max_val))) + 1
+
+
+      scale.max <- as.numeric(format(brathering::floor2(scale.max, 10^-decimals), nsmall = decimals))
+      scale.min <- as.numeric(format(brathering::ceiling2(scale.min, 10^-decimals), nsmall = decimals))
+      scale.mid <- as.numeric(format(round(scale.mid, decimals), nsmall = decimals))
     }
     return(list(scale.min, scale.mid, scale.max))
   }
@@ -481,6 +504,10 @@ get_legend_text <- function(data,
 get_col_pal <- function(data,
                         col_pal_c_args,
                         col_pal_d_args) {
+
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
 
   if (is.numeric(data[["feature"]])) {
     col.pal <- colrr::make_col_pal(col_vec = col_pal_c_args[["name"]],
@@ -510,6 +537,9 @@ add_color_scale <- function(plot,
                             col_na = "grey50",
                             col_binary = F) {
 
+  if (!requireNamespace("fcexpr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/fcexpr")
+  }
 
   if (col_binary) {
     if (col_legend_args[["title"]] == "..auto..") {
@@ -553,7 +583,7 @@ add_color_scale <- function(plot,
         if (legendlabels == "auto" && (qmin > 0 || qmax < 1)) {
           legendlabels <- c(min.lab, scale.mid, max.lab)
         } else if (legendlabels != "auto" && (qmin > 0 || qmax < 1)) {
-          message("qmax and/or qmin nor shown in legend.")
+          message("qmax and/or qmin not shown in legend.")
         }
         scale_color <- fcexpr:::colorscale_heuristic(colorscale_values = plot[["data"]][["feature"]], # fcexpr:::
                                                      values_zscored = F,
@@ -657,6 +687,9 @@ add_facet <- function(plot,
 add_axes_expansion <- function(plot,
                                axes_lim_set = list(),
                                axes_lim_expand = list()) {
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   if (length(axes_lim_set) > 0 || length(axes_lim_expand) > 0) {
 
@@ -702,6 +735,10 @@ add_labels <- function(plot = plot,
                          color = "black",
                          label.padding = ggplot2::unit(rep(0.1,4), "lines")),
                        finalize_plotting = F) {
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   data <- plot[["data"]] #|> tidyr::pivot_wider(names_from = feat, values_from = value)
   label_feature <- ifelse("label_feature" %in% names(attributes(plot[["data"]])), "label_feature", "feature")
@@ -943,6 +980,10 @@ add_contour <- function(plot,
                         contour_fun = ggplot2::geom_density2d,
                         contour_path_label = NULL,
                         finalize_plotting_expr_freq_labels = F) {
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
 
   if (contour_multi_try) {
@@ -1276,7 +1317,9 @@ co_add_feature_and_contour_labels <- function(plot,
                                               label_args,
                                               contour_label_nudge,
                                               contour_label_args) {
-
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   dimcol1 <- attr(plot[["data"]], "dim1")
   dimcol2 <- attr(plot[["data"]], "dim2")

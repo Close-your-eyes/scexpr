@@ -154,6 +154,12 @@ heatmap_pseudobulk2 <- function(SO,
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }
+  if (!requireNamespace("fcexpr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/fcexpr")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   feature_order <- rlang::arg_match(feature_order)
   group_order <- rlang::arg_match(group_order)

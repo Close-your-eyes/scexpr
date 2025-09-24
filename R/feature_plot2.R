@@ -262,6 +262,10 @@ feature_plot2 <- function(SO,
 
   ## label position calculation is not facetted!!
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
+
   dotlist <- list(...)
   for (i in c("contour_feature", "label_feature", "split_feature", "shape_feature", "feature_ex", "feature_cut", "feature_cut_expr")) {
     if (!is.null(dotlist[[i]])) {get_data_args[[i]] <- dotlist[[i]]}

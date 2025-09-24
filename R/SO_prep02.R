@@ -106,6 +106,10 @@ SO_prep02 <- function(SO_unprocessed,
                       join_layers = T,
                       ...) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
+
   mydots <- list(...)
   options(warn = 1)
 

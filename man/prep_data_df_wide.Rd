@@ -6,7 +6,7 @@
 \usage{
 prep_data_df_wide(
   data,
-  feature,
+  feature = NULL,
   reduction = c("umap_1", "umap_2"),
   qmin = 0,
   qmax = 1,

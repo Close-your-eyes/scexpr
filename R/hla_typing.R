@@ -58,11 +58,11 @@ hla_typing <- function(hla_ref,
   # check for unique read names
   # check for columns in data frames
 
-  if (!requireNamespace("BiocManager", quietly = T)) {
-    utils::install.packages("BiocManager")
-  }
   if (!requireNamespace("Biostrings", quietly = T)) {
     BiocManager::install("Biostrings")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
   }
 
   lapply_fun <- match.fun(lapply_fun)

@@ -61,6 +61,12 @@ composition_barplot <- function(SO,
                                 label_position = NULL,
                                 flip = F) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data

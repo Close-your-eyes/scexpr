@@ -56,8 +56,8 @@ cluster_correlation <- function(SO,
                                 aspect.ratio = 1,
                                 mid.white.strech.length = 4) {
 
-  if (!requireNamespace("reshape2", quietly = T)) {
-    utils::install.packages("reshape2")
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
   }
 
   if (length(features) == 1 || length(features) == 2 && length(intersect(features, c("all", "pca"))) == 2) {

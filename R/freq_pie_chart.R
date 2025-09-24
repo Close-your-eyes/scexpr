@@ -50,6 +50,13 @@ freq_pie_chart <- function(SO,
                                              axis.text = ggplot2::element_blank(),
                                              axis.ticks = ggplot2::element_blank()),
                            col_pal_args = list(missing_fct_to_na = T)) {
+
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data
   }

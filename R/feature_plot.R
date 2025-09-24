@@ -211,6 +211,9 @@ feature_plot <- function(SO,
                          facet_grid_row_var = NULL,
                          ...) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
   ## geom textpath for contour lines?
 
   ## add axis arrows, shortened:

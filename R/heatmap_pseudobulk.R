@@ -156,6 +156,9 @@ heatmap_pseudobulk <- function(SO,
   if (!requireNamespace("presto", quietly = T)) {
     devtools::install_github("immunogenomics/presto")
   }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
 
   # set to 2 when features are provided
   # this was found to reliably yield a beautiful order

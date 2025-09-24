@@ -43,6 +43,9 @@ volcano01_calc <- function(SO,
                                                                                                  c(neg_name, pos_name)),
                                                                           missing_fct_to_na = F))) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
+  }
 
   default_warn <- getOption("warn")
   options(warn = 1)
