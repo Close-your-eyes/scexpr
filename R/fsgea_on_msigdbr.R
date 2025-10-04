@@ -16,6 +16,8 @@
 #'
 #' @examples
 #' \dontrun{
+#' s2ntab <- scexpr::s2n_groupwise(obj = so, group = "integrated_snn_res.0.7")
+#' msiggsea <- fgsea_on_msigdbr(gene.ranks = s2ntab[,"20"], use.msigdbr = T)
 #' # get gene sets from msigdbr, split to a named list
 #' gene.sets <- scexpr:::.get.split.msigdbr()
 #' msigdbr::msigdbr_collections()
@@ -27,7 +29,11 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
                              return.gene.sets = T,
                              min.padj = 0, # which plots to generate; by default: none
                              use.msigdbr = F,
-                             msigdbr_args = list(species = "Homo sapiens", collection = NULL, subcollection = NULL),
+                             msigdbr_args = list(
+                               db_species = "HS",
+                               species = "human",
+                               collection = c("C1","C2","C3","C4","C5","C6","C7","C8","H")
+                             ),
                              fgsea_fun = fgsea::fgseaMultilevel,
                              fgsea_args = list(),
                              ...) {
@@ -105,11 +111,20 @@ fgsea_on_msigdbr <- function(gene.ranks = NULL,
 
 
 
-.get.split.msigdbr <- function(msigdbr_args = list(species = "Homo sapiens", category = NULL, subcategory = NULL)) {
-  sets <- Gmisc::fastDoCall(msigdbr::msigdbr, args = msigdbr_args)[,c("gs_name", "gene_symbol", "gs_cat")]
+.get.split.msigdbr <- function(msigdbr_args = list(
+  db_species = "HS",
+  species = "human",
+  collection = NULL
+)) {
+
+  sets <- purrr::map_dfr(msigdbr_args$collection, function(x) {
+    msigdbr_args$collection <- x
+    Gmisc::fastDoCall(msigdbr::msigdbr, args = msigdbr_args)[,c("gs_collection", "gs_name", "gene_symbol")]
+  })
+
   sets <- unique(sets) # some gene symbols exist in duplicates, but ENSEMBLE differs; make gene symbols unique
-  sets_cat <- unique(sets[,which(names(sets) %in% c("gs_cat", "gs_name"))])
-  return(list(sets = split(sets$gene_symbol, sets$gs_name), cats = stats::setNames(sets_cat$gs_cat, sets_cat$gs_name)))
+  sets_cat <- unique(sets[,which(names(sets) %in% c("gs_collection", "gs_name"))])
+  return(list(sets = split(sets$gene_symbol, sets$gs_name), cats = stats::setNames(sets_cat$gs_collection, sets_cat$gs_name)))
 }
 
 

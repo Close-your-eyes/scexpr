@@ -2,13 +2,15 @@
 % Please edit documentation in R/volcano02_plot.R
 \name{volcano02_plot}
 \alias{volcano02_plot}
-\title{Title}
+\title{Make volcano plot}
 \usage{
 volcano02_plot(
-  vd,
-  x = "log2.fc",
-  y = "adj.p.val",
+  volc01_df,
+  x = "avg_log2FC",
+  y = "p_val_adj",
   feature = "feature",
+  pt_col = "grey60",
+  pt_col_inf = "cornflowerblue",
   pt_size = 1,
   pt_alpha = 0.8,
   minus_log10_y = T,
@@ -16,16 +18,15 @@ volcano02_plot(
   x_expnd = 0.5,
   y_pseudo_log = F,
   pseudo_log_sigma = 1,
-  features.to.color = NULL,
-  features.color.by = NULL,
-  errorbar.low.col = NULL,
-  errorbar.up.col = NULL,
-  errorbar.size = 0.2,
-  errorbar.width = 0.2,
-  col.pal = "RdBu",
-  col.pal.dir = 1,
-  col.type = c("c", "d"),
-  font.size = 14,
+  features_to_color = NULL,
+  features_color_by = NULL,
+  errorbar_low = NULL,
+  errorbar_up = NULL,
+  errorbar_size = 0.2,
+  errorbar_width = 0.2,
+  col_pal = "RdBu",
+  col_pal_dir = -1,
+  theme = colrr::theme_material(base_size = 14, white = T),
   p_tick = NULL,
   feature_exclude = NULL,
   min_pct = 0,
@@ -33,17 +34,104 @@ volcano02_plot(
   cut_fc = NA,
   label_plot = T,
   label_features = NULL,
-  label_topn_metric = c("p_val", "fc", "both"),
+  label_topn_metric = c("x", "y"),
   label_topn = 30,
-  label_dot_color = "tomato2",
+  label_pt_col = "tomato2",
   label_neg_pos_sep = F,
   label_p_signif = 0.001,
   geom_text_repel_args = list(fontface = "italic", max.overlaps = 50)
 )
 }
 \arguments{
-\item{cut_fc}{}
+\item{volc01_df}{data frame from volcano01_calc}
+
+\item{x}{column from volc01_df for x axis}
+
+\item{y}{column from volc01_df for y axis}
+
+\item{feature}{column from volc01_df with feature (gene) names}
+
+\item{pt_col}{point color}
+
+\item{pt_col_inf}{point color for those with Inf log fc}
+
+\item{pt_size}{point size}
+
+\item{pt_alpha}{point alpha}
+
+\item{minus_log10_y}{make y = -log10(y) (when p-value kind of thing)}
+
+\item{x_symm}{make x axis symmetric}
+
+\item{x_expnd}{expand (or reduce) x-axis by this at top and bottom}
+
+\item{y_pseudo_log}{make y axis pseudo log with scales::pseudo_log_trans}
+
+\item{pseudo_log_sigma}{sigma for pseudo log}
+
+\item{features_to_color}{which features to plot with color on top}
+
+\item{features_color_by}{which column to color them by;
+numeric --> continuous, else: discrete}
+
+\item{errorbar_low}{column from volc01_df with low errorbar size; only when
+MetaVolcanoR}
+
+\item{errorbar_up}{see errorbar_low}
+
+\item{errorbar_size}{to ggplot2::geom_errorbar}
+
+\item{errorbar_width}{ggplot2::geom_errorbar}
+
+\item{col_pal}{color palette to colrr::col_pal}
+
+\item{col_pal_dir}{to direction in colrr::col_pal}
+
+\item{theme}{ggplot theme}
+
+\item{p_tick}{value for extra tick on y-axis (~p-value)}
+
+\item{feature_exclude}{exclude features from plotting, vector}
+
+\item{min_pct}{filter features by min_pct}
+
+\item{cut_p}{provide cut_p and cut_fc and count number of genes above these
+limits}
+
+\item{cut_fc}{see cut_p}
+
+\item{label_plot}{plot feature labels?}
+
+\item{label_features}{select features for labeling; or pass "significant", then
+all features below label_p_signif are labelled}
+
+\item{label_topn_metric}{select features to label by top values in x and/or y}
+
+\item{label_topn}{how many of top hits in metric? (roughly)}
+
+\item{label_pt_col}{extra color for labelled points; NULL for no extra color}
+
+\item{label_neg_pos_sep}{label points >0 and <0 separately? useful for uniform
+repelling to left and right}
+
+\item{label_p_signif}{p value (y-axis) cutoff for labeling, passed
+"significant" to label_features to enable this}
+
+\item{geom_text_repel_args}{arguments to ggrepel::geom_text_repel}
+}
+\value{
+ggplot object
 }
 \description{
-Title
+Calculate with volcano01_calc. Plot with volcano02_plot.
+}
+\examples{
+\dontrun{
+  volc <- scexpr::volcano01_calc(
+    so2,
+    neg_cells = c(15,16),
+    pos_cells = c(17,18),
+    method = "wilcox")
+  volcano02_plot(volc[["df"]])
+}
 }

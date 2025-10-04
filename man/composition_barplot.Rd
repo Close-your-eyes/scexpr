@@ -19,6 +19,7 @@ composition_barplot(
   min_label_freq = 0.05,
   label_rel_pct = T,
   label_rel_decimals = 2,
+  label_rel_rm_zero = T,
   summarize_all_x = F,
   label_rel_nudge = list(c(0, 0)),
   label_abs_nudge = list(c(0, 0)),

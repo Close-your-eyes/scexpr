@@ -11,7 +11,8 @@ fgsea_on_msigdbr(
   return.gene.sets = T,
   min.padj = 0,
   use.msigdbr = F,
-  msigdbr_args = list(species = "Homo sapiens", collection = NULL, subcollection = NULL),
+  msigdbr_args = list(db_species = "HS", species = "human", collection = c("C1", "C2",
+    "C3", "C4", "C5", "C6", "C7", "C8", "H")),
   fgsea_fun = fgsea::fgseaMultilevel,
   fgsea_args = list(),
   ...
@@ -33,6 +34,8 @@ Convenient wrapper around fgsea function
 }
 \examples{
 \dontrun{
+s2ntab <- scexpr::s2n_groupwise(obj = so, group = "integrated_snn_res.0.7")
+msiggsea <- fgsea_on_msigdbr(gene.ranks = s2ntab[,"20"], use.msigdbr = T)
 # get gene sets from msigdbr, split to a named list
 gene.sets <- scexpr:::.get.split.msigdbr()
 msigdbr::msigdbr_collections()

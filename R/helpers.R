@@ -483,17 +483,11 @@ get_legend_text <- function(data,
 
       scale.mid <- scale.min + ((scale.max - scale.min) / 2)
 
-      # find the largest absolute value
-      max_val <- abs(scale.max)
 
-      # compute how many decimals are needed:
-      # if max_val = 0.8 → floor(log10(0.8)) = -1 → need 1 decimal
-      # if max_val = 0.07 → floor(log10(0.07)) = -2 → need 2 decimals, etc.
-      decimals <- max(0, -floor(log10(max_val))) + 1
+      decimals <- brathering::decimals_adaptive(data[intersect(which(data[["cells"]] == 1), which(is.finite(data[["feature"]]))), "feature"])
 
-
-      scale.max <- as.numeric(format(brathering::floor2(scale.max, 10^-decimals), nsmall = decimals))
-      scale.min <- as.numeric(format(brathering::ceiling2(scale.min, 10^-decimals), nsmall = decimals))
+      scale.max <- as.numeric(format(brathering::floor2(scale.max, decimals), nsmall = decimals))
+      scale.min <- as.numeric(format(brathering::ceiling2(scale.min, decimals), nsmall = decimals))
       scale.mid <- as.numeric(format(round(scale.mid, decimals), nsmall = decimals))
     }
     return(list(scale.min, scale.mid, scale.max))
@@ -530,15 +524,15 @@ get_col_pal <- function(data,
 add_color_scale <- function(plot,
                             col.pal,
                             col_legend_args,
-                            col_steps = "auto",
-                            legendbreaks = "auto",
-                            legendlabels = "auto",
+                            col_steps = "..auto..",
+                            legendbreaks = "..auto..",
+                            legendlabels = "..auto..",
                             col_steps_nice = T,
                             col_na = "grey50",
                             col_binary = F) {
 
-  if (!requireNamespace("fcexpr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/fcexpr")
+  if (!requireNamespace("colrr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/colrr")
   }
 
   if (col_binary) {
@@ -585,18 +579,19 @@ add_color_scale <- function(plot,
         } else if (legendlabels != "auto" && (qmin > 0 || qmax < 1)) {
           message("qmax and/or qmin not shown in legend.")
         }
-        scale_color <- fcexpr:::colorscale_heuristic(colorscale_values = plot[["data"]][["feature"]], # fcexpr:::
-                                                     values_zscored = F,
-                                                     colorsteps = col_steps,
-                                                     legendbreaks = legendbreaks,
-                                                     legendlabels = legendlabels,
-                                                     fill = col.pal,
-                                                     colorsteps_nice = col_steps_nice,
-                                                     type = "color",
-                                                     col_na = col_na,
-                                                     qmin = attr(plot[["data"]], "qmin"),
-                                                     qmax = attr(plot[["data"]], "qmax"),
-                                                     scale.min = scale.min)
+
+        scale_color <- colrr::get_color_scale_continuous(values = plot[["data"]][["feature"]],
+                                                         zscored = F,
+                                                         colorsteps = col_steps,
+                                                         legendbreaks = legendbreaks,
+                                                         legendlabels = legendlabels,
+                                                         colors = col.pal,
+                                                         colorsteps_nice = col_steps_nice,
+                                                         type = "color",
+                                                         col_na = col_na,
+                                                         qmin = attr(plot[["data"]], "qmin"),
+                                                         qmax = attr(plot[["data"]], "qmax"),
+                                                         scale.min = scale.min)
 
         if (grepl("coloursteps", scale_color[["guide"]])) {
           guide_fun <- ggplot2::guide_colorsteps
@@ -690,6 +685,12 @@ add_axes_expansion <- function(plot,
   if (!requireNamespace("brathering", quietly = T)) {
     devtools::install_github("Close-your-eyes/brathering")
   }
+
+  plot <- plot  +
+    ## needed to avoid expansion by annotation below
+    # also makes tight plot: 1 % expansion only
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.02)) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.02))
 
   if (length(axes_lim_set) > 0 || length(axes_lim_expand) > 0) {
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/volcano01_calc.R
 \name{volcano01_calc}
 \alias{volcano01_calc}
-\title{Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects}
+\title{Volcano plot comparing gene expression between groups of cells from one or more Seurat objects}
 \usage{
 volcano01_calc(
   SO,
@@ -10,10 +10,10 @@ volcano01_calc(
   layer = "data",
   neg_cells,
   pos_cells,
-  neg_name = "negative.group",
-  pos_name = "positive.group",
+  neg_name = NULL,
+  pos_name = NULL,
   method = c("MAST", "wilcox", "wilcox_limma", "bimod", "roc", "t", "negbinom",
-    "poisson", "LR", "DESeq2", "limma", "default"),
+    "poisson", "LR", "DESeq2", "limma", "custom"),
   fc_inf_squish = 2,
   p_zero_squish = 1,
   min_pct = 0.1,
@@ -31,19 +31,18 @@ volcano01_calc(
 
 \item{neg_cells}{vector of cell names for the negative group of cells; genes which
 are expressed at higher level in this group will have a negative sign (minus); use Seurat::Cells()
-or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells}
+or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells;
+or provide a vector which will be checked against Idents(SO)}
 
-\item{pos_cells}{vector of cell names for the positive group of cells; genes which
-are expressed at higher level in this group will have a positive sign (plus); use Seurat::Cells()
-or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells}
+\item{pos_cells}{vector of cell names for the positive group of cells}
 
 \item{neg_name}{name for the negative group of cells; this will appear on plot axes}
 
 \item{pos_name}{name for the positive group of cells; this will appear on plot axes}
 
-\item{method}{backend for DE calculation;limma:intended for subsequent use MetaVolcanoR
-which relies on values returned from limma; MAST: Seurat::FindMarkers;
-with MAST as method; default: matrixTests::row_wilcoxon_twosample}
+\item{method}{backend for DE calculation; any method from Seurat::FindMarkers;
+limma: intended for subsequent use MetaVolcanoR
+custom: matrixTests::row_wilcoxon_twosample w/o any modelling}
 
 \item{fc_inf_squish}{numeric; genes with an infinite fold-change (happens when a gene not expressed at all in one group)
 are not left infinite but will be put at: "largest finite fold-change +/- fc_inf_squish"; such genes are indicated
@@ -54,6 +53,24 @@ fraction of cells at least one group (neg_cells or pos_cells)}
 
 \item{p_adj}{method for p-value adjustment}
 }
+\value{
+list of data frame, matrix, meta data; pct column in df is percent of
+expressers for a gene in pos_group when avg_log2fc > 0 and vice versa pct
+in neg_group when  avg_log2fc < 0
+}
 \description{
-Make a volcano plot comparing the gene expression of selected groups of cells from one or more preprocessed Seurat objects
+Calculate with volcano01_calc. Plot with volcano02_plot.
+}
+\examples{
+\dontrun{
+# when neg_cells and pos_cells are idents and not vectors of cell names
+# set the right meta.data column as Idents first
+SeuratObject::Idents(so2) <- so2$SCT_snn_res.0.8
+  volc <- scexpr::volcano01_calc(
+    so2,
+    neg_cells = c(15,16),
+    pos_cells = c(17,18),
+    method = "wilcox")
+  volcano02_plot(volc[["df"]])
+}
 }

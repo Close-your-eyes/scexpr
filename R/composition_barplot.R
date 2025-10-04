@@ -51,6 +51,7 @@ composition_barplot <- function(SO,
                                 min_label_freq = 0.05,
                                 label_rel_pct = T,
                                 label_rel_decimals = 2,
+                                label_rel_rm_zero = T,
                                 summarize_all_x = F,
                                 label_rel_nudge = list(c(0,0)),
                                 label_abs_nudge = list(c(0,0)),
@@ -157,10 +158,14 @@ composition_barplot <- function(SO,
   ## use cumsum approach to define label position in middle of bars
   ## this allow to remove label by min_label_freq and still have the correct coordinate
   ## coordinates became wrong with position = ggplot2::position_stack(vjust = 0.5) when some values were removed
+
+
   table <-
     table %>%
+    # make sure NA come first in order, as they will be plotted first - needed for cumsum and correct label position
+    dplyr::mutate(sort_helper = ifelse(is.na(!!rlang::sym(fill_cat)), 0, 1)) %>%
     dplyr::group_by(!!rlang::sym(x_cat)) %>%
-    dplyr::arrange(dplyr::desc(!!rlang::sym(fill_cat)), .by_group = T) %>%
+    dplyr::arrange(sort_helper, dplyr::desc(!!rlang::sym(fill_cat)), .by_group = T) %>%
     dplyr::mutate(rel_x_cumsum = cumsum(rel_x)) %>%
     dplyr::mutate(rel_x_cumsum_lag = dplyr::lag(rel_x_cumsum, default = 0)) %>%
     dplyr::mutate(label_ypos = rel_x_cumsum_lag + (rel_x_cumsum-rel_x_cumsum_lag)/2) %>%
@@ -169,6 +174,11 @@ composition_barplot <- function(SO,
     dplyr::mutate(n_label_ypos = n_cumsum_lag + (n_cumsum-n_cumsum_lag)/2) %>%
     dplyr::mutate(rel_x_fctr = rel_x*fctr) %>%
     dplyr::mutate(rel_x_fctr_round = brathering::round2(rel_x_fctr, label_rel_decimals)) %>%
+    dplyr::mutate(rel_x_fctr_round = ifelse(
+      label_rel_rm_zero,
+      gsub("^0", "", as.character(rel_x_fctr_round)),
+      rel_x_fctr_round
+    )) %>%
     dplyr::mutate(rel_x_fctr_pct = paste0(brathering::round2(rel_x_fctr, label_rel_decimals), " %")) %>%
     dplyr::mutate(label_ypos_fctr = label_ypos*fctr) %>%
     tibble::as_tibble()
@@ -198,6 +208,7 @@ composition_barplot <- function(SO,
 
 
   if (plot_rel_labels || plot_abs_labels) {
+
     table_temp <- dplyr::filter(table, rel_x >= min_label_freq)
     if (nrow(table_temp) < nrow(table)) {
       message(nrow(table) - nrow(table_temp), " text labels removed due to min_label_freq.")
@@ -209,9 +220,7 @@ composition_barplot <- function(SO,
         dplyr::slice_max(rel_x_fctr) %>%
         dplyr::ungroup()
     }
-    table_temp <-
-      table_temp %>%
-      dplyr::arrange(!!rlang::sym(fill_cat), rel_x_cumsum)
+    table_temp <- dplyr::arrange(table_temp, !!rlang::sym(fill_cat), rel_x_cumsum)
 
     if (!missing(label_rel_nudge) || !missing(label_abs_nudge) || !is.null(label_position)) {
       # print to show order of entries in the table which relevant for nudging labels
@@ -232,7 +241,7 @@ composition_barplot <- function(SO,
           # order
           label_position <- label_position[as.character(table_temp[[x_cat]])]
           # handle missing values
-          label_position <- purrr::map2_dbl(label_position, table_temp[[y_plot]], ~ if (is.na(.x)) .y else .x)
+          label_position <- purrr::map2_dbl(label_position, table_temp[[y_plot]], ~ if (is.na(.x)) {.y} else {.x})
         } else {
           message("names of label_position cannot be used due to duplicates. will stick to the order provided.")
         }
@@ -302,7 +311,15 @@ composition_barplot <- function(SO,
   return(list(plot = plot, data = table, data_total = table0))
 }
 
-plot_label_fun <- function(nudge, size, label_var, name, table_temp, x_cat, y_plot, label_color, plot) {
+plot_label_fun <- function(nudge,
+                           size,
+                           label_var,
+                           name,
+                           table_temp,
+                           x_cat,
+                           y_plot,
+                           label_color,
+                           plot) {
 
   if (!is.null(names(nudge))) {
     if (!anyDuplicated(names(nudge)) && !anyDuplicated(table_temp[[x_cat]])) {
@@ -321,10 +338,14 @@ plot_label_fun <- function(nudge, size, label_var, name, table_temp, x_cat, y_pl
   }
   size <- brathering::recycle(size, nudge)
   for (j in seq_along(nudge)) {
-    plot <-
-      plot +
+    plot <- plot +
       ggplot2::geom_text(data = table_temp[j,],
-                         ggplot2::aes(color = I(label_color), label = !!rlang::sym(label_var), x = !!rlang::sym(x_cat), y = !!rlang::sym(y_plot)),
+                         ggplot2::aes(
+                           color = I(label_color),
+                           label = !!rlang::sym(label_var),
+                           x = !!rlang::sym(x_cat),
+                           y = !!rlang::sym(y_plot)
+                         ),
                          nudge_x = nudge[[j]][1], nudge_y = nudge[[j]][2],
                          size = size[j])
   }

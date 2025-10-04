@@ -71,6 +71,7 @@ unique values only}
 list with (i) ggplot object of correlation matrix plot, (ii) the data frame to that plot and (iii) calculated average expressions from Seurat::AverageExpression
 }
 \description{
+Consider scexpr::labeltransfer_singler for spearman correlation between clusters.
 Sometimes one wants to avoid combining data sets into a single seurat object as this often requires to employ an integration procedure or a
 batch correction and respective uncertainties. At some point then one may be interested in which clusters correspond to
 each other in separate seurat object. This function quickly returns a graphic and data frames to judge best matching clusters.

@@ -16,7 +16,7 @@
 #' @param col_pal_d_args for discrete color
 #' @param col_steps NULL to have normal colorbar, auto for default colorsteps,
 #' a single number or a vector of explicit steps; may not work with any number
-#' when col_steps_nice is TRUE; fcexpr:::colorscale_heuristic is used
+#' when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used
 #' @param col_steps_nice algorithmic determination of pretty steps,
 #' see ggplot2::scale_color_stepsn
 #' @param col_legend_args arguments to ggplot2::guide_colorsteps,
@@ -115,7 +115,7 @@ feature_plot_data <- function(data,
                               col_binary = F,
                               col_pal_c_args = list(name = "spectral", direction = -1),
                               col_pal_d_args = list(name = "custom"),
-                              col_steps = "auto",
+                              col_steps = "..auto..",
                               col_steps_nice = T,
                               col_legend_args = list(barwidth = 1,
                                                      barheight = 8,
@@ -123,7 +123,7 @@ feature_plot_data <- function(data,
                                                      title = "..auto..",
                                                      order = 1),
                               legendbreaks = "minmidmax",
-                              legendlabels = "auto",
+                              legendlabels = "..auto..",
                               shape_legend_args = list(override.aes = list(size = 4),
                                                        order = 2),
                               shape_legend_hide = F,
@@ -135,16 +135,15 @@ feature_plot_data <- function(data,
                               freq_col = "..auto..",
                               name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
                               name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
-                              name_anno_args = list(x = -Inf,
-                                                    y = Inf,
-                                                    hjust = 0, # 1.1,
-                                                    vjust = 1.25,
+                              name_anno_args = list(x = "..auto..",
+                                                    y = "..auto..",
+                                                    hjust = "..auto..",
+                                                    vjust = "..auto..",
                                                     color = NA,
                                                     fill = NA,
                                                     label.color = NA,
                                                     size = 4,
                                                     text.color = "..auto.."),
-
                               theme = colrr::theme_material(
                                 white = T,
                                 legend_tight = T,
@@ -274,11 +273,9 @@ feature_plot_data <- function(data,
   shapeby <- tryCatch(rlang::sym(attr(data, "shape_feature")), error = function(e) NULL)
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(attr(data, "dim1")), y = !!rlang::sym(attr(data, "dim2")))) +
-    ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells)
-
-
-  plot <- plot + theme
-  plot <- plot + Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
+    ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells) +
+    theme +
+    Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
 
   if (attr(data, "feature_type") == "gene") {
     freqs <- get.freqs2(data = data)
@@ -363,23 +360,41 @@ feature_plot_data <- function(data,
       plot <- plot + ggplot2::labs(title = title_freq_df$freq3)
       #plot <- plot + ggplot2::labs(title = substitute(paste(x, sep = ""), list(x = title)))
     }
+
     if ("annotation" %in% name_anno_pos) {
-      library(ggtext)
+
       if (!"text.color" %in% names(name_anno_args)) {
         name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
       } else if (name_anno_args[["text.color"]] == "..auto..") {
         name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
       }
 
-      ## cange this somewhen
+       empty_corner <- brathering::corner_scores(ggobj = plot)
+       name_anno_args$x <- ifelse(name_anno_args$x == "..auto..", empty_corner[1,"x"], as.numeric(name_anno_args$x))
+       name_anno_args$y <- ifelse(name_anno_args$y == "..auto..", empty_corner[1,"y"], as.numeric(name_anno_args$y))
+       # set hjust, vjust
+       xmin <- min(empty_corner$x); xmax <- max(empty_corner$x)
+       ymin <- min(empty_corner$y); ymax <- max(empty_corner$y)
+
+       name_anno_args$hjust <- ifelse(name_anno_args$hjust == "..auto..",
+                                      # x closer to xmin or xmax?
+                                      ifelse(abs(name_anno_args$x - xmin) <= abs(name_anno_args$x - xmax), 0, 1),
+                                      name_anno_args$hjust)
+       name_anno_args$vjust <- ifelse(name_anno_args$vjust == "..auto..",
+                                      # y closer to ymin or ymax?
+                                      ifelse(abs(name_anno_args$y - ymin) <= abs(name_anno_args$y - ymax), 0, 1),
+                                      name_anno_args$vjust)
+      ## change this somewhen
       if (is.data.frame(annotation_freq_df)) {
         annotation_freq_df <- annotation_freq_df |>
           dplyr::mutate(!!attr(data, "dim1") := name_anno_args$x,
                         !!attr(data, "dim2") := name_anno_args$y)
         name_anno_args <- c(name_anno_args,
                             list(data = annotation_freq_df, mapping = aes(label = freq3)))
+
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = name_anno_args)
       } else {
+        library(ggtext)
         plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
                                                                           label = annotation_freq_df$freq3),
                                                                      name_anno_args))
@@ -474,4 +489,149 @@ feature_plot_data <- function(data,
   #   plot <- cowplot::ggdraw() + cowplot::draw_plot(plot) + cowplot::draw_plot(inset, x = inset.position[1], y = inset.position[2], width = inset.size[1], height = inset.size[2])
   # }
   return (plot)
+}
+
+
+
+feature_plot_gene <- function(plot,
+                              freqs,
+                              pt_size = 0.3,
+                              pt_size_fct = 1,
+                              col_expr = "tomato2",
+                              col_non_expr = "grey85",
+                              col_binary = F,
+                              col_split = "grey30",
+                              freq_plot = T,
+                              plot_all_across_split = F,
+                              freq_pos = c(-Inf, Inf),
+                              freq_size = 4,
+                              freq_col = "black") {
+
+  shapeby <- tryCatch(rlang::sym(attr(plot[["data"]], "shape_feature")), error = function(e) NULL)
+
+  if (plot_all_across_split && "split_feature" %in% names(attributes(plot[["data"]]))) {
+    plot <- plot + ggplot2::geom_point(data = ~dplyr::select(., -split_feature) |> dplyr::filter(cells == 1),
+                                       mapping = ggplot2::aes(shape = !!shapeby),
+                                       size = pt_size,
+                                       color = col_split)
+  }
+
+  if (col_binary) {
+    if (any(dplyr::filter(plot[["data"]], cells == 1)[["feature"]] < 0)) {
+      message("col_binary (+/-) may not be meaningful as there are negative expression values for ", attr(plot[["data"]], "feature"), ".")
+    }
+    plot[["data"]][["valuebin"]] <- ifelse(plot[["data"]][["feature"]] > 0, "+", "-")
+    plot <- plot + ggplot2::geom_point(
+      data = ~dplyr::filter(., cells == 1),
+      mapping = ggplot2::aes(shape = !!shapeby, color = valuebin),
+      size = pt_size*pt_size_fct) +
+      ggplot2::scale_color_manual(values = c(col_non_expr, col_expr))
+  } else {
+    # non-expressers
+    plot <- plot + ggplot2::geom_point(
+      data = ~dplyr::filter(., cells == 1 & feature == 0),
+      mapping = ggplot2::aes(shape = !!shapeby),
+      size = pt_size,
+      color = col_non_expr)
+    # expressers
+    plot <- plot + ggplot2::geom_point(
+      data = ~dplyr::filter(., cells == 1 & feature > 0),
+      mapping = ggplot2::aes(color = feature, shape = !!shapeby),
+      size = pt_size*pt_size_fct)
+  }
+
+
+  if (freq_plot) {
+    if (nlevels(plot[["data"]][["SO.split"]]) > 1 && !"split_feature" %in% names(attributes(plot[["data"]]))) {
+      freqs2 <- freqs[["freq.expr.by.SO"]]
+    } else if (nlevels(plot[["data"]][["SO.split"]]) > 1 && "split_feature" %in% names(attributes(plot[["data"]]))) {
+      freqs2 <- freqs[["freq.expr.by.split.SO"]]
+    } else if ("split_feature" %in% names(attributes(plot[["data"]])) && nlevels(plot[["data"]][["SO.split"]]) == 1) {
+      freqs2 <- freqs[["freq.expr.by.split"]]
+    } else {
+      freqs2 <- freqs[["freq.expr"]]
+    }
+
+    plot <- plot + ggrepel::geom_text_repel(
+      data = freqs2,
+      size = freq_size,
+      color = ifelse(freq_col == "..auto..", brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]]), freq_col),
+      ggplot2::aes(
+        label = freq2,
+        x = freq_pos[1],
+        y = freq_pos[2]
+      )
+    )
+  }
+
+  return(plot)
+}
+
+
+feature_plot_meta <- function(plot,
+                              order_discr_explicit = NULL,
+                              pt_size = 0.3,
+                              col_split = "grey30",
+                              plot_all_across_split = F,
+                              shape_by = NULL) {
+
+  shapeby <- tryCatch(rlang::sym(attr(plot[["data"]], "shape_feature")), error = function(e) NULL)
+
+  if (plot_all_across_split && "split_feature" %in% names(attributes(plot[["data"]]))) {
+    plot <- plot + ggplot2::geom_point(data = ~dplyr::select(., -split_feature) |> dplyr::filter(cells == 1),
+                                       mapping = ggplot2::aes(shape = !!shapeby),
+                                       size = pt_size,
+                                       color = col_split)
+  }
+
+  if (is.null(order_discr_explicit)) {
+    # order_discr_explicit T or F: ordering has been done in .get.data
+    # use rownames(data) %in% ... to preserve random order
+
+    plot <- plot +
+      ggplot2::geom_point(data = ~dplyr::filter(., cells == 1),
+                          mapping = ggplot2::aes(color = feature, shape = !!shapeby),
+                          size = pt_size)
+  } else {
+    # order is explicit
+    if (length(unique(order_discr_explicit)) != length(order_discr_explicit)) {
+      order_discr_explicit <- unique(order_discr_explicit)
+      message("order_discr_explicit is made unique: ", paste(order_discr_explicit, collapse = ", "))
+    }
+
+    if (any(!gsub("\\$$", "", (gsub("^\\^", "", order_discr_explicit))) %in% levels(as.factor(plot[["data"]][["value"]])))) {
+      order_discr_explicit <- order_discr_explicit[which(gsub("\\$$", "", (gsub("^\\^", "", order_discr_explicit))) %in% levels(as.factor(plot[["data"]][["value"]])))]
+      message("order_discr_explicit reduced to existing levels: ", paste(gsub("\\$$", "", (gsub("^\\^", "", order_discr_explicit))), collapse = ", "))
+    }
+
+    for (i in order_discr_explicit[which(grepl("^\\^", order_discr_explicit))]) {
+      i <- gsub("^\\^", "", i)
+      plot <- plot + ggplot2::geom_point(
+        data = ~dplyr::filter(., cells == 1 & value == i),
+        mapping = ggplot2::aes(color = feature, shape = !!shapeby),
+        size = pt_size
+      )
+    }
+
+    for (i in order_discr_explicit[intersect(which(!grepl("^\\^", order_discr_explicit)), which(!grepl("\\$$", order_discr_explicit)))]) {
+      plot <- plot + ggplot2::geom_point(
+        data = ~dplyr::filter(., cells == 1 & value == i),
+        mapping = ggplot2::aes(color = feature, shape = !!shapeby),
+        size = pt_size
+      )
+    }
+    plot <- plot + ggplot2::geom_point(data = ~dplyr::filter(., cells == 1 & value %in% gsub("\\$$", "", (gsub("^\\^", "", order_discr_explicit)))),
+                                       mapping = ggplot2::aes(color = feature, shape = !!shapeby),
+                                       size = pt_size)
+
+    for (i in order_discr_explicit[which(grepl("\\$$", order_discr_explicit))]) {
+      i <- gsub("\\$$", "", i)
+      plot <- plot + ggplot2::geom_point(
+        data = ~dplyr::filter(., cells == 1 & value == i),
+        ggplot2::aes(color = feature, shape = !!shapeby),
+        size = pt_size
+      )
+    }
+  }
+  return(plot)
 }

@@ -33,7 +33,7 @@
 #' @param col_pal_d_args for discrete color
 #' @param col_steps NULL to have normal colorbar, auto for default colorsteps,
 #' a single number or a vector of explicit steps; may not work with any number
-#' when col_steps_nice is TRUE; fcexpr:::colorscale_heuristic is used
+#' when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used
 #' @param col_steps_nice algorithmic determination of pretty steps,
 #' see ggplot2::scale_color_stepsn
 #' @param col_legend_args arguments to ggplot2::guide_colorsteps,
@@ -154,7 +154,7 @@ feature_plot2 <- function(SO,
                           col_binary = F,
                           col_pal_c_args = list(name = "spectral", direction = -1),
                           col_pal_d_args = list(name = "custom", missing_fct_to_na = T),
-                          col_steps = "auto",
+                          col_steps = "..auto..",
                           col_steps_nice = T,
                           col_legend_args = list(barwidth = 1,
                                                  barheight = 8,
@@ -162,7 +162,7 @@ feature_plot2 <- function(SO,
                                                  title = "..auto..",
                                                  order = 1),
                           legendbreaks = "minmidmax",
-                          legendlabels = "auto",
+                          legendlabels = "..auto..",
                           shape_legend_args = list(override.aes = list(size = 4),
                                                    order = 2),
                           shape_legend_hide = F,
@@ -177,16 +177,15 @@ feature_plot2 <- function(SO,
                           freq_col = "..auto..",
                           name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
                           name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
-                          name_anno_args = list(x = -Inf,
-                                                y = Inf,
-                                                hjust = 0, # 1.1,
-                                                vjust = 1.25,
+                          name_anno_args = list(x = "..auto..",
+                                                y = "..auto..",
+                                                hjust = "..auto..",
+                                                vjust = "..auto..",
                                                 color = NA,
                                                 fill = NA,
                                                 label.color = NA,
                                                 size = 4,
                                                 text.color = "..auto.."),
-
                           theme = colrr::theme_material(
                             white = T,
                             legend_tight = T,

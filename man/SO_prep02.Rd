@@ -23,7 +23,7 @@ SO_prep02(
   save_path = NULL,
   save_ext = c("rds", "zap"),
   celltype_refs = NULL,
-  celltype_label = "label.main",
+  celltype_label = c("label.main", "label.fine"),
   celltype_ref_clusters = NULL,
   diet_seurat = F,
   var_feature_filter = NULL,

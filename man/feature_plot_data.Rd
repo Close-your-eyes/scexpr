@@ -16,12 +16,12 @@ feature_plot_data(
   col_binary = F,
   col_pal_c_args = list(name = "spectral", direction = -1),
   col_pal_d_args = list(name = "custom"),
-  col_steps = "auto",
+  col_steps = "..auto..",
   col_steps_nice = T,
   col_legend_args = list(barwidth = 1, barheight = 8, override.aes = list(size = 4),
     title = "..auto..", order = 1),
   legendbreaks = "minmidmax",
-  legendlabels = "auto",
+  legendlabels = "..auto..",
   shape_legend_args = list(override.aes = list(size = 4), order = 2),
   shape_legend_hide = F,
   feature_alias = NULL,
@@ -31,8 +31,9 @@ feature_plot_data(
   freq_col = "..auto..",
   name_anno = "..auto..",
   name_anno_pos = c("..auto..", "title", "annotation"),
-  name_anno_args = list(x = -Inf, y = Inf, hjust = 0, vjust = 1.25, color = NA, fill =
-    NA, label.color = NA, size = 4, text.color = "..auto.."),
+  name_anno_args = list(x = "..auto..", y = "..auto..", hjust = "..auto..", vjust =
+    "..auto..", color = NA, fill = NA, label.color = NA, size = 4, text.color =
+    "..auto.."),
   theme = colrr::theme_material(white = T, legend_tight = T, text_fun =
     ggplot2::element_text),
   theme_args = list(axis.ticks = ggplot2::element_blank(), axis.text.x =
@@ -106,7 +107,7 @@ a single color or (iii) a vector of colors}
 
 \item{col_steps}{NULL to have normal colorbar, auto for default colorsteps,
 a single number or a vector of explicit steps; may not work with any number
-when col_steps_nice is TRUE; fcexpr:::colorscale_heuristic is used}
+when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used}
 
 \item{col_steps_nice}{algorithmic determination of pretty steps,
 see ggplot2::scale_color_stepsn}

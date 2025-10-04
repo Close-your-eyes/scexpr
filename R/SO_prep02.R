@@ -83,8 +83,8 @@ SO_prep02 <- function(SO_unprocessed,
                       seeed = 42,
                       save_path = NULL,
                       save_ext = c("rds", "zap"),
-                      celltype_refs = NULL, # list of celldex::objects
-                      celltype_label = "label.main",
+                      celltype_refs = NULL, # list of celldex::objects of seurat or matrix
+                      celltype_label = c("label.main", "label.fine"),
                       celltype_ref_clusters = NULL,
                       diet_seurat = F,
                       var_feature_filter = NULL,
@@ -465,15 +465,26 @@ check_celltype_refs <- function(celltype_refs, celltype_label) {
     if (any(duplicated(names(celltype_refs)))) {
       stop("names for celltype_refs must be unique.")
     }
+
+    if (!is.list(celltype_label)) {
+      celltype_label <- list(celltype_label)
+    }
     if (length(celltype_label) == 1) {
       celltype_label <- rep(celltype_label, length(celltype_refs))
     }
     if (length(celltype_label) != length(celltype_refs)) {
       stop("celltype_label and celltype_refs must have the same lengths. Please choose one label for each ref.")
     }
+    ## adjust to seurat, summexp or matrix
     for (i in seq_along(celltype_refs)) {
-      if (any(!celltype_label[[i]] %in% names(celltype_refs[[i]]@colData@listData))) {
-        stop(paste0(paste(celltype_label[[i]][which(!celltype_label[[i]] %in% names(celltype_refs[[i]]@colData@listData))], collapse = ", "), " not found in ", names(celltype_refs)[i], "."))
+      if (methods::is(celltype_refs[[i]], "SummarizedExperiment")) {
+        celltype_label[[i]] <- intersect(celltype_label[[i]], names(celltype_refs[[i]]@colData@listData))
+      } else if (methods::is(celltype_refs[[i]], "Seurat")) {
+        celltype_label[[i]] <- intersect(celltype_label[[i]], names(celltype_refs[[i]]@meta.data))
+      } else if (methods::is(celltype_refs[[i]], "matrix") || methods::is(celltype_refs[[i]], "sparseMatrix")) {
+        celltype_label[[i]] <- celltype_label[[i]][which(lengths(celltype_label[[i]]) == ncol(celltype_refs[[i]]))]
+      } else {
+        stop("celltype_refs must be Seurat, SummarizedExperiment or gene x cell matrix.")
       }
     }
 
@@ -1101,23 +1112,15 @@ run_celltyping <- function(SO,
     refs <- SO@meta.data[,celltype_ref_clusters]
   }
 
-
   for (i in seq_along(celltype_refs)) {
-    for (j in seq_along(celltype_label[[i]])) {
-      celltypes <- SingleR::SingleR(test = get_layer(obj = SO, layer = "data", assay = "RNA"),
-                                    ref = celltype_refs[[i]],
-                                    labels = celltype_refs[[i]]@colData@listData[[celltype_label[[i]][j]]],
-                                    clusters = refs)
-
-      if (is.null(celltype_ref_clusters)) {
-        SO@meta.data[,paste0(names(celltype_refs)[i], "__", celltype_label[[i]][j])] <- celltypes$labels
-      } else {
-        celltypes_df <- utils::stack(stats::setNames(celltypes$labels, levels(SO@meta.data[,celltype_ref_clusters])))
-        names(celltypes_df) <- c(paste0(names(celltype_refs)[i], "__", celltype_label[[i]][j]), celltype_ref_clusters)
-        celltypes_df <- tibble::column_to_rownames(dplyr::left_join(tibble::rownames_to_column(SO@meta.data[,celltype_ref_clusters,drop=F], "ID"), celltypes_df, by = celltype_ref_clusters), "ID")
-        SO <- Seurat::AddMetaData(SO, celltypes_df[-which(names(celltypes_df) == celltype_ref_clusters)])
-      }
-      Seurat::Misc(SO, paste0(names(celltype_refs)[i], "__", celltype_label[[i]][j])) <- celltypes
+    for (j in celltype_label[[i]]) {
+      out <- labeltransfer_singler(test_obj = SO,
+                                   test_clusters = celltype_ref_clusters,
+                                   ref_obj = celltype_refs[[i]],
+                                   ref_labels = j,
+                                   name_prefix = names(celltype_refs)[i])
+      SO <- Seurat::AddMetaData(SO, out$metadata)
+      Seurat::Misc(SO, paste0(names(celltype_refs)[i], "__", j)) <- out[1:4]
     }
   }
   return(SO)
