@@ -21,13 +21,23 @@ fgsea_groupwise <- function(obj,
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
   }
+  if (!"pathways" %in% names(fgseaMultilevel_args)) {
+    stop("pathways in fgseaMultilevel_args missing.")
+  }
+  if (!length(fgseaMultilevel_args$pathways) || !is.list(fgseaMultilevel_args$pathways) || is.null(names(fgseaMultilevel_args$pathways))) {
+    stop("pathways in fgseaMultilevel_args requires a named list of gene sets.")
+  }
 
   s2ntab <- s2n_groupwise(obj = obj, group = group, ...)
   gseares <- purrr::map_dfr(stats::setNames(colnames(s2ntab), colnames(s2ntab)),
                             ~as.data.frame(Gmisc::fastDoCall(fgsea::fgseaMultilevel,
                                                              args = c(list(stats = s2ntab[,.x]), fgseaMultilevel_args))),
                             .id = group)
-  rownames(gseares) <- gseares[[group]]
+  # try({
+  #   # only works with a single pathway
+  #   rownames(gseares) <- gseares[[group]]
+  # }, silent = T)
+
 
   gseares2 <- split(gseares, gseares$pathway)
   gseares2 <- purrr::map_dfc(names(gseares2), function(i) {

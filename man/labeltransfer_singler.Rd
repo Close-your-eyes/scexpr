@@ -2,7 +2,7 @@
 % Please edit documentation in R/labeltransfer_singler.R
 \name{labeltransfer_singler}
 \alias{labeltransfer_singler}
-\title{Transfer cluster labels, i.e. celltype classification}
+\title{Transfer cluster labels, i.e. celltype classification between objects}
 \usage{
 labeltransfer_singler(
   test_obj,

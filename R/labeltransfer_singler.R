@@ -1,4 +1,4 @@
-#' Transfer cluster labels, i.e. celltype classification
+#' Transfer cluster labels, i.e. celltype classification between objects
 #'
 #' How SingleR computes. Marker selection: For each label, SingleR identifies genes
 #' that distinguish it from the others (de.method argument). Scoring: For a given
@@ -52,6 +52,16 @@ labeltransfer_singler <- function(test_obj,
                                   get_layer_args = list(layer = "data",
                                                         assay = "RNA")) {
 
+  if (!requireNamespace("SingleR", quietly = T)) {
+    BiocManager::install("SingleR")
+  }
+  if (!requireNamespace("fcexpr", quietly = T)) {
+    devtools::install_github("Close-your-eyes/fcexpr")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    devtools::install_github("Close-your-eyes/brathering")
+  }
+
   if (missing(ref_labels) || !length(ref_labels)) {
     stop("ref_labels are missing.")
   }
@@ -102,6 +112,10 @@ labeltransfer_singler <- function(test_obj,
     ref_labels <- ref_obj@colData@listData[[ref_labels]]
   } else if (!methods::is(ref_obj, "matrix") && !methods::is(ref_obj, "sparseMatrix")) {
     stop("ref_obj must be Seurat, SummarizedExperiment or (sparse) matrix")
+  }
+
+  if (ref_labels_name == test_clusters_name) {
+    stop("ref_labels and test_clusters cannot have the same name.")
   }
 
   if (is.null(test_clusters)) {
@@ -169,10 +183,16 @@ labeltransfer_singler <- function(test_obj,
     rownames_to = test_clusters_name,
     values_to = "score"
   )
-  scores_plot <- fcexpr::heatmap_long_df(score_df,
-                                         groups = names(score_df)[2],
-                                         features = names(score_df)[1],
-                                         values = names(score_df)[3])
+  scores_plot <- fcexpr::heatmap_long_df(
+    df = score_df,
+    groups = names(score_df)[2],
+    features = names(score_df)[1],
+    values = names(score_df)[3]) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
+    ggplot2::geom_text(data = dplyr::slice_max(score_df, order_by = score,
+                                               n = 1,
+                                               by = !!rlang::sym(names(score_df)[1])),
+                       mapping = ggplot2::aes(label = round(score, 2)))
 
   return(list(
     labels_list = lablist,

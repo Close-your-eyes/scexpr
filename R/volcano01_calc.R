@@ -152,6 +152,7 @@ volcano01_calc <- function(SO,
     # this restores the counts matrix
     ## fix this like in so_prep
     SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
+    SO <- SeuratObject::JoinLayers(SO)
   } else {
     SO <- SO[[1]]
   }
