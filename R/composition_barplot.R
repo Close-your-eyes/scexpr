@@ -39,7 +39,7 @@ composition_barplot <- function(SO,
                                 x_cat, #x_var
                                 fill_cat, #fill_var
                                 y = c("rel", "abs"),
-                                col_pal = colrr::col_pal("custom"),
+                                col_pal = "custom",
                                 color = "black",
                                 plot_rel_labels = F,
                                 label_only_largest = F,
@@ -142,6 +142,10 @@ composition_barplot <- function(SO,
     table0$pct_round <- brathering::round2(table0$pct, label_rel_decimals)
     table0$label_color = "black" # could be made relative to background color
   }
+
+  # always works?
+  col_pal <- colrr::make_col_pal(col_vec = col_pal,
+                                 fct_lvls = sort(unique(table[,fill_cat,drop=T])))
 
   # check this somewhen; in some cases label_color is not defined and then an error occurs below
   if (!is.null(names(col_pal)) && any(!unique(table[,fill_cat,drop=T]) %in% names(col_pal))) {
@@ -303,9 +307,9 @@ composition_barplot <- function(SO,
     #   plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = Inf, y = total_labels_ypos*fctr, vjust = sigma_just, size = label_size)
     # }
   } #else {
-    # if (plot_sigma) {
-    #   plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = -Inf, y = total_labels_ypos*fctr, hjust = sigma_just, size = label_size)
-    # }
+  # if (plot_sigma) {
+  #   plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = -Inf, y = total_labels_ypos*fctr, hjust = sigma_just, size = label_size)
+  # }
   #}
 
   return(list(plot = plot, data = table, data_total = table0))

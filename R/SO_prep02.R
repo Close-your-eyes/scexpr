@@ -45,7 +45,7 @@
 #' @param FindVariableFeatures_args
 #' @param SCtransform_args
 #' @param RunUMAP_args
-#' @param RunTSNE_args
+#' @param RunTSNE_args arguments to scexpr::run_fft_tsne
 #' @param FindNeighbors_args
 #' @param FindClusters_args
 #' @param RunHarmony_args
@@ -57,7 +57,6 @@
 #' @param RunPCA_args
 #' @param ...
 #' @param downsample_method
-#' @param scale_RNA_assay_when_SCT
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -93,7 +92,7 @@ SO_prep02 <- function(SO_unprocessed,
                       SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
                       RunPCA_args = list(),
                       RunUMAP_args = list(),
-                      RunTSNE_args = list(theta = 0),
+                      RunTSNE_args = list(theta = 0.2),
                       FindNeighbors_args = list(),
                       FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                       RunHarmony_args = list(group.by.vars = "orig.ident"),
@@ -102,10 +101,10 @@ SO_prep02 <- function(SO_unprocessed,
                       EmbedSOM_args = list(),
                       FindIntegrationAnchors_args = list(reduction = "rpca"),
                       IntegrateData_args = list(),
-                      scale_RNA_assay_when_SCT = T,
                       join_layers = T,
                       ...) {
 
+  scale_RNA_assay_when_SCT <- F
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
   }
@@ -249,18 +248,22 @@ SO_prep02 <- function(SO_unprocessed,
 
   if (any(grepl("tsne", reductions, ignore.case = T))) {
     RunTSNE_args <- RunTSNE_args[which(!names(RunTSNE_args) %in% c("object", "seed.use", "reduction", "verbose"))]
-    if (!"dims" %in% names(RunTSNE_args)) {
-      RunTSNE_args <- c(list(dims = 1:npcs), RunTSNE_args)
-    }
-    if (!"num_threads" %in% names(RunTSNE_args)) {
-      RunTSNE_args <- c(list(num_threads = 0), RunTSNE_args)
-    }
-    SO <- Gmisc::fastDoCall(Seurat::RunTSNE, args = c(list(object = SO,
-                                                           reduction = red,
-                                                           seed.use = seeed,
-                                                           verbose = verbose),
-                                                      RunTSNE_args))
-    #SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, num_threads = 0, ...)
+    # if (!"dims" %in% names(RunTSNE_args)) {
+    #   RunTSNE_args <- c(list(dims = 1:npcs), RunTSNE_args)
+    # }
+    # if (!"num_threads" %in% names(RunTSNE_args)) {
+    #   RunTSNE_args <- c(list(num_threads = 0), RunTSNE_args)
+    # }
+    # SO <- Gmisc::fastDoCall(Seurat::RunTSNE, args = c(list(object = SO,
+    #                                                        reduction = red,
+    #                                                        seed.use = seeed,
+    #                                                        verbose = verbose),
+    #                                                   RunTSNE_args))
+    SO <- Gmisc::fastDoCall(scexpr::run_fft_tsne, args = c(list(SO = SO,
+                                                                reduction = red,
+                                                                rand_seed = seeed),
+                                                           RunTSNE_args))
+                            #SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, num_threads = 0, ...)
   }
 
   if (any(grepl("^som$", reductions, ignore.case = T))) {
@@ -353,6 +356,13 @@ SO_prep02 <- function(SO_unprocessed,
   if (diet_seurat) {
     SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
   }
+
+  try(expr = {
+    # quick to reproduce
+    # save disk space
+    SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
+  }, silent = T)
+
 
   if (verbose) {
     message("saving to disk.")

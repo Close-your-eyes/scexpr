@@ -135,8 +135,7 @@ feature_plot2 <- function(SO,
                           assay = "RNA",
                           cells = NULL,
                           get_data_args = list(qmin = 0,
-                                               qmax = 1,
-                                               label_feature = NULL),
+                                               qmax = 1),
                           combine = T,
                           combine_guides = NULL,
                           ncol_combine = NULL,
@@ -246,11 +245,14 @@ feature_plot2 <- function(SO,
                             label.padding = ggplot2::unit(rep(1/20,4), "lines")),
                           contour_same_across_split = T,
                           contour_expr_freq = F,
-                          contour_ggnewscale = F,
                           contour_fun = ggplot2::geom_density2d,
                           contour_path_label = NULL,
                           order_discr_explicit = NULL,
-                          plot_all_across_split = F) {
+                          plot_all_across_split = F,
+                          label_feature = NULL,
+                          contour_feature = NULL,
+                          split_feature = NULL,
+                          shape_feature = NULL) {
 
  ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 
@@ -260,6 +262,8 @@ feature_plot2 <- function(SO,
 
 
   ## label position calculation is not facetted!!
+
+  contour_ggnewscale <- F # T not tested yet
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -278,6 +282,10 @@ feature_plot2 <- function(SO,
                                                            cells = cells,
                                                            reduction = reduction,
                                                            dims = dims,
+                                                           label_feature = label_feature,
+                                                           contour_feature = contour_feature,
+                                                           split_feature = split_feature,
+                                                           shape_feature = shape_feature,
                                                            feature_cut = feature_cut,
                                                            feature_cut_expr = feature_cut_expr,
                                                            feature_ex = feature_ex),

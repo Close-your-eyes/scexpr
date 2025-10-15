@@ -32,7 +32,7 @@ SO_prep02(
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
   RunPCA_args = list(),
   RunUMAP_args = list(),
-  RunTSNE_args = list(theta = 0),
+  RunTSNE_args = list(theta = 0.2),
   FindNeighbors_args = list(),
   FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
   RunHarmony_args = list(group.by.vars = "orig.ident"),
@@ -41,7 +41,6 @@ SO_prep02(
   EmbedSOM_args = list(),
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
-  scale_RNA_assay_when_SCT = T,
   join_layers = T,
   ...
 )
@@ -57,6 +56,8 @@ SO_prep02(
 
 \item{downsample}{downsample a fraction of cells from each object in SO_unprocessed (downsample < 0);
 or an absolute number of cells per object (downsample > 1 & downsample >= min_cells)}
+
+\item{downsample_method}{}
 
 \item{export_prefix}{prefix to the output rds file}
 
@@ -108,9 +109,9 @@ exclude T cell receptor gene segments}
 
 \item{verbose}{print messages and progress bars from functions}
 
-\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
+\item{RunTSNE_args}{arguments to scexpr::run_fft_tsne}
 
-\item{scale_RNA_assay_when_SCT}{}
+\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file

@@ -138,15 +138,19 @@ volcano01_calc <- function(SO,
     }, error = function(e) NULL)
 
 
-
+  # all(pgc %in% colnames(SO[[1]]))
   # DietSeurat is slow ?!
   # Seurat::DietSeurat(, assays = assay, counts = F)
+  # SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(
+  #   x,
+  #   features = intersect(rownames(x), intersect_features),
+  #   cells = intersect(colnames(x), c(ngc, pgc))
+  # ), assays = assay, counts = T))
 
-  SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(
+  SO <- lapply(SO, function(x) subset(
     x,
     features = intersect(rownames(x), intersect_features),
-    cells = intersect(colnames(x), c(ngc, pgc))
-  ), assays = assay, counts = T))
+    cells = intersect(colnames(x), c(ngc, pgc))))
 
   if (length(SO) > 1) {
     # this restores the counts matrix
@@ -169,6 +173,11 @@ volcano01_calc <- function(SO,
                                names(which(comparefun(Matrix::rowSums(get_layer(obj = SO, assay = assay, layer = layer, cells = pgc) != 0)/length(pgc), min_pct)))))
 
   min_pct_features_removed <- setdiff(intersect_features, min_pct_features)
+
+  # all(Seurat::Cells(SO) == Seurat::Cells(SO[["RNA"]]))
+  # SeuratObject::DefaultAssay(SO) <- "RNA"
+  #SO <- SeuratObject::UpdateSeuratObject(SO)
+
   SO <- Seurat::DietSeurat(SO, assays = assay, features = min_pct_features, counts = T)
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation

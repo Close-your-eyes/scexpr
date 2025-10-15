@@ -10,7 +10,7 @@ labeltransfer_singler(
   ref_labels,
   test_clusters = NULL,
   name_prefix = NULL,
-  singler_args = list(de.method = "classic", aggr.ref = F),
+  singler_args = list(de.method = "wilcox", fine.tune = T, aggr.ref = F),
   get_layer_args = list(layer = "data", assay = "RNA")
 )
 }
@@ -55,6 +55,10 @@ is too small (set to NA = “ambiguous”). Not strict probabilities. Scores are
 calibrated probabilities (they don’t sum to 1). They’re correlations, so you can
 think of them as “confidence-like.” If you want probability-like values, you can
 normalize across labels per cell (e.g. softmax), but this is an approximation.
+}
+\details{
+fine.tune may cause that the assigned label is not the top score.
+for single cell data use de.method = "wilcox", for bulk as ref "classic".
 }
 \examples{
 \dontrun{

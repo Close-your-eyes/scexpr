@@ -337,11 +337,11 @@ feature_plot_data <- function(data,
                                markdown = T)
 
     freq_df <-
-      if (nlevels(data$SO.split) > 1 && nlevels(data$split_feature) > 1) {
+      if (nlevels(data$SO.split) > 1 && length(unique(data$split_feature)) > 1) {
         freqs$freq.expr.by.split.SO
-      } else if (nlevels(data$SO.split) > 1 && nlevels(data$split_feature) == 1) {
+      } else if (nlevels(data$SO.split) > 1 && length(unique(data$split_feature)) == 1) {
         freqs$freq.expr.by.SO
-      }  else if (nlevels(data$SO.split) == 1 && nlevels(data$split_feature) > 1) {
+      }  else if (nlevels(data$SO.split) == 1 && length(unique(data$split_feature)) > 1) {
         freqs$freq.expr.by.split
       } else {
         freqs$freq.expr
@@ -390,7 +390,7 @@ feature_plot_data <- function(data,
           dplyr::mutate(!!attr(data, "dim1") := name_anno_args$x,
                         !!attr(data, "dim2") := name_anno_args$y)
         name_anno_args <- c(name_anno_args,
-                            list(data = annotation_freq_df, mapping = aes(label = freq3)))
+                            list(data = annotation_freq_df, mapping = ggplot2::aes(label = freq3)))
 
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = name_anno_args)
       } else {

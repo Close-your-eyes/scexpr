@@ -8,12 +8,12 @@ SO_prep01(
   data_dirs,
   nhvf = 2000,
   npcs = 10,
-  resolution = 0.8,
+  resolution = seq(0.1, 0.8, 0.1),
   resolution_SoupX = 0.6,
   resolution_meta = seq(0.1, 0.8, 0.1),
-  PCs_to_meta_clustering = 2,
+  PCs_to_meta_clustering = c(0, 2),
   scDblFinder = F,
-  min_UMI = 30,
+  min_UMI = 200,
   min_UMI_var_feat = 10,
   SoupX = F,
   decontX = F,
@@ -109,4 +109,7 @@ If data_dirs contains multiple samples then integration of samples is done with 
 (i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
 of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
 the common Seurat object though, the merged and harmonized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
+}
+\details{
+Checkout https://www.10xgenomics.com/analysis-guides/introduction-to-ambient-rna-correction.
 }

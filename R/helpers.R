@@ -141,7 +141,8 @@ check.and.get.cells <- function(SO,
   }
 
   # check if cell names are unique across SOs
-  all.cells <- purrr::map(SO, Seurat::Cells)
+  # all.cells <- purrr::map(SO, SeuratObject::Cells) # why did it return cells that were removed by subset before?
+  all.cells <- purrr::map(SO, colnames)
   if (any(duplicated(unlist(all.cells)))) {
     message("Duplicated cell names found across SO.")
     # Get all pairwise combinations of indices
@@ -1097,12 +1098,16 @@ add_contour <- function(plot,
     data <- dplyr::bind_rows(data |>
                                dplyr::filter(!contour_feature %in% unique(data2[["contour_feature"]])) |>
                                dplyr::mutate(contour_feature_split = NA),
-                             data2) |>
-      dplyr::mutate(contour_feature_split = ifelse(
-        is.na(contour_feature_split),
-        as.character(contour_feature),
-        contour_feature_split
-      ))
+                             data2)
+    if (all(is.na(data$contour_feature_split))) {
+      data <- data |>
+        dplyr::mutate(contour_feature_split = if (contour_same_across_split) paste0(as.character(contour_feature), "_", as.character(split_feature)) else as.character(contour_feature))
+    }
+    # dplyr::mutate(contour_feature_split = ifelse(
+    #   is.na(contour_feature_split),
+    #   ifelse(contour_same_across_split, paste0(as.character(contour_feature), "_", as.character(split_feature)), as.character(contour_feature)),
+    #   contour_feature_split
+    # ))
 
     # assign for next feature
     assign("contour_data", data, envir = parent.frame(8))
@@ -1113,10 +1118,11 @@ add_contour <- function(plot,
   }
 
   ## keep this as a list? or spare it?
-  if (contour_same_across_split) {
-    data <- purrr::map_dfr(stats::setNames(unique(data[["split_feature"]]), unique(data[["split_feature"]])),
-                           function(x) data |> dplyr::mutate(split_by = x))
-  }
+  ## currently uneffective
+  # if (contour_same_across_split) {
+  #   data <- purrr::map_dfr(stats::setNames(unique(data[["split_feature"]]), unique(data[["split_feature"]])),
+  #                          function(x) data |> dplyr::mutate(split_by = x))
+  # }
 
   ## handle names of contour_col_pal
   if (is.factor(data[["contour_feature"]])) {
@@ -1188,7 +1194,10 @@ add_contour <- function(plot,
     plot <-
       plot +
       ggnewscale::new_scale_color() +
-      Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(data = data, mapping = ggplot2::aes(color = !!rlang::sym(contour_feature))))) +
+      Gmisc::fastDoCall(ggplot2::geom_density2d, args = c(contour_args, list(
+        data = data,
+        mapping = ggplot2::aes(color = !!rlang::sym(contour_feature))
+      ))) +
       ggplot2::scale_color_manual(values = contour_col_pal)
   } else {
 
@@ -1233,6 +1242,8 @@ add_contour <- function(plot,
             Gmisc::fastDoCall(contour_fun, args = c(
               contour_args[[i]],
               list(data = data[which(data[["contour_feature_split"]] == j),,drop = F],
+                   #ggplot2::aes(x = !!rlang::sym(attr(data, "dim1")), y = !!rlang::sym(attr(data, "dim2"))),
+                  # inherit.aes = T,
                    color = contour_col_pal[i])))
         }
 
@@ -1252,7 +1263,7 @@ add_contour <- function(plot,
     # just recalculate for simplicity even though may have been done above
     expr_by_cluster <-
       plot[["data"]] |>
-      dplyr::group_by(contour_feature, SO.split) |>
+      dplyr::group_by(contour_feature, SO.split, split_feature) |>
       # label = pct
       dplyr::summarise(label = sum(feature > 0)/dplyr::n()*100, .groups = "drop") |>
       dplyr::mutate(label = ifelse(label < 1, ifelse(label == 0, "0 %", "< 1 %"), paste0(round(label,0), " %")))
@@ -1260,17 +1271,17 @@ add_contour <- function(plot,
     # data may have been subject to filtering
     largest_subcluster <-
       data |>
-      dplyr::group_by(contour_feature, SO.split, contour_feature_split) |>
+      dplyr::group_by(contour_feature, SO.split, contour_feature_split, split_feature) |>
       dplyr::summarise(n = dplyr::n(), .groups = "drop") |>
-      dplyr::slice_max(order_by = n, n = 1, with_ties = F, by = c(contour_feature, SO.split))
+      dplyr::slice_max(order_by = n, n = 1, with_ties = F, by = c(contour_feature, SO.split, split_feature))
     label_df <-
       data |>
-      dplyr::semi_join(largest_subcluster, by = c("contour_feature_split", "SO.split")) |>
-      dplyr::group_by(contour_feature, SO.split) |>
+      dplyr::semi_join(largest_subcluster, by = c("contour_feature_split", "SO.split", "split_feature")) |>
+      dplyr::group_by(contour_feature, SO.split, split_feature) |>
       dplyr::summarise(!!dimcol1 := label_center_fun(!!rlang::sym(dimcol1)),
                        !!dimcol2 := label_center_fun(!!rlang::sym(dimcol2)),
                        .groups = "drop") |>
-      dplyr::left_join(expr_by_cluster, by = c("contour_feature", "SO.split")) |>
+      dplyr::left_join(expr_by_cluster, by = c("contour_feature", "SO.split", "split_feature")) |>
       dplyr::rename("feature" = contour_feature)
 
     if (!finalize_plotting_expr_freq_labels) {
@@ -1474,7 +1485,13 @@ check.features <- function(SO,
   }
 
   ### TO DO WITH meta.data.numeric
-  hits <- hit.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = T)
+  hits <- hit.check(
+    SO = SO,
+    features = features,
+    rownames = rownames,
+    meta.data = meta.data,
+    ignore.case = T
+  )
   if (any(hits > 1)) {
     message(paste(names(hits)[which(hits > 1)], collapse = ","), " found more than once in at least one SO when ignoring case. So, case is being considered.")
     features.out <- feat.check(SO = SO, features = features, rownames = rownames, meta.data = meta.data, ignore.case = F)
@@ -1524,21 +1541,51 @@ hit.check <- function(SO, features, rownames, meta.data, ignore.case) {
 }
 
 
-feat.check <- function(SO, features, rownames, meta.data, ignore.case, meta.data.numeric) {
-  unlist(lapply(features, function(x) {
-    Reduce(intersect, lapply(SO, function(y) {
-      if (rownames && !meta.data && !meta.data.numeric) {
-        search <- rownames(y)
-      } else if (rownames && !meta.data && meta.data.numeric) {
-        search <- c(rownames(y), unique(c(names(which(sapply(y@meta.data, is.numeric))), names(which(sapply(y@meta.data, is.logical))))))
-      } else if (!rownames && meta.data) {
-        search <- names(y@meta.data)
-      } else if (rownames && meta.data) {
-        search <- c(names(y@meta.data), rownames(y))
-      }
-      grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
-    }))
-  }))
+feat.check <- function(SO,
+                       features,
+                       rownames,
+                       meta.data,
+                       ignore.case,
+                       meta.data.numeric) {
+
+  search <- character()
+  if (rownames) {
+    search <- Reduce(intersect, lapply(SO, rownames))
+  }
+  if (meta.data || meta.data.numeric) {
+    if (meta.data.numeric) {
+      search <- c(search, Reduce(intersect, purrr::map(SO, ~unique(c(names(which(sapply(.x@meta.data, is.numeric))), names(which(sapply(.x@meta.data, is.logical))))))))
+    } else {
+      search <- c(search, Reduce(intersect, purrr::map(SO, ~names(.x@meta.data))))
+    }
+  }
+  pattern <- paste(
+    stringi::stri_replace_all_fixed(
+      paste0("^", features, "$"),
+      c(".", "(", ")", "[", "]", "{", "}", "*", "+", "?"),   # match special chars (except | ^ $)
+      c("\\.", "\\(", "\\)", "\\[", "\\]", "\\{", "\\}", "\\*", "\\+", "\\?"),
+      vectorize_all = FALSE
+    ),
+    collapse = "|"
+  )
+
+  out <- search[which(stringi::stri_detect_regex(search, pattern, case_insensitive = TRUE))]
+
+  # out <- unlist(lapply(features, function(x) {
+  #   Reduce(intersect, lapply(SO, function(y) {
+  #     if (rownames && !meta.data && !meta.data.numeric) {
+  #       search <- rownames(y)
+  #     } else if (rownames && !meta.data && meta.data.numeric) {
+  #       search <- c(rownames(y), unique(c(names(which(sapply(y@meta.data, is.numeric))), names(which(sapply(y@meta.data, is.logical))))))
+  #     } else if (!rownames && meta.data) {
+  #       search <- names(y@meta.data)
+  #     } else if (rownames && meta.data) {
+  #       search <- c(names(y@meta.data), rownames(y))
+  #     }
+  #     grep(paste0("^",x,"$"), search, value = T, ignore.case = ignore.case)
+  #   }))
+  # }))
+  return(out)
 }
 
 

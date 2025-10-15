@@ -50,8 +50,6 @@ get_layer <- function(obj,
     }
   }
 
-
-
   if (utils::compareVersion(as.character(obj@version), "4.9.9") == 1) {
 
     x <- tryCatch(expr = {
@@ -74,10 +72,10 @@ get_layer <- function(obj,
   }
 
   Seurat::DefaultAssay(obj) <- assay
-  rownames(x) <- rownames(x) %||% rownames(obj)
-  colnames(x) <- colnames(x) %||% colnames(obj)
-  features <- features %||% rownames(obj)
-  cells <- cells %||% colnames(obj)
+  rownames(x) <- rownames(x) %||% names(which(obj@assays[["RNA"]]@features[,layer]@.Data[,1])) #rownames(obj)
+  colnames(x) <- colnames(x) %||% names(which(obj@assays[["RNA"]]@cells[,layer]@.Data[,1])) #colnames(obj)
+  features <- features %||% rownames(x) #rownames(obj)
+  cells <- cells %||% colnames(x) #colnames(obj)
 
   data <- x[features, cells, drop = F]
 

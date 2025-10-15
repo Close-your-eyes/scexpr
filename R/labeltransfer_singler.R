@@ -16,6 +16,9 @@
 #' think of them as “confidence-like.” If you want probability-like values, you can
 #' normalize across labels per cell (e.g. softmax), but this is an approximation.
 #'
+#' fine.tune may cause that the assigned label is not the top score.
+#' for single cell data use de.method = "wilcox", for bulk as ref "classic".
+#'
 #' @param test_obj Seurat object or gene x cell matrix (sparse/dense) to which
 #' labels should be transferred
 #' @param ref_obj Seurat object, SummarizedExperiment or gene x cell matrix
@@ -47,7 +50,8 @@ labeltransfer_singler <- function(test_obj,
                                   ref_labels,
                                   test_clusters = NULL,
                                   name_prefix = NULL,
-                                  singler_args = list(de.method = "classic",
+                                  singler_args = list(de.method = "wilcox",
+                                                      fine.tune = T,
                                                       aggr.ref = F),
                                   get_layer_args = list(layer = "data",
                                                         assay = "RNA")) {
@@ -130,7 +134,10 @@ labeltransfer_singler <- function(test_obj,
     BPPARAM <- BiocParallel::SerialParam()
     num.threads = BiocParallel::bpnworkers(BPPARAM)
   }
-
+  # labels <- SingleR::SingleR(test = test_obj,
+  #                            ref = ref_obj,
+  #                            labels = ref_labels,
+  #                            clusters = test_clusters)
   labels <- Gmisc::fastDoCall(SingleR::SingleR,
                               args = c(list(
                                 test = test_obj,
@@ -141,29 +148,131 @@ labeltransfer_singler <- function(test_obj,
                                 num.threads = num.threads
                               ), singler_args))
 
-  lablist <- purrr::map(stats::setNames(c("scores", "labels", "delta.next", "pruned.labels"),
-                                        c("scores", "labels", "delta.next", "pruned.labels")), function(x) {
-                                          if (x == "scores") {
-                                            y <- apply(labels@listData[[x]], 1, max)
-                                          } else {
-                                            y <- labels@listData[[x]]
-                                          }
-                                          return(stats::setNames(y, levels(test_clusters)))
-                                        })
+  ### fine.tune may cause that the assigned label is not the top score
+  # color scores of assigned labels green in scores_plot; top scores in black
 
-  # name_prefix + ref_labels as prefix
-  newnames <- paste0(name_prefix, "__", paste0(ref_labels_name, "__", names(lablist)))
-  newnames <- gsub("^__", "", newnames)
-  names(lablist) <- newnames
+  # top score number linked to cluster
+  # but labels may not be the top score
+  # lablist <- purrr::map(
+  #   stats::setNames(
+  #     names(labels@listData),
+  #     gsub("^__", "", paste0(name_prefix, "__", paste0(ref_labels_name, "__", names(labels@listData))))),
+  #   function(x) {
+  #     if (x == "scores") {
+  #       y <- apply(labels@listData[[x]], 1, max)
+  #     } else {
+  #       y <- labels@listData[[x]]
+  #     }
+  #     return(stats::setNames(y, labels@rownames))
+  #   })
+
+  # handle scores separately below to detect changes due to fine tuning
+  prefix <- gsub("^__", "", paste0(name_prefix, "__", ref_labels_name, "__"))
+  inds <- stats::setNames(
+    names(labels@listData),
+    paste0(prefix, names(labels@listData)))
+  inds <- inds[which(inds != "scores")]
+  lablist <- purrr::map(inds, ~stats::setNames(labels@listData[[.x]], labels@rownames))
+
+  ## scores
+  score_mat <- labels@listData[["scores"]]
+  rownames(score_mat) <- labels@rownames
+  labels_name <- grep("__labels$", names(lablist), value = T)
+  prunelabels_name <- grep("__pruned.labels$", names(lablist), value = T)
+
+  score_df <- brathering::mat_to_df_long(
+    score_mat,
+    colnames_to = ref_labels_name,
+    rownames_to = test_clusters_name,
+    values_to = "score") |>
+    dplyr::mutate(is_max_score = score == max(score), .by = !!rlang::sym(test_clusters_name)) |>
+    dplyr::left_join(utils::stack(lablist[[labels_name]]) |>
+                       dplyr::mutate(ind = as.character(ind)) |>
+                       dplyr::rename(!!rlang::sym(ref_labels_name) := values, !!rlang::sym(test_clusters_name) := ind) |>
+                       dplyr::mutate(is_label = T),
+                     by = c(ref_labels_name, test_clusters_name)) |>
+    dplyr::left_join(utils::stack(lablist[[prunelabels_name]]) |>
+                       dplyr::mutate(ind = as.character(ind)) |>
+                       dplyr::rename(!!rlang::sym(ref_labels_name) := values, !!rlang::sym(test_clusters_name) := ind) |>
+                       dplyr::mutate(is_pruned_label = T),
+                     by = c(ref_labels_name, test_clusters_name)) |>
+    dplyr::mutate(is_label = ifelse(is.na(is_label), F, is_label), is_pruned_label = ifelse(is.na(is_pruned_label), F, is_pruned_label))
+
+
+
+  if (any(score_df$is_max_score != score_df$is_label)) {
+    message("max_score does not always match assigned labels. that means fine tuning affected label assignment.")
+    print(dplyr::filter(score_df, is_max_score != is_label))
+  } else {
+    message("max_score always matches assigned labels.")
+  }
+  if (any(score_df$is_pruned_label != score_df$is_label)) {
+    message("labels and pruned labels are not always the same. pruning removed labels.")
+    print(dplyr::filter(score_df, is_pruned_label != is_label))
+  } else {
+    message("labels and pruned labels are equal.")
+  }
+
+  ## df for text labels on scores_plot
+  score_df_textlabels <-
+    score_df |>
+    dplyr::filter(is_max_score | (is_label & !is_max_score)) |>
+    tidyr::pivot_longer(cols = c(is_max_score, is_label)) |>
+    dplyr::filter(value) |>
+    dplyr::mutate(score_label = factor(name, levels = c("is_label", "is_max_score"))) |>
+    dplyr::mutate(score2 = gsub("^0", "", format(round(score, 2), nsmall = 2)))
+
+  scores_plot <- fcexpr::heatmap_long_df(
+    df = score_df,
+    groups = names(score_df)[2],
+    features = names(score_df)[1],
+    values = names(score_df)[3]) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
+    ggplot2::geom_text(data = score_df_textlabels,
+                       mapping = ggplot2::aes(label = score2, color = score_label)) +
+    ggplot2::scale_color_manual(values = c("black", "hotpink"))
+
+  label_score <- dplyr::filter(score_df, is_label)
+
+  lablist[[gsub("^__", "", paste0(name_prefix, "__", paste0(ref_labels_name, "__scores")))]] <-
+    stats::setNames(label_score$score, label_score[[test_clusters_name]])
 
   labdf <- NULL
+  gttable <- NULL
   if (!is.null(test_clusters)) {
-    labdf <- purrr::reduce(purrr::map(names(lablist), ~stats::setNames(stack(lablist[[.x]]), c(.x, test_clusters_name))),
+
+    labdf <- purrr::reduce(purrr::map(names(lablist), ~stats::setNames(utils::stack(lablist[[.x]]), c(.x, test_clusters_name))),
                            dplyr::left_join,
                            by = test_clusters_name) |>
-      dplyr::relocate(!!rlang::sym(test_clusters_name), 1)
+      dplyr::select(2,1,5,4,3)
     rownames(labdf) <- labdf[[test_clusters_name]]
-    names(labdf)[-1] <- newnames
+
+    labdfgt <- labdf
+    names(labdfgt) <- gsub(prefix, "", names(labdfgt))
+    labdfgt <- dplyr::mutate(labdfgt, scores = round(scores, 3), delta.next = round(delta.next, 3))
+
+    gttable <- brathering::gt_tight(labdfgt) |>
+      gt::tab_spanner(
+        label = gsub("__$", "", prefix),
+        columns = names(labdfgt)[-1],
+        id = "prefix") |>
+      gt::data_color(
+        columns = scores,
+        fn = scales::col_numeric(
+          palette = c(colrr::col_pal("RdBu", direction = -1)),
+          domain = range(labdfgt$scores))) |>
+      gt::data_color(
+        columns = delta.next,
+        fn = scales::col_numeric(
+          palette = c(colrr::col_pal("RdBu", direction = -1)),
+          domain = range(labdfgt$delta.next)))
+    # gt::tab_style(
+    #   style = gt::cell_fill(color = "lightgreen"),
+    #   locations = gt::cells_body(
+    #     columns = c(),
+    #     rows = c()
+    #   )
+    # )
 
     metadata <- stats::setNames(data.frame(test_clusters), test_clusters_name) |>
       dplyr::left_join(labdf, by = test_clusters_name) |>
@@ -173,33 +282,14 @@ labeltransfer_singler <- function(test_obj,
   }
   rownames(metadata) <- test_colnames #labels@rownames
 
-
-  ## scores
-  score_mat <- labels@listData[["scores"]]
-  rownames(score_mat) <- labels@rownames
-  score_df <- brathering::mat_to_df_long(
-    score_mat,
-    colnames_to = ref_labels_name,
-    rownames_to = test_clusters_name,
-    values_to = "score"
-  )
-  scores_plot <- fcexpr::heatmap_long_df(
-    df = score_df,
-    groups = names(score_df)[2],
-    features = names(score_df)[1],
-    values = names(score_df)[3]) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
-    ggplot2::geom_text(data = dplyr::slice_max(score_df, order_by = score,
-                                               n = 1,
-                                               by = !!rlang::sym(names(score_df)[1])),
-                       mapping = ggplot2::aes(label = round(score, 2)))
-
   return(list(
     labels_list = lablist,
     labels_df = labdf,
     metadata = metadata,
     scores = score_mat,
     scores_df = score_df,
-    scores_plot = scores_plot
+    scores_plot = scores_plot,
+    labels_gt = gttable,
+    singler_obj = labels
   ))
 }

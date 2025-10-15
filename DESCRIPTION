@@ -1,13 +1,13 @@
 Package: scexpr
-Title: Lots of helpers and wrappers to analyze scRNAseq data sets
-Version: 0.0.0.906
+Title: Ways to analyze scRNAseq data sets.
+Version: 0.1.0
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
            role = c("aut", "cre"),
            email = "vonskopnik@pm.me",
            comment = c(ORCID = "0000-0002-6089-4769"))
-Description: What the package does (one paragraph).
+Description: Mince the data until expectations are met.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

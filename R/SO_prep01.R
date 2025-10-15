@@ -23,6 +23,8 @@
 #' of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
 #' the common Seurat object though, the merged and harmonized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
 #'
+#' Checkout https://www.10xgenomics.com/analysis-guides/introduction-to-ambient-rna-correction.
+#'
 #'
 #' @param data_dirs list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
 #' on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
@@ -67,12 +69,12 @@
 SO_prep01 <- function(data_dirs,
                       nhvf = 2000,
                       npcs = 10,
-                      resolution = 0.8,
+                      resolution = seq(0.1,0.8,0.1),
                       resolution_SoupX = 0.6,
                       resolution_meta = seq(0.1,0.8,0.1),
-                      PCs_to_meta_clustering = 2,
+                      PCs_to_meta_clustering = c(0,2),
                       scDblFinder = F,
-                      min_UMI = 30,
+                      min_UMI = 200,
                       min_UMI_var_feat = 10,
                       SoupX = F,
                       decontX = F,
@@ -93,6 +95,18 @@ SO_prep01 <- function(data_dirs,
   resolution <- checks(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering)
   batch_corr <- rlang::arg_match(batch_corr)
 
+  # zeallot::operator(c(ffbms,
+  #                     rfbms,
+  #                     SoupX,
+  #                     SoupX_return,
+  #                     decontX,
+  #                     batch_corr), check_inputs(ffbms = ffbms,
+  #                                               rfbms = rfbms,
+  #                                               data_dirs = data_dirs,
+  #                                               SoupX = SoupX,
+  #                                               SoupX_return = SoupX_return,
+  #                                               decontX = decontX,
+  #                                               batch_corr = batch_corr))
   c(ffbms,
     rfbms,
     SoupX,
@@ -119,7 +133,8 @@ SO_prep01 <- function(data_dirs,
                         cells = cells,
                         min_UMI = min_UMI,
                         name = x,
-                        sample_prefix_to_cell_id = sample_prefix_to_cell_id)
+                        sample_prefix_to_cell_id = sample_prefix_to_cell_id,
+                        invert_cells = invert_cells)
 
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
       SO <- aggregate_or_remove_features(filt_data = SO,
@@ -157,7 +172,16 @@ SO_prep01 <- function(data_dirs,
                   FindClusters_args = list(resolution = resolution),
                   normalization = "LogNormalize",
                   diet_seurat = F)
-  suppressWarnings(SeuratObject::Misc(SO, "clusterings") <- paste0("RNA_snn_res.", resolution))
+
+  # only save a useful cluster resolution
+  allclust <- paste0("RNA_snn_res.", resolution)
+  nclust <- apply(SO@meta.data[,allclust], 2, function(x) length(unique(x)))
+  candidates <- names(nclust)[which(dplyr::between(nclust, 1,12))]
+  choice <- ifelse(!length(candidates), names(nlust)[1], candidates[length(candidates)])
+  # for qc_plot2; in analogy to meta_clustering
+  names(choice) <- "umap"
+  resolution <- sub("RNA_snn_res.", "", choice, fixed = T)
+  suppressWarnings(SeuratObject::Misc(SO, "clusterings") <- choice)
 
   if (SoupX) {
     # ffmbs and rfbms are paired by name
@@ -354,7 +378,8 @@ read_10X_data <- function(path,
                           min_UMI,
                           verbose = T,
                           name,
-                          sample_prefix_to_cell_id = T) {
+                          sample_prefix_to_cell_id = T,
+                          invert_cells = F) {
 
   h5files <- list.files(path, pattern = "\\.h5$", full.names = T)
   if (length(h5files)) {
@@ -687,6 +712,8 @@ cluster_on_metadata <- function(SO,
     # and add freq of RPS / RPL and MRPS / MRPL genes
     #grep("^MT-|mt-", c("MT-iii", "mt-zzz"), value = T)
     # regex for or: |
+    #tt <- grep("^MT-", rownames(SO), value=T)
+
     qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt")
     if (any(grepl("^MT-", rownames(SO))) && !any(grepl("^mt-", rownames(SO)))) {
       SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
