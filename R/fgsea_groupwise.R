@@ -2,13 +2,13 @@
 #'
 #' S2N is calculated with scexpr::s2n_groupwise, then fgsea::fgseaMultilevel is
 #' called on each group. You may use an overclustered grouping, GSEA on groups of cells
-#' should cacel out noise in single cells.
+#' should cancel out noise in single cells and group highly correlates cells.
 #'
 #' @param obj Seurat object
 #' @param group grouping column in obj meta.data
 #' @param fgseaMultilevel_args arguments to fgsea::fgseaMultilevel; named list of
 #' pathways is mandatory
-#' @param ... arguments to scexpr::get_layer
+#' @param get_layer_args arguments to scexpr::get_layer
 #'
 #' @returns list
 #' @export
@@ -17,7 +17,7 @@
 fgsea_groupwise <- function(obj,
                             group,
                             fgseaMultilevel_args = list(pathways = list()),
-                            ...) {
+                            get_layer_args = list()) {
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
   }
@@ -28,7 +28,11 @@ fgsea_groupwise <- function(obj,
     stop("pathways in fgseaMultilevel_args requires a named list of gene sets.")
   }
 
-  s2ntab <- s2n_groupwise(obj = obj, group = group, ...)
+  s2ntab <- s2n_groupwise(
+    obj = obj,
+    group = group,
+    get_layer_args = get_layer_args
+  )
   gseares <- purrr::map_dfr(stats::setNames(colnames(s2ntab), colnames(s2ntab)),
                             ~as.data.frame(Gmisc::fastDoCall(fgsea::fgseaMultilevel,
                                                              args = c(list(stats = s2ntab[,.x]), fgseaMultilevel_args))),

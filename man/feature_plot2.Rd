@@ -11,7 +11,7 @@ feature_plot2(
   dims = c(1, 2),
   assay = "RNA",
   cells = NULL,
-  get_data_args = list(qmin = 0, qmax = 1, label_feature = NULL),
+  get_data_args = list(qmin = 0, qmax = 1),
   combine = T,
   combine_guides = NULL,
   ncol_combine = NULL,
@@ -87,11 +87,14 @@ feature_plot2(
     label.padding = ggplot2::unit(rep(1/20, 4), "lines")),
   contour_same_across_split = T,
   contour_expr_freq = F,
-  contour_ggnewscale = F,
   contour_fun = ggplot2::geom_density2d,
   contour_path_label = NULL,
   order_discr_explicit = NULL,
-  plot_all_across_split = F
+  plot_all_across_split = F,
+  label_feature = NULL,
+  contour_feature = NULL,
+  split_feature = NULL,
+  shape_feature = NULL
 )
 }
 \arguments{
@@ -254,8 +257,6 @@ facets}
 \item{contour_expr_freq}{do plot expression frequency per group/cluster of
 feature_contour}
 
-\item{contour_ggnewscale}{use ggnewscale for colored contours}
-
 \item{contour_fun}{function for contour drawing, either one of:
 ggplot2::geom_density2d, geomtextpath::geom_textpath,
 geomtextpath::geom_labelpath; geomtexpath functions require a
@@ -271,6 +272,8 @@ group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")}
 
 \item{plot_all_across_split}{do plot all cells across feature_split in
 col_split?}
+
+\item{contour_ggnewscale}{use ggnewscale for colored contours}
 }
 \description{
 This function wraps around scexpr::get_data, scexpr::feature_plot_data

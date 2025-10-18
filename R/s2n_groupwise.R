@@ -5,20 +5,23 @@
 #' @param obj Seurat object or gene x cell matrix
 #' @param group grouping column in obj meta.data or vector of length ncol(obj)
 #' @param eps epsilon to avoid division by 0 in S2N formula
-#' @param ... arguments to scexpr::get_layer
+#' @param get_layer_args arguments to scexpr::get_layer
 #'
 #' @returns matrix
 #' @export
 #'
 #' @examples
-s2n_groupwise <- function(obj, group, eps = 1e-6, ...) {
+s2n_groupwise <- function(obj,
+                          group,
+                          eps = 1e-6,
+                          get_layer_args = list()) {
 
   if (length(group) == 1 && methods::is(obj, "Seurat") && group %in% names(obj@meta.data)) {
     group <- obj@meta.data[[group]]
   }
 
   if (methods::is(obj, "Seurat")) {
-    obj <- get_layer(obj, ...)
+    obj <- Gmisc::fastDoCall(get_layer, args = c(list(obj = obj), get_layer_args))
   }
 
   stopifnot(ncol(obj) == length(group))

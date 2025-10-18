@@ -1257,7 +1257,8 @@ add_contour <- function(plot,
     }
   }
 
-  if (contour_expr_freq && is.numeric(data[["feature"]])) {
+  # rm attr(data, "feature_type") == "gene" ?
+  if (contour_expr_freq && is.numeric(data[["feature"]]) && attr(data, "feature_type") == "gene") {
     # filter for largest subcluster of multimodal clusters
     # plot[["data"]] is unfiltered
     # just recalculate for simplicity even though may have been done above

@@ -8,7 +8,7 @@ fgsea_groupwise(
   obj,
   group,
   fgseaMultilevel_args = list(pathways = list()),
-  ...
+  get_layer_args = list()
 )
 }
 \arguments{
@@ -19,7 +19,7 @@ fgsea_groupwise(
 \item{fgseaMultilevel_args}{arguments to fgsea::fgseaMultilevel; named list of
 pathways is mandatory}
 
-\item{...}{arguments to scexpr::get_layer}
+\item{get_layer_args}{arguments to scexpr::get_layer}
 }
 \value{
 list
@@ -27,5 +27,5 @@ list
 \description{
 S2N is calculated with scexpr::s2n_groupwise, then fgsea::fgseaMultilevel is
 called on each group. You may use an overclustered grouping, GSEA on groups of cells
-should cacel out noise in single cells.
+should cancel out noise in single cells and group highly correlates cells.
 }

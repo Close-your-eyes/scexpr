@@ -4,7 +4,7 @@
 \alias{s2n_groupwise}
 \title{Compute S2N per gene for each group (cluster) (one-vs-rest)}
 \usage{
-s2n_groupwise(obj, group, eps = 0.000001, ...)
+s2n_groupwise(obj, group, eps = 0.000001, get_layer_args = list())
 }
 \arguments{
 \item{obj}{Seurat object or gene x cell matrix}
@@ -13,7 +13,7 @@ s2n_groupwise(obj, group, eps = 0.000001, ...)
 
 \item{eps}{epsilon to avoid division by 0 in S2N formula}
 
-\item{...}{arguments to scexpr::get_layer}
+\item{get_layer_args}{arguments to scexpr::get_layer}
 }
 \value{
 matrix

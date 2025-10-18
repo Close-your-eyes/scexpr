@@ -269,6 +269,19 @@ feature_plot2 <- function(SO,
     devtools::install_github("Close-your-eyes/colrr")
   }
 
+  if (missing(features)) {
+    if (!is.null(Seurat::Idents(SO))) {
+      SO <- Seurat::AddMetaData(SO, Seurat::Idents(SO), col.name = "Idents")
+      features <- "Idents"
+    } else if ("seurat_clusters" %in% names(SO@meta.data)) {
+      features <- "seurat_clusters"
+    } else if ("orig.ident" %in% names(SO@meta.data)) {
+      features <- "orig.ident"
+    } else {
+      features <- names(SO@meta.data)[1]
+    }
+  }
+
   dotlist <- list(...)
   for (i in c("contour_feature", "label_feature", "split_feature", "shape_feature", "feature_ex", "feature_cut", "feature_cut_expr")) {
     if (!is.null(dotlist[[i]])) {get_data_args[[i]] <- dotlist[[i]]}
