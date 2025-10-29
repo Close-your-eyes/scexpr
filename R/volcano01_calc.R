@@ -20,6 +20,12 @@
 #' @param method backend for DE calculation; any method from Seurat::FindMarkers;
 #' limma: intended for subsequent use MetaVolcanoR
 #' custom: matrixTests::row_wilcoxon_twosample w/o any modelling
+#' @param layer
+#' @param p_zero_squish
+#' @param fc_thresh
+#' @param feature_plot_args
+#' @param mc.cores mc cores for parallel computing when method is MAST
+#' @param ... arguments to Seurat::FindMarkers
 #'
 #' @return list of data frame, matrix, meta data; pct column in df is percent of
 #' expressers for a gene in pos_group when avg_log2fc > 0 and vice versa pct
@@ -79,7 +85,9 @@ volcano01_calc <- function(SO,
                              list(col_pal_d_args =
                                     list(name = stats::setNames(colrr::col_pal("custom")[2:3],
                                                                 c(neg_name, pos_name)),
-                                         missing_fct_to_na = F))) {
+                                         missing_fct_to_na = F)),
+                           mc.cores = 1,
+                           ...) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -178,7 +186,7 @@ volcano01_calc <- function(SO,
   # SeuratObject::DefaultAssay(SO) <- "RNA"
   #SO <- SeuratObject::UpdateSeuratObject(SO)
 
-  SO <- Seurat::DietSeurat(SO, assays = assay, features = min_pct_features, counts = T)
+  SO <- Seurat::DietSeurat(SO, assays = assay, features = min_pct_features, layers = c("counts", "data"))
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   # DefaultAssay set above
@@ -192,7 +200,9 @@ volcano01_calc <- function(SO,
                       n.feat.for.p.adj = length(intersect_features),
                       p_adj = p_adj,
                       method = method,
-                      fc_thresh = fc_thresh)
+                      fc_thresh = fc_thresh,
+                      mc.cores = mc.cores,
+                      ...)
 
   df <- vd |>
     as.data.frame() |>
@@ -229,19 +239,34 @@ calculate_DEG <- function(SO,
                           p_zero_squish = 1,
                           p_adj = "bonferroni",
                           method = "MAST",
-                          fc_thresh = 0) {
+                          fc_thresh = 0,
+                          mc.cores = 1,
+                          ...) {
 
 
   if (method %in% c("MAST", "wilcox", "wilcox_limma", "bimod", "roc", "t", "negbinom", "poisson", "LR", "DESeq2")) {
     if (!requireNamespace("MAST", quietly = T)) {
       BiocManager::install("MAST")
     }
+
+    # Underlying MAST functions used:
+    # Model fitting → MAST::zlm()
+    # Hypothesis testing → MAST::lrTest()
+
+    if (method == "MAST") {
+      if (mc.cores != 1) {
+        message("set options(mc.cores = ", mc.cores, ")")
+      }
+      options(mc.cores = mc.cores)
+    }
+
     Seurat::Idents(SO) <- SO@meta.data[,1,drop=T]
     df <- Seurat::FindMarkers(Seurat::GetAssay(SO, Seurat::DefaultAssay(SO)),
                               test.use = method,
                               min.pct = 0, # filtered before
                               logfc.threshold = fc_thresh,
-                              cells.1 = pgc, cells.2 = ngc)
+                              cells.1 = pgc, cells.2 = ngc,
+                              ...)
 
     # names(df)[which(names(df) == "avg_log2FC")] <- "avg_log2FC"
     # names(df)[which(names(df) == "p_val")] <- "p_val"

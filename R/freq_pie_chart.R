@@ -27,7 +27,7 @@
 #' @examples
 freq_pie_chart <- function(SO,
                            meta_col,
-                           order = T,
+                           order = NULL,
                            fill = colrr::col_pal("custom"),
                            fill_na = "grey50",
                            color = "white",
@@ -60,7 +60,7 @@ freq_pie_chart <- function(SO,
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data
   }
-
+  # brathering::
   brathering::piechart(x = SO[[meta_col]],
                        order = order,
                        fill = fill,

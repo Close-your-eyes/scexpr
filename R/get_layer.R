@@ -29,6 +29,8 @@ get_layer <- function(obj,
                       as = c("sparse", "dense", "df"),
                       transpose = F) {
 
+  # split = NULL
+
   as <- rlang::arg_match(as)
   assay <- rlang::arg_match(assay, names(obj@assays))
 

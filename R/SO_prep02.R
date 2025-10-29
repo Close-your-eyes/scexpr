@@ -155,6 +155,7 @@ SO_prep02 <- function(SO_unprocessed,
                                                                    RunHarmony_args,
                                                                    verbose)
 
+
   SO_unprocessed <- subset_SO_unprocessed(
     SO_unprocessed = SO_unprocessed,
     cells = cells,
@@ -187,7 +188,6 @@ SO_prep02 <- function(SO_unprocessed,
                          RunPCA_args,
                          npcs)
   }
-
 
   if (length(SO_unprocessed) > 1) {
     if (batch_corr %in% c("none", "harmony")) {
@@ -1006,9 +1006,20 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                             SCtransform_args))
       Seurat::VariableFeatures(SO) <- anchor.features
     } else {
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
+
+      intersect_features <- purrr::reduce(purrr::map(SO_unprocessed, rownames), intersect)
+      feature_numbers <- purrr::map_int(SO_unprocessed, nrow)
+      feature_number_common <- length(intersect_features)
+      if (any(feature_number_common != feature_numbers)) {
+        message("unequal features across inputs:")
+        print(feature_numbers)
+        message("common features: ", feature_number_common)
+      }
+      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed,
+                                                                          get_layer,
+                                                                          layer = "counts",
+                                                                          features = intersect_features)),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
-      #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
                                                                  seed.use = seeed,
                                                                  verbose = verbose),

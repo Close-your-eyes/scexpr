@@ -35,17 +35,17 @@ heatmap_pseudobulk2(
   axes_flip = F,
   group_seplines = F,
   seplines_args = list(),
-  theme = ggplot2::theme_classic(),
+  theme = colrr::theme_material(),
   legend_fill_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
     ggplot2::element_text(size = 10), title.position = "top", title = "..auto..",
     title.hjust = 0.5, barwidth = 1, barheight = 8, order = 1),
   legend_size_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
     ggplot2::element_text(size = 10), title.position = "top", title =
     "transcription\\nfrequency [\%]", title.hjust = 0.5, label.position = "bottom", order
-    = 2, ncol = NULL, nrow = NULL, override.aes = list(color = "black")),
+    = 2, ncol = NULL, nrow = NULL, override.aes = list(color = "white")),
   theme_args = list(axis.title = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), axis.text.x = ggplot2::element_text(angle = 40, hjust = 1),
-    legend.position = "right", legend.direction = "vertical"),
+    legend.position = "right", legend.direction = "vertical", legend.box = "horizontal"),
   repel_args = list(featurelabels_width = 0.2, featurelabels_nudhe_x = -1),
   sec_axis = F,
   convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME")

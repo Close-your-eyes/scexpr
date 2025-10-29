@@ -21,7 +21,9 @@ volcano01_calc(
   fc_thresh = 0,
   feature_plot_args = list(col_pal_d_args = list(name =
     stats::setNames(colrr::col_pal("custom")[2:3], c(neg_name, pos_name)),
-    missing_fct_to_na = F))
+    missing_fct_to_na = F)),
+  mc.cores = 1,
+  ...
 )
 }
 \arguments{
@@ -52,6 +54,10 @@ specifically}
 fraction of cells at least one group (neg_cells or pos_cells)}
 
 \item{p_adj}{method for p-value adjustment}
+
+\item{mc.cores}{mc cores for parallel computing when method is MAST}
+
+\item{...}{arguments to Seurat::FindMarkers}
 }
 \value{
 list of data frame, matrix, meta data; pct column in df is percent of

@@ -93,13 +93,6 @@ get_data <- function(SO,
   split_feature <- check.features(SO = SO, features = split_feature, rownames = F)
   shape_feature <- check.features(SO = SO, features = shape_feature, rownames = F)
   reduction <- check.reduction(SO = SO, reduction = reduction, dims = dims)
-  if ("reduction_preferred" %in% names(SO[[1]]@misc)) {
-    if (tolower(SO[[1]]@misc$reduction_preferred[1]) != tolower(reduction)) {
-      message("reduction set to SO[[1]]@misc$reduction_preferred[1]: ", SO[[1]]@misc$reduction_preferred[1])
-    }
-    reduction <- SO[[1]]@misc$reduction_preferred[1]
-  }
-  reduction <- check.reduction(SO = SO, reduction = reduction, dims = dims)
   assay <- match.arg(assay, names(SO[[1]]@assays))
 
 

@@ -123,7 +123,7 @@ labeltransfer_singler <- function(test_obj,
   }
 
   if (is.null(test_clusters)) {
-    BPPARAM <- BiocParallel::MulticoreParam()
+    BPPARAM <- BiocParallel::MulticoreParam(progressbar = T)
     num.threads = BiocParallel::bpnworkers(BPPARAM)
     message("no test_clusters.
             you may over-cluster your cells and provide result as test_clusters.
@@ -213,24 +213,34 @@ labeltransfer_singler <- function(test_obj,
     message("labels and pruned labels are equal.")
   }
 
-  ## df for text labels on scores_plot
-  score_df_textlabels <-
-    score_df |>
-    dplyr::filter(is_max_score | (is_label & !is_max_score)) |>
-    tidyr::pivot_longer(cols = c(is_max_score, is_label)) |>
-    dplyr::filter(value) |>
-    dplyr::mutate(score_label = factor(name, levels = c("is_label", "is_max_score"))) |>
-    dplyr::mutate(score2 = gsub("^0", "", format(round(score, 2), nsmall = 2)))
+  if (!is.null(test_clusters)) {
+    ## df for text labels on scores_plot
+    score_df_textlabels <-
+      score_df |>
+      dplyr::filter(is_max_score | (is_label & !is_max_score)) |>
+      tidyr::pivot_longer(cols = c(is_max_score, is_label)) |>
+      dplyr::filter(value) |>
+      dplyr::mutate(score_label = factor(name, levels = c("is_label", "is_max_score"))) |>
+      dplyr::mutate(score2 = gsub("^0", "", format(round(score, 2), nsmall = 2)))
 
-  scores_plot <- fcexpr::heatmap_long_df(
-    df = score_df,
-    groups = names(score_df)[2],
-    features = names(score_df)[1],
-    values = names(score_df)[3]) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
-    ggplot2::geom_text(data = score_df_textlabels,
-                       mapping = ggplot2::aes(label = score2, color = score_label)) +
-    ggplot2::scale_color_manual(values = c("black", "hotpink"))
+    scores_plot <- fcexpr::heatmap_long_df(
+      df = score_df,
+      groups = names(score_df)[2],
+      features = names(score_df)[1],
+      values = names(score_df)[3]) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
+      ggplot2::geom_text(data = score_df_textlabels,
+                         mapping = ggplot2::aes(label = score2, color = score_label)) +
+      ggplot2::scale_color_manual(values = c("black", "hotpink"))
+
+  } else {
+
+    scores_plot <- ggplot2::ggplot(dplyr::filter(score_df, is_label),
+                                   ggplot2::aes(x = !!rlang::sym(names(score_df)[2]), y = !!rlang::sym(names(score_df)[3]))) +
+      ggplot2::geom_boxplot(outlier.shape = NA) +
+      ggplot2::geom_jitter(width = 0.05, size = 0.3) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
+  }
 
   label_score <- dplyr::filter(score_df, is_label)
 

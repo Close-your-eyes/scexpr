@@ -39,7 +39,9 @@ volcano02_plot(
   label_pt_col = "tomato2",
   label_neg_pos_sep = F,
   label_p_signif = 0.001,
-  geom_text_repel_args = list(fontface = "italic", max.overlaps = 50)
+  geom_text_repel_args = list(fontface = "italic", max.overlaps = 50, max.time = 3,
+    max.iter = 30000, segment.color = "grey30", segment.alpha = 0.4, min.segment.length =
+    1)
 )
 }
 \arguments{

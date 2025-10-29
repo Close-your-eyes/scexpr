@@ -30,7 +30,7 @@ feature_plot2(
   col_pal_d_args = list(name = "custom", missing_fct_to_na = T),
   col_steps = "..auto..",
   col_steps_nice = T,
-  col_legend_args = list(barwidth = 1, barheight = 8, override.aes = list(size = 4),
+  col_legend_args = list(barwidth = 0.5, barheight = 8, override.aes = list(size = 4),
     title = "..auto..", order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "..auto..",

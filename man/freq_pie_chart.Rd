@@ -7,7 +7,7 @@
 freq_pie_chart(
   SO,
   meta_col,
-  order = T,
+  order = NULL,
   fill = colrr::col_pal("custom"),
   fill_na = "grey50",
   color = "white",

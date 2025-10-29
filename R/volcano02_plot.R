@@ -94,7 +94,12 @@ volcano02_plot <- function(volc01_df,
                            label_p_signif = 0.001,
 
                            geom_text_repel_args = list(fontface = "italic",
-                                                       max.overlaps = 50)) {
+                                                       max.overlaps = 50,
+                                                       max.time = 3,
+                                                       max.iter = 3e4,
+                                                       segment.color = "grey30",
+                                                       segment.alpha = 0.4,
+                                                       min.segment.length = 1)) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -107,13 +112,6 @@ volcano02_plot <- function(volc01_df,
 
   label_topn_metric <- rlang::arg_match(label_topn_metric, multiple = T)
   att <- attributes(vd)
-
-
-  if (!is.null(feature_exclude)) {
-    # grepl(paste(feature_exclude, collapse = "|"), vd[,feature])
-    print(paste0("The following features are excluded from the volcano plot: ", paste(grep(paste(feature_exclude, collapse = "|"), vd[,feature], value = T), collapse = ",")))
-    vd <- vd[which(!vd[,feature] %in% feature_exclude),]
-  }
 
   if (!is.null(features_to_color)) {
     if (any(!features_to_color %in% vd[,feature])) {
@@ -142,21 +140,71 @@ volcano02_plot <- function(volc01_df,
     errorbar_up <- NULL
   }
 
-  if (min_pct > 0) {
-    vd <- rbind(vd[intersect(which(vd[[paste0("pct.", att$neg_name)]] >= min_pct), which(vd[,x] < 0)),],
-                vd[intersect(which(vd[[,paste0("pct.", att$pos_name)]] >= min_pct), which(vd[,x] > 0)),])
+
+  if (!is.null(feature_exclude)) {
+    message(paste0("The following features are excluded from the volcano plot: ", paste(grep(paste(feature_exclude, collapse = "|"), vd[,feature], value = T), collapse = ",")))
+    vd <- vd[which(!vd[[feature]] %in% feature_exclude),]
   }
 
-  if (minus_log10_y) {
-    vp <- ggplot2::ggplot(vd, ggplot2::aes(x = !!rlang::sym(x), y = -log10(!!rlang::sym(y))))
-  } else {
-    vp <- ggplot2::ggplot(vd, ggplot2::aes(x = !!rlang::sym(x), y = !!rlang::sym(y)))
+  # minimal expression freq
+  if (min_pct > 0) {
+    vd <- rbind(vd[intersect(which(vd[[paste0("pct.", att$neg_name)]] >= min_pct), which(vd[[x]] < 0)),],
+                vd[intersect(which(vd[[paste0("pct.", att$pos_name)]] >= min_pct), which(vd[[x]] > 0)),])
   }
-  vp <-
-    vp +
+
+  ## fix zero p-values
+  n_min_p <- sum(vd[[y]] == 0)
+  p1 <- vd[[y]][which(vd[[y]] > 0)]
+  minp1 <- min(p1)
+  ylim <- minp1*1e-2
+  vd[[y]][which(vd[[y]] == 0)] <- ylim
+  if (n_min_p > 10) {
+    y_axis_expansion <- 50
+  } else {
+    y_axis_expansion <- 0
+  }
+
+  ## init plot
+  vp <- ggplot2::ggplot(
+    data = vd,
+    ggplot2::aes(
+      x = !!rlang::sym(x),
+      y = if (minus_log10_y) -log10(!!rlang::sym(y)) else !!rlang::sym(y)
+    )
+  )
+
+  ## y-axis
+  brk <- ggplot2::waiver()
+  lab <- ggplot2::waiver()
+  if (!is.null(p_tick) && p_tick > 0) {
+    gg.brk <- ggplot2::ggplot_build(vp)[["layout"]][["panel_params"]][[1]][["y"]][["breaks"]]
+    ord <- order(c(gg.brk, -log10(p_tick)))
+    brk <- c(gg.brk, -log10(p_tick))
+    lab <- c(gg.brk, paste0("p = ", p_tick))
+    lab <- gsub("^0$", "", lab)
+    brk <- brk[ord]
+    lab <- lab[ord]
+  }
+  trans <- if (y_pseudo_log) scales::pseudo_log_trans(base = 10, sigma = pseudo_log_sigma) else "identity"
+
+  xrng <- range(vd[[x]])
+  x_absmax <- max(abs(xrng))
+
+  ## main plotting code lines
+  vp <- vp +
     ggplot2::geom_point(color = pt_col, alpha = pt_alpha, size = pt_size) +
     ggplot2::geom_point(data = vd[which(vd$infinite.FC == 1),], color = pt_col_inf, size = pt_size) +
-    theme
+    theme +
+    ggplot2::scale_y_continuous(transform = trans,
+                                breaks = brk,
+                                labels = lab,
+                                expand = ggplot2::expansion(add = c(0, y_axis_expansion))) +
+    # ggplot2::labs(x = bquote(bold(.(att$neg_name)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(att$pos_name))),
+    #               y = if (minus_log10_y) bquote(-log[10]~.(rlang::sym(y))) else y) +
+    ggplot2::labs(x = paste0(att$neg_name, "  <--  ", x, "  -->  ", att$pos_name),
+                  y = if (minus_log10_y) paste0("-log10 ", y) else y) +
+    ggplot2::xlim(ifelse(x_symm, -x_absmax, xrng[1]) - x_expnd, ifelse(x_symm, x_absmax, xrng[2]) + x_expnd)
+
 
   if (!is.null(features_color_by)) {
 
@@ -167,7 +215,7 @@ volcano02_plot <- function(volc01_df,
       # continuous
       fct_lvls <- NULL
     } else {
-      fct_lvls <- vd[which(vd[,feature] %in% features_to_color),features_color_by]
+      fct_lvls <- vd[which(vd[[feature]] %in% features_to_color), features_color_by]
       vd[[features_color_by]] <- as.factor(vd[[features_color_by]])
     }
 
@@ -198,66 +246,28 @@ volcano02_plot <- function(volc01_df,
     }
   }
 
-  if (!is.null(p_tick) && p_tick > 0) {
-    gg.brk <- ggplot2::ggplot_build(vp)[["layout"]][["panel_params"]][[1]][["y"]][["breaks"]]
-    ord <- order(c(gg.brk, -log10(p_tick)))
-    brk <- c(gg.brk, -log10(p_tick))
-    lab <- c(gg.brk, paste0("p = ", p_tick))
-    lab <- gsub("^0$", "", lab)
-    brk <- brk[ord]
-    lab <- lab[ord]
-  } else {
-    brk <- ggplot2::waiver()
-    lab <- ggplot2::waiver()
-  }
 
-  if (y_pseudo_log) {
-    vp <- vp + ggplot2::scale_y_continuous(trans = scales::pseudo_log_trans(base = 10, sigma = pseudo_log_sigma),
-                                           breaks = brk, labels = lab, limits = vp[["layout"]][["panel_params"]][[1]][["y"]][["limits"]])
-  } else {
-    vp <- vp + ggplot2::scale_y_continuous(breaks = brk, labels = lab, limits = vp[["layout"]][["panel_params"]][[1]][["y"]][["limits"]])
-  }
-
-  if (minus_log10_y) {
-    vp <- vp + ggplot2::labs(x = bquote(bold(.(att$neg_name)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(att$pos_name))), y = bquote(-log[10]~.(rlang::sym(y))))
-  } else {
-    vp <- vp + ggplot2::labs(x = bquote(bold(.(att$neg_name)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(att$pos_name))), y = y)
-  }
-
-  if (x_symm) {
-    vp <- vp + ggplot2::xlim(-round(max(abs(vd[,x]))) - x_expnd, round(max(abs(vd[,x]))) + x_expnd)
-  } else {
-    vp <- vp + ggplot2::xlim(round(min(vd[,x])) - x_expnd, round(max(vd[,x])) + x_expnd)
-  }
-
-
+  ## counting top DE genes
   if (!any(c(is.na(cut_p), is.na(cut_fc)))) {
-    vp <- vp + ggplot2::geom_hline(yintercept = -log10(cut_p), linetype = "dashed") + ggplot2::geom_vline(xintercept = c(-cut_fc, cut_fc), linetype = "dashed")
-
     vd.cut <-
       vd |>
       dplyr::filter(abs(!!rlang::sym(x)) >= cut_fc) |>
       dplyr::filter(!!rlang::sym(y) <= cut_p)
 
-    vd.cut.sum <-
-      vd.cut |>
+    vd.cut.sum <- vd.cut |>
       dplyr::mutate(sign = ifelse(!!rlang::sym(x) > 0, "plus", "minus")) |>
-      dplyr::group_by(sign) |>
-      dplyr::summarise(n.genes = dplyr::n()) |>
-      dplyr::ungroup() |>
+      dplyr::summarise(n.genes = dplyr::n(), .by = sign) |>
       dplyr::mutate(xpos = ifelse(sign == "plus", cut_fc + 0.75*(max(abs(vd.cut[,x]))-cut_fc), -(cut_fc + 0.75*(max(abs(vd.cut[,x]))-cut_fc)))) |>
       dplyr::mutate(ypos = -log10(cut_p)*2)
 
-    vp <-
-      vp +
+    vp <- vp +
+      ggplot2::geom_hline(yintercept = -log10(cut_p), linetype = "dashed") +
+      ggplot2::geom_vline(xintercept = c(-cut_fc, cut_fc), linetype = "dashed") +
       ggplot2::geom_point(data = vd.cut, color = "black", size = pt_size) +
-      ggplot2::geom_text(data = vd.cut.sum, ggplot2::aes(x = xpos, y = ypos, label = n.genes), inherit.aes = F, size = 5/14*base_size)
-
+      ggplot2::geom_text(data = vd.cut.sum, ggplot2::aes(x = xpos, y = ypos, label = n.genes), inherit.aes = F, size = 5/14*vp$theme$text$size)
   }
 
-
-  #### label section
-
+  ## label section
   if (!is.null(feature_exclude)) {
     vd <- vd[which(!grepl(paste0(feature_exclude, collapse = "|"), vd[,feature])),]
   }
@@ -266,16 +276,21 @@ volcano02_plot <- function(volc01_df,
     if (length(label_topn_metric) == 1 && label_topn_metric == "y") {
       f_lab <- dplyr::top_n(vd, -label_topn, !!rlang::sym(y))
     } else if (length(label_topn_metric) == 2) {
+
       f_lab.p.val <- dplyr::top_n(vd, -label_topn, !!rlang::sym(y))
+      # exclude lower 20 % of p-values for labeling according to logfc
+      temp <- dplyr::filter(vd, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
       f_lab.logfc <- dplyr::bind_rows(
-        dplyr::top_n(vd, label_topn/2, !!rlang::sym(x)),
-        dplyr::top_n(vd, -(label_topn/2), !!rlang::sym(x))
+        dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
+        dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
       )
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) |> dplyr::distinct()
     } else if (label_topn_metric == 1 && label_topn_metric == "x") {
+      # exclude lower 20 % of p-values for labeling according to logfc
+      temp <- dplyr::filter(vd, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
       f_lab <- dplyr::bind_rows(
-        dplyr::top_n(vd, label_topn/2, !!rlang::sym(x)),
-        dplyr::top_n(vd, -(label_topn/2), !!rlang::sym(x))
+        dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
+        dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
       )
     }
 
@@ -286,10 +301,6 @@ volcano02_plot <- function(volc01_df,
     }
     f_lab <- dplyr::filter(vd, !!rlang::sym(feature) %in% label_features)
 
-  }
-
-  if (!is.null(label_pt_col)) {
-    vp <- vp + ggplot2::geom_point(data = f_lab, color = label_pt_col)
   }
 
   if (label_plot) {
@@ -314,6 +325,10 @@ volcano02_plot <- function(volc01_df,
                           args = c(list(mapping = ggplot2::aes(label = !!rlang::sym(feature)), data = f_lab),
                                    geom_text_repel_args))
     }
+  }
+
+  if (!is.null(label_pt_col)) {
+    vp <- vp + ggplot2::geom_point(data = f_lab, color = label_pt_col)
   }
 
   return(vp)

@@ -112,7 +112,7 @@ heatmap_pseudobulk2 <- function(SO,
                                 axes_flip = F,
                                 group_seplines = F,
                                 seplines_args = list(),
-                                theme = ggplot2::theme_classic(),
+                                theme = colrr::theme_material(),
                                 legend_fill_args = list(
                                   label.theme = ggplot2::element_text(size = 10),
                                   title.theme = ggplot2::element_text(size = 10),
@@ -133,7 +133,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   order = 2,
                                   ncol = NULL,
                                   nrow = NULL,
-                                  override.aes = list(color = "black")
+                                  override.aes = list(color = "white")
                                   #size = c(2,4, 10))
                                 ),
                                 theme_args = list(
@@ -141,7 +141,8 @@ heatmap_pseudobulk2 <- function(SO,
                                   panel.grid = ggplot2::element_blank(),
                                   axis.text.x = ggplot2::element_text(angle = 40, hjust = 1),
                                   legend.position = "right",
-                                  legend.direction = "vertical"
+                                  legend.direction = "vertical",
+                                  legend.box = "horizontal"
                                 ),
                                 repel_args = list(featurelabels_width = 0.2,
                                                   featurelabels_nudhe_x = -1),

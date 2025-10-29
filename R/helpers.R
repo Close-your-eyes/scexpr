@@ -88,10 +88,18 @@ check.reduction <- function(SO,
     stop("No common reduction found in SOs.")
   }
 
+  if ("reduction_preferred" %in% names(SO[[1]]@misc)) {
+    if (tolower(SO[[1]]@misc$reduction_preferred[1]) != tolower(reduction)) {
+      message("reduction set to SO[[1]]@misc$reduction_preferred[1]: ", SO[[1]]@misc$reduction_preferred[1])
+    }
+    reduction <- SO[[1]]@misc$reduction_preferred[1]
+  }
+
   red <- grep(reduction, common_red, ignore.case = T, value = T)
   if (length(red) == 0) {
-    message("reduction not found in SOs., Changing to an arbitrary common one in SOs.")
-    red <- sample(common_red, 1)
+    message("reduction not found in SOs., Changing to best match.")
+    red <- common_red[which.min(adist(reduction, common_red)[1,])]
+    #red <- sample(common_red, 1)
   } else if (length(red) > 1) {
     red <- common_red[which.min(utils::adist(reduction, common_red, ignore.case = T))]
   }
@@ -536,7 +544,7 @@ add_color_scale <- function(plot,
     devtools::install_github("Close-your-eyes/colrr")
   }
 
-  if (col_binary) {
+  if (col_binary && "title" %in% names(col_legend_args)) {
     if (col_legend_args[["title"]] == "..auto..") {
       col_legend_args[["title"]] <- "UMI"
     }
@@ -544,7 +552,7 @@ add_color_scale <- function(plot,
   } else {
 
     if (is.numeric(plot[["data"]][["feature"]])) {
-      if (col_legend_args[["title"]] == "..auto..") {
+      if ("title" %in% names(col_legend_args) && col_legend_args[["title"]] == "..auto..") {
         if (attr(plot[["data"]], "feature_type") == "gene") {
           if (!is.null(attr(plot[["data"]], "layer"))) {
             if (attr(plot[["data"]], "layer") == "data") {
@@ -558,7 +566,6 @@ add_color_scale <- function(plot,
         } else if (attr(plot[["data"]], "feature_type") == "meta") {
           col_legend_args[["title"]] <- NA # omit by default as names shows up through names_anno
         }
-
       }
 
       c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]],
@@ -1103,12 +1110,6 @@ add_contour <- function(plot,
       data <- data |>
         dplyr::mutate(contour_feature_split = if (contour_same_across_split) paste0(as.character(contour_feature), "_", as.character(split_feature)) else as.character(contour_feature))
     }
-    # dplyr::mutate(contour_feature_split = ifelse(
-    #   is.na(contour_feature_split),
-    #   ifelse(contour_same_across_split, paste0(as.character(contour_feature), "_", as.character(split_feature)), as.character(contour_feature)),
-    #   contour_feature_split
-    # ))
-
     # assign for next feature
     assign("contour_data", data, envir = parent.frame(8))
   }
@@ -1181,14 +1182,14 @@ add_contour <- function(plot,
     contour_args <- contour_args[[1]]
   }
 
-  # calc expression freq per cluster
-  if ((contour_expr_freq || !identical(ggplot2::geom_density_2d, contour_fun)) &&
-      is.numeric(data[["feature"]]) &&
-      !is.null(contour_path_label)) {
-    # filter for largest subcluster of multimodal clusters
-    # plot[["data"]] is unfiltered
-
-  }
+  # # calc expression freq per cluster
+  # if ((contour_expr_freq || !identical(ggplot2::geom_density_2d, contour_fun)) &&
+  #     is.numeric(data[["feature"]]) &&
+  #     !is.null(contour_path_label)) {
+  #   # filter for largest subcluster of multimodal clusters
+  #   # plot[["data"]] is unfiltered
+  #
+  # }
 
   if (contour_ggnewscale) {
     plot <-
@@ -1210,8 +1211,7 @@ add_contour <- function(plot,
           # brathering::contour_est and use ...
           # ... geomtextpath::geom_textpath or geomtextpath::geom_labelpath
           # expr_by_cluster: in case this is used as path variable
-          expr_by_cluster <-
-            plot[["data"]] |>
+          expr_by_cluster <- plot[["data"]] |>
             dplyr::group_by(contour_feature, SO.split) |>
             dplyr::summarise(pct = sum(feature > 0)/dplyr::n()*100, .groups = "drop") |>
             dplyr::mutate(pct = ifelse(pct < 1, ifelse(pct == 0, "0 %", "< 1 %"), paste0(round(pct,0), " %")))
@@ -1224,8 +1224,7 @@ add_contour <- function(plot,
             dplyr::bind_cols(data2[1,names(which(apply(data2, 2, function(x) length(unique(x))) == 1)), drop = F]) |>
             dplyr::left_join(expr_by_cluster, by = c("contour_feature", "SO.split"))
           suppressWarnings(expr = {
-            plot <-
-              plot +
+            plot <- plot +
               Gmisc::fastDoCall(contour_fun, args = c(
                 contour_args[[i]],
                 list(data = contdata,
@@ -1237,14 +1236,13 @@ add_contour <- function(plot,
           #ggplot2::geom_density2d
           #contour_fun <- match.fun(contour_fun)
 
-          plot <-
-            plot +
-            Gmisc::fastDoCall(contour_fun, args = c(
-              contour_args[[i]],
-              list(data = data[which(data[["contour_feature_split"]] == j),,drop = F],
-                   #ggplot2::aes(x = !!rlang::sym(attr(data, "dim1")), y = !!rlang::sym(attr(data, "dim2"))),
-                  # inherit.aes = T,
-                   color = contour_col_pal[i])))
+          temp <- data[which(data[["contour_feature_split"]] == j),,drop = F]
+          if (nrow(temp) > 1) {
+            plot <- plot +
+              Gmisc::fastDoCall(contour_fun, args = c(
+                contour_args[[i]],
+                list(data = temp, color = contour_col_pal[i])))
+          }
         }
 
         # plot <-

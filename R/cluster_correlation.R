@@ -181,26 +181,27 @@ cluster_correlation <- function(SO,
                             .y = meta.cols,
                             .f = ~ purrr::map2(.x = .x,
                                                .y = .y,
-                                               .f = ~as.matrix(Seurat::AverageExpression(
-                                                 .x,
-                                                 assays = assay,
-                                                 features = features,
-                                                 group.by = .y,
-                                                 layer = "data",
-                                                 verbose = F
-                                               )[[assay]])))
+                                               .f = ~avg_expression(obj = .x,
+                                                                    assay = assay,
+                                                                    features = features,
+                                                                    group = .y,)
+                            ))
+
+# tt <- brathering::split_mat(get_layer(SO[[1]][[1]]), f = SO[[1]][[1]]$cluster, byrow = F)
+# tt <- purrr::map(tt, ~Matrix::rowMeans(expm1(.x)))
+# tt <- do.call(cbind, tt)
   } else {
     # filter for features only
     avg.expr <- purrr::map(.x = avg.expr,
                            .f = ~ purrr::map(.x = .x, .f = ~.x[features,,drop=F]))
   }
 
-  # reverse seurat column renaming with leading g
-  avg.expr <- purrr::map(avg.expr, function(x) {
-    rename <- grepl("^g[[:digit:]]{1,}$", colnames(x[[1]]))
-    colnames(x[[1]])[which(rename)] <- gsub("^g", "", colnames(x[[1]])[which(rename)])
-    return(x)
-  })
+  # # reverse seurat column renaming with leading g
+  # avg.expr <- purrr::map(avg.expr, function(x) {
+  #   rename <- grepl("^g[[:digit:]]{1,}$", colnames(x[[1]]))
+  #   colnames(x[[1]])[which(rename)] <- gsub("^g", "", colnames(x[[1]])[which(rename)])
+  #   return(x)
+  # })
 
   # if one level in meta.col only, Seurat writes 'all' as column name but not the actual level, fix that
   for (i in seq_along(avg.expr)) {
@@ -265,7 +266,6 @@ cluster_correlation <- function(SO,
       as.data.frame()
 
     ## filter clusters with n cells below threshold
-
     for (i in 1:nrow(n_cell_df_nest)) {
       avg.expr[[n_cell_df_nest[i,"SO"]]] <-
         avg.expr[[n_cell_df_nest[i,"SO"]]][,n_cell_df_nest[[i,"meta_col_levels"]],drop=F]
@@ -365,13 +365,19 @@ cluster_correlation <- function(SO,
           rep(colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[6], mid.white.strech.length),
           colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[7:10])
 
-  cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
-    ggplot2::geom_tile(colour = "black") +
-    #ggplot2::scale_fill_gradient2(high = "#BC3F2B", low = "#4C6CA6", mid = "#edf9ff", midpoint = median(cm.melt$value)) +
-    ggplot2::scale_fill_gradientn(colors = pp) +
-    ggplot2::labs(x = paste0(names(SO)[1], " ", meta.cols[1]), y = paste0(names(SO)[2], " ", meta.cols[2])) +
-    ggplot2::theme_classic() +
-    ggplot2::coord_fixed(ratio = aspect.ratio)
+  cm.plot <- fcexpr::heatmap_long_df(cm.melt, groups = "Var1", features = "Var2", values = "value",
+                          colorsteps = NULL,
+                          fill = colrr::col_pal("spectral", direction = -1),
+                          feature_order = "hclust",
+                          group_order = "hclust")
+
+  # cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
+  #   ggplot2::geom_tile(colour = "black") +
+  #   #ggplot2::scale_fill_gradient2(high = "#BC3F2B", low = "#4C6CA6", mid = "#edf9ff", midpoint = median(cm.melt$value)) +
+  #   ggplot2::scale_fill_gradientn(colors = pp) +
+  #   ggplot2::labs(x = paste0(names(SO)[1], " ", meta.cols[1]), y = paste0(names(SO)[2], " ", meta.cols[2])) +
+  #   ggplot2::theme_classic() +
+  #   ggplot2::coord_fixed(ratio = aspect.ratio)
 
   if (corr.in.percent) {
     cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = paste0(round(value*100, 0), " %")))
