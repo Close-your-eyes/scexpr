@@ -18,8 +18,9 @@ feature_plot_data(
   col_pal_d_args = list(name = "custom"),
   col_steps = "..auto..",
   col_steps_nice = T,
-  col_legend_args = list(barwidth = 1, barheight = 8, override.aes = list(size = 4),
-    title = "..auto..", order = 1),
+  col_legend_c_args = list(barwidth = 0.5, barheight = 8, title = "..auto..", order = 1),
+  col_legend_d_args = list(nrow = 10, override.aes = list(size = 4), title = "..auto..",
+    order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "..auto..",
   shape_legend_args = list(override.aes = list(size = 4), order = 2),
@@ -112,7 +113,11 @@ when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used}
 \item{col_steps_nice}{algorithmic determination of pretty steps,
 see ggplot2::scale_color_stepsn}
 
-\item{col_legend_args}{arguments to ggplot2::guide_colorsteps,
+\item{col_legend_c_args}{arguments to ggplot2::guide_colorsteps,
+ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
+continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
+
+\item{col_legend_d_args}{arguments to ggplot2::guide_colorsteps,
 ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
 continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
 
@@ -193,8 +198,6 @@ outlier points to avoid ugly contours? uses brathering::outlier}
 \item{contour_rm_lowfreq_subcluster}{groups in feature_contour are checked for
 split clusters with diptest and mclust, do remove low frequency subclusters
 to avoid ugly contours?}
-
-\item{contour_multi_max}{}
 
 \item{contour_col_pal_args}{discrete colors of contours, see col_pal_c_args}
 

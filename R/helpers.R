@@ -98,7 +98,7 @@ check.reduction <- function(SO,
   red <- grep(reduction, common_red, ignore.case = T, value = T)
   if (length(red) == 0) {
     message("reduction not found in SOs., Changing to best match.")
-    red <- common_red[which.min(adist(reduction, common_red)[1,])]
+    red <- common_red[which.min(utils::adist(reduction, common_red)[1,])]
     #red <- sample(common_red, 1)
   } else if (length(red) > 1) {
     red <- common_red[which.min(utils::adist(reduction, common_red, ignore.case = T))]
@@ -532,7 +532,8 @@ get_col_pal <- function(data,
 
 add_color_scale <- function(plot,
                             col.pal,
-                            col_legend_args,
+                            col_legend_c_args = col_legend_c_args,
+                            col_legend_d_args = col_legend_d_args,
                             col_steps = "..auto..",
                             legendbreaks = "..auto..",
                             legendlabels = "..auto..",
@@ -544,27 +545,29 @@ add_color_scale <- function(plot,
     devtools::install_github("Close-your-eyes/colrr")
   }
 
-  if (col_binary && "title" %in% names(col_legend_args)) {
-    if (col_legend_args[["title"]] == "..auto..") {
-      col_legend_args[["title"]] <- "UMI"
+  if (col_binary && "title" %in% names(col_legend_d_args)) {
+    if (col_legend_d_args[["title"]] == "..auto..") {
+      col_legend_d_args[["title"]] <- "UMI"
     }
     guide_fun <- ggplot2::guide_legend
+
+    col_legend_args <- col_legend_d_args
   } else {
 
     if (is.numeric(plot[["data"]][["feature"]])) {
-      if ("title" %in% names(col_legend_args) && col_legend_args[["title"]] == "..auto..") {
+      if ("title" %in% names(col_legend_c_args) && col_legend_c_args[["title"]] == "..auto..") {
         if (attr(plot[["data"]], "feature_type") == "gene") {
           if (!is.null(attr(plot[["data"]], "layer"))) {
             if (attr(plot[["data"]], "layer") == "data") {
-              col_legend_args[["title"]] <- "log<br>UMI"
+              col_legend_c_args[["title"]] <- "log<br>UMI"
             } else if (attr(plot[["data"]], "layer") == "counts") {
-              col_legend_args[["title"]] <- "UMI"
+              col_legend_c_args[["title"]] <- "UMI"
             } else {
-              col_legend_args[["title"]] <- attr(plot[["data"]], "layer")
+              col_legend_c_args[["title"]] <- attr(plot[["data"]], "layer")
             }
           }
         } else if (attr(plot[["data"]], "feature_type") == "meta") {
-          col_legend_args[["title"]] <- NA # omit by default as names shows up through names_anno
+          col_legend_c_args[["title"]] <- NA # omit by default as names shows up through names_anno
         }
       }
 
@@ -617,23 +620,22 @@ add_color_scale <- function(plot,
         guide_fun <- ggplot2::guide_colorbar
       }
 
+      col_legend_args <- col_legend_c_args
+
     } else {
 
-      if (col_legend_args[["title"]] == "..auto..") {
-        #col_legend_args[["title"]] <- attr(plot[["data"]], "feature")
-        col_legend_args[["title"]] <- NA # or ""; omit by default as it shows up in annotation or title, may take too much space as legend title
-      }
-      if ("barheight" %in% names(col_legend_args)) {
-        col_legend_args[["barheight"]] <- 1
+      if (col_legend_d_args[["title"]] == "..auto..") {
+        col_legend_d_args[["title"]] <- NA # or ""; omit by default as it shows up in annotation or title, may take too much space as legend title
       }
       plot <- plot + ggplot2::scale_color_manual(values = col.pal,
                                                  na.value = col_na)
       guide_fun <- ggplot2::guide_legend
+      col_legend_args <- col_legend_d_args
     }
   }
 
-
   plot <- plot + ggplot2::guides(color = Gmisc::fastDoCall(guide_fun, args = col_legend_args))
+
 
   return(plot)
 }

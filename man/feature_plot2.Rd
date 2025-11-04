@@ -30,8 +30,9 @@ feature_plot2(
   col_pal_d_args = list(name = "custom", missing_fct_to_na = T),
   col_steps = "..auto..",
   col_steps_nice = T,
-  col_legend_args = list(barwidth = 0.5, barheight = 8, override.aes = list(size = 4),
-    title = "..auto..", order = 1),
+  col_legend_c_args = list(barwidth = 0.5, barheight = 8, title = "..auto..", order = 1),
+  col_legend_d_args = list(nrow = 10, override.aes = list(size = 4), title = "..auto..",
+    order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "..auto..",
   shape_legend_args = list(override.aes = list(size = 4), order = 2),
@@ -94,7 +95,8 @@ feature_plot2(
   label_feature = NULL,
   contour_feature = NULL,
   split_feature = NULL,
-  shape_feature = NULL
+  shape_feature = NULL,
+  title = NULL
 )
 }
 \arguments{
@@ -157,7 +159,11 @@ when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used}
 \item{col_steps_nice}{algorithmic determination of pretty steps,
 see ggplot2::scale_color_stepsn}
 
-\item{col_legend_args}{arguments to ggplot2::guide_colorsteps,
+\item{col_legend_c_args}{arguments to ggplot2::guide_colorsteps,
+ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
+continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
+
+\item{col_legend_d_args}{arguments to ggplot2::guide_colorsteps,
 ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
 continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
 
@@ -181,8 +187,6 @@ for decision based on number of SOs}
 \item{freq_pos}{where to plot, xy coordinates}
 
 \item{freq_size}{font size of frequency annotation}
-
-\item{freq_col}{}
 
 \item{name_anno}{name of the plot, any string possible, understands glue
 syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
@@ -273,7 +277,7 @@ group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")}
 \item{plot_all_across_split}{do plot all cells across feature_split in
 col_split?}
 
-\item{contour_ggnewscale}{use ggnewscale for colored contours}
+\item{title}{}
 }
 \description{
 This function wraps around scexpr::get_data, scexpr::feature_plot_data

@@ -36,9 +36,6 @@
 #' when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used
 #' @param col_steps_nice algorithmic determination of pretty steps,
 #' see ggplot2::scale_color_stepsn
-#' @param col_legend_args arguments to ggplot2::guide_colorsteps,
-#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
 #' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
 #' for ggplot default or "minmidmax" for three breaks at minimum, middle and
 #' maximum of value range
@@ -99,7 +96,6 @@
 #' contour_expr_freq
 #' @param contour_same_across_split have the same contours across feature_split
 #' facets
-#' @param contour_ggnewscale use ggnewscale for colored contours
 #' @param contour_fun function for contour drawing, either one of:
 #' ggplot2::geom_density2d, geomtextpath::geom_textpath,
 #' geomtextpath::geom_labelpath; geomtexpath functions require a
@@ -120,6 +116,17 @@
 #' @param contour_multi_try
 #' @param contour_multi_max
 #' @param freq_col
+#' @param col_legend_c_args arguments to ggplot2::guide_colorsteps,
+#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
+#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
+#' @param col_legend_d_args arguments to ggplot2::guide_colorsteps,
+#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
+#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
+#' @param label_feature
+#' @param contour_feature
+#' @param split_feature
+#' @param shape_feature
+#' @param title
 #'
 #' @return
 #' @export
@@ -155,11 +162,14 @@ feature_plot2 <- function(SO,
                           col_pal_d_args = list(name = "custom", missing_fct_to_na = T),
                           col_steps = "..auto..",
                           col_steps_nice = T,
-                          col_legend_args = list(barwidth = 0.5,
-                                                 barheight = 8,
-                                                 override.aes = list(size = 4),
-                                                 title = "..auto..",
-                                                 order = 1),
+                          col_legend_c_args = list(barwidth = 0.5,
+                                                   barheight = 8,
+                                                   title = "..auto..",
+                                                   order = 1),
+                          col_legend_d_args = list(nrow = 10,
+                                                   override.aes = list(size = 4),
+                                                   title = "..auto..",
+                                                   order = 1),
                           legendbreaks = "minmidmax",
                           legendlabels = "..auto..",
                           shape_legend_args = list(override.aes = list(size = 4),
@@ -252,9 +262,10 @@ feature_plot2 <- function(SO,
                           label_feature = NULL,
                           contour_feature = NULL,
                           split_feature = NULL,
-                          shape_feature = NULL) {
+                          shape_feature = NULL,
+                          title = NULL) {
 
- ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
+  ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 
   ## add axis arrows, shortened:
   #p_blood <- p_blood + guides(x = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])))/4 ),
@@ -313,7 +324,8 @@ feature_plot2 <- function(SO,
                                                            col_non_expr = col_non_expr,
                                                            col_pal_c_args = col_pal_c_args,
                                                            col_pal_d_args = col_pal_d_args,
-                                                           col_legend_args = col_legend_args,
+                                                           col_legend_c_args = col_legend_c_args,
+                                                           col_legend_d_args = col_legend_d_args,
                                                            col_steps = col_steps,
                                                            facet_grid_row_var = facet_grid_row_var,
                                                            feature_alias = feature_alias,
@@ -384,6 +396,19 @@ feature_plot2 <- function(SO,
   if ((length(plots) == 1 && !combine) || length(features) == 1) {
     plots <- plots[[1]]
   }
+
+  if (!is.null(title)) {
+    if ("patchwork" %in% class(plots)) {
+      plots <- plots +
+        patchwork::plot_annotation(
+          title = title
+        )
+    } else {
+      plots <- plots + ggplot2::labs(title = title)
+    }
+  }
+
+
   return(plots)
 }
 

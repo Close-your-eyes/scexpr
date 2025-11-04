@@ -256,7 +256,6 @@ best_cluster_assignment_by_module_scores <- function(df,
                                                      cluster) {
 
 
-
   mean_scores <- dplyr::summarise(
     df,
     mean_score = median(!!rlang::sym(score), na.rm = TRUE),
@@ -300,11 +299,12 @@ best_cluster_assignment_by_module_scores <- function(df,
       assigned = colnames(current_scores)[assignment],
       iteration = round
     )
+    names(mapping)[1] <- cluster
 
     all_mappings[[round]] <- mapping
 
     # remove assigned clusters
-    remaining_clusters <- setdiff(remaining_clusters, mapping$cluster)
+    remaining_clusters <- setdiff(remaining_clusters, mapping[[cluster]])
     round <- round + 1
   }
 
@@ -319,7 +319,7 @@ best_cluster_assignment_by_module_scores <- function(df,
                               .by = assigned)
 
   # merge with original data
-  df <- dplyr::left_join(df, mapping_df, by = "cluster")
+  df <- dplyr::left_join(df, mapping_df, by = cluster)
 
   return(list(df = df, mapping = mapping_df))
 }

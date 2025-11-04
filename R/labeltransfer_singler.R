@@ -198,7 +198,16 @@ labeltransfer_singler <- function(test_obj,
                      by = c(ref_labels_name, test_clusters_name)) |>
     dplyr::mutate(is_label = ifelse(is.na(is_label), F, is_label), is_pruned_label = ifelse(is.na(is_pruned_label), F, is_pruned_label))
 
-
+  if (is.null(test_clusters)) {
+    score_df <-
+      score_df |>
+      dplyr::left_join(
+        score_df |>
+          dplyr::filter(is_label) |>
+          dplyr::select(!!rlang::sym(test_clusters_name), !!rlang::sym(ref_labels_name)) |>
+          dplyr::rename(!!paste0(ref_labels_name, "_assigned_label") := !!rlang::sym(ref_labels_name)),
+        by = dplyr::join_by(!!rlang::sym(test_clusters_name)))
+  }
 
   if (any(score_df$is_max_score != score_df$is_label)) {
     message("max_score does not always match assigned labels. that means fine tuning affected label assignment.")
@@ -212,7 +221,7 @@ labeltransfer_singler <- function(test_obj,
   } else {
     message("labels and pruned labels are equal.")
   }
-
+  scores_plot_pseudobulk <- NULL
   if (!is.null(test_clusters)) {
     ## df for text labels on scores_plot
     score_df_textlabels <-
@@ -234,6 +243,22 @@ labeltransfer_singler <- function(test_obj,
       ggplot2::scale_color_manual(values = c("black", "hotpink"))
 
   } else {
+
+    score_df_pseudobulk <- score_df |>
+      dplyr::summarise(score = median(score), .by = c(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")), !!rlang::sym(ref_labels_name)))
+    score_df_textlabels <-
+      score_df_pseudobulk |>
+      dplyr::filter(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")) == !!rlang::sym(ref_labels_name)) |>
+      dplyr::mutate(score2 = gsub("^0", "", format(round(score, 2), nsmall = 2)))
+
+    scores_plot_pseudobulk <- fcexpr::heatmap_long_df(
+      df = score_df_pseudobulk,
+      groups = names(score_df_pseudobulk)[1],
+      features = names(score_df_pseudobulk)[2],
+      values = names(score_df_pseudobulk)[3]) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
+      ggplot2::geom_text(data = score_df_textlabels,
+                         mapping = ggplot2::aes(label = score2))
 
     scores_plot <- ggplot2::ggplot(dplyr::filter(score_df, is_label),
                                    ggplot2::aes(x = !!rlang::sym(names(score_df)[2]), y = !!rlang::sym(names(score_df)[3]))) +
@@ -299,6 +324,7 @@ labeltransfer_singler <- function(test_obj,
     scores = score_mat,
     scores_df = score_df,
     scores_plot = scores_plot,
+    scores_plot_pseudobulk = scores_plot_pseudobulk,
     labels_gt = gttable,
     singler_obj = labels
   ))

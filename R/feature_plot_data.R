@@ -19,9 +19,6 @@
 #' when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used
 #' @param col_steps_nice algorithmic determination of pretty steps,
 #' see ggplot2::scale_color_stepsn
-#' @param col_legend_args arguments to ggplot2::guide_colorsteps,
-#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
 #' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
 #' for ggplot default or "minmidmax" for three breaks at minimum, middle and
 #' maximum of value range
@@ -97,6 +94,12 @@
 #' @param label_multi_max
 #' @param contour_multi_try
 #' @param contour_multi_max
+#' @param col_legend_c_args arguments to ggplot2::guide_colorsteps,
+#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
+#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
+#' @param col_legend_d_args arguments to ggplot2::guide_colorsteps,
+#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
+#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
 #'
 #' @return
 #' @export
@@ -117,11 +120,14 @@ feature_plot_data <- function(data,
                               col_pal_d_args = list(name = "custom"),
                               col_steps = "..auto..",
                               col_steps_nice = T,
-                              col_legend_args = list(barwidth = 1,
-                                                     barheight = 8,
-                                                     override.aes = list(size = 4),
-                                                     title = "..auto..",
-                                                     order = 1),
+                              col_legend_c_args = list(barwidth = 0.5,
+                                                       barheight = 8,
+                                                       title = "..auto..",
+                                                       order = 1),
+                              col_legend_d_args = list(nrow = 10,
+                                                       override.aes = list(size = 4),
+                                                       title = "..auto..",
+                                                       order = 1),
                               legendbreaks = "minmidmax",
                               legendlabels = "..auto..",
                               shape_legend_args = list(override.aes = list(size = 4),
@@ -317,7 +323,8 @@ feature_plot_data <- function(data,
 
   plot <- add_color_scale(plot = plot,
                           col.pal = col.pal,
-                          col_legend_args = col_legend_args,
+                          col_legend_c_args = col_legend_c_args,
+                          col_legend_d_args = col_legend_d_args,
                           col_steps = col_steps,
                           legendbreaks = legendbreaks,
                           legendlabels = legendlabels,

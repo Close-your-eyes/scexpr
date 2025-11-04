@@ -30,14 +30,18 @@ convert_gene_ident <- function(x,
 
   while(length(x) > 0 && i <= length(input)) {
     message(input[i])
-    res <- dplyr::bind_rows(res,
-                            biomaRt::getBM(
-                              attributes = output,
-                              filters = input[i],
-                              values = x,
-                              mart = mart) |>
-                              dplyr::mutate(dplyr::across(dplyr::everything(), as.character))) |>
-      dplyr::mutate(input = !!rlang::sym(input[i]))
+    temp <- biomaRt::getBM(
+      attributes = output,
+      filters = input[i],
+      values = x,
+      mart = mart) |>
+      dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
+      dplyr::mutate(input = !!rlang::sym(input[i])) #, input2 = !!input[i]
+
+    res <- dplyr::bind_rows(res, temp)
+    # res$input <- res[[input[i]]]
+    # res$input2 <- input[i]
+    # dplyr::mutate(input = !!rlang::sym(input[i]), input2 = !!input[i])
     x <- setdiff(x, res[[input[i]]])
     i <- i + 1
   }
@@ -56,8 +60,9 @@ convert_gene_ident <- function(x,
                                 filters    = input[i],
                                 values     = x,
                                 mart       = mart) |>
-                                dplyr::mutate(dplyr::across(dplyr::everything(), as.character))) |>
-        dplyr::mutate(input = !!rlang::sym(input[i]))
+                                dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
+                                dplyr::mutate(input = !!rlang::sym(input[i]))
+      )
       x <- setdiff(x, res[[input[i]]])
       i <- i + 1
     }

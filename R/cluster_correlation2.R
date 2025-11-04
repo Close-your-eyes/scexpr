@@ -188,7 +188,7 @@ cluster_correlation2 <- function(objs,
     dplyr::left_join(cells[[2]], by = names(objs)[2])
 
   # ordering before NA may be introduced
-  rdf <- Gmisc::fastDoCall(what = heatmap_ordering,
+  rdf <- Gmisc::fastDoCall(what = fcexpr::heatmap_ordering,
                            args = c(list(df = rdf,
                                          groups = names(rdf)[1],
                                          features = names(rdf)[2],
@@ -222,8 +222,8 @@ cluster_correlation2 <- function(objs,
                                           groups = names(rdf)[1],
                                           features = names(rdf)[2],
                                           values = method,
-                                          feature_order = "none",
-                                          group_order = "none"),
+                                          heatmap_ordering_args = list(feature_order = "none",
+                                                                       group_order = "none")),
                                      heatmap_long_df_args))
 
   ret <- list(corrobj = corrobj, plot = plot, corr_df_plot = rdf_plot, corr_df = rdf)
@@ -273,7 +273,7 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
     names(split_intersect) <- split_intersect
   }
   assay <- match.arg(assay, names(objs[[1]]@assays))
-  method = match.arg(method, c("pearson","spearman", "kendall"))
+  method = match.arg(method, c("pearson","spearman", "kendall", "kendall_zi"))
 
   if (length(features) %in% c(1,2) && length(intersect(features, c("all", "pca"))) == 2) {
     features <- match.arg(features, choices = c("all", "pca"))
@@ -282,7 +282,12 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
   if (length(features) == 1 && features == "all") {
     features <- Reduce(intersect, purrr::map(objs, rownames))
   } else if (length(features) == 1 && features == "pca") {
-    features <- Reduce(intersect,  purrr::map(objs, ~rownames(.x@reductions[["pca"]]@feature.loadings)))
+    features2 <- names(check.reduction(objs, reduction = "pca"))
+    if (features != features2) {
+      message("using pca: ", features2)
+      features <- features2
+    }
+    features <- Reduce(intersect,  purrr::map(objs, ~rownames(.x@reductions[[features]]@feature.loadings)))
   } else {
     # features <- check.features(objs, features, meta.data = F)
   }

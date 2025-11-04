@@ -92,7 +92,7 @@ SO_prep01 <- function(data_dirs,
 
 
   install_pkgs(SoupX, scDblFinder, decontX)
-  resolution <- checks(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering)
+  resolution <- resolution_checks(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering)
   batch_corr <- rlang::arg_match(batch_corr)
 
   # zeallot::operator(c(ffbms,
@@ -321,7 +321,7 @@ install_pkgs <- function(SoupX, scDblFinder, decontX) {
   }
 }
 
-checks <- function(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering) {
+resolution_checks <- function(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering) {
   if (!is.numeric(resolution_meta)) {
     stop("resolution_meta has to be numeric.")
   }

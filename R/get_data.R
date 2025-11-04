@@ -86,7 +86,6 @@ get_data <- function(SO,
                                feature_cut_expr = feature_cut_expr,
                                feature_ex = feature_ex,
                                downsample = downsample)
-
   feature <- check.features(SO = SO, feature = feature)
   label_feature <- check.features(SO = SO, features = label_feature, rownames = F)
   contour_feature <- check.features(SO = SO, features = contour_feature, rownames = F)
@@ -136,8 +135,8 @@ get_data <- function(SO,
     )
 
     if (!is.null(reduction)) {
-      reduction <- unique(unlist(lapply(reduction, function(z) {
-        names(x@reductions)[which.min(utils::adist(z, names(x@reductions), ignore.case = T))]
+      reduction <- unique(unlist(lapply(names(reduction), function(z) {
+        names(x@reductions)[which.min(stringdist::stringdist(tolower(z), tolower(names(x@reductions))))]
       })))
       for (i in reduction) {
         # valid umap colnames can be umap_1 but also UMAP_1
