@@ -559,7 +559,7 @@ add_color_scale <- function(plot,
         if (attr(plot[["data"]], "feature_type") == "gene") {
           if (!is.null(attr(plot[["data"]], "layer"))) {
             if (attr(plot[["data"]], "layer") == "data") {
-              col_legend_c_args[["title"]] <- "log<br>UMI"
+              col_legend_c_args[["title"]] <- "log\nUMI"
             } else if (attr(plot[["data"]], "layer") == "counts") {
               col_legend_c_args[["title"]] <- "UMI"
             } else {
@@ -567,7 +567,7 @@ add_color_scale <- function(plot,
             }
           }
         } else if (attr(plot[["data"]], "feature_type") == "meta") {
-          col_legend_c_args[["title"]] <- NA # omit by default as names shows up through names_anno
+          col_legend_c_args[["title"]] <- "" # omit by default as names shows up through names_anno
         }
       }
 
@@ -625,8 +625,9 @@ add_color_scale <- function(plot,
     } else {
 
       if (col_legend_d_args[["title"]] == "..auto..") {
-        col_legend_d_args[["title"]] <- NA # or ""; omit by default as it shows up in annotation or title, may take too much space as legend title
+        col_legend_d_args[["title"]] <- "" # or ""; omit by default as it shows up in annotation or title, may take too much space as legend title
       }
+
       plot <- plot + ggplot2::scale_color_manual(values = col.pal,
                                                  na.value = col_na)
       guide_fun <- ggplot2::guide_legend
@@ -1031,9 +1032,9 @@ add_contour <- function(plot,
     # filter 2D outliers by contour_feature level
     # instead of filtering below
     if (contour_rm_outlier) {
-      # if min 5 algos indicate an outlier it is removed
       data <- purrr::map_dfr(split(data, data$group_id),
-                             ~.x[which(rowSums(brathering::outlier(.x[,c(dimcol1, dimcol2)], methods = "dbscan")) == 0),])
+                             ~.x[which(rowSums(brathering::outlier(.x[,c(dimcol1, dimcol2)],
+                                                                   methods = "dbscan")) == 0),])
     }
 
     data2 <- data.frame()
@@ -1110,7 +1111,8 @@ add_contour <- function(plot,
                              data2)
     if (all(is.na(data$contour_feature_split))) {
       data <- data |>
-        dplyr::mutate(contour_feature_split = if (contour_same_across_split) paste0(as.character(contour_feature), "_", as.character(split_feature)) else as.character(contour_feature))
+        dplyr::mutate(contour_feature_split = if (contour_same_across_split) {paste0(as.character(contour_feature), "_", as.character(split_feature))}
+                      else {as.character(contour_feature)})
     }
     # assign for next feature
     assign("contour_data", data, envir = parent.frame(8))
@@ -1119,13 +1121,6 @@ add_contour <- function(plot,
   if (dtach) {
     detach("package:mclust", unload = T)
   }
-
-  ## keep this as a list? or spare it?
-  ## currently uneffective
-  # if (contour_same_across_split) {
-  #   data <- purrr::map_dfr(stats::setNames(unique(data[["split_feature"]]), unique(data[["split_feature"]])),
-  #                          function(x) data |> dplyr::mutate(split_by = x))
-  # }
 
   ## handle names of contour_col_pal
   if (is.factor(data[["contour_feature"]])) {
@@ -1204,11 +1199,12 @@ add_contour <- function(plot,
       ggplot2::scale_color_manual(values = contour_col_pal)
   } else {
 
-    for (i in unique(data[["contour_feature"]])) {
-      i <- as.character(i)
-      for (j in unique(data[which(data[["contour_feature"]] == i), "contour_feature_split",drop=T])) {
-        j <- as.character(j)
-        if (!identical(ggplot2::geom_density_2d, contour_fun) && !is.null(contour_path_label)) {
+
+    if (!identical(ggplot2::geom_density_2d, contour_fun) && !is.null(contour_path_label)) {
+      for (i in unique(data[["contour_feature"]])) {
+        i <- as.character(i)
+        for (j in unique(data[which(data[["contour_feature"]] == i), "contour_feature_split",drop=T])) {
+          j <- as.character(j)
           # geomtextpath::geom_labeldensity2d does not allow for arbitrary label, hence: calculate paths by hand with
           # brathering::contour_est and use ...
           # ... geomtextpath::geom_textpath or geomtextpath::geom_labelpath
@@ -1233,30 +1229,49 @@ add_contour <- function(plot,
                      mapping = ggplot2::aes(label = !!rlang::sym(contour_path_label)),
                      color = contour_col_pal[i])))
           })
-
-        } else {
-          #ggplot2::geom_density2d
-          #contour_fun <- match.fun(contour_fun)
-
-          temp <- data[which(data[["contour_feature_split"]] == j),,drop = F]
-          if (nrow(temp) > 1) {
-            plot <- plot +
-              Gmisc::fastDoCall(contour_fun, args = c(
-                contour_args[[i]],
-                list(data = temp, color = contour_col_pal[i])))
-          }
         }
-
-        # plot <-
-        #   plot +
-        #   Gmisc::fastDoCall(geomtextpath::geom_labeldensity2d, args = c(
-        #     contour_args[[i]],
-        #     list(data = data[which(data[["contour_feature_split"]] == j),,drop = F],
-        #          color = contour_col_pal[i])))
       }
-    }
-  }
+    } else {
+      #ggplot2::geom_density2d
+      #contour_fun <- match.fun(contour_fun)
 
+      #   temp <- data[which(data[["contour_feature_split"]] == j),,drop = F]
+      #   if (nrow(temp) > 1) {
+      #     plot <- plot +
+      #       Gmisc::fastDoCall(contour_fun, args = c(
+      #         contour_args[[i]],
+      #         list(data = temp, color = contour_col_pal[i])))
+      #   }
+      # }
+
+      # loop only for color via contour_col_pal
+      for (i in unique(data[["contour_feature"]])) {
+
+        group <- ifelse(contour_same_across_split, "contour_feature", "split_feature")
+        contdata <- brathering::get_contour_2d(x = data[which(data[["contour_feature"]] == i),
+                                                        c(dimcol1, dimcol2,group),
+                                                        drop=T],
+                                               group = group) |>
+        dplyr::filter(as.character(level) %in% as.character(contour_args[[i]]$breaks))
+        plot <- plot +
+          Gmisc::fastDoCall(geom_path, args = c(
+            #contour_args[[i]],
+            list(
+              data = contdata,
+              color = contour_col_pal[i],
+              mapping = ggplot2::aes(x = !!rlang::sym(dimcol1),
+                                     y = !!rlang::sym(dimcol2),
+                                     group = combined_group)
+            )))
+
+      }
+
+
+
+
+    }
+
+  }
   # rm attr(data, "feature_type") == "gene" ?
   if (contour_expr_freq && is.numeric(data[["feature"]]) && attr(data, "feature_type") == "gene") {
     # filter for largest subcluster of multimodal clusters
@@ -1569,8 +1584,15 @@ feat.check <- function(SO,
     ),
     collapse = "|"
   )
-
   out <- search[which(stringi::stri_detect_regex(search, pattern, case_insensitive = TRUE))]
+
+  # maintain original order
+  if (length(out) > 1) {
+    order <- apply(utils::adist(out, features, ignore.case = T), 2, which.min)
+    order <- unique(order)
+    order <- c(order, setdiff(seq_along(out), order))
+    out <- out[order]
+  }
 
   # out <- unlist(lapply(features, function(x) {
   #   Reduce(intersect, lapply(SO, function(y) {

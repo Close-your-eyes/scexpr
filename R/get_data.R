@@ -86,7 +86,8 @@ get_data <- function(SO,
                                feature_cut_expr = feature_cut_expr,
                                feature_ex = feature_ex,
                                downsample = downsample)
-  feature <- check.features(SO = SO, feature = feature)
+
+  feature <- check.features(SO = SO, features = feature)
   label_feature <- check.features(SO = SO, features = label_feature, rownames = F)
   contour_feature <- check.features(SO = SO, features = contour_feature, rownames = F)
   split_feature <- check.features(SO = SO, features = split_feature, rownames = F)

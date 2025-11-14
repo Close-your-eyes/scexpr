@@ -281,8 +281,8 @@ heatmap_pseudobulk2 <- function(SO,
                                   theme_args = theme_args,
                                   repel_args = repel_args,
                                   theme = theme,
-                                  feature_order = feature_order,
-                                  group_order = group_order)
+                                  heatmap_ordering_args = list(feature_order = feature_order,
+                                                               group_order = group_order))
   if (sec_axis) {
     plot <- add_sec_axis(
       plot = plot,

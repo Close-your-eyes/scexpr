@@ -376,8 +376,6 @@ feature_plot2 <- function(SO,
                                                            plot_all_across_split = plot_all_across_split)
   ))
 
-
-
   if (!is.null(strip_select)) {
     for (i in 1:length(plots)) {
       if (!i %in% strip_select) {

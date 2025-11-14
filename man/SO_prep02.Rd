@@ -42,6 +42,9 @@ SO_prep02(
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
   join_layers = T,
+  interactive_varfeat_selection = T,
+  interactive_varfeat_selection_inds = seq(200, 2000, 200),
+  interactive_pc_selection = T,
   ...
 )
 }
@@ -50,14 +53,12 @@ SO_prep02(
 
 \item{samples}{names of SO_unprocessed that are to include; if missing all are used}
 
-\item{cells}{vector of cell names to include; if missint all cells are used}
+\item{cells}{vector of cell names to include; if missing all cells are used}
 
 \item{min_cells}{min number of cells per object in SO_unprocessed; objects with lower cell number are excluded}
 
 \item{downsample}{downsample a fraction of cells from each object in SO_unprocessed (downsample < 0);
 or an absolute number of cells per object (downsample > 1 & downsample >= min_cells)}
-
-\item{downsample_method}{}
 
 \item{export_prefix}{prefix to the output rds file}
 
@@ -112,6 +113,10 @@ exclude T cell receptor gene segments}
 \item{RunTSNE_args}{arguments to scexpr::run_fft_tsne}
 
 \item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
+
+\item{interactive_varfeat_selection}{only applies when hvf_determination_before_merge = F}
+
+\item{interactive_varfeat_selection_inds}{only applies when hvf_determination_before_merge = F}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file

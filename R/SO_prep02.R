@@ -401,7 +401,8 @@ SO_prep02 <- function(SO_unprocessed,
     } else if (save_ext == "zap") {
       zap::zap_write(SO, dst = file.path(save_path, save.name), compress = "zstd")
     }
-    message(paste0("SO saved to: ", save_path, " as ", save.name, "."))
+    message("SO saved to: ")
+    message(file.path(save_path, save.name))
   }
 
   return(SO)
