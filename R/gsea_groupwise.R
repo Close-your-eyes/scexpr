@@ -1,6 +1,6 @@
 #' Groupwise gene set enrichment analysis
 #'
-#' S2N is calculated with scexpr::s2n_groupwise, then fgsea::fgseaMultilevel is
+#' S2N is calculated with scexpr::gsea_s2n_groupwise, then fgsea::fgseaMultilevel is
 #' called on each group. You may use an overclustered grouping, GSEA on groups of cells
 #' should cancel out noise in single cells and group highly correlates cells.
 #'
@@ -14,10 +14,10 @@
 #' @export
 #'
 #' @examples
-fgsea_groupwise <- function(obj,
-                            group,
-                            fgseaMultilevel_args = list(pathways = list()),
-                            get_layer_args = list()) {
+gsea_groupwise <- function(obj,
+                           group,
+                           fgseaMultilevel_args = list(pathways = list()),
+                           get_layer_args = list()) {
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
   }
@@ -28,7 +28,7 @@ fgsea_groupwise <- function(obj,
     stop("pathways in fgseaMultilevel_args requires a named list of gene sets.")
   }
 
-  s2ntab <- s2n_groupwise(
+  s2ntab <- gsea_s2n_groupwise(
     obj = obj,
     group = group,
     get_layer_args = get_layer_args

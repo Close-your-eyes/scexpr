@@ -102,8 +102,8 @@ labeltransfer_module_gsea <- function(test_obj,
 
 
   ## ---- do smth similar with gsea -----
-  # s2n <- s2n_groupwise(test_obj, test_clusters)
-  res <- fgsea_groupwise(test_obj,
+  # s2n <- gsea_s2n_groupwise(test_obj, test_clusters)
+  res <- gsea_groupwise(test_obj,
                          test_clusters,
                          fgseaMultilevel_args = list(pathways = modules))
   res[["gsea"]] <- dplyr::mutate(res[["gsea"]], padj2 = -log10(padj))

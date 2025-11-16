@@ -68,10 +68,10 @@
 #' fold change (list index 1) and p-value (list index 2) limits for GSEA; first entry of each vector
 #' applies for genes with negative fold change, second entry for genes with positive fold change;
 #' 2 GSEA will be run separately on genes with negative and positive fold change;
-#' if argument is NULL no GSEA is performed; the function called for GSEA is scexpr::fgsea_on_msigdbr which
+#' if argument is NULL no GSEA is performed; the function called for GSEA is scexpr::gsea_on_msigdbr which
 #' uses all gene sets from \href{https://igordot.github.io/msigdbr/articles/msigdbr-intro.html}{msigdb(r)} by default
 #' and runs \href{https://bioconductor.org/packages/release/bioc/html/fgsea.html}{fgsea} for GSEA; alternative
-#' arguments to scexpr::fgsea_on_msigdbr can be supplied in ... (except for gene.ranks)
+#' arguments to scexpr::gsea_on_msigdbr can be supplied in ... (except for gene.ranks)
 #' @param interactive.only logical; do calculations only for interactive analysis and only
 #' return these values
 #' @param use.limma logical; use limma for DE gene detection; intended for subsequent use MetaVolcanoR
@@ -362,7 +362,7 @@ volcano_plot <- function(SO,
                     topn.metric = topn.metric)
 
 
-    ## to fgsea_on_msigdbr
+    ## to gsea_on_msigdbr
     if (!is.null(gsea.param)) {
       # run on positive and negative DEG - which ones? additional arguments?
       # 1 log2.fc
@@ -381,13 +381,13 @@ volcano_plot <- function(SO,
       } else {
         arg_add <- list(gene.ranks = ranks.1)
       }
-      g1 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
+      g1 <- do.call(gsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(gsea_on_msigdbr)))]))
       if (!"maxSize" %in% names(dots)) {
         arg_add <- list(gene.ranks = ranks.2, maxSize = 500)
       } else {
         arg_add <- list(gene.ranks = ranks.2)
       }
-      g2 <- do.call(fgsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(fgsea_on_msigdbr)))]))
+      g2 <- do.call(gsea_on_msigdbr, args = c(arg_add, dots[which(names(dots) %in% names(formals(gsea_on_msigdbr)))]))
       vp_gsea.1 <- .plot_vp(vd = vd,
                             y = p.plot,
                             x.axis.symmetric = x.axis.symmetric,

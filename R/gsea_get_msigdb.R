@@ -11,12 +11,21 @@
 #' @export
 #'
 #' @examples
-#' sets <- msigdb_get(collection = c("C1", "H"))
+#' # H: hallmark gene sets
+#' # C1: positional gene sets
+#' # C2: curated gene sets
+#' # C3: regulatory target gene sets
+#' # C4: computational gene sets
+#' # C5: ontology gene sets
+#' # C6: oncogenic signature gene sets
+#' # C7: immunologic signature gene sets
+#' # C8: cell type signature gene sets
+#' sets <- gsea_get_msigdb(collection = c("C1", "H"))
 #' # then pass on
-#' fgsea_groupwise(obj = SO,
+#' gsea_groupwise(obj = SO,
 #'                 group = "meta.col",
 #'                 fgseaMultilevel_args = list(pathways = list(sets$sets)))
-msigdb_get <- function(collection = c("C1","C2","C3","C4","C5","C6","C7","C8","H"),
+gsea_get_msigdb <- function(collection = c("C1","C2","C3","C4","C5","C6","C7","C8","H"),
                        msigdbr_args = list(
                          db_species = "HS",
                          species = "human"),

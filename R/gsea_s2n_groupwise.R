@@ -11,7 +11,7 @@
 #' @export
 #'
 #' @examples
-s2n_groupwise <- function(obj,
+gsea_s2n_groupwise <- function(obj,
                           group,
                           eps = 1e-6,
                           get_layer_args = list()) {

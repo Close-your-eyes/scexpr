@@ -82,7 +82,7 @@ feature_plot2(
   contour_multi_try = F,
   contour_multi_max = 3,
   contour_col_pal_args = list(name = "custom"),
-  contour_args = list(contour_var = "ndensity", breaks = 0.3, linewidth = 0.5),
+  contour_args = list(breaks = 0.3, linewidth = 0.5, linetype = "solid"),
   contour_label_nudge = list(),
   contour_label_args = list(label.colour = NA, fill = "white", size = 4, color = "black",
     label.padding = ggplot2::unit(rep(1/20, 4), "lines")),

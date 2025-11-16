@@ -155,6 +155,7 @@ volcano01_calc <- function(SO,
   #   cells = intersect(colnames(x), c(ngc, pgc))
   # ), assays = assay, counts = T))
 
+
   SO <- lapply(SO, function(x) subset(
     x,
     features = intersect(rownames(x), intersect_features),

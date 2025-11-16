@@ -31,7 +31,7 @@ method_score is module_score}
 \item{fgseaMultilevel_args}{args to fgsea::fgseaMultilevel when method_score
 is gsea}
 
-\item{get_layer_args}{args to scexpr::getLayer in scexpr::fgsea_groupwise
+\item{get_layer_args}{args to scexpr::getLayer in scexpr::gsea_groupwise
 when method_score is gsea}
 
 \item{gsea_overcluster_resolution}{}

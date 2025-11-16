@@ -1,8 +1,8 @@
-#' Plot results from scexpr::fgsea_on_msigdbr
+#' Plot results from scexpr::gsea_on_msigdbr
 #'
-#' @param data named numeric vector of ranking metric, e.g. S2N; names must
-#' be genes; no need to sort, this is done internally; if taken times -1 the
-#' gsea plot and ES flips
+#' @param data list as returned from gsea_on_msigdbr; filter rows of data$data
+#' to select gene sets for plotting
+#' @param padj_min filter data$data by this p-value? set NULL for no filtering
 #' @param ticks_linewidth width of gene ticks
 #' @param color_ES_line color of the ES line along the gene ranks
 #' @param color_ES_lims color of vertical lines which indicate min and max
@@ -27,7 +27,9 @@
 #' @export
 #'
 #' @examples
-plot_gsea <- function(data,
+gsea_plot <- function(data,
+                      padj_min = 0.01,
+                      return_metric_plot = F,
                       ticks_linewidth = 0.2,
                       ticks_height = 1,
                       rect_height = 0.65,
@@ -43,6 +45,73 @@ plot_gsea <- function(data,
                       annotation_size = 4,
                       zscore_lims = c(-2,2),
                       annotation_with_name = F) {
+
+  results <- data$data
+  if (!is.null(padj_min)) {
+    results <- results |>
+      dplyr::filter(padj <= padj_min)
+  }
+
+  if (nrow(results) > 100) {
+    choi <- menu(c("yes", "no"), title = paste0(nrow(results), " gene sets to plot?"))
+    if (choi == 2) {
+      return(NULL)
+    }
+  }
+
+  gsea_plots <- lapply(stats::setNames(results$pathway, results$pathway), function(x) {
+    gsea_plot_data <- prep_gsea(gene.set = data$gene_sets[[x]],
+                                gene_ranks = data$gene_ranks,
+                                gseaParam = 1,
+                                pval = signif(results[which(results$pathway == x), "padj"], 2),
+                                NES = signif(results[which(results$pathway == x), "NES"], 2))
+    gsea_plot_data$name <- x
+    # leadingEdge_rank differs by 1 between methods ?!
+    # leadingEdge_rank = results[which(results$pathway == x), "leadingEdge_rank"]
+
+    return(make_gsea_plot(data = gsea_plot_data,
+                          ticks_linewidth = ticks_linewidth,
+                          ticks_height = ticks_height,
+                          rect_height = rect_height,
+                          rect_alpha = rect_alpha,
+                          color_ES_line = color_ES_line,
+                          color_ES_lims = color_ES_lims,
+                          color_leadingEdge = color_leadingEdge,
+                          label_genes = label_genes,
+                          theme = theme,
+                          plot_leadingEdge_rank = plot_leadingEdge_rank,
+                          plot_leadingEdge_size = plot_leadingEdge_size,
+                          annotation_pos = annotation_pos,
+                          annotation_size = annotation_size,
+                          zscore_lims = zscore_lims,
+                          annotation_with_name = annotation_with_name))
+  })
+
+  if (!return_metric_plot) {
+    gsea_plots <- purrr::map(gsea_plots, `[[`, 1)
+  }
+
+  return(gsea_plots)
+
+}
+
+
+make_gsea_plot <- function(data,
+                           ticks_linewidth = 0.2,
+                           ticks_height = 1,
+                           rect_height = 0.65,
+                           rect_alpha = 0.85,
+                           color_ES_line = "black",
+                           color_ES_lims = "black",
+                           color_leadingEdge = "hotpink2",
+                           label_genes = NULL, # leave NULL by default because it may take some time in case many gene sets are tested
+                           theme = theme_bw(),
+                           plot_leadingEdge_rank = T,
+                           plot_leadingEdge_size = T,
+                           annotation_pos = NULL,
+                           annotation_size = 4,
+                           zscore_lims = c(-2,2),
+                           annotation_with_name = F) {
 
 
   data_colorbar <-
@@ -62,8 +131,7 @@ plot_gsea <- function(data,
   ticks_height <- sES * ticks_height
   rect_height <- sES * rect_height
 
-  p <-
-    ggplot2::ggplot(data = data$curve) +
+  p <- ggplot2::ggplot(data = data$curve) +
     ggplot2::geom_segment(
       data = data$ticks,
       mapping = ggplot2::aes(
@@ -184,4 +252,127 @@ plot_gsea <- function(data,
     theme +
     ggplot2::labs(x="gene rank", y="ranking metric")
   return(list(plot = p, metric_plot = p_metric))
+}
+
+
+
+
+
+prep_gsea <- function(gene.set,
+                      gene_ranks,
+                      gseaParam = 1,
+                      pval,
+                      NES) {
+
+  data <- .plotEnrichmentData(pathway = gene.set,
+                              stats = gene_ranks,
+                              gseaParam = gseaParam)
+
+  #colorbar_df <- .prep_gsea_colorbar(x = as.data.frame(data[["stats"]]))
+  rank_df <- data.frame(gene = names(rev(gene_ranks)[data[["ticks"]][["rank"]]]), rank = data[["ticks"]][["rank"]])
+
+  leadingEdge_rank <- as.numeric(data[["curve"]][which(data[["curve"]]$ES == c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))]), "rank"])
+  if (abs(data[["posES"]]) > abs(data[["negES"]])) {
+    rank_df$leadingEdge <- rank_df$rank <= leadingEdge_rank
+  } else if (abs(data[["posES"]]) < abs(data[["negES"]])) {
+    rank_df$leadingEdge <- rank_df$rank >= leadingEdge_rank
+  } else {
+    stop("posES equal to negES. What now?")
+  }
+  leadingEdge_size = sum(rank_df$leadingEdge)
+
+
+
+  data <- c(data, list(gene.set = gene.set,
+                       rank_df = rank_df,
+                       leadingEdge_rank = leadingEdge_rank,
+                       leadingEdge_size = leadingEdge_size,
+                       pval = pval,
+                       ES = c(data[["posES"]], data[["negES"]])[which.max(abs(c(data[["posES"]], data[["negES"]])))],
+                       NES = NES))
+  return(data)
+}
+
+.prep_gsea_colorbar <- function(x) {
+  zscore_cuts <- NULL
+  x$stat_scale <- scale(x$stat)
+  if (is.null(zscore_cuts)) {
+    zscore_cuts <- seq(floor(min(x$stat_scale)), ceiling(max(x$stat_scale)), 1)
+
+
+    unique(c(seq(min(zscore_cuts), max(zscore_cuts), 4), max(zscore_cuts)))
+
+    x <- unique(c(min(zscore_cuts), seq(min(zscore_cuts), 0, 2), 0))
+    y <- unique(c(min(zscore_cuts), seq(min(x), 0, 3), 0))
+
+    z <- unique(c(seq(0, max(zscore_cuts), 2), max(zscore_cuts)))
+    z1 <- unique(c(0, seq(0, max(z), 3), max(z)))
+
+    split_func(zscore_cuts[which(zscore_cuts <= 0)],4)
+  }
+  data <-
+    x %>%
+    dplyr::mutate(zscore = cut(stat_scale, breaks = zscore_cuts)) %>% # as.numeric(as.factor())
+    dplyr::group_by(zscore) %>%
+    dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
+  data$zscore <- factor(data$zscore, levels = data %>% dplyr::arrange(min_rank) %>% dplyr::pull(zscore))
+  data <- dplyr::arrange(data, zscore)
+  data$fill_col <- ""
+
+  # manually take care, that positive stats become reddish color and negative bluish
+  pos_col <- RColorBrewer::brewer.pal(10, "RdBu")[1:5]
+  neg_col <- RColorBrewer::brewer.pal(10, "RdBu")[6:10]
+  data[which(grepl("^\\(-", data$zscore)),"fill_col"] <- grDevices::colorRampPalette(neg_col, interpolate = "linear")(length(which(grepl("^\\(-", data$zscore))))
+  data[which(grepl("^\\([[:digit:]]", data$zscore)),"fill_col"] <- grDevices::colorRampPalette(pos_col, interpolate = "linear")(length(which(grepl("^\\([[:digit:]]", data$zscore))))
+
+
+  return(list(data = data, breaks = zscore_cuts))
+}
+
+.plotEnrichmentData <- function(pathway,
+                                stats,
+                                gseaParam=1) {
+  # copied from fgsea pkg
+
+  if (any(!is.finite(stats))){
+    stop("Not all stats values are finite numbers")
+  }
+
+  rnk <- rank(-stats)
+  ord <- order(rnk)
+
+  statsAdj <- stats[ord]
+  statsAdj <- sign(statsAdj) * (abs(statsAdj) ^ gseaParam)
+
+  pathway <- unname(as.vector(stats::na.omit(match(pathway, names(statsAdj)))))
+  pathway <- sort(pathway)
+  pathway <- unique(pathway)
+
+  gseaRes <- fgsea::calcGseaStat(statsAdj, selectedStats = pathway,
+                                 returnAllExtremes = TRUE)
+
+  bottoms <- gseaRes$bottoms
+  tops <- gseaRes$tops
+
+  n <- length(statsAdj)
+  xs <- as.vector(rbind(pathway - 1, pathway))
+  ys <- as.vector(rbind(bottoms, tops))
+  toPlot <- data.table::data.table(rank=c(0, xs, n + 1), ES=c(0, ys, 0))
+  ticks <- data.table::data.table(rank=pathway, stat=statsAdj[pathway])
+  stats <- data.table::data.table(rank=seq_along(stats), stat=statsAdj)
+
+  res <- list(
+    curve=toPlot,
+    ticks=ticks,
+    stats=stats,
+    posES=max(tops),
+    negES=min(bottoms),
+    spreadES=max(tops)-min(bottoms),
+    maxAbsStat=max(abs(statsAdj)))
+}
+
+split_func <- function(x, by) {
+  r <- diff(range(x))
+  out <- seq(0, r - by - 1, by = by)
+  c(round(min(x) + c(0, out - 0.51 + (max(x) - max(out)) / 2), 0), max(x))
 }

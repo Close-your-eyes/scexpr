@@ -7,7 +7,7 @@
 #' norm = sum of rescaled [0,3] expression, max is 3*length(features), rounded
 #' lognorm = log2 of norm (dapening extreme values)
 #' Check out: UCell::AddModuleScore_UCell
-#' Check out: scexpr::fgsea_groupwise
+#' Check out: scexpr::gsea_groupwise
 #'
 #' @param obj Seurat object
 #' @param features gene features

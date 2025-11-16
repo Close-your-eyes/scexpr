@@ -8,7 +8,7 @@
 #' method_score is module_score
 #' @param fgseaMultilevel_args args to fgsea::fgseaMultilevel when method_score
 #' is gsea
-#' @param get_layer_args args to scexpr::getLayer in scexpr::fgsea_groupwise
+#' @param get_layer_args args to scexpr::getLayer in scexpr::gsea_groupwise
 #' when method_score is gsea
 #' @param n_times_modules_subcluster
 #' @param gsea_overcluster_resolution
@@ -68,7 +68,7 @@ discretize_module_score_suggestive_clusters <- function(obj,
     new_cols <- gsub("\\.0$", "", new_cols)
 
     ## check output
-    score_df <- fgsea_groupwise(
+    score_df <- gsea_groupwise(
       obj = obj,
       group = new_cols,
       fgseaMultilevel_args = fgseaMultilevel_args,

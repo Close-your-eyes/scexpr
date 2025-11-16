@@ -1154,9 +1154,9 @@ add_contour <- function(plot,
 
     for (i in 1:length(lengths(contour_args))) {
       contour_args[[i]] <- contour_args[[i]][which(!names(contour_args[[i]]) %in% c("data", "mapping"))]
-      if (!"contour_var" %in% names(contour_args[[i]])) {
-        contour_args[[i]] <- c(contour_var = "ndensity", contour_args[[i]])
-      }
+      # if (!"contour_var" %in% names(contour_args[[i]])) {
+      #   contour_args[[i]] <- c(contour_var = "ndensity", contour_args[[i]])
+      # }
       if (!"breaks" %in% names(contour_args[[i]])) {
         contour_args[[i]] <- c(breaks = 0.3, contour_args[[i]])
       }
@@ -1251,11 +1251,12 @@ add_contour <- function(plot,
         contdata <- brathering::get_contour_2d(x = data[which(data[["contour_feature"]] == i),
                                                         c(dimcol1, dimcol2,group),
                                                         drop=T],
-                                               group = group) |>
-        dplyr::filter(as.character(level) %in% as.character(contour_args[[i]]$breaks))
+                                               group = group,
+                                               levels = as.numeric(contour_args[[i]]$breaks))
+        # dplyr::filter(as.character(level) %in% as.character(contour_args[[i]]$breaks))
         plot <- plot +
-          Gmisc::fastDoCall(geom_path, args = c(
-            #contour_args[[i]],
+          Gmisc::fastDoCall(ggplot2::geom_path, args = c(
+            contour_args[[i]][which(names(contour_args[[i]]) != "breaks")],
             list(
               data = contdata,
               color = contour_col_pal[i],

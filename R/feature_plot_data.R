@@ -197,10 +197,11 @@ feature_plot_data <- function(data,
                               contour_multi_max = 3,
                               contour_col_pal_args = list(name = "custom"),
                               contour_args = list(
-                                contour_var = "ndensity",
+                                #contour_var = "ndensity",
                                 breaks = 0.3,
-                                linewidth = 0.5
-                              ), # arguments to geom_density_2d
+                                linewidth = 0.5,
+                                linetype = "solid"
+                              ),
                               contour_label_nudge = list(),
                               contour_label_args = list(
                                 label.colour = NA,
