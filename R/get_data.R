@@ -35,6 +35,7 @@
 #' @param feature_cut filter cells by a one or more cutoff features,
 #' cells with UMI>feature_cut_expr are excluded and get col_ex_cells
 #' @param feature_cut_expr numeric vector of cutoff expressions
+#' @param try_df try to return one joined data frame
 #'
 #' @return a list of data frame
 #' @export
@@ -66,7 +67,8 @@ get_data <- function(SO,
                      downsample = 1,
                      feature_cut = NULL,
                      feature_cut_expr = 0,
-                     feature_ex = NULL) {
+                     feature_ex = NULL,
+                     try_df = F) {
 
 
 
@@ -254,6 +256,7 @@ get_data <- function(SO,
   # shuffle = T --> only considered when !order; will shuffle the data data.frame; if !order and !shuffle a custom order can be provided from outside
   # order_rev = T --> reverse the order so that lowest values (or zeros if order_abs = T) are on top
 
+  classes <- purrr::map(data, freeze_classes, cols = "feature")
   data <- purrr::map(data, function(x) {
     # gene feat or numeric meta_feat
     if (is.numeric(x[["feature"]])) {
@@ -308,6 +311,8 @@ get_data <- function(SO,
     return(x)
   })
 
+  data <- purrr::map2(data, classes, ~thaw_cols(.x, .y))
+
   for (i in seq_along(data)) {
     if (names(data)[i] %in% gene_features) {
       attr(data[[i]], "feature_type") <- "gene"
@@ -340,6 +345,13 @@ get_data <- function(SO,
     attr(data[[i]], "feature_cut") <- feature_cut
   }
 
+  if (try_df) {
+    for(i in names(data)) {
+      names(data[[i]])[which(names(data[[i]]) == "feature")] <- i
+    }
+    data <- purrr::reduce(data, dplyr::left_join)
+  }
+
   # data <- dplyr::bind_rows(data)
   #
   # if (!is.null(trajectory_slot)) {
@@ -356,7 +368,45 @@ get_data <- function(SO,
   #   return(list(data = data, data_traj = data_traj))
   # }
 
+
+
   return(data)
 }
 
+
+## to brathering
+freeze_classes <- function(df, cols) {
+
+  # keep only columns that exist, ignore others silently
+  cols <- intersect(cols, names(df))
+
+  # store classes of selected columns
+  classes <- sapply(df[cols], class)
+
+  return(classes = classes)
+}
+
+
+thaw_cols <- function(df, classes) {
+  restore_class <- function(x, cls) {
+    if (cls == "numeric")  return(as.numeric(x))
+    if (cls == "integer")  return(as.integer(x))
+    if (cls == "logical")  return(as.logical(x))
+    if (cls == "factor")   return(as.factor(x))
+    if (cls == "Date")     return(as.Date(x))
+    if (cls == "POSIXct")  return(as.POSIXct(x))
+    x
+  }
+
+  # Only restore columns that still exist
+  cols_to_restore <- intersect(names(classes), names(df))
+
+  df[cols_to_restore] <- Map(
+    restore_class,
+    df[cols_to_restore],
+    classes[cols_to_restore]
+  )
+
+  return(df)
+}
 

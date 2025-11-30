@@ -29,6 +29,7 @@ list of gene sets and data frame with category info
 Convenience function to get gene sets from msigdbr
 }
 \examples{
+\dontrun{
 # H: hallmark gene sets
 # C1: positional gene sets
 # C2: curated gene sets
@@ -43,4 +44,51 @@ sets <- gsea_get_msigdb(collection = c("C1", "H"))
 gsea_groupwise(obj = SO,
                 group = "meta.col",
                 fgseaMultilevel_args = list(pathways = list(sets$sets)))
+msigdb <- scexpr::gsea_get_msigdb(return = "df")
+
+# numeric summary
+summ <- msigdb$sets |>
+  dplyr::summarise(n_genes = dplyr::n(), .by = c(gs_collection, gs_name))
+
+ggplot(summ, aes(x = gs_collection, y = n_genes)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.2)
+
+ggplot(summ, aes(x = gs_collection, y = n_genes)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.2) +
+  scale_y_log10()
+
+quantile(summ$n_genes, probs = seq(0.1,1,0.1))
+
+# some checks
+all_genes <- unique(msigdb$sets$gene_symbol)
+conv <- convert_gene_ident(x = all_genes,
+                           input = c("hgnc_symbol", "external_synonym", "external_gene_name", "ensembl_gene_id"))
+conv_short <- conv[["short"]]
+sum(is.na(conv_short$hgnc_symbol)) # 2164
+sum(is.na(conv_short$ensembl_gene_id)) # 0
+anyDuplicated(conv_short$hgnc_symbol[which(!is.na(conv_short$hgnc_symbol))])
+check <- conv_short |>
+  dplyr::add_count(hgnc_symbol) |>
+  dplyr::filter(!is.na(hgnc_symbol))
+any(check$n > 1)
+
+sum(conv_short$unequal_input_hgnc, na.rm = T) # 158 - very minor
+
+# harmonized:
+# dplyr::mutate(harmonized = ifelse(is.na(hgnc_symbol), input, hgnc_symbol))
+
+# cluster gene sets
+msigdb <- scexpr::gsea_get_msigdb()
+mat <- brathering::list_to_binary_matrix(msigdb$sets)
+k <- 50
+pca_res <- irlba::irlba(mat, nv = k, nu = k)
+# scores or embedding
+pc_embedding <- pca_res$u \%*\% diag(pca_res$d)
+loadings <- pca_res$v
+
+ures <- uwot::umap(pc_embedding, verbose = T)
+brathering::plot2(ures, size = 2)
+}
 }

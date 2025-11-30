@@ -164,8 +164,14 @@ volcano01_calc <- function(SO,
   if (length(SO) > 1) {
     # this restores the counts matrix
     ## fix this like in so_prep
-    SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
-    SO <- SeuratObject::JoinLayers(SO)
+    #SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
+    #SO <- SeuratObject::JoinLayers(SO)
+    if (assay != "RNA") {
+      stop("multiple SO: only RNA currently")
+    }
+    SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO, get_layer, layer = "counts")),
+                                     meta.data = dplyr::bind_rows(purrr::map(SO, ~.x@meta.data)))
+    SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
   } else {
     SO <- SO[[1]]
   }

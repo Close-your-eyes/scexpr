@@ -10,6 +10,7 @@ countmat_to_hdf5(
   out_dir,
   sub_dir = "filtered_feature_bc_matrix",
   types = c("sparse", "HDF5"),
+  min_split_cols = 10,
   ...
 )
 }

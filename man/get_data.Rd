@@ -31,7 +31,8 @@ get_data(
   downsample = 1,
   feature_cut = NULL,
   feature_cut_expr = 0,
-  feature_ex = NULL
+  feature_ex = NULL,
+  try_df = F
 )
 }
 \arguments{
@@ -94,6 +95,8 @@ cells with UMI>feature_cut_expr are excluded and get col_ex_cells}
 
 \item{feature_ex}{filter cells by an exclusion feature, cells with UMI>0
 are excluded and get col_ex_cells as color, passed to scexpr::get_data}
+
+\item{try_df}{try to return one joined data frame}
 }
 \value{
 a list of data frame

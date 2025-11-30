@@ -32,12 +32,6 @@
 #' for decision based on number of SOs
 #' @param freq_pos where to plot, xy coordinates
 #' @param freq_size font size of frequency annotation
-#' @param name_anno name of the plot, any string possible, understands glue
-#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-#' where freq is global expression frequency and feature_cut_ex is a collapsed
-#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-#' algorithmic decision based on freq_plot; freq is removed for meta features;
-#' feature_cut_ex is adjusted if either element is missing
 #' @param name_anno_pos where to plot name_anno, NULL to omit plotting, '..auto..'
 #' for automatic decision between title, annotation or NULL; title and annotation
 #' simultaneously also possible
@@ -100,6 +94,18 @@
 #' @param col_legend_d_args arguments to ggplot2::guide_colorsteps,
 #' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
 #' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
+#' @param name name of the plot, any string possible, understands glue
+#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
+#' where freq is global expression frequency and feature_cut_ex is a collapsed
+#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
+#' algorithmic decision based on freq_plot; freq is removed for meta features;
+#' feature_cut_ex is adjusted if either element is missing
+#' @param anno name of the plot, any string possible, understands glue
+#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
+#' where freq is global expression frequency and feature_cut_ex is a collapsed
+#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
+#' algorithmic decision based on freq_plot; freq is removed for meta features;
+#' feature_cut_ex is adjusted if either element is missing
 #'
 #' @return
 #' @export
@@ -139,7 +145,8 @@ feature_plot_data <- function(data,
                               freq_pos = c(Inf, Inf),
                               freq_size = 4,
                               freq_col = "..auto..",
-                              name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
+                              name = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
+                              anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
                               name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
                               name_anno_args = list(x = "..auto..",
                                                     y = "..auto..",
@@ -165,7 +172,7 @@ feature_plot_data <- function(data,
                                                 legend.key.size = grid::unit(0.3, "cm"),
                                                 legend.key = ggplot2::element_blank(),
                                                 title = ggtext::element_markdown(),
-                                                plot.title = ggplot2::element_text(margin = ggplot2::margin(b = 0, unit = "pt")),
+                                                plot.title = ggtext::element_markdown(margin = ggplot2::margin(b = 0, t = 2, unit = "pt")),
                                                 strip.text.x = ggplot2::element_text(margin = ggplot2::margin(0,0,0,0, unit = "pt")),
                                                 plot.margin = grid::unit(c(1,1,1,1), "pt"),
                                                 panel.spacing = grid::unit(2, "pt")),
@@ -234,10 +241,21 @@ feature_plot_data <- function(data,
   } else if (!is.logical(freq_plot)) {
     stop("freq_plot has to be ..auto.., TRUE or FALSE.")
   }
-  if (freq_plot && name_anno == "..auto..") {
-    name_anno <- "{feature} in {feature_cut_ex}"
-  } else if (!freq_plot && name_anno == "..auto..") {
-    name_anno <- "{feature} ({freq}) in {feature_cut_ex}"
+
+  # if (freq_plot && name_anno == "..auto..") {
+  #   name_anno <- "{feature} in {feature_cut_ex}"
+  # } else if (!freq_plot && name_anno == "..auto..") {
+  #   name_anno <- "{feature} ({freq}) in {feature_cut_ex}"
+  # }
+  if (freq_plot && anno == "..auto..") {
+    anno <- "{feature} in {feature_cut_ex}"
+  } else if (!freq_plot && anno == "..auto..") {
+    anno <- "{feature} ({freq}) in {feature_cut_ex}"
+  }
+  if (freq_plot && name == "..auto..") {
+    name <- "{feature} in {feature_cut_ex}"
+  } else if (!freq_plot && name == "..auto..") {
+    name <- "{feature} ({freq}) in {feature_cut_ex}"
   }
 
   if (!is.null(name_anno_pos)) {
@@ -333,6 +351,10 @@ feature_plot_data <- function(data,
                           col_na = col_na,
                           col_binary = col_binary)
 
+  plot <- add_axes_expansion(plot = plot,
+                             axes_lim_set = axes_lim_set,
+                             axes_lim_expand = axes_lim_expand)
+
   if (!is.null(name_anno_pos)) {
     title_freq_df <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
                                feature_cut = attr(data, "feature_cut", exact = T),
@@ -340,7 +362,7 @@ feature_plot_data <- function(data,
                                freq_df = freqs[["freq.expr"]],
                                feature_italic = attr(data, "feature_type") == "gene",
                                feature = attr(data, "feature"),
-                               name_anno = name_anno,
+                               name_anno = name,
                                #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
                                markdown = T)
 
@@ -360,7 +382,7 @@ feature_plot_data <- function(data,
                                     freq_df = freq_df,
                                     feature_italic = attr(data, "feature_type") == "gene",
                                     feature = attr(data, "feature"),
-                                    name_anno = name_anno,
+                                    name_anno = anno,
                                     #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
                                     markdown = T)
 
@@ -371,27 +393,36 @@ feature_plot_data <- function(data,
 
     if ("annotation" %in% name_anno_pos) {
 
-      if (!"text.color" %in% names(name_anno_args)) {
-        name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
-      } else if (name_anno_args[["text.color"]] == "..auto..") {
-        name_anno_args[["text.color"]] <- brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]])
+      if (!"text.color" %in% names(name_anno_args) || name_anno_args[["text.color"]] == "..auto..") {
+        bckgr <- plot[["theme"]][["plot.background"]][["fill"]]
+        if (is.null(bckgr) || is.na(bckgr)) {
+          bckgr <- plot[["theme"]][["plot.background"]][["colour"]]
+        } else if (is.null(bckgr) || is.na(bckgr)) {
+          bckgr <- ggplot2::get_theme()$plot.background[["fill"]]
+        } else if (is.null(bckgr) || is.na(bckgr)) {
+          bckgr <- ggplot2::get_theme()$plot.background[["colour"]]
+        } else {
+          bckgr <- "white"
+        }
+        name_anno_args[["text.color"]] <- brathering:::bw_txt(bckgr)
       }
 
-       empty_corner <- brathering::corner_scores(ggobj = plot)
-       name_anno_args$x <- ifelse(name_anno_args$x == "..auto..", empty_corner[1,"x"], as.numeric(name_anno_args$x))
-       name_anno_args$y <- ifelse(name_anno_args$y == "..auto..", empty_corner[1,"y"], as.numeric(name_anno_args$y))
-       # set hjust, vjust
-       xmin <- min(empty_corner$x); xmax <- max(empty_corner$x)
-       ymin <- min(empty_corner$y); ymax <- max(empty_corner$y)
+      empty_corner <- brathering::corner_scores(ggobj = plot)
+      name_anno_args$x <- ifelse(name_anno_args$x == "..auto..", empty_corner[1,"x"], as.numeric(name_anno_args$x))
+      name_anno_args$y <- ifelse(name_anno_args$y == "..auto..", empty_corner[1,"y"], as.numeric(name_anno_args$y))
+      # set hjust, vjust
+      xmin <- min(empty_corner$x); xmax <- max(empty_corner$x)
+      ymin <- min(empty_corner$y); ymax <- max(empty_corner$y)
 
-       name_anno_args$hjust <- ifelse(name_anno_args$hjust == "..auto..",
-                                      # x closer to xmin or xmax?
-                                      ifelse(abs(name_anno_args$x - xmin) <= abs(name_anno_args$x - xmax), 0, 1),
-                                      name_anno_args$hjust)
-       name_anno_args$vjust <- ifelse(name_anno_args$vjust == "..auto..",
-                                      # y closer to ymin or ymax?
-                                      ifelse(abs(name_anno_args$y - ymin) <= abs(name_anno_args$y - ymax), 0, 1),
-                                      name_anno_args$vjust)
+      name_anno_args$hjust <- ifelse(name_anno_args$hjust == "..auto..",
+                                     # x closer to xmin or xmax?
+                                     ifelse(abs(name_anno_args$x - xmin) <= abs(name_anno_args$x - xmax), 0, 1),
+                                     name_anno_args$hjust)
+      name_anno_args$vjust <- ifelse(name_anno_args$vjust == "..auto..",
+                                     # y closer to ymin or ymax?
+                                     ifelse(abs(name_anno_args$y - ymin) <= abs(name_anno_args$y - ymax), 0, 1),
+                                     name_anno_args$vjust)
+
       ## change this somewhen
       if (is.data.frame(annotation_freq_df)) {
         annotation_freq_df <- annotation_freq_df |>
@@ -410,10 +441,6 @@ feature_plot_data <- function(data,
     }
   }
 
-
-  plot <- add_axes_expansion(plot = plot,
-                             axes_lim_set = axes_lim_set,
-                             axes_lim_expand = axes_lim_expand)
 
   label_label <- NULL
   if ("label_feature" %in% names(attributes(plot[["data"]]))) {

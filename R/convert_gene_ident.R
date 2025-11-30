@@ -10,7 +10,6 @@
 #' @export
 #'
 #' @examples
-#' convert_gene_ident(x = c("CD8A", "CD4"))
 convert_gene_ident <- function(x,
                                input = c("hgnc_symbol",
                                          "external_synonym",
@@ -71,13 +70,29 @@ convert_gene_ident <- function(x,
 
   res$description <- sapply(strsplit(res$description, " \\[Source"), "[", 1)
 
+  replfun <- function(x) {
+    x[which(x == "")] <- NA
+    return(x)
+  }
+  res <- res |>
+    dplyr::mutate(dplyr::across(dplyr::everything(), trimws)) |>
+    dplyr::mutate(dplyr::across(dplyr::everything(), replfun))
+
   res2 <- res |>
-    dplyr::group_by(input, hgnc_symbol, description, GRCh) |>
+    dplyr::group_by(input, hgnc_symbol, GRCh) |>
     dplyr::summarise(ensembl_gene_id = paste(unique(ensembl_gene_id), collapse = ","),
                      external_gene_name = paste(unique(external_gene_name), collapse = ","),
                      external_synonym = paste(unique(external_synonym), collapse = ","),
                      gene_biotype = paste(unique(gene_biotype), collapse = ","),
+                     description = paste(unique(description), collapse = ","),
                      .groups = "drop")
+
+  if ("hgnc_symbol" %in% names(res2)) {
+    res2 <- res2 |>
+      dplyr::mutate(unequal_input_hgnc = input != hgnc_symbol) |>
+      dplyr::mutate(harmonized = ifelse(is.na(hgnc_symbol), input, hgnc_symbol))
+  }
+
 
   return(list(long = res, short = res2, unmapped = x))
 }

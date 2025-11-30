@@ -27,6 +27,7 @@ countmat_to_hdf5 <- function(mat,
                              out_dir,
                              sub_dir = "filtered_feature_bc_matrix",
                              types = c("sparse", "HDF5"),
+                             min_split_cols = 10,
                              ...) {
   if (!requireNamespace("DropletUtils", quietly = T)) {
     BiocManager::install("DropletUtils")
@@ -38,12 +39,21 @@ countmat_to_hdf5 <- function(mat,
   types <- rlang::arg_match(types, multiple = T)
   types <- sort(types, decreasing = T) # write sparse first
 
+  if (is.null(rownames(mat)) || is.null(colnames(mat))) {
+    stop("mat has no rownames or colnames. use scexpr::get_layer to pull layer data from Seurat.")
+  }
+
   if (!is.null(colsplit)) {
     mat <- brathering::split_mat(
       x = mat,
       f = colsplit,
       byrow = F
     )
+    ncols <- purrr::map_int(mat, ncol)
+    if (any(ncols < min_split_cols)) {
+      message("splits with ncol below min_split_cols: ", paste(names(ncols[which(ncols < min_split_cols)]), collapse = ", "))
+      mat <- mat[which(ncols >= min_split_cols)]
+    }
   } else {
     mat <- list(mat)
   }

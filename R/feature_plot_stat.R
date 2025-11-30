@@ -42,6 +42,7 @@ feature_plot_stat <- function(SO,
                               jitterwidth = 0.2,
                               dodgewidth = 0.9,
                               label.size = 4,
+                              label.angle = 0,
                               plot.expr.freq = F,
                               expr.freq.decimals = 2,
                               expr.freq.pct = F,
@@ -64,7 +65,8 @@ feature_plot_stat <- function(SO,
                               geom2_args = list(outlier.shape = NA),
                               facetting_args = list(scales = "free_y",
                                                     axes = "all",
-                                                    axis.labels = "margins")) {
+                                                    axis.labels = "margins"),
+                              axis_expansion_y_mult = 0.2) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -181,7 +183,9 @@ feature_plot_stat <- function(SO,
                                                                   "pct.expr.adjust")),
                                       y = max.feat.expr + expr.freq.hjust),
                          position = ggplot2::position_dodge(width = 0.75),
-                         size = label.size, show.legend = F)
+                         size = label.size, show.legend = F,
+                         angle = label.angle) +
+      ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = axis_expansion_y_mult))
     #expand_limits
   }
 

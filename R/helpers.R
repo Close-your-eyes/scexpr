@@ -693,38 +693,70 @@ add_facet <- function(plot,
 add_axes_expansion <- function(plot,
                                axes_lim_set = list(),
                                axes_lim_expand = list()) {
+
   if (!requireNamespace("brathering", quietly = T)) {
     devtools::install_github("Close-your-eyes/brathering")
   }
 
+  # lists can be w/o names
+  # with x, y
+  # or actual dimnames
+  # when only one vector in list:
+
   plot <- plot  +
     ## needed to avoid expansion by annotation below
-    # also makes tight plot: 1 % expansion only
+    # also makes tight plot: 2 % expansion only
     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.02)) +
     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.02))
 
-  if (length(axes_lim_set) > 0 || length(axes_lim_expand) > 0) {
+  if (length(axes_lim_set) || length(axes_lim_expand)) {
+    axes_lims <- brathering::gg_lims(plot) # has dimcol names
+    dimcols <- c(attr(plot[["data"]], "dim1"), attr(plot[["data"]], "dim2"))
+    axes_lim_names <- c("x", "y")
 
-    if (length(axes_lim_expand) > 0) {
-      if (length(axes_lim_set) > 0) {
-        message("axes_lim_expand provided, axes_lim_set ignored.")
+    if (length(axes_lim_set) > 2 || length(axes_lim_expand) > 2) {
+      stop("axes_lim_set or axes_lim_expand should be list of max length 2.")
+    }
+    if (any(lengths(axes_lim_set) != 2) || any(lengths(axes_lim_expand) != 2)) {
+      stop("axes_lim_set or axes_lim_expand should only contain vectors of length 2.")
+    }
+    if (length(axes_lim_expand) && length(axes_lim_set)) {
+      message("axes_lim_expand provided, axes_lim_set ignored.")
+      axes_lim_set <- NULL
+    }
+
+    if (length(axes_lim_set) && is.null(names(axes_lim_set))) {
+      names(axes_lim_set) <- c("x", "y")[seq_along(axes_lim_set)]
+    }
+    if (length(axes_lim_expand) && is.null(names(axes_lim_expand))) {
+      names(axes_lim_expand) <- dimcols[seq_along(axes_lim_expand)]
+    }
+
+    if (length(axes_lim_expand)) {
+      # axes_lim_set with axes_lim_expand
+      # axes_lim_expand need dimcol names
+      if (all(names(axes_lim_expand) == rev(dimcols)[seq_along(axes_lim_expand)]) ||
+          all(names(axes_lim_expand) == rev(axes_lim_names)[seq_along(axes_lim_expand)])) {
+        # when names are given and they are explicitly reverse, leave them reverse
+        # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
+        axes_lim_names <- rev(axes_lim_names)
       }
-      if (is.null(names(axes_lim_expand))) {
-        message("axes_lim_expand needs names, e.g. list(x = c(2,2), y = c(3,3))")
-        axes_lim_expand <- NULL
-      }
-      axes_lims <- brathering::gg_lims(plot)
-      if (any(!names(axes_lim_expand) %in% names(axes_lims))) {
-        message("names of axes_lim_expand must be: ", paste(names(axes_lims), collapse = ","))
-        axes_lim_expand <- axes_lim_expand[names(axes_lims)]
-      }
-      if (!is.null(axes_lim_expand)) {
-        for (i in names(axes_lims)) {
-          axes_lims[[i]] <- axes_lims[[i]] + axes_lim_expand[[i]]
-        }
+      names(axes_lim_expand) <- axes_lim_names[seq_along(axes_lim_expand)]
+      # has dimcol names
+      for (i in names(axes_lims)) {
+        axes_lims[[i]] <- axes_lims[[i]] + axes_lim_expand[[i]]
       }
       axes_lim_set <- axes_lims
     }
+
+    axes_lim_names <- c("x", "y")
+    if (all(names(axes_lim_set) == rev(dimcols)[seq_along(axes_lim_set)]) ||
+        all(names(axes_lim_set) == rev(axes_lim_names)[seq_along(axes_lim_set)])) {
+      # when names are given and they are explicitly reverse, leave them reverse
+      # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
+      axes_lim_names <- rev(axes_lim_names)
+    }
+    names(axes_lim_set) <- axes_lim_names[seq_along(axes_lim_set)]
     plot <- plot + Gmisc::fastDoCall(ggplot2::expand_limits, args = axes_lim_set)
   }
   return(plot)
@@ -1125,6 +1157,7 @@ add_contour <- function(plot,
   ## handle names of contour_col_pal
   if (is.factor(data[["contour_feature"]])) {
     colpal_names <- levels(data[["contour_feature"]])
+    colpal_names <- colpal_names[which(colpal_names %in% data[["contour_feature"]])]
   } else {
     colpal_names <- sort(as.character(unique(data[["contour_feature"]])))
   }
@@ -1150,6 +1183,7 @@ add_contour <- function(plot,
   # only when contour_ggnewscale is FALSE
 
   if (list_depth(contour_args) == 1 && !contour_ggnewscale) {
+
     contour_args <- rep(list(contour_args), length(unique(data[["contour_feature"]])))
 
     for (i in 1:length(lengths(contour_args))) {
@@ -1164,6 +1198,7 @@ add_contour <- function(plot,
         contour_args[[i]] <- c(linewidth = 1, contour_args[[i]])
       }
     }
+
     names(contour_args) <- colpal_names
   } else if (list_depth(contour_args) > 1 && length(lengths(contour_args)) != length(unique(data[["contour_feature"]])) && !contour_ggnewscale) {
     message("Length of list of contour_args lists does not match length of factor levels of contour_feature.")
@@ -1264,15 +1299,10 @@ add_contour <- function(plot,
                                      y = !!rlang::sym(dimcol2),
                                      group = combined_group)
             )))
-
       }
-
-
-
-
     }
-
   }
+
   # rm attr(data, "feature_type") == "gene" ?
   if (contour_expr_freq && is.numeric(data[["feature"]]) && attr(data, "feature_type") == "gene") {
     # filter for largest subcluster of multimodal clusters
@@ -1369,12 +1399,12 @@ co_add_feature_and_contour_labels <- function(plot,
     contour_label_nudge <- check_nudge_list(nudge_list = contour_label_nudge,
                                             label_df = label_df)
     for (i in names(label_nudge)) {
-      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + label_nudge[[i]][1]
-      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + label_nudge[[i]][2]
+      label_df[which(label_df$feature == i),dimcol1] <- label_df[which(label_df$feature == i),dimcol1] + label_nudge[[i]][1]
+      label_df[which(label_df$feature == i),dimcol2] <- label_df[which(label_df$feature == i),dimcol2] + label_nudge[[i]][2]
     }
     for (i in names(contour_label_nudge)) {
-      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + contour_label_nudge[[i]][1]
-      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + contour_label_nudge[[i]][2]
+      label_df[which(label_df$feature == i),dimcol1] <- label_df[which(label_df$feature == i),dimcol1] + contour_label_nudge[[i]][1]
+      label_df[which(label_df$feature == i),dimcol2] <- label_df[which(label_df$feature == i),dimcol2] + contour_label_nudge[[i]][2]
     }
     label_df <- split(label_df, label_df$group)
     plot <- plot +
@@ -1408,8 +1438,8 @@ co_add_feature_and_contour_labels <- function(plot,
                                     label_df = label_df)
     # nudge labels by name
     for (i in names(label_nudge)) {
-      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + label_nudge[[i]][1]
-      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + label_nudge[[i]][2]
+      label_df[which(label_df$feature == i),dimcol1] <- label_df[which(label_df$feature == i),dimcol1] + label_nudge[[i]][1]
+      label_df[which(label_df$feature == i),dimcol2] <- label_df[which(label_df$feature == i),dimcol2] + label_nudge[[i]][2]
     }
 
     plot <- plot +
@@ -1423,16 +1453,17 @@ co_add_feature_and_contour_labels <- function(plot,
     label_df <- label_contour
     contour_label_nudge <- check_nudge_list(nudge_list = contour_label_nudge,
                                             label_df = label_df)
+
     for (i in names(contour_label_nudge)) {
-      label_df[which(label_df$label == i),dimcol1] <- label_df[which(label_df$label == i),dimcol1] + contour_label_nudge[[i]][1]
-      label_df[which(label_df$label == i),dimcol2] <- label_df[which(label_df$label == i),dimcol2] + contour_label_nudge[[i]][2]
+      label_df[which(label_df$feature == i),dimcol1] <- label_df[which(label_df$feature == i),dimcol1] + contour_label_nudge[[i]][1]
+      label_df[which(label_df$feature == i),dimcol2] <- label_df[which(label_df$feature == i),dimcol2] + contour_label_nudge[[i]][2]
     }
 
     plot <-
       plot +
       Gmisc::fastDoCall(what = ggtext::geom_richtext,
                         args = c(list(
-                          data = label_contour,
+                          data = label_df,
                           mapping = ggplot2::aes(label = label)
                         ), contour_label_args))
   }
@@ -1442,23 +1473,28 @@ co_add_feature_and_contour_labels <- function(plot,
 
 check_nudge_list <- function(nudge_list,
                              label_df) {
+
   name <- deparse(substitute(nudge_list))
-  if (!methods::is(nudge_list, "list") || (is.null(names(nudge_list)) && length(nudge_list) > 0)) {
+  if (!methods::is(nudge_list, "list")) {
+    nudge_list <- list(nudge_list)
+  }
+  if (!length(nudge_list)) {
+   return(nudge_list)
+  }
+  if (is.null(names(nudge_list)) && length(nudge_list) == 1) {
     #nudge_list <- list(nudge_list)
-    message(name, " has to be a named list with names being those of labels.")
-    nudge_list <- replicate(length(label_df[["feature"]]), c(0,0), simplify = F)
+    message(name, " can to be a named list with names being those of labels.")
+    nudge_list <- replicate(length(label_df[["feature"]]), nudge_list[[1]], simplify = F)
     names(nudge_list) <- label_df[["feature"]]
   }
   if (any(lengths(nudge_list) != 2)) {
     message(name, " should contain vectors of length 2 only.")
     nudge_list <- nudge_list[which(lengths(nudge_list) == 2)]
   }
-  if (length(nudge_list) > 0) {
-    len_bef <- length(nudge_list)
-    nudge_list <- nudge_list[which(names(nudge_list) %in% label_df[["feature"]])]
-    if (length(nudge_list) < len_bef) {
-      message(name, ": not all names found in label column of data.")
-    }
+  len_bef <- length(nudge_list)
+  nudge_list <- nudge_list[which(names(nudge_list) %in% label_df[["feature"]])]
+  if (length(nudge_list) < len_bef) {
+    message(name, ": not all names found in label column of data.")
   }
   return(nudge_list)
 }

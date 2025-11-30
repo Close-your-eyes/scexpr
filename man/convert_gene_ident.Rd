@@ -24,6 +24,3 @@ list()
 \description{
 Uses biomaRt. See biomaRt::listFilters() and biomaRt::listAttributes()
 }
-\examples{
-convert_gene_ident(x = c("CD8A", "CD4"))
-}

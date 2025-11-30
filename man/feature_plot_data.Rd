@@ -30,7 +30,8 @@ feature_plot_data(
   freq_pos = c(Inf, Inf),
   freq_size = 4,
   freq_col = "..auto..",
-  name_anno = "..auto..",
+  name = "..auto..",
+  anno = "..auto..",
   name_anno_pos = c("..auto..", "title", "annotation"),
   name_anno_args = list(x = "..auto..", y = "..auto..", hjust = "..auto..", vjust =
     "..auto..", color = NA, fill = NA, label.color = NA, size = 4, text.color =
@@ -42,11 +43,11 @@ feature_plot_data(
     ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), legend.background = ggplot2::element_blank(),
     legend.key.size = grid::unit(0.3, "cm"), legend.key = ggplot2::element_blank(), title
-    = ggtext::element_markdown(), plot.title = ggplot2::element_text(margin =
-    ggplot2::margin(b = 0, unit = "pt")), strip.text.x = ggplot2::element_text(margin =
-    ggplot2::margin(0, 
-     0, 0, 0, unit = "pt")), plot.margin = grid::unit(c(1, 1, 1,
-    1), "pt"), panel.spacing = grid::unit(2, "pt")),
+    = ggtext::element_markdown(), plot.title = ggtext::element_markdown(margin =
+    ggplot2::margin(b = 0, t = 2, unit = "pt")), strip.text.x =
+    ggplot2::element_text(margin = ggplot2::margin(0, 
+     0, 0, 0, unit = "pt")),
+    plot.margin = grid::unit(c(1, 1, 1, 1), "pt"), panel.spacing = grid::unit(2, "pt")),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,
@@ -142,7 +143,14 @@ for decision based on number of SOs}
 
 \item{freq_size}{font size of frequency annotation}
 
-\item{name_anno}{name of the plot, any string possible, understands glue
+\item{name}{name of the plot, any string possible, understands glue
+syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
+where freq is global expression frequency and feature_cut_ex is a collapsed
+string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
+algorithmic decision based on freq_plot; freq is removed for meta features;
+feature_cut_ex is adjusted if either element is missing}
+
+\item{anno}{name of the plot, any string possible, understands glue
 syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
 where freq is global expression frequency and feature_cut_ex is a collapsed
 string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for

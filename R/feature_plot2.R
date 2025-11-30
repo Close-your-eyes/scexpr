@@ -49,12 +49,6 @@
 #' for decision based on number of SOs
 #' @param freq_pos where to plot, xy coordinates
 #' @param freq_size font size of frequency annotation
-#' @param name_anno name of the plot, any string possible, understands glue
-#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-#' where freq is global expression frequency and feature_cut_ex is a collapsed
-#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-#' algorithmic decision based on freq_plot; freq is removed for meta features;
-#' feature_cut_ex is adjusted if either element is missing
 #' @param name_anno_pos where to plot name_anno, NULL to omit plotting, '..auto..'
 #' for automatic decision between title, annotation or NULL; title and annotation
 #' simultaneously also possible
@@ -126,7 +120,19 @@
 #' @param contour_feature
 #' @param split_feature
 #' @param shape_feature
-#' @param title
+#' @param title add a superordinate title
+#' @param name name of the plot, any string possible, understands glue
+#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
+#' where freq is global expression frequency and feature_cut_ex is a collapsed
+#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
+#' algorithmic decision based on freq_plot; freq is removed for meta features;
+#' feature_cut_ex is adjusted if either element is missing
+#' @param anno name of the plot, any string possible, understands glue
+#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
+#' where freq is global expression frequency and feature_cut_ex is a collapsed
+#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
+#' algorithmic decision based on freq_plot; freq is removed for meta features;
+#' feature_cut_ex is adjusted if either element is missing
 #'
 #' @return
 #' @export
@@ -184,7 +190,8 @@ feature_plot2 <- function(SO,
                           freq_pos = c(Inf, Inf),
                           freq_size = 4,
                           freq_col = "..auto..",
-                          name_anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
+                          name = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
+                          anno = "..auto..", # "{feature} ({freq}) in {feature_cut_ex}"
                           name_anno_pos = c("..auto..", "title", "annotation"), # or NULL
                           name_anno_args = list(x = "..auto..",
                                                 y = "..auto..",
@@ -200,20 +207,22 @@ feature_plot2 <- function(SO,
                             legend_tight = T,
                             text_fun = ggplot2::element_text
                           ),
-                          theme_args = list(axis.ticks = ggplot2::element_blank(),
-                                            axis.text.x = ggplot2::element_blank(),
-                                            axis.text.y = ggplot2::element_blank(),
-                                            axis.title.x = ggplot2::element_blank(),
-                                            axis.title.y = ggplot2::element_blank(),
-                                            panel.grid = ggplot2::element_blank(),
-                                            legend.background = ggplot2::element_blank(),
-                                            legend.key.size = grid::unit(0.3, "cm"),
-                                            legend.key = ggplot2::element_blank(),
-                                            title = ggtext::element_markdown(),
-                                            plot.title = ggplot2::element_text(margin = ggplot2::margin(b = 0, unit = "pt")),
-                                            strip.text.x = ggplot2::element_text(margin = ggplot2::margin(2,0,2,0, unit = "pt")),
-                                            plot.margin = grid::unit(c(1,1,1,1), "pt"),
-                                            panel.spacing = grid::unit(2, "pt")),
+                          theme_args = list(#legend.direction = "vertical",
+                            axis.ticks = ggplot2::element_blank(),
+                            axis.text.x = ggplot2::element_blank(),
+                            axis.text.y = ggplot2::element_blank(),
+                            axis.title.x = ggplot2::element_blank(),
+                            axis.title.y = ggplot2::element_blank(),
+                            panel.grid = ggplot2::element_blank(),
+                            legend.background = ggplot2::element_blank(),
+                            legend.key.size = grid::unit(0.3, "cm"),
+                            legend.key = ggplot2::element_blank(),
+                            title = ggtext::element_markdown(),
+                            plot.title = ggtext::element_markdown(margin = ggplot2::margin(b = 0, t = 2, unit = "pt")),
+                            strip.text.x = ggplot2::element_text(margin = ggplot2::margin(2,0,2,0, unit = "pt")),
+                            strip.background = element_rect(color = "white", fill = "grey95"),
+                            plot.margin = grid::unit(c(1,1,1,1), "pt"),
+                            panel.spacing = grid::unit(2, "pt")),
 
                           facet_scales = c("fixed", "free", "free_x", "free_y"),
                           facet_grid_row_var = NULL,
@@ -334,7 +343,8 @@ feature_plot2 <- function(SO,
                                                            freq_pos = freq_pos,
                                                            freq_plot = freq_plot,
                                                            freq_col = freq_col,
-                                                           name_anno = name_anno,
+                                                           name = name,
+                                                           anno = anno,
                                                            name_anno_pos = name_anno_pos,
                                                            name_anno_args = name_anno_args,
                                                            legendbreaks = legendbreaks,

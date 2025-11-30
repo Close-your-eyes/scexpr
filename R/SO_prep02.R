@@ -241,6 +241,8 @@ SO_prep02 <- function(SO_unprocessed,
     }
   }
 
+  nhvf <- length(Seurat::VariableFeatures(SO))
+
   ### do.call on large SeuratObject became super slow, not practicable!
   # https://stackoverflow.com/questions/28198103/alternative-to-do-call-for-large-datasets
 
@@ -582,12 +584,12 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
 
 
   # create objects from scratch to rm all previous traces like commands or so
-  SO_unprocessed <- purrr::map(SO_unprocessed, function(x) {
+  SO_unprocessed <- parallel::mclapply(SO_unprocessed, function(x) {
     get_layer(obj = x, assay = "RNA", layer = "counts") |>
       SeuratObject::CreateSeuratObject() |>
       SeuratObject::AddMetaData(x@meta.data) |>
-      Seurat::NormalizeData(verbose = verbose, assay = "RNA")
-  })
+      Seurat::NormalizeData(verbose = F, assay = "RNA")
+  }, mc.cores = parallel::detectCores()-2)
 
   if (is.null(samples)) {
     samples <- names(SO_unprocessed)

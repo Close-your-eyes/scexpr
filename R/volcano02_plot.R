@@ -219,12 +219,14 @@ volcano02_plot <- function(volc01_df,
       vd[[features_color_by]] <- as.factor(vd[[features_color_by]])
     }
 
-    col_pal <- make_col_pal(col_vec = col_pal,
-                            fct_lvls = fct_lvls,
-                            col_pal_args = list(direction = col_pal_dir))
+    col_pal <- colrr::make_col_pal(col_vec = col_pal,
+                                   fct_lvls = fct_lvls,
+                                   col_pal_args = list(direction = col_pal_dir))
     vp <- vp +
       ggplot2::geom_point(
-        data = vd[which(vd[[feature]] %in% features_to_color),],
+        data = vd[which(vd[[feature]] %in% features_to_color),] |>
+          dplyr::mutate(!!rlang::sym(features_color_by) := forcats::fct_infreq(!!rlang::sym(features_color_by))) |>
+          dplyr::arrange(!!rlang::sym(features_color_by)),
         ggplot2::aes(color = !!rlang::sym(features_color_by)),
         size = pt_size)
 

@@ -59,6 +59,7 @@
 #' @param diet_seurat
 #' @param SoupX_autoEstCont_args
 #' @param sample_prefix_to_cell_id
+#' @param early_exit
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -88,7 +89,8 @@ SO_prep01 <- function(data_dirs,
                       rfbms = NULL,
                       batch_corr = c("harmony", "none"),
                       diet_seurat = T,
-                      sample_prefix_to_cell_id = T) {
+                      sample_prefix_to_cell_id = T,
+                      early_exit = F) {
 
 
   install_pkgs(SoupX, scDblFinder, decontX)
@@ -156,6 +158,10 @@ SO_prep01 <- function(data_dirs,
     return(SO)
   })
 
+  if (early_exit) {
+    return(SO)
+  }
+
   if (length(SO) > 1) {
     message("Preparing merged and harmonized Seurat object with ", sum(lengths(lapply(SO, Seurat::Cells))), " cells.")
   } else {
@@ -171,6 +177,8 @@ SO_prep01 <- function(data_dirs,
                   RunHarmony_args = list(group.by.vars = "orig.ident"),
                   FindClusters_args = list(resolution = resolution),
                   normalization = "LogNormalize",
+                  interactive_varfeat_selection = F,
+                  interactive_pc_selection = F,
                   diet_seurat = F)
 
   # only save a useful cluster resolution
@@ -624,6 +632,8 @@ run_soupx <- function(ffbms,
                          RunHarmony_args = list(group.by.vars = "orig.ident"),
                          FindClusters_args = list(resolution = resolution),
                          normalization = "LogNormalize",
+                         interactive_varfeat_selection = F,
+                         interactive_pc_selection = F,
                          diet_seurat = F)
 
       SO_sx <- SeuratObject::AddMetaData(object = SO_sx,
@@ -660,6 +670,8 @@ run_soupx <- function(ffbms,
                      RunHarmony_args = list(group.by.vars = "orig.ident"),
                      FindClusters_args = list(resolution = resolution),
                      normalization = "LogNormalize",
+                     interactive_varfeat_selection = F,
+                     interactive_pc_selection = F,
                      diet_seurat = F)
     # rm seurat to save ram
     SoupX_results <- purrr::map(SoupX_results, ~.x[-1])

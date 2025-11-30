@@ -19,6 +19,7 @@ find_markers_pairwise <- function(obj,
 
   lvls <- as.character(unique(obj@meta.data[[group]]))
   all_pairs <- combn(lvls, 2, simplify = F)
+  Seurat::Idents(obj) <- obj@meta.data[[group]]
   if (!is.null(split)) {
     obj <- Seurat::SplitObject(obj, split.by = split)
   } else {

@@ -15,6 +15,7 @@ feature_plot_stat(
   jitterwidth = 0.2,
   dodgewidth = 0.9,
   label.size = 4,
+  label.angle = 0,
   plot.expr.freq = F,
   expr.freq.decimals = 2,
   expr.freq.pct = F,
@@ -35,7 +36,8 @@ feature_plot_stat(
   feature_ex = NULL,
   theme = ggplot2::theme_bw(),
   geom2_args = list(outlier.shape = NA),
-  facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins")
+  facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins"),
+  axis_expansion_y_mult = 0.2
 )
 }
 \arguments{
