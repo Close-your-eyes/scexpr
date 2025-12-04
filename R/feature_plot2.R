@@ -133,6 +133,7 @@
 #' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
 #' algorithmic decision based on freq_plot; freq is removed for meta features;
 #' feature_cut_ex is adjusted if either element is missing
+#' @param axes_arrows plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)
 #'
 #' @return
 #' @export
@@ -273,7 +274,8 @@ feature_plot2 <- function(SO,
                           contour_feature = NULL,
                           split_feature = NULL,
                           shape_feature = NULL,
-                          title = NULL) {
+                          title = NULL,
+                          axes_arrows = F) {
 
   ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 
@@ -384,7 +386,8 @@ feature_plot2 <- function(SO,
                                                            contour_fun = contour_fun,
                                                            contour_path_label = contour_path_label,
                                                            col_split = col_split,
-                                                           plot_all_across_split = plot_all_across_split)
+                                                           plot_all_across_split = plot_all_across_split,
+                                                           axes_arrows = axes_arrows)
   ))
 
   if (!is.null(strip_select)) {

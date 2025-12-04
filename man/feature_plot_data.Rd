@@ -78,7 +78,8 @@ feature_plot_data(
   contour_fun = ggplot2::geom_density2d,
   contour_path_label = NULL,
   order_discr_explicit = NULL,
-  plot_all_across_split = F
+  plot_all_across_split = F,
+  axes_arrows
 )
 }
 \arguments{
@@ -236,6 +237,8 @@ group or expression frequency via: 'pct'}
 
 \item{plot_all_across_split}{do plot all cells across feature_split in
 col_split?}
+
+\item{axes_arrows}{plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)}
 }
 \description{
 Feature plot based on a data frame

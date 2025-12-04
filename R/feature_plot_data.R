@@ -106,6 +106,7 @@
 #' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
 #' algorithmic decision based on freq_plot; freq is removed for meta features;
 #' feature_cut_ex is adjusted if either element is missing
+#' @param axes_arrows plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)
 #'
 #' @return
 #' @export
@@ -222,7 +223,8 @@ feature_plot_data <- function(data,
                               contour_fun = ggplot2::geom_density2d,
                               contour_path_label = NULL,
                               order_discr_explicit = NULL,
-                              plot_all_across_split = F) {
+                              plot_all_across_split = F,
+                              axes_arrows) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -491,6 +493,11 @@ feature_plot_data <- function(data,
                                               contour_label_args = contour_label_args)
 
   }
+
+  if (axes_arrows) {
+    plot <- brathering::gg_axes_arrows(plot)
+  }
+
 
 
   # repel labels from label_feature and contour_expr_freq

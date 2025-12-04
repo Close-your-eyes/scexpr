@@ -22,7 +22,9 @@ gsea_plot(
   annotation_pos = NULL,
   annotation_size = 4,
   zscore_lims = c(-2, 2),
-  annotation_with_name = F
+  annotation_with_name = F,
+  annotation = "{pval}<br>{es}<br>{nes}",
+  plot_ranking_color = T
 )
 }
 \arguments{

@@ -44,7 +44,9 @@ gsea_plot <- function(data,
                       annotation_pos = NULL,
                       annotation_size = 4,
                       zscore_lims = c(-2,2),
-                      annotation_with_name = F) {
+                      annotation_with_name = F,
+                      annotation = "{pval}<br>{es}<br>{nes}",
+                      plot_ranking_color = T) {
 
   results <- data$data
   if (!is.null(padj_min)) {
@@ -84,7 +86,9 @@ gsea_plot <- function(data,
                           annotation_pos = annotation_pos,
                           annotation_size = annotation_size,
                           zscore_lims = zscore_lims,
-                          annotation_with_name = annotation_with_name))
+                          annotation_with_name = annotation_with_name,
+                          annotation = annotation,
+                          plot_ranking_color = plot_ranking_color))
   })
 
   if (!return_metric_plot) {
@@ -111,7 +115,9 @@ make_gsea_plot <- function(data,
                            annotation_pos = NULL,
                            annotation_size = 4,
                            zscore_lims = c(-2,2),
-                           annotation_with_name = F) {
+                           annotation_with_name = F,
+                           annotation = "{pval}<br>{es}<br>{nes}",
+                           plot_ranking_color = T) {
 
 
   data_colorbar <-
@@ -142,38 +148,43 @@ make_gsea_plot <- function(data,
       ),
       linewidth = ticks_linewidth
     ) +
-    ggplot2::geom_rect(
-      data = data_colorbar,
-      mapping = ggplot2::aes(
-        xmin = min_rank,
-        xmax = max_rank,
-        fill = zscore
-      ),
-      ymin = -rect_height,
-      ymax = rect_height,
-      alpha = rect_alpha,
-      show.legend = T
-    ) +
-    ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")),
-                               breaks = data_colorbar$zscore,
-                               limits = c(color_scale_limits[1],color_scale_limits[2]),
-                               # center color scale at 0 by ensuring equal number of values around 0
-                               # using color_breaks as it is now gives darker colors as if it would be e.g. c(min,1,0,-1,max)
-                               values = scales::rescale(c(
-                                 color_scale_limits[1],
-                                 -sort(color_breaks, decreasing = T),
-                                 0,
-                                 color_breaks,
-                                 color_scale_limits[2]
-                               )),
-                               show.limits = T) +
     ggplot2::geom_line(ggplot2::aes(x=rank, y=ES), color = color_ES_line) +
-    ggplot2::geom_hline(yintercept = data$posES, colour = color_ES_lims, linetype = "dashed") +
-    ggplot2::geom_hline(yintercept = data$negES, colour = color_ES_lims, linetype = "dashed") +
-    ggplot2::geom_hline(yintercept = 0, colour = "black") +
+    ggplot2::geom_hline(yintercept = data$posES, color = color_ES_lims, linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = data$negES, color = color_ES_lims, linetype = "dashed") +
+    ggplot2::geom_hline(yintercept = 0, color = "black") +
     theme +
-    ggplot2::labs(x = "gene rank", y = "enrichment score (ES)", fill = "ranking metric\n[z-score]") +
-    ggplot2::guides(fill = ggplot2::guide_colorsteps())
+    ggplot2::labs(x = "gene rank", y = "enrichment score (ES)")
+
+  if (plot_ranking_color) {
+    p <- p +
+      ggplot2::geom_rect(
+        data = data_colorbar,
+        mapping = ggplot2::aes(
+          xmin = min_rank,
+          xmax = max_rank,
+          fill = zscore
+        ),
+        ymin = -rect_height,
+        ymax = rect_height,
+        alpha = rect_alpha,
+        show.legend = T
+      ) +
+      ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")),
+                                 breaks = data_colorbar$zscore,
+                                 limits = c(color_scale_limits[1],color_scale_limits[2]),
+                                 # center color scale at 0 by ensuring equal number of values around 0
+                                 # using color_breaks as it is now gives darker colors as if it would be e.g. c(min,1,0,-1,max)
+                                 values = scales::rescale(c(
+                                   color_scale_limits[1],
+                                   -sort(color_breaks, decreasing = T),
+                                   0,
+                                   color_breaks,
+                                   color_scale_limits[2]
+                                 )),
+                                 show.limits = T) +
+      ggplot2::guides(fill = ggplot2::guide_colorsteps()) +
+      ggplot2::labs(fill = "ranking metric\n[z-score]")
+  }
 
   if (!is.null(label_genes)) {
     p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
@@ -220,19 +231,23 @@ make_gsea_plot <- function(data,
     p2 <- strsplit(p_raw, "e")[[1]][2]
 
     if (annotation_pos[1] == "auto") {
-      annotation_pos[2] <- data[["ES"]] * 0.8 # y
+      annotation_pos[2] <- data[["ES"]] * 0.85 # y
       if (data[["ES"]] > 0) {
-        annotation_pos[1] <- which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) #x
+
+        annotation_pos[1] <- nrow(data[["stats"]])*0.98# which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) #x
       } else {
         annotation_pos[1] <- 300
       }
       annotation_pos <- as.numeric(annotation_pos)
     }
 
+    pval <- paste0("*p* = ", p1, " x 10<sup>", p2, "</sup>")
+    es <- paste0("ES = ", signif(data[["ES"]], 2))
+    nes <- paste0("NES = ", data[["NES"]])
     if (annotation_with_name) {
       ann_label <- paste0("**", data[["name"]], " (n = ", nrow(data[["ticks"]]), ")", "**<br>*p* = ", p1, " x 10<sup>", p2, "</sup><br>ES = ", signif(data[["ES"]], 2), "<br>NES = ", data[["NES"]])
     } else {
-      ann_label <- paste0("*p* = ", p1, " x 10<sup>", p2, "</sup><br>ES = ", signif(data[["ES"]], 2), "<br>NES = ", data[["NES"]])
+      ann_label <- glue::glue(annotation)
     }
 
     p <- p +
@@ -243,7 +258,8 @@ make_gsea_plot <- function(data,
                             size = annotation_size,
                             fill = NA,
                             label.color = NA,
-                            hjust = 0)
+                            hjust = 1,
+                            vjust = 1)
   }
   p_metric <- ggplot2::ggplot(as.data.frame(data[["stats"]]),
                               ggplot2::aes(x = rank, y = stat)) +

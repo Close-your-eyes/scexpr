@@ -127,13 +127,13 @@ heatmap_pseudobulk2 <- function(SO,
                                   label.theme = ggplot2::element_text(size = 10),
                                   title.theme = ggplot2::element_text(size = 10),
                                   title.position = "top",
-                                  title = "transcription\nfrequency [%]",
+                                  title = "transcription\nfrequency\n[%]",
                                   title.hjust = 0.5,
                                   label.position = "bottom",
                                   order = 2,
                                   ncol = NULL,
                                   nrow = NULL,
-                                  override.aes = list(color = "white")
+                                  override.aes = list(color = "white", fill = "white")
                                   #size = c(2,4, 10))
                                 ),
                                 theme_args = list(
@@ -176,9 +176,9 @@ heatmap_pseudobulk2 <- function(SO,
 
   if ("title" %in% names(legend_fill_args) && legend_fill_args[["title"]] == "..auto..") {
     if (scale == "zscore") {
-      legend_fill_args[["title"]] <- "transcription\nlevel [z-score]"
+      legend_fill_args[["title"]] <- "transcription\nlevel\n[z-score]"
     } else if (scale == "none") {
-      legend_fill_args[["title"]] <- "transcription\nlevel [log (UMI)]"
+      legend_fill_args[["title"]] <- "transcription\nlevel\n[log (UMI)]"
     } else if (scale == "1") {
       legend_fill_args[["title"]] <- "transcription\nlevel"
     }

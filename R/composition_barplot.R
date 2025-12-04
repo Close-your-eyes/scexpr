@@ -144,6 +144,7 @@ composition_barplot <- function(SO,
   }
 
   # always works?
+  # non existing factor levels ... problem
   col_pal <- colrr::make_col_pal(col_vec = col_pal,
                                  fct_lvls = sort(unique(table[,fill_cat,drop=T])))
 

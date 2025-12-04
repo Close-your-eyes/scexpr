@@ -62,7 +62,8 @@ feature_plot2(
     ggplot2::margin(b = 0, t = 2, unit = "pt")), strip.text.x =
     ggplot2::element_text(margin = ggplot2::margin(2, 
      0, 2, 0, unit = "pt")),
-    plot.margin = grid::unit(c(1, 1, 1, 1), "pt"), panel.spacing = grid::unit(2, "pt")),
+    strip.background = element_rect(color = "white", fill = "grey95"), plot.margin =
+    grid::unit(c(1, 1, 1, 1), "pt"), panel.spacing = grid::unit(2, "pt")),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,
@@ -97,7 +98,8 @@ feature_plot2(
   contour_feature = NULL,
   split_feature = NULL,
   shape_feature = NULL,
-  title = NULL
+  title = NULL,
+  axes_arrows = F
 )
 }
 \arguments{
@@ -286,6 +288,8 @@ group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")}
 col_split?}
 
 \item{title}{add a superordinate title}
+
+\item{axes_arrows}{plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)}
 }
 \description{
 This function wraps around scexpr::get_data, scexpr::feature_plot_data
