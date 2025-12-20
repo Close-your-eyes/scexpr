@@ -230,12 +230,15 @@ make_gsea_plot <- function(data,
     p1 <- strsplit(p_raw, "e")[[1]][1]
     p2 <- strsplit(p_raw, "e")[[1]][2]
 
-    if (annotation_pos[1] == "auto") {
-      annotation_pos[2] <- data[["ES"]] * 0.85 # y
-      if (data[["ES"]] > 0) {
 
+    if (annotation_pos[1] == "auto") {
+      fac <- ifelse(data[["ES"]] > 0, 0.85, 0.75)
+      annotation_pos[2] <- data[["ES"]] * fac # y
+      if (data[["ES"]] > 0) {
+        hjust <- 1
         annotation_pos[1] <- nrow(data[["stats"]])*0.98# which.min(as.data.frame(data[["stats"]])$stat[which(as.data.frame(data[["stats"]])$stat > 0)]) #x
       } else {
+        hjust <- 0
         annotation_pos[1] <- 300
       }
       annotation_pos <- as.numeric(annotation_pos)
@@ -258,7 +261,7 @@ make_gsea_plot <- function(data,
                             size = annotation_size,
                             fill = NA,
                             label.color = NA,
-                            hjust = 1,
+                            hjust = hjust,
                             vjust = 1)
   }
   p_metric <- ggplot2::ggplot(as.data.frame(data[["stats"]]),

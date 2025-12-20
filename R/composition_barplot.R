@@ -60,7 +60,8 @@ composition_barplot <- function(SO,
                                 label_total_rel_nudge = c(0,0),
                                 label_total_abs_nudge = c(0,0),
                                 label_position = NULL,
-                                flip = F) {
+                                flip = F,
+                                bw_cutoff = 50) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -157,7 +158,7 @@ composition_barplot <- function(SO,
       names(col_pal) <- sort(unique(table[,fill_cat,drop=T]))
     }
     table$bar_segment_cols <- col_pal[as.character(table[,fill_cat,drop=T])]
-    table$label_color <- ifelse(farver::decode_colour(table$bar_segment_cols, to = "hcl")[, "l"] > 50, "black", "white")
+    table$label_color <- brathering:::bw_txt(table$bar_segment_cols, cutoff = bw_cutoff)
   }
 
   ## use cumsum approach to define label position in middle of bars

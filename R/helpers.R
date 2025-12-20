@@ -890,10 +890,9 @@ add_labels <- function(plot = plot,
   # not split up clusters
   label_df <-
     data |>
-    dplyr::group_by(!!rlang::sym(label_feature), SO.split) |>
     dplyr::summarise(!!dimcol1 := label_center_fun(!!rlang::sym(dimcol1)),
                      !!dimcol2 := label_center_fun(!!rlang::sym(dimcol2)),
-                     .groups = "drop") |>
+                     .by = c(!!rlang::sym(label_feature), SO.split)) |>
     dplyr::rename("label" = !!rlang::sym(label_feature)) |>
     as.data.frame()
 

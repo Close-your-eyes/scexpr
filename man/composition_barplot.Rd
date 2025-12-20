@@ -28,7 +28,8 @@ composition_barplot(
   label_total_rel_nudge = c(0, 0),
   label_total_abs_nudge = c(0, 0),
   label_position = NULL,
-  flip = F
+  flip = F,
+  bw_cutoff = 50
 )
 }
 \arguments{

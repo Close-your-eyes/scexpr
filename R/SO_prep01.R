@@ -271,6 +271,7 @@ check_dir <- function(data_dirs, SoupX = F) {
 
   if (is.null(names(dir_roots))) {
     names(dir_roots) <- basename(dir_roots)
+    names(dir_roots)[which(names(dir_roots) == "outs")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "outs")]
   }
 
   if (any(duplicated(names(dir_roots)))) {

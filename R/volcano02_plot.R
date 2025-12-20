@@ -243,7 +243,17 @@ volcano02_plot <- function(volc01_df,
                                ggplot2::aes(color = !!rlang::sym(features_color_by),
                                             xmin = !!rlang::sym(errorbar_low),
                                             xmax = !!rlang::sym(errorbar_up)),
-                               size = errorbar_size, width = errorbar_width)
+                               linewidth = errorbar_size, width = errorbar_width)
+      ## 95 % conf-interval in case of metavolcanoR
+    }
+  } else {
+    if (!is.null(errorbar_up)) {
+      # checking one of errorbar_up, errorbar_low is enough
+      vp <- vp +
+        ggplot2::geom_errorbar(data = vd,
+                               ggplot2::aes(xmin = !!rlang::sym(errorbar_low),
+                                            xmax = !!rlang::sym(errorbar_up)),
+                               linewidth = errorbar_size, width = errorbar_width)
       ## 95 % conf-interval in case of metavolcanoR
     }
   }
