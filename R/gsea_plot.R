@@ -22,6 +22,10 @@
 #' @param zscore_lims breaks at which to cut the color scale (which is zscore),
 #' if very few ranks fill a zscore range it is pointless to plot such very small
 #' rectangle
+#' @param return_metric_plot
+#' @param plot_subtitle
+#' @param annotation
+#' @param plot_ranking_color
 #'
 #' @return
 #' @export
@@ -41,6 +45,7 @@ gsea_plot <- function(data,
                       theme = theme_bw(),
                       plot_leadingEdge_rank = T,
                       plot_leadingEdge_size = T,
+                      plot_subtitle = T,
                       annotation_pos = NULL,
                       annotation_size = 4,
                       zscore_lims = c(-2,2),
@@ -83,6 +88,7 @@ gsea_plot <- function(data,
                           theme = theme,
                           plot_leadingEdge_rank = plot_leadingEdge_rank,
                           plot_leadingEdge_size = plot_leadingEdge_size,
+                          plot_subtitle = plot_subtitle,
                           annotation_pos = annotation_pos,
                           annotation_size = annotation_size,
                           zscore_lims = zscore_lims,
@@ -112,6 +118,7 @@ make_gsea_plot <- function(data,
                            theme = theme_bw(),
                            plot_leadingEdge_rank = T,
                            plot_leadingEdge_size = T,
+                           plot_subtitle = T,
                            annotation_pos = NULL,
                            annotation_size = 4,
                            zscore_lims = c(-2,2),
@@ -216,9 +223,10 @@ make_gsea_plot <- function(data,
     }
   }
 
-  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (", nrow(data[["ticks"]]), "/", length(data[["gene.set"]]),  ")"),
-                         subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
-
+  p <- p + ggplot2::labs(title = paste0(data[["name"]], " (", nrow(data[["ticks"]]), "/", length(data[["gene.set"]]),  ")"))
+  if (plot_subtitle) {
+    p <- p + ggplot2::labs(subtitle = paste0("p = ", data[["pval"]], "\nES = ", signif(data[["ES"]], 2), "\nNES = ", data[["NES"]]))
+  }
 
   if (!is.null(annotation_pos)) {
     # use geom_richtext to avoid annotate("richtext") which would require library(ggtext)

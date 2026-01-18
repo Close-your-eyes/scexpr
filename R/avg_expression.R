@@ -48,8 +48,8 @@ avg_expression <- function(obj,
   } else {
     f <- split(f, obj@meta.data[[split]])
     obj <- Seurat::SplitObject(obj, split.by = split)
+    f <- f[names(obj)]
   }
-
 
   transformer <- if (layer == "data" && assay %in% c("RNA", "SCT")) expm1 else identity
 

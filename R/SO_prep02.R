@@ -42,23 +42,23 @@
 #' deciding whether SCtransform is run on mulitple samples separately before merging (set to TRUE) or
 #' after merging (set to FALSE); in my experience and when batch_corr = harmony, setting
 #' it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links
-#' @param FindVariableFeatures_args
-#' @param SCtransform_args
-#' @param RunUMAP_args
+#' @param FindVariableFeatures_args arguments to Seurat::FindVariableFeatures
+#' @param SCtransform_args arguments to Seurat::SCTransform
+#' @param RunUMAP_args arguments to Seurat::RunUMAP
 #' @param RunTSNE_args arguments to scexpr::run_fft_tsne
-#' @param FindNeighbors_args
-#' @param FindClusters_args
-#' @param RunHarmony_args
-#' @param SOM_args
-#' @param GQTSOM_args
-#' @param EmbedSOM_args
-#' @param FindIntegrationAnchors_args
+#' @param FindNeighbors_args arguments to Seurat::FindNeighbors
+#' @param FindClusters_args arguments to Seurat::FindClusters
+#' @param RunHarmony_args arguments to harmony::RunHarmony
+#' @param SOM_args arguments to EmbedSOM::SOM
+#' @param GQTSOM_args arguments to EmbedSOM::GQTSOM
+#' @param EmbedSOM_args arguments to EmbedSOM::EmbedSOM
+#' @param FindIntegrationAnchors_args arguments to Seurat::FindIntegrationAnchors
 #' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
-#' @param RunPCA_args
-#' @param ...
+#' @param RunPCA_args arguments to Seurat::RunUMAP
+#' @param ... not used yet
 #' @param downsample_method
-#' @param save_ext
-#' @param join_layers
+#' @param save_ext save as rds or zap file?
+#' @param join_layers run SeuratObject::JoinLayers in the end?
 #' @param interactive_varfeat_selection only applies when hvf_determination_before_merge = F
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
 #'
@@ -93,7 +93,11 @@ SO_prep02 <- function(SO_unprocessed,
                       var_feature_filter = NULL,
                       verbose = F,
                       FindVariableFeatures_args = list(),
-                      SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
+                      SCtransform_args = list(
+                        vst.flavor = "v2",
+                        method = "glmGamPoi",
+                        conserve.memory = F
+                      ),
                       RunPCA_args = list(),
                       RunUMAP_args = list(),
                       RunTSNE_args = list(theta = 0.2),
@@ -1273,6 +1277,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                      RunPCA_args))
   }
   SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
+
 
   if (batch_corr == "harmony") {
     RunHarmony_args <- RunHarmony_args[which(!names(RunHarmony_args) %in% c("object", "assay.use", "verbose"))]

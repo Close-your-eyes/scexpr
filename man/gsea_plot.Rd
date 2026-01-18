@@ -19,6 +19,7 @@ gsea_plot(
   theme = theme_bw(),
   plot_leadingEdge_rank = T,
   plot_leadingEdge_size = T,
+  plot_subtitle = T,
   annotation_pos = NULL,
   annotation_size = 4,
   zscore_lims = c(-2, 2),
@@ -64,6 +65,8 @@ a vector gene names to plot}
 \item{zscore_lims}{breaks at which to cut the color scale (which is zscore),
 if very few ranks fill a zscore range it is pointless to plot such very small
 rectangle}
+
+\item{plot_ranking_color}{}
 }
 \description{
 Plot results from scexpr::gsea_on_msigdbr

@@ -262,6 +262,61 @@ SO_prep01 <- function(data_dirs,
   }
 }
 
+# alldir <- list.dirs(datadir, recursive = TRUE, full.names = TRUE)
+# seldir <- alldir[basename(alldir) %in% c("filtered_feature_bc_matrix", "filtered_gene_bc_matrices", "raw_feature_bc_matrix", "raw_gene_bc_matrices")]
+# allfile <- list.files(datadir, recursive = TRUE, full.names = TRUE)
+# selfile <- allfile[basename(allfile) %in% c("filtered_feature_bc_matrix.h5", "raw_feature_bc_matrix.h5")]
+#
+# find_divergence_folder <- function(paths) {
+#   # Split paths into components
+#   split_paths <- strsplit(normalizePath(paths), .Platform$file.sep)
+#
+#   # Convert to matrix (pad with NA if needed)
+#   max_len <- max(lengths(split_paths))
+#   mat <- t(sapply(split_paths, function(x) {
+#     c(x, rep(NA, max_len - length(x)))
+#   }))
+#
+#   # Find last column where all values are identical
+#   same_cols <- apply(mat, 2, function(col) length(unique(col[!is.na(col)])) == 1)
+#   last_common_idx <- max(which(same_cols))
+#
+#   list(
+#     lowest_common_folder = file.path(mat[1, seq_len(last_common_idx)]),
+#     divergence_level = mat[, last_common_idx + 1]
+#   )
+# }
+#
+# prefer_h5 <- function(x) {
+#   h5 <- x[grepl("\\.h5$", x)]
+#   if (length(h5) > 0) {
+#     unique(h5)
+#   } else {
+#     unique(x)
+#   }
+# }
+# prefer_h5_per_type <- function(x) {
+#   split_types <- split(
+#     x,
+#     ifelse(grepl("filtered", x), "filtered", "raw")
+#   )
+#
+#   out <- lapply(split_types, function(paths) {
+#     h5 <- paths[grepl("\\.h5$", paths)]
+#     if (length(h5) > 0) unique(h5) else unique(paths)
+#   })
+#   unlist(out)
+# }
+#
+#
+# divfolder1 <- find_divergence_folder(seldir)$divergence_level
+# divfolder2 <- find_divergence_folder(selfile)$divergence_level
+# names(seldir) <- divfolder1
+# names(selfile) <- divfolder2
+# out <- split(c(seldir, selfile), names(c(seldir, selfile)))
+# out <- lapply(out, prefer_h5_per_type)
+#
+
 check_dir <- function(data_dirs, SoupX = F) {
 
   dir_roots <- unlist(lapply(data_dirs, function(x) {
@@ -485,6 +540,7 @@ check_inputs <- function(ffbms, rfbms, data_dirs, SoupX, SoupX_return, decontX, 
   if (is.null(ffbms) && is.null(rfbms)) {
 
     checked_dirs <- check_dir(data_dirs = data_dirs, SoupX = SoupX)
+
     data_dirs <- checked_dirs[[1]]
 
     if (SoupX && !checked_dirs[[2]]) {

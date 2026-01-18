@@ -262,7 +262,7 @@ calculate_DEG <- function(SO,
 
     if (method == "MAST") {
       if (mc.cores != 1) {
-        message("set options(mc.cores = ", mc.cores, ")")
+        message("setting options(mc.cores = ", mc.cores, ")")
       }
       options(mc.cores = mc.cores)
     }

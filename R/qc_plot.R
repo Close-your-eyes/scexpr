@@ -219,10 +219,11 @@ qc_plot2 <- function(SO,
   qc_p1 <- suppressMessages(feature_plot2(SO,
                                           features = c(gsub("_log$", "", qc_cols), "orig.ident", SO@misc$clusterings),
                                           reduction = "UMAP",
-                                          get_data_args = list(shuffle = T, order_discr = F)))
+                                          get_data_args = list(shuffle = T, order_discr = F, qmax = 99.5)))
 
   red_name <- c(names(SO@misc$meta_clusterings), names(SO@misc$clusterings))
   clust_name <- unname(c(SO@misc$meta_clusterings, SO@misc$clusterings))
+
   qc_p2 <- purrr::map2(stats::setNames(red_name, red_name), clust_name,  function(red_name, clust_name) {
     #clust_name <- SO@misc$meta_clusterings[red_name]
     p1 <- patchwork::wrap_plots(feature_plot2(SO,
@@ -243,7 +244,8 @@ qc_plot2 <- function(SO,
                                   label_rel_cutoff = 0.04)[["plot"]] +
                                   ggplot2::theme(panel.background = ggplot2::element_rect(fill = "white")),
                                 ncol = 1,
-                                heights = c(0.35,0.35,0.3))
+                                heights = c(0.35,0.35,0.3)
+                                )
     p2 <- purrr::map(stats::setNames(qc_cols, qc_cols), function(feature) {
       make_stat_plot(
         SO = SO,

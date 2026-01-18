@@ -539,7 +539,8 @@ add_color_scale <- function(plot,
                             legendlabels = "..auto..",
                             col_steps_nice = T,
                             col_na = "grey50",
-                            col_binary = F) {
+                            col_binary = F,
+                            trans_log = F) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -602,7 +603,8 @@ add_color_scale <- function(plot,
                                                          col_na = col_na,
                                                          qmin = attr(plot[["data"]], "qmin"),
                                                          qmax = attr(plot[["data"]], "qmax"),
-                                                         scale.min = scale.min)
+                                                         scale.min = scale.min,
+                                                         trans_log = trans_log)
 
         if (grepl("coloursteps", scale_color[["guide"]])) {
           guide_fun <- ggplot2::guide_colorsteps

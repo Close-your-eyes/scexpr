@@ -18,6 +18,7 @@ feature_plot_data(
   col_pal_d_args = list(name = "custom"),
   col_steps = "..auto..",
   col_steps_nice = T,
+  col_trans_log = F,
   col_legend_c_args = list(barwidth = 0.5, barheight = 8, title = "..auto..", order = 1),
   col_legend_d_args = list(nrow = 10, override.aes = list(size = 4), title = "..auto..",
     order = 1),
@@ -47,7 +48,9 @@ feature_plot_data(
     ggplot2::margin(b = 0, t = 2, unit = "pt")), strip.text.x =
     ggplot2::element_text(margin = ggplot2::margin(0, 
      0, 0, 0, unit = "pt")),
-    plot.margin = grid::unit(c(1, 1, 1, 1), "pt"), panel.spacing = grid::unit(2, "pt")),
+    plot.margin = grid::unit(c(1, 1, 1, 1), "pt"), strip.background =
+    ggplot2::element_rect(color = "white", fill = "grey95"), panel.spacing =
+    grid::unit(2, "pt")),
   facet_scales = c("fixed", "free", "free_x", "free_y"),
   facet_grid_row_var = NULL,
   nrow_inner = NULL,

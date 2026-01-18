@@ -29,7 +29,7 @@ SO_prep02(
   var_feature_filter = NULL,
   verbose = F,
   FindVariableFeatures_args = list(),
-  SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi"),
+  SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = F),
   RunPCA_args = list(),
   RunUMAP_args = list(),
   RunTSNE_args = list(theta = 0.2),
@@ -92,6 +92,8 @@ rather vars.to.regress may be used in combination with batch_corr to regress per
 
 \item{save_path}{folder to save the resulting Seurat object as rds-file to}
 
+\item{save_ext}{save as rds or zap file?}
+
 \item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData(), MonacoImmune = celldex::MonacoImmuneData())}
 
 \item{celltype_label}{list of label names to use from the reference data set (one list entry per celltype_refs; each entry may contain a vector of labels)}
@@ -110,13 +112,39 @@ exclude T cell receptor gene segments}
 
 \item{verbose}{print messages and progress bars from functions}
 
+\item{FindVariableFeatures_args}{arguments to Seurat::FindVariableFeatures}
+
+\item{SCtransform_args}{arguments to Seurat::SCTransform}
+
+\item{RunPCA_args}{arguments to Seurat::RunUMAP}
+
+\item{RunUMAP_args}{arguments to Seurat::RunUMAP}
+
 \item{RunTSNE_args}{arguments to scexpr::run_fft_tsne}
 
+\item{FindNeighbors_args}{arguments to Seurat::FindNeighbors}
+
+\item{FindClusters_args}{arguments to Seurat::FindClusters}
+
+\item{RunHarmony_args}{arguments to harmony::RunHarmony}
+
+\item{SOM_args}{arguments to EmbedSOM::SOM}
+
+\item{GQTSOM_args}{arguments to EmbedSOM::GQTSOM}
+
+\item{EmbedSOM_args}{arguments to EmbedSOM::EmbedSOM}
+
+\item{FindIntegrationAnchors_args}{arguments to Seurat::FindIntegrationAnchors}
+
 \item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
+
+\item{join_layers}{run SeuratObject::JoinLayers in the end?}
 
 \item{interactive_varfeat_selection}{only applies when hvf_determination_before_merge = F}
 
 \item{interactive_varfeat_selection_inds}{only applies when hvf_determination_before_merge = F}
+
+\item{...}{not used yet}
 }
 \value{
 Seurat Object, as R object and saved to disk as rds file
