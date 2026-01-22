@@ -196,6 +196,11 @@ heatmap_pseudobulk2 <- function(SO,
 
   SO <- check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
+  feature_groups <- NULL
+  if (!is.null(features) && is.list(features)) {
+    feature_groups <- features
+    features <- unlist(features)
+  }
 
   c(SO,
     meta_col,
@@ -283,6 +288,32 @@ heatmap_pseudobulk2 <- function(SO,
                                   theme = theme,
                                   heatmap_ordering_args = list(feature_order = feature_order,
                                                                group_order = group_order))
+
+  if (!is.null(feature_groups)) {
+    marker_df <- stats::setNames(utils::stack(feature_groups), c("gene", "cell_type"))
+    color_conv <- stats::setNames(as.character(colrr::col_pal("custom_light", n = length(unique(marker_df$cell_type)))),
+                                  unique(marker_df$cell_type))
+    marker_df$color <- color_conv[marker_df$cell_type]
+    colman <- setNames(marker_df$color, marker_df$cell_type)
+
+    plot <- plot +
+      ggplot2::scale_y_discrete(labels = function(y) color_labels(y, stats::setNames(marker_df$color, marker_df$gene))) +
+      ggplot2::theme(axis.text.y = ggtext::element_markdown()) +
+      ggplot2::geom_point(
+        data = data.frame(
+          x = 0,
+          y = 0,
+          yaxis = marker_df$cell_type
+        ),
+        ggplot2::aes(x = x, y = y, color = yaxis),
+        inherit.aes = F
+      ) +
+      ggplot2::scale_color_manual(
+        name = "",  #"Cell type",
+        values = colman[!duplicated(colman)]
+      )
+  }
+
   if (sec_axis) {
     plot <- add_sec_axis(
       plot = plot,
@@ -629,3 +660,12 @@ add_sec_axis <- function(plot, convert_gene_identifier_args) {
   return(plot)
 }
 
+color_labels <- function(labels, col_map) {
+  sapply(labels, function(x) {
+    if (x %in% names(col_map)) {
+      paste0("<span style='color:", col_map[x], ";'>", x, "</span>")
+    } else {
+      x
+    }
+  })
+}

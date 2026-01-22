@@ -144,6 +144,8 @@ exclude T cell receptor gene segments}
 
 \item{interactive_varfeat_selection_inds}{only applies when hvf_determination_before_merge = F}
 
+\item{interactive_pc_selection}{}
+
 \item{...}{not used yet}
 }
 \value{

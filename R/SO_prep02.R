@@ -61,6 +61,7 @@
 #' @param join_layers run SeuratObject::JoinLayers in the end?
 #' @param interactive_varfeat_selection only applies when hvf_determination_before_merge = F
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
+#' @param interactive_pc_selection
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -183,6 +184,9 @@ SO_prep02 <- function(SO_unprocessed,
                                                                nhvf)
 
 
+  if (interactive_pc_selection) {
+    npcs <- 50
+  }
 
   # cases:
   if (length(SO_unprocessed) == 1) {
