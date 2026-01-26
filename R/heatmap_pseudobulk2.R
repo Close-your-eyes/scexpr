@@ -76,6 +76,9 @@
 #' @param sec_axis plot a secondary feature axis with full gene names
 #' @param convert_gene_identifier_args arguments to
 #' scexpr::convert_gene_identifier
+#' @param featuregroup_style how to show feature groups, by colored axis text and/or separate facets
+#' @param featuregroup_col_name color legend name
+#' @param featuregroup_col_pal color palette name passed to colrr::col_pal
 #'
 #' @importFrom zeallot %<-%
 #'
@@ -83,6 +86,10 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#'   htmp[["plot"]] +
+#'     scale_size_continuous(breaks = c(1,5,10,15,20,30,50,70), range = c(1,10))
+#' }
 heatmap_pseudobulk2 <- function(SO,
                                 meta_col = NULL,
                                 levels_calc = NULL,
@@ -91,6 +98,9 @@ heatmap_pseudobulk2 <- function(SO,
                                 min_pct = 0.1,
                                 max_padj = 0.05,
                                 features = NULL,
+                                featuregroup_style = c("facet", "color"),
+                                featuregroup_col_name = "",
+                                featuregroup_col_pal = "custom_light",
                                 feature_order = c("custom", "hclust", "none"),
                                 group_order = c("hclust", "none", "custom"),
                                 topn_metric = c("padj", "auc", "logFC"),
@@ -112,7 +122,7 @@ heatmap_pseudobulk2 <- function(SO,
                                 axes_flip = F,
                                 group_seplines = F,
                                 seplines_args = list(),
-                                theme = colrr::theme_material(),
+                                theme = colrr::theme_material(white = T),
                                 legend_fill_args = list(
                                   label.theme = ggplot2::element_text(size = 10),
                                   title.theme = ggplot2::element_text(size = 10),
@@ -133,7 +143,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   order = 2,
                                   ncol = NULL,
                                   nrow = NULL,
-                                  override.aes = list(color = "white", fill = "white")
+                                  override.aes = list(color = "..auto..", fill = "..auto..")
                                   #size = c(2,4, 10))
                                 ),
                                 theme_args = list(
@@ -165,6 +175,8 @@ heatmap_pseudobulk2 <- function(SO,
   feature_order <- rlang::arg_match(feature_order)
   group_order <- rlang::arg_match(group_order)
   topn_metric <- rlang::arg_match(topn_metric, multiple = T)
+  featuregroup_style <- rlang::arg_match(featuregroup_style, multiple = T)
+
   if (!is.null(features_topn)) {
     features_topn <- max(1, features_topn)
   }
@@ -194,7 +206,7 @@ heatmap_pseudobulk2 <- function(SO,
     }
   }
 
-  SO <- check.SO(SO = SO, assay = assay)
+  SO <- scexpr:::check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
   feature_groups <- NULL
   if (!is.null(features) && is.list(features)) {
@@ -257,9 +269,21 @@ heatmap_pseudobulk2 <- function(SO,
   # filter here after feature selection
   wil_auc <- dplyr::filter(wil_auc, group %in% unlist(levels_plot))
 
+  featuregroup <- NULL
+  if (!is.null(feature_groups)) {
+    feat_group <- stats::setNames(utils::stack(feature_groups), c("feature", "featgroup"))
+    wil_auc <- dplyr::left_join(wil_auc, feat_group, by = "feature")
+    featuregroup <- "featgroup"
+  }
+
+  # fcexpr::
   plot <- fcexpr::heatmap_long_df(df = wil_auc,
                                   groups = "group",
                                   features = "feature",
+                                  featuregroup = featuregroup,
+                                  featuregroup_style = featuregroup_style,
+                                  featuregroup_col_name = featuregroup_col_name,
+                                  featuregroup_col_pal = featuregroup_col_pal,
                                   values = values,
                                   dotsizes = if (dotplot) "pct_in" else NULL,
                                   dotsize_range = dotsize_range,
@@ -289,30 +313,31 @@ heatmap_pseudobulk2 <- function(SO,
                                   heatmap_ordering_args = list(feature_order = feature_order,
                                                                group_order = group_order))
 
-  if (!is.null(feature_groups)) {
-    marker_df <- stats::setNames(utils::stack(feature_groups), c("gene", "cell_type"))
-    color_conv <- stats::setNames(as.character(colrr::col_pal("custom_light", n = length(unique(marker_df$cell_type)))),
-                                  unique(marker_df$cell_type))
-    marker_df$color <- color_conv[marker_df$cell_type]
-    colman <- setNames(marker_df$color, marker_df$cell_type)
 
-    plot <- plot +
-      ggplot2::scale_y_discrete(labels = function(y) color_labels(y, stats::setNames(marker_df$color, marker_df$gene))) +
-      ggplot2::theme(axis.text.y = ggtext::element_markdown()) +
-      ggplot2::geom_point(
-        data = data.frame(
-          x = 0,
-          y = 0,
-          yaxis = marker_df$cell_type
-        ),
-        ggplot2::aes(x = x, y = y, color = yaxis),
-        inherit.aes = F
-      ) +
-      ggplot2::scale_color_manual(
-        name = "",  #"Cell type",
-        values = colman[!duplicated(colman)]
-      )
-  }
+  # if (!is.null(feature_groups)) {
+  #   marker_df <- stats::setNames(utils::stack(feature_groups), c("gene", "cell_type"))
+  #   color_conv <- stats::setNames(as.character(colrr::col_pal("custom_light", n = length(unique(marker_df$cell_type)))),
+  #                                 unique(marker_df$cell_type))
+  #   marker_df$color <- color_conv[marker_df$cell_type]
+  #   colman <- setNames(marker_df$color, marker_df$cell_type)
+  #
+  #   plot <- plot +
+  #     ggplot2::scale_y_discrete(labels = function(y) color_labels(y, stats::setNames(marker_df$color, marker_df$gene))) +
+  #     ggplot2::theme(axis.text.y = ggtext::element_markdown()) +
+  #     ggplot2::geom_point(
+  #       data = data.frame(
+  #         x = 0,
+  #         y = 0,
+  #         yaxis = marker_df$cell_type
+  #       ),
+  #       ggplot2::aes(x = x, y = y, color = yaxis),
+  #       inherit.aes = F
+  #     ) +
+  #     ggplot2::scale_color_manual(
+  #       name = "",  #"Cell type",
+  #       values = colman[!duplicated(colman)]
+  #     )
+  # }
 
   if (sec_axis) {
     plot <- add_sec_axis(
@@ -589,7 +614,7 @@ determine_features <- function(SO, assay, features, levels_plot, meta_col, featu
 
   presto_feat <- unique(unlist(purrr::map(SO, ~names(which(Matrix::rowSums(get_layer(obj = .x, layer = "data", assay = assay)) > 0)))))
   if (!is.null(features)) {
-    features <- check.features(SO = SO, features = unique(features), meta.data = F)
+    features <- scexpr:::check.features(SO = SO, features = unique(features), meta.data = F)
     if (any(!features %in% presto_feat)) {
       message("No expressers found for: ", paste(features[which(!features %in% presto_feat)], collapse = ","), ". Will not be plotted.")
     }
@@ -660,12 +685,3 @@ add_sec_axis <- function(plot, convert_gene_identifier_args) {
   return(plot)
 }
 
-color_labels <- function(labels, col_map) {
-  sapply(labels, function(x) {
-    if (x %in% names(col_map)) {
-      paste0("<span style='color:", col_map[x], ";'>", x, "</span>")
-    } else {
-      x
-    }
-  })
-}

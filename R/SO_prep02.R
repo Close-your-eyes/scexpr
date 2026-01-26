@@ -112,7 +112,9 @@ SO_prep02 <- function(SO_unprocessed,
                       IntegrateData_args = list(),
                       join_layers = T,
                       interactive_varfeat_selection = T,
-                      interactive_varfeat_selection_inds = seq(200,2000,200),
+                      interactive_varfeat_selection_inds = seq(max(nhvf/10,50),
+                                                               min(3*nhvf, nrow(SO_unprocessed[[1]])),
+                                                               length.out = 11),
                       interactive_pc_selection = T,
                       ...) {
 
@@ -185,7 +187,7 @@ SO_prep02 <- function(SO_unprocessed,
 
 
   if (interactive_pc_selection) {
-    npcs <- 50
+    npcs <- max(50, npcs)
   }
 
   # cases:
@@ -311,7 +313,7 @@ SO_prep02 <- function(SO_unprocessed,
     map <- Gmisc::fastDoCall(EmbedSOM::SOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings)), SOM_args)
     EmbedSOM_args <- EmbedSOM_args[which(!names(EmbedSOM_args) %in% c("data", "map"))]
     ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
-    SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = list(SOM_args, EmbedSOM_args))
+    SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"), misc = list(SOM_args, EmbedSOM_args))
   }
 
   if (any(grepl("^gqtsom$", reductions, ignore.case = T))) {
@@ -326,7 +328,7 @@ SO_prep02 <- function(SO_unprocessed,
     map <- Gmisc::fastDoCall(EmbedSOM::GQTSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings)), GQTSOM_args)
     EmbedSOM_args <- EmbedSOM_args[which(!names(EmbedSOM_args) %in% c("data", "map"))]
     ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
-    SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA"), misc = list(GQTSOM_args, EmbedSOM_args))
+    SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"), misc = list(GQTSOM_args, EmbedSOM_args))
   }
 
   FindNeighbors_args <- FindNeighbors_args[which(!names(FindNeighbors_args) %in% c("object", "reduction", "verbose"))]
@@ -459,7 +461,7 @@ SO_prep02 <- function(SO_unprocessed,
 
       #SO <- Seurat::SCTransform(SO, assay = "RNA", vst.flavor = "v2", method = "glmGamPoi", variable.features.n = nhvf + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter)), vars.to.regress = vars.to.regress, seed.use = seeed, verbose = verbose)
     }
-    if (normalization == "LogNormalize") {
+    if (normalization %in% c("LogNormalize", "RNA")) {
       FindVariableFeatures_args[which(names(FindVariableFeatures_args) == "nfeatures")] <- FindVariableFeatures_args[["nfeatures"]] + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter))
       SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO,
                                                                           assay = "RNA",
@@ -785,7 +787,7 @@ make_so_single <- function(SO_unprocessed,
     if (scale_RNA_assay_when_SCT) {
       SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
     }
-  } else if (normalization == "LogNormalize") {
+  } else if (normalization %in% c("LogNormalize", "RNA")) {
     SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
     SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO,
                                                                         assay = "RNA",
@@ -1028,7 +1030,7 @@ make_so_multi_integrate <- function(SO_unprocessed,
   IntegrateData_args <- IntegrateData_args[which(!names(IntegrateData_args) %in% c("anchorset", "new.assay.name", "normalization.method", "verbose"))]
   if (!"features.to.integrate" %in% names(IntegrateData_args)) {
     IntegrateData_args <- c(list(features.to.integrate = rownames(get_layer(obj = SO_unprocessed[[1]],
-                                                                            assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))),
+                                                                            assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA")))),
                             IntegrateData_args)
   }
   if (!"k.weight" %in% names(IntegrateData_args)) {
@@ -1286,7 +1288,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
   if (batch_corr == "harmony") {
     RunHarmony_args <- RunHarmony_args[which(!names(RunHarmony_args) %in% c("object", "assay.use", "verbose"))]
     SO <- Gmisc::fastDoCall(harmony::RunHarmony, args = c(list(object = SO,
-                                                               assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA")),
+                                                               assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA")),
                                                           RunHarmony_args))
   }
   return(SO)

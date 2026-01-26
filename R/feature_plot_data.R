@@ -177,7 +177,7 @@ feature_plot_data <- function(data,
                                                 plot.title = ggtext::element_markdown(margin = ggplot2::margin(b = 0, t = 2, unit = "pt")),
                                                 strip.text.x = ggplot2::element_text(margin = ggplot2::margin(0,0,0,0, unit = "pt")),
                                                 plot.margin = grid::unit(c(1,1,1,1), "pt"),
-                                                strip.background = ggplot2::element_rect(color = "white", fill = "grey95"),
+                                                #strip.background = ggplot2::element_rect(color = "white", fill = "grey95"),
                                                 panel.spacing = grid::unit(2, "pt")),
 
                               facet_scales = c("fixed", "free", "free_x", "free_y"),

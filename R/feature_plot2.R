@@ -222,7 +222,7 @@ feature_plot2 <- function(SO,
                             title = ggtext::element_markdown(),
                             plot.title = ggtext::element_markdown(margin = ggplot2::margin(b = 0, t = 2, unit = "pt")),
                             strip.text.x = ggplot2::element_text(margin = ggplot2::margin(2,0,2,0, unit = "pt")),
-                            strip.background = ggplot2::element_rect(color = "white", fill = "grey95"),
+                            #strip.background = ggplot2::element_rect(color = "white", fill = "grey95"),
                             plot.margin = grid::unit(c(1,1,1,1), "pt"),
                             panel.spacing = grid::unit(2, "pt")),
 

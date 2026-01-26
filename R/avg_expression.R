@@ -33,7 +33,10 @@ avg_expression <- function(obj,
                            cells = NULL,
                            split = NULL,
                            fun = Matrix::rowMeans,
-                           fun2 = base::identity) {
+                           fun2 = base::identity,
+                           return_as = c("list", "df")) {
+
+  return_as <- rlang::arg_match(return_as)
 
   if (!is.null(group)) {
     f <- obj@meta.data[[group]]
@@ -52,7 +55,6 @@ avg_expression <- function(obj,
   }
 
   transformer <- if (layer == "data" && assay %in% c("RNA", "SCT")) expm1 else identity
-
   out <- purrr::map2(obj, f, function(obj, f) {
     obj <- brathering::split_mat(x = get_layer(obj = obj,
                                                assay = assay,
@@ -68,8 +70,16 @@ avg_expression <- function(obj,
     return(obj)
   })
 
-  if (length(out) == 1) {
-    out <- out[[1]]
+  if (return_as == "df") {
+    out <- purrr::map(
+      .x = out,
+      .f = brathering::mat_to_df_long,
+      rownames_to = "feature",
+      colnames_to = "group",
+      values_to = "expr"
+    )
+    out <- dplyr::bind_rows(out, .id = split)
   }
+
   return(out)
 }

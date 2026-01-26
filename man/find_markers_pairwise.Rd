@@ -4,11 +4,44 @@
 \alias{find_markers_pairwise}
 \title{Find marker genes in pairwise comparisons}
 \usage{
-find_markers_pairwise(obj, group, split = NULL, mc.cores = 1, ...)
+find_markers_pairwise(
+  obj,
+  group,
+  split = NULL,
+  mc.cores = 1,
+  redundant_return = T,
+  ...
+)
 }
 \arguments{
-\item{...}{}
+\item{obj}{Seurat object}
+
+\item{group}{column in meta data}
+
+\item{split}{column in obj to split by before marker calculation}
+
+\item{mc.cores}{multiple threads?}
+
+\item{redundant_return}{with utils::combn unique combinations of ident.1 and
+ident.2 are calculation and returned as list of lists; by default this is
+made redundant by adding the flip order of ident.1 and ident.2 to create
+returned list of lists; with}
+
+\item{...}{arguments to Seurat::FindMarkers}
 }
 \description{
 Find marker genes in pairwise comparisons
+}
+\examples{
+\dontrun{
+markers_pairwise <- scexpr::find_markers_pairwise(so, group = "label_main", mc.cores = 6)
+
+# turn this into a result like from SingleR::getClassicMarkers but based on more statistic
+markers_pairwise_seurat <- markers_pairwise |>
+  dplyr::slice_min(order_by = p_val, n = 100, by = c(ident.1, ident.2), with_ties = F) |>
+  dplyr::arrange(p_val)
+markers_pairwise_seurat <- split(markers_pairwise_seurat, markers_pairwise_seurat$ident.1)
+markers_pairwise_seurat <- purrr::map(markers_pairwise_seurat, ~split(.x$gene, .x$ident.2))
+markers_pairwise_seurat_full <- scexpr:::make_list_of_lists_redundant(markers_pairwise_seurat)
+}
 }

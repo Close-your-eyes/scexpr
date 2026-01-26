@@ -43,7 +43,8 @@ SO_prep02(
   IntegrateData_args = list(),
   join_layers = T,
   interactive_varfeat_selection = T,
-  interactive_varfeat_selection_inds = seq(200, 2000, 200),
+  interactive_varfeat_selection_inds = seq(max(nhvf/10, 50), min(3 * nhvf,
+    nrow(SO_unprocessed[[1]])), length.out = 11),
   interactive_pc_selection = T,
   ...
 )

@@ -1,30 +1,48 @@
 #' Find marker genes in pairwise comparisons
 #'
-#' @param obj
-#' @param group
-#' @param mc.cores
-#' @param ...
+#' @param obj Seurat object
+#' @param group column in meta data
+#' @param mc.cores multiple threads?
+#' @param ... arguments to Seurat::FindMarkers
+#' @param split column in obj to split by before marker calculation
+#' @param redundant_return with utils::combn unique combinations of ident.1 and
+#' ident.2 are calculation and returned as list of lists; by default this is
+#' made redundant by adding the flip order of ident.1 and ident.2 to create
+#' returned list of lists; with
 #'
 #' @returns
 #' @export
 #'
 #' @examples
+#'\dontrun{
+#' markers_pairwise <- scexpr::find_markers_pairwise(so, group = "label_main", mc.cores = 6)
+#'
+#' # turn this into a result like from SingleR::getClassicMarkers but based on more statistic
+#' markers_pairwise_seurat <- markers_pairwise |>
+#'   dplyr::slice_min(order_by = p_val, n = 100, by = c(ident.1, ident.2), with_ties = F) |>
+#'   dplyr::arrange(p_val)
+#' markers_pairwise_seurat <- split(markers_pairwise_seurat, markers_pairwise_seurat$ident.1)
+#' markers_pairwise_seurat <- purrr::map(markers_pairwise_seurat, ~split(.x$gene, .x$ident.2))
+#' markers_pairwise_seurat_full <- scexpr:::make_list_of_lists_redundant(markers_pairwise_seurat)
+#'}
 find_markers_pairwise <- function(obj,
                                   group,
                                   #assay = "RNA",
                                   #layer = "data",
                                   split = NULL,
                                   mc.cores = 1,
+                                  redundant_return = T,
                                   ...) {
 
   lvls <- as.character(unique(obj@meta.data[[group]]))
-  all_pairs <- combn(lvls, 2, simplify = F)
+  all_pairs <- utils::combn(lvls, 2, simplify = F)
   Seurat::Idents(obj) <- obj@meta.data[[group]]
   if (!is.null(split)) {
     obj <- Seurat::SplitObject(obj, split.by = split)
   } else {
     obj <- list(seurat = obj)
   }
+
   out <- purrr::map_dfr(obj, function(obj) {
     out <- parallel::mclapply(all_pairs, function(z) {
       tryCatch(expr = {
@@ -39,6 +57,7 @@ find_markers_pairwise <- function(obj,
     out <- dplyr::bind_rows(out)
     return(out)
   }, .id = "split")
+
   return(out)
 
   # fun <- if (assay %in% c("RNA", "SCT") && layer == "data") expm1 else identity
@@ -55,6 +74,19 @@ find_markers_pairwise <- function(obj,
   #                    by = "feature")
   # }, mc.cores = mc.cores)
   #
+}
+
+make_list_of_lists_redundant <- function(x) {
+  # assumes list depth of 2
+  all_names <- unique(c(names(x), unlist(purrr::map(x, names))))
+  sep <- brathering::find_sep(all_names)
+  flat <- purrr::list_flatten(x, name_spec = paste0("{outer}", sep, "{inner}"))
+  flat2 <- flat
+  rev_names <- purrr::map_chr(purrr::map(strsplit(names(flat2), sep), rev), paste, collapse = sep)
+  names(flat2) <- rev_names
+  flat_join <- c(flat, flat2)
+
+  return(brathering::list_unflatten(flat_join, sep = sep))
 }
 
 

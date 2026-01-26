@@ -66,7 +66,7 @@ feature_plot_stat <- function(SO,
                               facetting_args = list(scales = "free_y",
                                                     axes = "all",
                                                     axis.labels = "margins"),
-                              axis_expansion_y_mult = 0.2) {
+                              axis_expansion_y_mult = c(0.02,0.2)) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -88,22 +88,22 @@ feature_plot_stat <- function(SO,
   geom2 <- rlang::arg_match(geom2)
   plot_first <- rlang::arg_match(plot_first)
 
-  SO <- check.SO(SO = SO, assay = assay)
+  SO <- scexpr:::check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
-  features <- check.features(SO = SO, features = features, meta.data = T)
+  features <- scexpr:::check.features(SO = SO, features = features, meta.data = T)
   if (length(meta_col) > 1) {
     stop("Please provide only one meta_col.")
   }
 
-  meta_col <- check.features(SO = SO, features = meta_col, rownames = F)
-  cells <- check.and.get.cells(SO = SO,
-                               assay = assay,
-                               cells = cells,
-                               feature_cut = feature_cut,
-                               feature_cut_expr = feature_cut_expr,
-                               feature_ex = feature_ex,
-                               downsample = downsample,
-                               included_only = T)
+  meta_col <- scexpr:::check.features(SO = SO, features = meta_col, rownames = F)
+  cells <- scexpr:::check.and.get.cells(SO = SO,
+                                        assay = assay,
+                                        cells = cells,
+                                        feature_cut = feature_cut,
+                                        feature_cut_expr = feature_cut_expr,
+                                        feature_ex = feature_ex,
+                                        downsample = downsample,
+                                        included_only = T)
 
   data <- get_data(SO,
                    feature = features,
@@ -156,7 +156,7 @@ feature_plot_stat <- function(SO,
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +
     ggplot2::scale_color_manual(values = col.pal, na.value = col.na) +
     theme +
-    Gmisc::fastDoCall(ggplot2::facet_wrap, args = c(list(facets = ggplot2::vars(feature_split)), facetting_args))
+    Gmisc::fastDoCall(ggplot2::facet_wrap, args = c(list(facets = ggplot2::vars(factor(feature_split, features))), facetting_args))
 
   if (plot_first == "geom1") {
     plot <- plot +
@@ -178,6 +178,7 @@ feature_plot_stat <- function(SO,
   if (plot.expr.freq) {
     plot <- plot +
       ggplot2::geom_text(data = stat,
+                         color = "black",
                          ggplot2::aes(label = !!rlang::sym(ifelse(expr.freq.pct,
                                                                   "pct.expr.adjust.pct",
                                                                   "pct.expr.adjust")),

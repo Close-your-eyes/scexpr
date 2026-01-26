@@ -37,7 +37,7 @@ feature_plot_stat(
   theme = ggplot2::theme_bw(),
   geom2_args = list(outlier.shape = NA),
   facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins"),
-  axis_expansion_y_mult = 0.2
+  axis_expansion_y_mult = c(0.02, 0.2)
 )
 }
 \arguments{

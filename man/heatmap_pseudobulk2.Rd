@@ -14,6 +14,9 @@ heatmap_pseudobulk2(
   min_pct = 0.1,
   max_padj = 0.05,
   features = NULL,
+  featuregroup_style = c("facet", "color"),
+  featuregroup_col_name = "",
+  featuregroup_col_pal = "custom_light",
   feature_order = c("custom", "hclust", "none"),
   group_order = c("hclust", "none", "custom"),
   topn_metric = c("padj", "auc", "logFC"),
@@ -35,15 +38,15 @@ heatmap_pseudobulk2(
   axes_flip = F,
   group_seplines = F,
   seplines_args = list(),
-  theme = colrr::theme_material(),
+  theme = colrr::theme_material(white = T),
   legend_fill_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
     ggplot2::element_text(size = 10), title.position = "top", title = "..auto..",
     title.hjust = 0.5, barwidth = 1, barheight = 8, order = 1),
   legend_size_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
     ggplot2::element_text(size = 10), title.position = "top", title =
     "transcription\\nfrequency\\n[\%]", title.hjust = 0.5, label.position = "bottom",
-    order = 2, ncol = NULL, nrow = NULL, override.aes = list(color = "white", fill =
-    "white")),
+    order = 2, ncol = NULL, nrow = NULL, override.aes = list(color = "..auto..", fill =
+    "..auto..")),
   theme_args = list(axis.title = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), axis.text.x = ggplot2::element_text(angle = 40, hjust = 1),
     legend.position = "right", legend.direction = "vertical", legend.box = "horizontal"),
@@ -79,6 +82,12 @@ p-value for a gene to become marker gene}
 
 \item{features}{choose which features to plot; if NULL features_topn becomes
 relevant}
+
+\item{featuregroup_style}{how to show feature groups, by colored axis text and/or separate facets}
+
+\item{featuregroup_col_name}{color legend name}
+
+\item{featuregroup_col_pal}{color palette name passed to colrr::col_pal}
 
 \item{feature_order}{if and how to order features?}
 
@@ -162,4 +171,10 @@ scexpr::convert_gene_identifier}
 \description{
 Plot a heatmap of average gene transcription of transcriptomes by
 different groups (clusters)
+}
+\examples{
+\dontrun{
+  htmp[["plot"]] +
+    scale_size_continuous(breaks = c(1,5,10,15,20,30,50,70), range = c(1,10))
+}
 }

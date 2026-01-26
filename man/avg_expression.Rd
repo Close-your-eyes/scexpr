@@ -13,7 +13,8 @@ avg_expression(
   cells = NULL,
   split = NULL,
   fun = Matrix::rowMeans,
-  fun2 = base::identity
+  fun2 = base::identity,
+  return_as = c("list", "df")
 )
 }
 \arguments{
