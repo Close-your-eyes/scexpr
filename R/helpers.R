@@ -97,7 +97,14 @@ check.reduction <- function(SO,
 
   red <- grep(reduction, common_red, ignore.case = T, value = T)
   if (length(red) == 0) {
-    message("reduction not found in SOs., Changing to best match.")
+    red <- grep("umap", common_red, ignore.case = T, value = T)
+  }
+  if (length(red) == 0) {
+    red <- grep("tsne", common_red, ignore.case = T, value = T)
+  }
+  if (length(red) == 0) {
+    message("reduction not found in SOs.")
+
     red <- common_red[which.min(utils::adist(reduction, common_red)[1,])]
     #red <- sample(common_red, 1)
   } else if (length(red) > 1) {

@@ -13,6 +13,7 @@ heatmap_pseudobulk2(
   assay = "RNA",
   min_pct = 0.1,
   max_padj = 0.05,
+  min_pct_force = F,
   features = NULL,
   featuregroup_style = c("facet", "color"),
   featuregroup_col_name = "",
@@ -79,6 +80,8 @@ cells for a gene to become marker gene for a group}
 
 \item{max_padj}{for marker feature selection per only: max adjusted
 p-value for a gene to become marker gene}
+
+\item{min_pct_force}{}
 
 \item{features}{choose which features to plot; if NULL features_topn becomes
 relevant}

@@ -18,15 +18,22 @@
 #' @param feature_cut
 #' @param feature_cut_expr
 #' @param feature_ex
-#' @param font.family
 #' @param theme
-#' @param ...
 #' @param expr.freq.hjust
 #' @param legend.title
 #' @param col.pal
-#' @param col.pal.dir
 #' @param expr.freq.decimals decimal precision of frequency labels
 #' @param expr.freq.pct plot expression frequency in percent?
+#' @param layer
+#' @param plot_first
+#' @param dodgewidth
+#' @param label.angle
+#' @param plot.strip
+#' @param col.na
+#' @param col_pal_args
+#' @param geom2_args
+#' @param facetting_args
+#' @param axis_expansion_y_mult
 #'
 #' @return
 #' @export
@@ -36,6 +43,7 @@ feature_plot_stat <- function(SO,
                               features,
                               meta_col,
                               assay = "RNA",
+                              layer = "data",
                               geom1 = c("jitter", "point"),
                               geom2 = c("boxplot", "violin", "none"),
                               plot_first = c("geom1", "geom2"),
@@ -109,7 +117,7 @@ feature_plot_stat <- function(SO,
                    feature = features,
                    reduction = NULL,
                    assay = assay,
-                   layer = "data",
+                   layer = layer,
                    cells = cells,
                    meta_col = meta_col,
                    split_feature = split.by)

@@ -43,6 +43,10 @@
 #' "significant" to label_features to enable this
 #' @param geom_text_repel_args arguments to ggrepel::geom_text_repel
 #' @param theme ggplot theme
+#' @param pt_col_cut dot color outside of cut values
+#' @param cut_plot_summary plot number of genes outside of cut values
+#' @param col_line cut line colors
+#' @param linewidth cut line linewidth
 #'
 #' @returns ggplot object
 #' @export
@@ -60,7 +64,8 @@ volcano02_plot <- function(volc01_df,
                            x = "avg_log2FC",
                            y = "p_val_adj",
                            feature = "feature",
-                           pt_col = "grey60",
+                           pt_col = "grey80",
+                           pt_col_cut = "grey60",
                            pt_col_inf = "cornflowerblue",
                            pt_size = 1,
                            pt_alpha = 0.8,
@@ -82,8 +87,9 @@ volcano02_plot <- function(volc01_df,
                            p_tick = NULL,
                            feature_exclude = NULL,
                            min_pct = 0,
-                           cut_p = NA,
-                           cut_fc = NA,
+                           cut_p = 10^-10,
+                           cut_fc = 1,
+                           cut_plot_summary = F,
 
                            label_plot = T,
                            label_features = NULL,
@@ -99,7 +105,9 @@ volcano02_plot <- function(volc01_df,
                                                        max.iter = 3e4,
                                                        segment.color = "grey30",
                                                        segment.alpha = 0.4,
-                                                       min.segment.length = 1)) {
+                                                       min.segment.length = 1),
+                           col_line = "grey50",
+                           linewidth = 0.5) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -269,14 +277,18 @@ volcano02_plot <- function(volc01_df,
     vd.cut.sum <- vd.cut |>
       dplyr::mutate(sign = ifelse(!!rlang::sym(x) > 0, "plus", "minus")) |>
       dplyr::summarise(n.genes = dplyr::n(), .by = sign) |>
+      ## maybe use brathering::gg_lims()
       dplyr::mutate(xpos = ifelse(sign == "plus", cut_fc + 0.75*(max(abs(vd.cut[,x]))-cut_fc), -(cut_fc + 0.75*(max(abs(vd.cut[,x]))-cut_fc)))) |>
       dplyr::mutate(ypos = -log10(cut_p)*2)
 
     vp <- vp +
-      ggplot2::geom_hline(yintercept = -log10(cut_p), linetype = "dashed") +
-      ggplot2::geom_vline(xintercept = c(-cut_fc, cut_fc), linetype = "dashed") +
-      ggplot2::geom_point(data = vd.cut, color = "black", size = pt_size) +
-      ggplot2::geom_text(data = vd.cut.sum, ggplot2::aes(x = xpos, y = ypos, label = n.genes), inherit.aes = F, size = 5/14*vp$theme$text$size)
+      ggplot2::geom_hline(yintercept = -log10(cut_p), linetype = "dashed", color = col_line, linewidth = linewidth) +
+      ggplot2::geom_vline(xintercept = c(-cut_fc, cut_fc), linetype = "dashed", color = col_line, linewidth = linewidth) +
+      ggplot2::geom_point(data = vd.cut, color = pt_col_cut, size = pt_size)
+
+    if (cut_plot_summary) {
+      vp <- vp + ggplot2::geom_text(data = vd.cut.sum, ggplot2::aes(x = xpos, y = ypos, label = n.genes), inherit.aes = F, size = 5/14*vp$theme$text$size)
+    }
   }
 
   ## label section
@@ -285,13 +297,18 @@ volcano02_plot <- function(volc01_df,
   }
 
   if (is.null(label_features)) {
+    if (!any(c(is.na(cut_p), is.na(cut_fc)))) {
+      vd2 <- vd.cut
+    } else {
+      vd2 <- vd
+    }
     if (length(label_topn_metric) == 1 && label_topn_metric == "y") {
-      f_lab <- dplyr::top_n(vd, -label_topn, !!rlang::sym(y))
+      f_lab <- dplyr::top_n(vd2, -label_topn, !!rlang::sym(y))
     } else if (length(label_topn_metric) == 2) {
 
-      f_lab.p.val <- dplyr::top_n(vd, -label_topn, !!rlang::sym(y))
+      f_lab.p.val <- dplyr::top_n(vd2, -label_topn, !!rlang::sym(y))
       # exclude lower 20 % of p-values for labeling according to logfc
-      temp <- dplyr::filter(vd, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+      temp <- dplyr::filter(vd2, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
       f_lab.logfc <- dplyr::bind_rows(
         dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
         dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
@@ -299,7 +316,7 @@ volcano02_plot <- function(volc01_df,
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) |> dplyr::distinct()
     } else if (label_topn_metric == 1 && label_topn_metric == "x") {
       # exclude lower 20 % of p-values for labeling according to logfc
-      temp <- dplyr::filter(vd, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+      temp <- dplyr::filter(vd2, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
       f_lab <- dplyr::bind_rows(
         dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
         dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))

@@ -167,6 +167,9 @@ hla_typing <- function(hla_ref,
                                                               maxmis = maxmis,
                                                               arg_list = arg_list,
                                                               ...)
+  if (is.null(first_round_results)) {
+    return(NULL)
+  }
 
 '  allele_group12_medians <-
     first_round_results[["pair_res1_df"]] %>%
@@ -271,7 +274,8 @@ run_read_matching_and_report_results <- function(hla_ref,
 
   message("Total:")
   if (reads_w_min_one_match_sum == 0) {
-    stop("No matches/hits determined.")
+    message("No matches/hits determined.")
+    return(NULL)
   }
   message("  ", reads_w_min_one_match_sum, " reads with at least one match/hit, (", round(reads_w_min_one_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")
   message("  ", reads_w_no_match_sum, " reads with no match/hit, (", round(reads_w_no_match_sum/(reads_w_min_one_match_sum+reads_w_no_match_sum)*100), " %)")

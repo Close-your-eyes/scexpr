@@ -56,12 +56,12 @@
 #' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
 #' @param RunPCA_args arguments to Seurat::RunUMAP
 #' @param ... not used yet
-#' @param downsample_method
+#' @param downsample_method how to downsample?
 #' @param save_ext save as rds or zap file?
 #' @param join_layers run SeuratObject::JoinLayers in the end?
 #' @param interactive_varfeat_selection only applies when hvf_determination_before_merge = F
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
-#' @param interactive_pc_selection
+#' @param interactive_pc_selection do conduct interactive PC selection?
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -69,6 +69,7 @@
 #'
 #' @examples
 #' \dontrun{
+#' # for future issues: options(future.globals.maxSize = 1000 * 1024^2)
 #' }
 SO_prep02 <- function(SO_unprocessed,
                       samples = NULL,
@@ -101,8 +102,8 @@ SO_prep02 <- function(SO_unprocessed,
                       ),
                       RunPCA_args = list(),
                       RunUMAP_args = list(),
-                      RunTSNE_args = list(theta = 0.2),
-                      FindNeighbors_args = list(),
+                      RunTSNE_args = list(theta = 0.01),
+                      FindNeighbors_args = list(dims = 1:npcs),
                       FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                       RunHarmony_args = list(group.by.vars = "orig.ident"),
                       SOM_args = list(),
@@ -268,6 +269,7 @@ SO_prep02 <- function(SO_unprocessed,
     }
     SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
                                                            reduction = red,
+                                                           reduction.name = c("umap_", red),
                                                            seed.use = seeed,
                                                            verbose = verbose),
                                                       RunUMAP_args))
@@ -280,6 +282,7 @@ SO_prep02 <- function(SO_unprocessed,
     tryCatch(expr = {
       SO <- Gmisc::fastDoCall(scexpr::run_fft_tsne, args = c(list(SO = SO,
                                                                   reduction = red,
+                                                                  reduction.name = paste0("tsne_", red),
                                                                   rand_seed = seeed),
                                                              RunTSNE_args))
     }, error = function(err) {
@@ -293,6 +296,7 @@ SO_prep02 <- function(SO_unprocessed,
       #RunTSNE_args[["tsne.method"]] <- "FIt-SNE"
       SO <- Gmisc::fastDoCall(Seurat::RunTSNE, args = c(list(object = SO,
                                                              reduction = red,
+                                                             reduction.name = paste0("tsne_", red),
                                                              seed.use = seeed,
                                                              verbose = verbose),
                                                         RunTSNE_args))
@@ -339,10 +343,12 @@ SO_prep02 <- function(SO_unprocessed,
                                                                reduction = red,
                                                                verbose = verbose),
                                                           FindNeighbors_args))
+  names(SO@graphs) <- paste0(names(SO@graphs), "_", red, "_", npcs)
 
   names_wo_clust <- names(SO@meta.data)
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   SO <- Gmisc::fastDoCall(Seurat::FindClusters, args = c(list(object = SO,
+                                                              graph.name = names(SO@graphs)[2], # snn
                                                               verbose = verbose),
                                                          FindClusters_args))
 
@@ -359,7 +365,7 @@ SO_prep02 <- function(SO_unprocessed,
 
   # add meta cols
   try(expr = {
-    # when metacols exist from SO_prep01 rownames_toCol throws error
+    # when metacols exist from SO_prep01 rownames_to_col (tibble) throws error
     newmeta <- tibble::rownames_to_column(SO@meta.data, "id") |> dplyr::select(id)
     rownames(newmeta) <- newmeta$id
     newmeta$barcode <- stringr::str_extract(newmeta$id, "[ATCG]{1,}-1$")
@@ -657,9 +663,15 @@ subset_SO_unprocessed <- function(SO_unprocessed,
 
   if (downsample_method == "uniform") {
     if (downsample < 1) {
-      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(x, cells = sample(Seurat::Cells(x), size = as.integer(downsample*length(Seurat::Cells(x))), replace = FALSE)))
+      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(
+        x,
+        cells = sample(Seurat::Cells(x), size = as.integer(downsample*length(Seurat::Cells(x))), replace = FALSE)
+      ))
     } else if (downsample > 1) {
-      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(x, cells = sample(Seurat::Cells(x), size = downsample, replace = FALSE)))
+      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(
+        x,
+        cells = sample(Seurat::Cells(x), size = min(downsample, length(Seurat::Cells(x))), replace = FALSE)
+      ))
     }
   }
   if (downsample_method == "leverage") {

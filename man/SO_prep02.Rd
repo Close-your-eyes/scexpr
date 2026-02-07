@@ -32,8 +32,8 @@ SO_prep02(
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = F),
   RunPCA_args = list(),
   RunUMAP_args = list(),
-  RunTSNE_args = list(theta = 0.2),
-  FindNeighbors_args = list(),
+  RunTSNE_args = list(theta = 0.01),
+  FindNeighbors_args = list(dims = 1:npcs),
   FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
   RunHarmony_args = list(group.by.vars = "orig.ident"),
   SOM_args = list(),
@@ -60,6 +60,8 @@ SO_prep02(
 
 \item{downsample}{downsample a fraction of cells from each object in SO_unprocessed (downsample < 0);
 or an absolute number of cells per object (downsample > 1 & downsample >= min_cells)}
+
+\item{downsample_method}{how to downsample?}
 
 \item{export_prefix}{prefix to the output rds file}
 
@@ -145,7 +147,7 @@ exclude T cell receptor gene segments}
 
 \item{interactive_varfeat_selection_inds}{only applies when hvf_determination_before_merge = F}
 
-\item{interactive_pc_selection}{}
+\item{interactive_pc_selection}{do conduct interactive PC selection?}
 
 \item{...}{not used yet}
 }
@@ -157,5 +159,6 @@ Prepare a somewhat standardized Seurat Object for further analyses
 }
 \examples{
 \dontrun{
+# for future issues: options(future.globals.maxSize = 1000 * 1024^2)
 }
 }

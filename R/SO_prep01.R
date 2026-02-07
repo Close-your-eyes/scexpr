@@ -185,7 +185,7 @@ SO_prep01 <- function(data_dirs,
   allclust <- paste0("RNA_snn_res.", resolution)
   nclust <- apply(SO@meta.data[,allclust], 2, function(x) length(unique(x)))
   candidates <- names(nclust)[which(dplyr::between(nclust, 1,12))]
-  choice <- ifelse(!length(candidates), names(nlust)[1], candidates[length(candidates)])
+  choice <- ifelse(!length(candidates), names(nclust)[1], candidates[length(candidates)])
   # for qc_plot2; in analogy to meta_clustering
   names(choice) <- "umap"
   resolution <- sub("RNA_snn_res.", "", choice, fixed = T)
@@ -854,7 +854,7 @@ cluster_on_metadata <- function(SO,
                                        verbose = F)
       nclust <- apply(clusters, 2, function(x) length(unique(x)))
       candidates <- names(nclust)[which(dplyr::between(nclust, 1,12))]
-      choice <- ifelse(!length(candidates), names(nlust)[1], candidates[length(candidates)])
+      choice <- ifelse(!length(candidates), names(nclust)[1], candidates[length(candidates)])
       clusters <- clusters[,choice,drop = F]
 
       # add reduction belonging to the meta clustering as name

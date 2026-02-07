@@ -11,7 +11,7 @@ feature_plot2(
   dims = c(1, 2),
   assay = "RNA",
   cells = NULL,
-  get_data_args = list(qmin = 0, qmax = 1),
+  get_data_args = list(qmin = 0, qmax = 1, order_discr = T, shuffle = F),
   combine = T,
   combine_guides = NULL,
   ncol_combine = NULL,

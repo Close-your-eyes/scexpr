@@ -9,6 +9,7 @@ feature_plot_stat(
   features,
   meta_col,
   assay = "RNA",
+  layer = "data",
   geom1 = c("jitter", "point"),
   geom2 = c("boxplot", "violin", "none"),
   plot_first = c("geom1", "geom2"),
@@ -48,6 +49,8 @@ feature_plot_stat(
 \item{expr.freq.pct}{plot expression frequency in percent?}
 
 \item{plot.non.expr}{do plot dots of non-expressers (0 UMIs)}
+
+\item{axis_expansion_y_mult}{}
 }
 \description{
 Title

@@ -9,7 +9,8 @@ volcano02_plot(
   x = "avg_log2FC",
   y = "p_val_adj",
   feature = "feature",
-  pt_col = "grey60",
+  pt_col = "grey80",
+  pt_col_cut = "grey60",
   pt_col_inf = "cornflowerblue",
   pt_size = 1,
   pt_alpha = 0.8,
@@ -30,8 +31,9 @@ volcano02_plot(
   p_tick = NULL,
   feature_exclude = NULL,
   min_pct = 0,
-  cut_p = NA,
-  cut_fc = NA,
+  cut_p = 10^-10,
+  cut_fc = 1,
+  cut_plot_summary = F,
   label_plot = T,
   label_features = NULL,
   label_topn_metric = c("x", "y"),
@@ -41,7 +43,9 @@ volcano02_plot(
   label_p_signif = 0.001,
   geom_text_repel_args = list(fontface = "italic", max.overlaps = 50, max.time = 3,
     max.iter = 30000, segment.color = "grey30", segment.alpha = 0.4, min.segment.length =
-    1)
+    1),
+  col_line = "grey50",
+  linewidth = 0.5
 )
 }
 \arguments{
@@ -54,6 +58,8 @@ volcano02_plot(
 \item{feature}{column from volc01_df with feature (gene) names}
 
 \item{pt_col}{point color}
+
+\item{pt_col_cut}{dot color outside of cut values}
 
 \item{pt_col_inf}{point color for those with Inf log fc}
 
@@ -102,6 +108,8 @@ limits}
 
 \item{cut_fc}{see cut_p}
 
+\item{cut_plot_summary}{plot number of genes outside of cut values}
+
 \item{label_plot}{plot feature labels?}
 
 \item{label_features}{select features for labeling; or pass "significant", then
@@ -120,6 +128,10 @@ repelling to left and right}
 "significant" to label_features to enable this}
 
 \item{geom_text_repel_args}{arguments to ggrepel::geom_text_repel}
+
+\item{col_line}{cut line colors}
+
+\item{linewidth}{cut line linewidth}
 }
 \value{
 ggplot object

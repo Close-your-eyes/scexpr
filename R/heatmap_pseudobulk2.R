@@ -79,6 +79,7 @@
 #' @param featuregroup_style how to show feature groups, by colored axis text and/or separate facets
 #' @param featuregroup_col_name color legend name
 #' @param featuregroup_col_pal color palette name passed to colrr::col_pal
+#' @param min_pct_force
 #'
 #' @importFrom zeallot %<-%
 #'
@@ -97,6 +98,7 @@ heatmap_pseudobulk2 <- function(SO,
                                 assay = "RNA",
                                 min_pct = 0.1,
                                 max_padj = 0.05,
+                                min_pct_force = F,
                                 features = NULL,
                                 featuregroup_style = c("facet", "color"),
                                 featuregroup_col_name = "",
@@ -262,6 +264,13 @@ heatmap_pseudobulk2 <- function(SO,
       dplyr::slice_max(order_by = avgExpr, n = 1, by = feature) |>
       dplyr::slice_max(order_by = tibble::tibble(!!!rlang::syms(as.list(topn_metric))), n = features_topn, by = group, with_ties = topn_ties) |>
       # filter here but not in determine_features to not bias feature selection by levels_plot
+      dplyr::filter(group %in% unlist(levels_plot)) |>
+      dplyr::pull(feature)
+    wil_auc <- wil_auc[which(wil_auc[["feature"]] %in% select),,drop = F]
+  } else if (is.null(features_topn) && min_pct_force) {
+    select <-
+      wil_auc |>
+      dplyr::filter(pct_in >= min_pct) |>
       dplyr::filter(group %in% unlist(levels_plot)) |>
       dplyr::pull(feature)
     wil_auc <- wil_auc[which(wil_auc[["feature"]] %in% select),,drop = F]
