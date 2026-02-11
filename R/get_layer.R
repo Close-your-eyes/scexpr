@@ -79,6 +79,15 @@ get_layer <- function(obj,
   features <- features %||% rownames(x) #rownames(obj)
   cells <- cells %||% colnames(x) #colnames(obj)
 
+  if (!all(cells %in% colnames(x))) {
+    message("get_layer: some cells not found.")
+    cells <- cells[which(cells %in% colnames(x))]
+  }
+  if (!all(features %in% rownames(x))) {
+    message("get_layer: some features not found.")
+    features <- features[which(features %in% rownames(x))]
+  }
+
   data <- x[features, cells, drop = F]
 
   if (transpose) {

@@ -48,7 +48,8 @@ freq_pie_chart <- function(SO,
                            theme_args = list(panel.grid = ggplot2::element_blank(),
                                              axis.title = ggplot2::element_blank(),
                                              axis.text = ggplot2::element_blank(),
-                                             axis.ticks = ggplot2::element_blank()),
+                                             axis.ticks = ggplot2::element_blank(),
+                                             panel.background = ggplot2::element_rect(fill = "white")),
                            col_pal_args = list(missing_fct_to_na = T)) {
 
   if (!requireNamespace("colrr", quietly = T)) {

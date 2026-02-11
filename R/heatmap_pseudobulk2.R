@@ -141,7 +141,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   title.position = "top",
                                   title = "transcription\nfrequency\n[%]",
                                   title.hjust = 0.5,
-                                  label.position = "bottom",
+                                  label.position = "right",
                                   order = 2,
                                   ncol = NULL,
                                   nrow = NULL,
@@ -617,23 +617,19 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
 }
 
 
-determine_features <- function(SO, assay, features, levels_plot, meta_col, feature_order) {
+determine_features <- function(SO,
+                               assay,
+                               features,
+                               levels_plot,
+                               meta_col,
+                               feature_order) {
 
-
-
-  presto_feat <- unique(unlist(purrr::map(SO, ~names(which(Matrix::rowSums(get_layer(obj = .x, layer = "data", assay = assay)) > 0)))))
-  if (!is.null(features)) {
-    features <- scexpr:::check.features(SO = SO, features = unique(features), meta.data = F)
-    if (any(!features %in% presto_feat)) {
-      message("No expressers found for: ", paste(features[which(!features %in% presto_feat)], collapse = ","), ". Will not be plotted.")
-    }
-    presto_feat <- intersect(presto_feat, features)
-  }
-
-  # by default, presto gives deviating results with respect to avgExpr and logFC
-  # use expm1 to match results Seurats procedure, see example below (comparison of presto and Seurat)
-  wil_auc_raw <- presto::wilcoxauc(X = Gmisc::fastDoCall(cbind, purrr::map(SO, ~expm1(get_layer(obj = .x, layer = "data", assay = assay, features = presto_feat)))),
-                                   y = unlist(purrr::pmap(list(x = SO, y = meta_col), function(x,y) x@meta.data[,y,drop=T]), use.names = F))
+  wil_auc_raw <- find_all_marker(obj = SO,
+                                 meta_col = meta_col,
+                                 assay = assay,
+                                 calc_avglog2fc = F, # for speed? or change fun to avg_log2FC
+                                 eps = 1e-6,
+                                 features = features)
 
   if (is.null(features)) {
     if (feature_order == "none") {

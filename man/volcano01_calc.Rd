@@ -12,6 +12,7 @@ volcano01_calc(
   pos_cells,
   neg_name = NULL,
   pos_name = NULL,
+  add_n_repl_to_names = F,
   method = c("MAST", "wilcox", "wilcox_limma", "bimod", "roc", "t", "negbinom",
     "poisson", "LR", "DESeq2", "limma", "custom"),
   fc_inf_squish = 2,
@@ -41,6 +42,8 @@ or provide a vector which will be checked against Idents(SO)}
 \item{neg_name}{name for the negative group of cells; this will appear on plot axes}
 
 \item{pos_name}{name for the positive group of cells; this will appear on plot axes}
+
+\item{add_n_repl_to_names}{add number of (pseudo-) replicates to names}
 
 \item{method}{backend for DE calculation; any method from Seurat::FindMarkers;
 limma: intended for subsequent use MetaVolcanoR

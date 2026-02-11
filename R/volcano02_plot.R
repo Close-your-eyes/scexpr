@@ -167,9 +167,9 @@ volcano02_plot <- function(volc01_df,
   ylim <- minp1*1e-2
   vd[[y]][which(vd[[y]] == 0)] <- ylim
   if (n_min_p > 10) {
-    y_axis_expansion <- 50
+    y_axis_expansion <- 15
   } else {
-    y_axis_expansion <- 0
+    y_axis_expansion <- 0.02
   }
 
   ## init plot
@@ -206,7 +206,7 @@ volcano02_plot <- function(volc01_df,
     ggplot2::scale_y_continuous(transform = trans,
                                 breaks = brk,
                                 labels = lab,
-                                expand = ggplot2::expansion(add = c(0, y_axis_expansion))) +
+                                expand = ggplot2::expansion(mult = c(0, y_axis_expansion))) +
     # ggplot2::labs(x = bquote(bold(.(att$neg_name)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(att$pos_name))),
     #               y = if (minus_log10_y) bquote(-log[10]~.(rlang::sym(y))) else y) +
     ggplot2::labs(x = paste0(att$neg_name, "  <--  ", x, "  -->  ", att$pos_name),

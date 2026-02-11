@@ -40,7 +40,7 @@ composition_barplot <- function(SO,
                                 fill_cat, #fill_var
                                 y = c("rel", "abs"),
                                 col_pal = "custom",
-                                color = "black",
+                                geom_col_args = list(color = "black"),
                                 plot_rel_labels = F,
                                 label_only_largest = F,
                                 plot_abs_labels = F,
@@ -199,18 +199,15 @@ composition_barplot <- function(SO,
   }
 
   if (y == "rel") {
-    plot <-
-      ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = rel_x*fctr, fill = !!rlang::sym(fill_cat))) +
-      ggplot2::geom_col(color = color) +
-      ggplot2::scale_fill_manual(values = col_pal) +
+    plot <- ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = rel_x*fctr, fill = !!rlang::sym(fill_cat))) +
       ggplot2::labs(y = ifelse(label_rel_pct, "frequency [%]", "frequency")) +
       ggplot2::scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1)*fctr)
   } else if (y == "abs") {
-    plot <-
-      ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = n, fill = !!rlang::sym(fill_cat))) +
-      ggplot2::geom_col(color = color) +
-      ggplot2::scale_fill_manual(values = col_pal)
+    plot <- ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = n, fill = !!rlang::sym(fill_cat)))
   }
+  plot <- plot +
+    do.call(ggplot2::geom_col, args = geom_col_args) +
+    ggplot2::scale_fill_manual(values = col_pal)
 
 
   if (plot_rel_labels || plot_abs_labels) {

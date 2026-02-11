@@ -26,6 +26,7 @@
 #' @param feature_plot_args
 #' @param mc.cores mc cores for parallel computing when method is MAST
 #' @param ... arguments to Seurat::FindMarkers
+#' @param add_n_repl_to_names  add number of (pseudo-) replicates to names
 #'
 #' @return list of data frame, matrix, meta data; pct column in df is percent of
 #' expressers for a gene in pos_group when avg_log2fc > 0 and vice versa pct
@@ -53,6 +54,7 @@ volcano01_calc <- function(SO,
                            pos_cells,
                            neg_name = NULL,
                            pos_name = NULL,
+                           add_n_repl_to_names = F,
                            method = c(
                              "MAST",
                              "wilcox",
@@ -103,14 +105,14 @@ volcano01_calc <- function(SO,
     stop("Length of neg_cells or pos_cells is zero.")
   }
 
-  SO <- check.SO(SO = SO, assay = assay)
+  SO <- scexpr:::check.SO(SO = SO, assay = assay)
   assay <- Seurat::DefaultAssay(SO[[1]])
   min_pct <- max(0, min_pct)
   p_adj <- rlang::arg_match(p_adj)
   method <- rlang::arg_match(method)
 
-  c(ngc, neg_name) %<-% find_cells(neg_cells, neg_name, SO)
-  c(pgc, pos_name) %<-% find_cells(pos_cells, pos_name, SO)
+  c(ngc, neg_name) %<-% scexpr:::find_cells(neg_cells, neg_name, SO)
+  c(pgc, pos_name) %<-% scexpr:::find_cells(pos_cells, pos_name, SO)
   if (is.null(neg_name)) {
     neg_name <- "neg_group"
   }
@@ -216,8 +218,19 @@ volcano01_calc <- function(SO,
     tibble::rownames_to_column("feature") |>
     tibble::as_tibble()
 
-  attr(df, "pos_name") <- pos_name[1]
-  attr(df, "neg_name") <- neg_name[1]
+
+
+  if (add_n_repl_to_names) {
+    tab <- table(Seurat::Idents(SO))
+    posname <- paste0(pos_name[1], " (n=", tab[pos_name[1]], ")")
+    negname <- paste0("(n=", tab[neg_name[1]], ") ", neg_name[1])
+  } else {
+    posname <- pos_name[1]
+    negname <- neg_name[1]
+  }
+
+  attr(df, "pos_name") <- posname
+  attr(df, "neg_name") <- negname
   attr(df, "method") <- method
   attr(df, "p_adj") <- p_adj
   attr(df, "min_pct") <- min_pct
