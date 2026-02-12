@@ -10,7 +10,7 @@ composition_barplot(
   fill_cat,
   y = c("rel", "abs"),
   col_pal = "custom",
-  color = "black",
+  geom_col_args = list(color = "black"),
   plot_rel_labels = F,
   label_only_largest = F,
   plot_abs_labels = F,
@@ -42,8 +42,6 @@ composition_barplot(
 \item{y}{use absolute (n) or relative (\%) y axis}
 
 \item{col_pal}{color palette for bar filling}
-
-\item{color}{color of bars}
 
 \item{plot_rel_labels}{plot relative labels of bar segment sizes}
 
@@ -83,6 +81,8 @@ e.g. when label_only_largest = T}
 \item{label_position}{overwrite calculated label positions, which by default are centered in bar segments}
 
 \item{flip}{flip x and y axis}
+
+\item{color}{color of bars}
 }
 \description{
 Plot composition of one category by another

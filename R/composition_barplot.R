@@ -32,7 +32,7 @@
 #' @return
 #' @export
 #'
-#' @importFrom magrittr %>%
+#' @importFrom magrittr |>
 #'
 #' @examples
 composition_barplot <- function(SO,
@@ -98,29 +98,29 @@ composition_barplot <- function(SO,
   y = match.arg(y, c("rel", "abs"))
 
   table <-
-    SO %>%
-    dplyr::count(!!rlang::sym(x_cat), !!rlang::sym(fill_cat)) %>%
-    dplyr::left_join(dplyr::count(SO, !!rlang::sym(x_cat), name = "x_total"), by = x_cat) %>%
-    dplyr::left_join(dplyr::count(SO, !!rlang::sym(fill_cat), name = "fill_total"), by = fill_cat) %>%
-    dplyr::mutate(rel_x = n/x_total) %>%
+    SO |>
+    dplyr::count(!!rlang::sym(x_cat), !!rlang::sym(fill_cat)) |>
+    dplyr::left_join(dplyr::count(SO, !!rlang::sym(x_cat), name = "x_total"), by = x_cat) |>
+    dplyr::left_join(dplyr::count(SO, !!rlang::sym(fill_cat), name = "fill_total"), by = fill_cat) |>
+    dplyr::mutate(rel_x = n/x_total) |>
     dplyr::mutate(rel_fill = n/fill_total) # rel_fill is not used below
 
   if (summarize_all_x) {
     table <- dplyr::bind_rows(table,
-                              SO %>%
-                                dplyr::count(!!rlang::sym(fill_cat)) %>%
-                                dplyr::mutate(x_total = nrow(SO)) %>%
-                                dplyr::mutate(fill_total = nrow(SO)) %>%
-                                dplyr::mutate(rel_x = n/x_total) %>%
-                                dplyr::mutate(rel_fill = n/fill_total) %>%
+                              SO |>
+                                dplyr::count(!!rlang::sym(fill_cat)) |>
+                                dplyr::mutate(x_total = nrow(SO)) |>
+                                dplyr::mutate(fill_total = nrow(SO)) |>
+                                dplyr::mutate(rel_x = n/x_total) |>
+                                dplyr::mutate(rel_fill = n/fill_total) |>
                                 dplyr::mutate(!!x_cat := "all"))
   }
 
   table0 <- NULL
   if (plot_total_rel_labels || plot_total_abs_labels) {
     table0 <-
-      SO %>%
-      dplyr::count(!!rlang::sym(x_cat)) %>%
+      SO |>
+      dplyr::count(!!rlang::sym(x_cat)) |>
       dplyr::mutate(pct = n/sum(n))
 
     if (summarize_all_x) {
@@ -167,26 +167,26 @@ composition_barplot <- function(SO,
 
 
   table <-
-    table %>%
+    table |>
     # make sure NA come first in order, as they will be plotted first - needed for cumsum and correct label position
-    dplyr::mutate(sort_helper = ifelse(is.na(!!rlang::sym(fill_cat)), 0, 1)) %>%
-    dplyr::group_by(!!rlang::sym(x_cat)) %>%
-    dplyr::arrange(sort_helper, dplyr::desc(!!rlang::sym(fill_cat)), .by_group = T) %>%
-    dplyr::mutate(rel_x_cumsum = cumsum(rel_x)) %>%
-    dplyr::mutate(rel_x_cumsum_lag = dplyr::lag(rel_x_cumsum, default = 0)) %>%
-    dplyr::mutate(label_ypos = rel_x_cumsum_lag + (rel_x_cumsum-rel_x_cumsum_lag)/2) %>%
-    dplyr::mutate(n_cumsum = cumsum(n)) %>%
-    dplyr::mutate(n_cumsum_lag = dplyr::lag(n_cumsum, default = 0)) %>%
-    dplyr::mutate(n_label_ypos = n_cumsum_lag + (n_cumsum-n_cumsum_lag)/2) %>%
-    dplyr::mutate(rel_x_fctr = rel_x*fctr) %>%
-    dplyr::mutate(rel_x_fctr_round = brathering::round2(rel_x_fctr, label_rel_decimals)) %>%
+    dplyr::mutate(sort_helper = ifelse(is.na(!!rlang::sym(fill_cat)), 0, 1)) |>
+    dplyr::group_by(!!rlang::sym(x_cat)) |>
+    dplyr::arrange(sort_helper, dplyr::desc(!!rlang::sym(fill_cat)), .by_group = T) |>
+    dplyr::mutate(rel_x_cumsum = cumsum(rel_x)) |>
+    dplyr::mutate(rel_x_cumsum_lag = dplyr::lag(rel_x_cumsum, default = 0)) |>
+    dplyr::mutate(label_ypos = rel_x_cumsum_lag + (rel_x_cumsum-rel_x_cumsum_lag)/2) |>
+    dplyr::mutate(n_cumsum = cumsum(n)) |>
+    dplyr::mutate(n_cumsum_lag = dplyr::lag(n_cumsum, default = 0)) |>
+    dplyr::mutate(n_label_ypos = n_cumsum_lag + (n_cumsum-n_cumsum_lag)/2) |>
+    dplyr::mutate(rel_x_fctr = rel_x*fctr) |>
+    dplyr::mutate(rel_x_fctr_round = brathering::round2(rel_x_fctr, label_rel_decimals)) |>
     dplyr::mutate(rel_x_fctr_round = ifelse(
       label_rel_rm_zero,
       gsub("^0", "", as.character(rel_x_fctr_round)),
       rel_x_fctr_round
-    )) %>%
-    dplyr::mutate(rel_x_fctr_pct = paste0(brathering::round2(rel_x_fctr, label_rel_decimals), " %")) %>%
-    dplyr::mutate(label_ypos_fctr = label_ypos*fctr) %>%
+    )) |>
+    dplyr::mutate(rel_x_fctr_pct = paste0(brathering::round2(rel_x_fctr, label_rel_decimals), " %")) |>
+    dplyr::mutate(label_ypos_fctr = label_ypos*fctr) |>
     tibble::as_tibble()
 
   if (!is.null(levels(SO[,x_cat]))) {
@@ -195,19 +195,20 @@ composition_barplot <- function(SO,
     } else {
       table[,x_cat] <- factor(table[,x_cat,drop=T], levels = levels(SO[,x_cat]))
     }
-
   }
 
   if (y == "rel") {
     plot <- ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = rel_x*fctr, fill = !!rlang::sym(fill_cat))) +
-      ggplot2::labs(y = ifelse(label_rel_pct, "frequency [%]", "frequency")) +
-      ggplot2::scale_y_continuous(breaks = c(0,0.25,0.5,0.75,1)*fctr)
+      ggplot2::labs(y = ifelse(label_rel_pct, "frequency [%]", "frequency"))
+    breaks <- c(0,0.25,0.5,0.75,1)*fctr
   } else if (y == "abs") {
     plot <- ggplot2::ggplot(table, ggplot2::aes(x = !!rlang::sym(x_cat), y = n, fill = !!rlang::sym(fill_cat)))
+    breaks <- ggplot2::waiver()
   }
   plot <- plot +
     do.call(ggplot2::geom_col, args = geom_col_args) +
-    ggplot2::scale_fill_manual(values = col_pal)
+    ggplot2::scale_fill_manual(values = col_pal) +
+    ggplot2::scale_y_continuous(breaks = breaks, ggplot2::expansion(mult = 0.01))
 
 
   if (plot_rel_labels || plot_abs_labels) {
@@ -217,11 +218,7 @@ composition_barplot <- function(SO,
       message(nrow(table) - nrow(table_temp), " text labels removed due to min_label_freq.")
     }
     if (label_only_largest) {
-      table_temp <-
-        table_temp %>%
-        dplyr::group_by(!!rlang::sym(x_cat)) %>%
-        dplyr::slice_max(rel_x_fctr) %>%
-        dplyr::ungroup()
+      table_temp <- dplyr::slice_max(table_temp, order_by = rel_x_fctr, by = !!rlang::sym(x_cat))
     }
     table_temp <- dplyr::arrange(table_temp, !!rlang::sym(fill_cat), rel_x_cumsum)
 

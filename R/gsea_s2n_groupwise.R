@@ -12,9 +12,9 @@
 #'
 #' @examples
 gsea_s2n_groupwise <- function(obj,
-                          group,
-                          eps = 1e-6,
-                          get_layer_args = list()) {
+                               group,
+                               eps = 1e-6,
+                               get_layer_args = list()) {
 
   if (length(group) == 1 && methods::is(obj, "Seurat") && group %in% names(obj@meta.data)) {
     group <- obj@meta.data[[group]]

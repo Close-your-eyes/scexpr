@@ -45,7 +45,7 @@ heatmap_pseudobulk2(
     title.hjust = 0.5, barwidth = 1, barheight = 8, order = 1),
   legend_size_args = list(label.theme = ggplot2::element_text(size = 10), title.theme =
     ggplot2::element_text(size = 10), title.position = "top", title =
-    "transcription\\nfrequency\\n[\%]", title.hjust = 0.5, label.position = "bottom",
+    "transcription\\nfrequency\\n[\%]", title.hjust = 0.5, label.position = "right",
     order = 2, ncol = NULL, nrow = NULL, override.aes = list(color = "..auto..", fill =
     "..auto..")),
   theme_args = list(axis.title = ggplot2::element_blank(), panel.grid =

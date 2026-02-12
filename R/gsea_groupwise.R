@@ -4,8 +4,8 @@
 #' called on each group. You may use an overclustered grouping, GSEA on groups of cells
 #' should cancel out noise in single cells and group highly correlates cells.
 #'
-#' @param obj Seurat object
-#' @param group grouping column in obj meta.data
+#' @param obj Seurat object or gene x cell matrix
+#' @param group grouping column in obj meta.data or vector of length ncol(obj)
 #' @param fgseaMultilevel_args arguments to fgsea::fgseaMultilevel; named list of
 #' pathways is mandatory
 #' @param get_layer_args arguments to scexpr::get_layer
@@ -33,6 +33,12 @@ gsea_groupwise <- function(obj,
     group = group,
     get_layer_args = get_layer_args
   )
+
+  if (length(group) > 1) {
+    # group is vector and obj is matrix, not seurat
+    group <- "group"
+  }
+
   # only calc once when 2 columns (groups) only
   gseares <- purrr::map_dfr(stats::setNames(colnames(s2ntab), colnames(s2ntab)),
                             ~as.data.frame(Gmisc::fastDoCall(fgsea::fgseaMultilevel,
