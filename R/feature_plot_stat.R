@@ -120,8 +120,9 @@ feature_plot_stat <- function(SO,
                    layer = layer,
                    cells = cells,
                    meta_col = meta_col,
+                   #try_df = T,
                    split_feature = split.by)
-  data <- dplyr::bind_rows(data, .id = "feature_split")
+  data <- dplyr::bind_rows(data, .id = "feature_split") ## different features
 
   # split.by requires testing - include in pivoting etc and geom_text
   #data <- tidyr::pivot_longer(data, dplyr::all_of(features), names_to = "feature_split", values_to = "expr")

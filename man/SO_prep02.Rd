@@ -78,7 +78,7 @@ consider for downstream functions like tSNE or UMAP}
 
 \item{hvf_determination_before_merge}{determine variable features before or after merging multiple samples;
 either by the standard LogNormalize workflow or by SCTransform function; this is most important for
-deciding whether SCtransform is run on mulitple samples separately before merging (set to TRUE) or
+deciding whether SCtransform is run on multiple samples separately before merging (set to TRUE) or
 after merging (set to FALSE); in my experience and when batch_corr = harmony, setting
 it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links}
 
@@ -117,7 +117,7 @@ exclude T cell receptor gene segments}
 
 \item{FindVariableFeatures_args}{arguments to Seurat::FindVariableFeatures}
 
-\item{SCtransform_args}{arguments to Seurat::SCTransform}
+\item{SCtransform_args}{arguments to Seurat::SCTransform but c("object", "assay", "new.assay.name", "seed.use", "verbose")}
 
 \item{RunPCA_args}{arguments to Seurat::RunUMAP}
 

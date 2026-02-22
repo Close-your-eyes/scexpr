@@ -88,6 +88,7 @@ SO_prep01 <- function(data_dirs,
                       ffbms = NULL,
                       rfbms = NULL,
                       batch_corr = c("harmony", "none"),
+                      reduction = c("tsne", "umap"),
                       diet_seurat = T,
                       sample_prefix_to_cell_id = T,
                       early_exit = F) {
@@ -96,6 +97,7 @@ SO_prep01 <- function(data_dirs,
   install_pkgs(SoupX, scDblFinder, decontX)
   resolution <- resolution_checks(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering)
   batch_corr <- rlang::arg_match(batch_corr)
+  reduction <- rlang::arg_match(reduction)
 
   # zeallot::operator(c(ffbms,
   #                     rfbms,
@@ -169,7 +171,7 @@ SO_prep01 <- function(data_dirs,
   }
 
   SO <- SO_prep02(SO_unprocessed = SO,
-                  reductions = "umap",
+                  reductions = reduction,
                   nhvf = nhvf,
                   npcs = npcs,
                   min_cells = 1,
@@ -182,13 +184,13 @@ SO_prep01 <- function(data_dirs,
                   diet_seurat = F)
 
   # only save a useful cluster resolution
-  allclust <- paste0("RNA_snn_res.", resolution)
+  allclust <- SO@misc$clusterings[-length(SO@misc$clusterings)]
   nclust <- apply(SO@meta.data[,allclust], 2, function(x) length(unique(x)))
   candidates <- names(nclust)[which(dplyr::between(nclust, 1,12))]
   choice <- ifelse(!length(candidates), names(nclust)[1], candidates[length(candidates)])
   # for qc_plot2; in analogy to meta_clustering
-  names(choice) <- "umap"
-  resolution <- sub("RNA_snn_res.", "", choice, fixed = T)
+  names(choice) <- reduction
+  resolution <- brathering::strsplit2(choice, "\\.")[[1]][2]
   suppressWarnings(SeuratObject::Misc(SO, "clusterings") <- choice)
 
   if (SoupX) {
@@ -438,10 +440,10 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
 }
 
 read_10X_data <- function(path,
-                          cells,
-                          min_UMI,
+                          name = NULL,
+                          cells = NULL,
+                          min_UMI = 1,
                           verbose = T,
-                          name,
                           sample_prefix_to_cell_id = T,
                           invert_cells = F) {
 
@@ -502,9 +504,20 @@ read_10X_data <- function(path,
   # change cell names here to avoid duplicate names from multiple samples
   # but only if not already there
   if (sample_prefix_to_cell_id) {
-    if (!all(grepl(paste0("^", name), colnames(filt_data)))) {
-      colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+    if (is.null(name)) {
+      # assumption of min prefix length of 3; maybe wrong sometimes
+      prefixes <- substr(colnames(filt_data), 1, 3)
+      if (length(unique(prefixes)) != 1) {
+        message("random prefix added to cell names.")
+        name <- stringr::str_pad(sample(1:1000, 1), width = 4, pad = "0")
+        colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+      }
+    } else {
+      if (!all(grepl(paste0("^", name), colnames(filt_data)))) {
+        colnames(filt_data) <- paste0(name, "__", colnames(filt_data))
+      }
     }
+
   }
 
   return(filt_data)
@@ -535,7 +548,13 @@ aggregate_or_remove_features <- function(filt_data,
   return(filt_data)
 }
 
-check_inputs <- function(ffbms, rfbms, data_dirs, SoupX, SoupX_return, decontX, batch_corr) {
+check_inputs <- function(data_dirs,
+                         ffbms = NULL,
+                         rfbms = NULL,
+                         SoupX = F,
+                         SoupX_return = F,
+                         decontX = F,
+                         batch_corr = "none") {
 
   if (is.null(ffbms) && is.null(rfbms)) {
 
@@ -594,32 +613,50 @@ check_inputs <- function(ffbms, rfbms, data_dirs, SoupX, SoupX_return, decontX, 
     stop("Duplicate names for paths not allowed.")
   }
 
-  return(list(ffbms, rfbms, SoupX, SoupX_return, decontX, batch_corr))
+  return(list(
+    ffbms = ffbms,
+    rfbms = rfbms,
+    SoupX = SoupX,
+    SoupX_return = SoupX_return,
+    decontX = decontX,
+    batch_corr = batch_corr
+  ))
 }
 
 run_soupx <- function(ffbms,
                       rfbms,
-                      SO,
-                      nhvf,
-                      min_UMI,
-                      resolution_SoupX,
-                      npcs,
-                      batch_corr,
-                      resolution,
-                      SoupX_return,
-                      SoupX_autoEstCont_args,
-                      feature_aggr,
-                      feature_rm) {
+                      SO = NULL,
+                      nhvf = 2000,
+                      min_UMI = 1,
+                      resolution_SoupX = 0.6,
+                      npcs = 10,
+                      batch_corr = "harmony",
+                      resolution = 0.8,
+                      SoupX_return = F,
+                      SoupX_autoEstCont_args = list(),
+                      feature_aggr = NULL,
+                      feature_rm = NULL) {
   # ffmbs and rfbms are paired by name
 
   # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the whole picture of the soup
   message("SoupX: Reading filtered and raw_feature_bc_matrix data.")
 
+  # if (!is.list(ffbms)) {
+  #   ffbms <- list(sample = ffbms)
+  # }
+  # if (!is.list(rfbms)) {
+  #   rfbms <- list(sample = rfbms)
+  # }
+
   SoupX_results <- lapply(stats::setNames(names(rfbms), names(rfbms)), function(x) {
     message(x)
     # just read again
+    cells <- NULL
+    if (!is.null(SO)) {
+      cells <- Seurat::Cells(SO)
+    }
     filt_data <- read_10X_data(path = ffbms[x],
-                               cells = Seurat::Cells(SO), ## filter for existing cells in SO (potential scDblFinder filtering, above)
+                               cells = cells, ## filter for existing cells in SO (potential scDblFinder filtering, above)
                                min_UMI = min_UMI,
                                verbose = F,
                                name = x)
@@ -656,8 +693,12 @@ run_soupx <- function(ffbms,
     ## https://github.com/constantAmateur/SoupX/issues/93
     ## run clustering on the specified subset only, otherwise an error may occur
     ## use intersect here as some cells may have been excluded above for scDblFinder
-    clusters <-
-      subset(Seurat::DietSeurat(SO, layers = "counts"), cells = intersect(Seurat::Cells(SO), rownames(sc$metaData))) |>
+    if (is.null(SO)) {
+      clusters <- Seurat::CreateSeuratObject(filt_data)
+    } else {
+      clusters <- subset(Seurat::DietSeurat(SO, layers = "counts"), cells = intersect(Seurat::Cells(SO), rownames(sc$metaData)))
+    }
+    clusters <- clusters |>
       Seurat::NormalizeData(verbose = F) |>
       Seurat::FindVariableFeatures(selection.method = "vst", nfeatures = nhvf, verbose = F, assay = "RNA") |>
       Seurat::ScaleData(verbose = F) |>
@@ -682,7 +723,7 @@ run_soupx <- function(ffbms,
       SO_sx@meta.data$orig.ident <- x
 
       SO_sx <- SO_prep02(SO_unprocessed = stats::setNames(list(SO_sx), x),
-                         reductions = "umap",
+                         reductions = reduction,
                          nhvf = nhvf,
                          npcs = npcs,
                          batch_corr = batch_corr,
@@ -698,7 +739,7 @@ run_soupx <- function(ffbms,
                                          col.name = "pct_soup_SoupX")
 
       sc <- SoupX::setDR(sc = sc,
-                         DR = SO_sx@reductions$umap@cell.embeddings)
+                         DR = SO_sx@reductions[[reduction]]@cell.embeddings)
 
       sc_info_df <- data.frame(n_expr_uncorrected = Matrix::rowSums(sc$toc > 0),
                                n_expr_corrected = Matrix::rowSums(sx_counts > 0)) |>
@@ -719,7 +760,7 @@ run_soupx <- function(ffbms,
 
   if (SoupX_return) {
     SOx <- SO_prep02(SO_unprocessed = purrr::map(SoupX_results, ~purrr::pluck(.x, "SO")),
-                     reductions = "umap",
+                     reductions = reduction,
                      nhvf = nhvf,
                      npcs = npcs,
                      min_cells = 1,
@@ -737,6 +778,8 @@ run_soupx <- function(ffbms,
 
   return(SoupX_results)
 }
+
+
 
 run_decontx <- function(SO, resolution, nhvf) {
   if (!requireNamespace("brathering", quietly = T)) {

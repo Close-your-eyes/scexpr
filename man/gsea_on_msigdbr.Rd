@@ -26,6 +26,14 @@ gsea_on_msigdbr(
 
 \item{return_gene_sets}{set to FALSE in order to save memory when the same gene sets are used multiple times}
 
+\item{use_msigdbr}{use gene sets from msigdb to test}
+
+\item{msigdbr_args}{arguments to msigdbr::msigdbr}
+
+\item{fgsea_fun}{which function to use for gsea}
+
+\item{fgsea_args}{arguments to fgsea_fun}
+
 \item{...}{arguments to .plotEnrichment}
 }
 \description{
@@ -33,7 +41,7 @@ Convenient wrapper around fgsea function
 }
 \examples{
 \dontrun{
-#' # H: hallmark gene sets
+# H: hallmark gene sets
 # C1: positional gene sets
 # C2: curated gene sets
 # C3: regulatory target gene sets

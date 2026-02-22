@@ -15,8 +15,8 @@ rename_reduction <- function(obj,
   reduction <- scexpr:::check.reduction(SO = obj,
                                         reduction = reduction)
 
-  if (new_name %in% names(obj@reduction)) {
-    stop("new name already exists in obj@reduction")
+  if (new_name %in% names(obj@reductions)) {
+    stop("new name already exists in obj@reductions")
   }
 
   names(obj@reductions)[reduction] <- new_name

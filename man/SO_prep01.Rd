@@ -26,6 +26,7 @@ SO_prep01(
   ffbms = NULL,
   rfbms = NULL,
   batch_corr = c("harmony", "none"),
+  reduction = c("tsne", "umap"),
   diet_seurat = T,
   sample_prefix_to_cell_id = T,
   early_exit = F

@@ -10,6 +10,7 @@ qc_plot2(
     "pct_soup_decontX", "pct_soup_SoupX"),
   geom2 = "boxplot",
   save_path = NULL,
+  reduction = "tsne",
   save_as = c("png", "pdf")
 )
 }

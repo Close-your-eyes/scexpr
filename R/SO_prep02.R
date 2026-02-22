@@ -39,11 +39,11 @@
 #' exclude T cell receptor gene segments
 #' @param hvf_determination_before_merge determine variable features before or after merging multiple samples;
 #' either by the standard LogNormalize workflow or by SCTransform function; this is most important for
-#' deciding whether SCtransform is run on mulitple samples separately before merging (set to TRUE) or
+#' deciding whether SCtransform is run on multiple samples separately before merging (set to TRUE) or
 #' after merging (set to FALSE); in my experience and when batch_corr = harmony, setting
 #' it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links
 #' @param FindVariableFeatures_args arguments to Seurat::FindVariableFeatures
-#' @param SCtransform_args arguments to Seurat::SCTransform
+#' @param SCtransform_args arguments to Seurat::SCTransform but c("object", "assay", "new.assay.name", "seed.use", "verbose")
 #' @param RunUMAP_args arguments to Seurat::RunUMAP
 #' @param RunTSNE_args arguments to scexpr::run_fft_tsne
 #' @param FindNeighbors_args arguments to Seurat::FindNeighbors
@@ -119,7 +119,6 @@ SO_prep02 <- function(SO_unprocessed,
                       interactive_pc_selection = T,
                       ...) {
 
-  scale_RNA_assay_when_SCT <- F
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
   }
@@ -152,7 +151,7 @@ SO_prep02 <- function(SO_unprocessed,
   }
 
   if (is.null(save_path)) {
-    message("No save_path to save Seurat objects to provided.")
+    message("No save_path provided.")
   } else if (!is.character(save_path) || length(save_path) != 1) {
     stop("save_path has to be a character; a path to a folder where to save Seurat objects to.")
   }
@@ -202,15 +201,12 @@ SO_prep02 <- function(SO_unprocessed,
                          nhvf,
                          vars.to.regress,
                          FindVariableFeatures_args,
-                         scale_RNA_assay_when_SCT,
                          RunPCA_args,
                          npcs,
                          interactive_varfeat_selection,
                          interactive_varfeat_selection_inds,
                          interactive_pc_selection)
-  }
-
-  if (length(SO_unprocessed) > 1) {
+  } else if (length(SO_unprocessed) > 1) {
     if (batch_corr %in% c("none", "harmony")) {
       SO <- make_so_multi_harmony(SO_unprocessed,
                                   normalization,
@@ -221,7 +217,6 @@ SO_prep02 <- function(SO_unprocessed,
                                   nhvf,
                                   vars.to.regress,
                                   FindVariableFeatures_args,
-                                  scale_RNA_assay_when_SCT,
                                   RunPCA_args,
                                   npcs,
                                   RunHarmony_args,
@@ -242,7 +237,6 @@ SO_prep02 <- function(SO_unprocessed,
                                     FindVariableFeatures_args,
                                     IntegrateData_args,
                                     hvf_determination_before_merge,
-                                    scale_RNA_assay_when_SCT,
                                     FindIntegrationAnchors_args,
                                     RunPCA_args,
                                     npcs,
@@ -267,12 +261,18 @@ SO_prep02 <- function(SO_unprocessed,
     if (!"dims" %in% names(RunUMAP_args)) {
       RunUMAP_args <- c(list(dims = 1:npcs), RunUMAP_args)
     }
-    SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
-                                                           reduction = red,
-                                                           reduction.name = c("umap_", red),
-                                                           seed.use = seeed,
-                                                           verbose = verbose),
-                                                      RunUMAP_args))
+
+    tryCatch(expr = {
+      SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
+                                                             reduction = red,
+                                                            reduction.name = paste0("umap_", red),
+                                                             seed.use = seeed,
+                                                             verbose = verbose),
+                                                        RunUMAP_args))
+      #SO <- rename_reduction(SO, reduction = "umap", new_name = paste0("umap_", red))
+    }, error = function(err) {
+      message("umap failed.")
+    })
     #SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", metric = "cosine", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, ...)
   }
 
@@ -302,7 +302,7 @@ SO_prep02 <- function(SO_unprocessed,
                                                         RunTSNE_args))
     })
 
-                            #SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, num_threads = 0, ...)
+    #SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, num_threads = 0, ...)
   }
 
   if (any(grepl("^som$", reductions, ignore.case = T))) {
@@ -339,11 +339,13 @@ SO_prep02 <- function(SO_unprocessed,
   if (!"dims" %in% names(FindNeighbors_args)) {
     FindNeighbors_args <- c(list(dims = 1:npcs), FindNeighbors_args)
   }
+  #graph_names <- paste0(SO@reductions[[red]]@assay.used, "_", ifelse(grepl("pca", red), "pca", "harmony"), "_", npcs, "_", c("nn", "snn"))
   SO <- Gmisc::fastDoCall(Seurat::FindNeighbors, args = c(list(object = SO,
                                                                reduction = red,
                                                                verbose = verbose),
                                                           FindNeighbors_args))
-  names(SO@graphs) <- paste0(names(SO@graphs), "_", red, "_", npcs)
+  #  "_", npcs,
+  names(SO@graphs) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(SO@graphs))), "_", red, "_", c("nn", "snn"))
 
   names_wo_clust <- names(SO@meta.data)
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
@@ -399,7 +401,7 @@ SO_prep02 <- function(SO_unprocessed,
   }
 
   try(expr = {
-    # quick to reproduce
+    # quick to calculate
     # save disk space
     SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
   }, silent = T)
@@ -461,6 +463,7 @@ SO_prep02 <- function(SO_unprocessed,
     if (normalization == "SCT") {
       SCtransform_args[which(names(SCtransform_args) == "variable.features.n")] <- SCtransform_args[["variable.features.n"]] + length(intersect(Seurat::VariableFeatures(SO), var_feature_filter))
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                 assay = "RNA",
                                                                  seed.use = seeed,
                                                                  verbose = verbose),
                                                             SCtransform_args))
@@ -755,7 +758,6 @@ make_so_single <- function(SO_unprocessed,
                            nhvf,
                            vars.to.regress,
                            FindVariableFeatures_args,
-                           scale_RNA_assay_when_SCT,
                            RunPCA_args,
                            npcs,
                            interactive_varfeat_selection,
@@ -765,6 +767,7 @@ make_so_single <- function(SO_unprocessed,
   rm(SO_unprocessed)
   if (normalization == "SCT") {
     SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                               assay = "RNA",
                                                                seed.use = seeed,
                                                                verbose = verbose),
                                                           SCtransform_args))
@@ -775,6 +778,7 @@ make_so_single <- function(SO_unprocessed,
       nhvf <- new_nhvf
       SCtransform_args[["variable.features.n"]] <- nhvf
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                 assay = "RNA",
                                                                  seed.use = seeed,
                                                                  verbose = verbose),
                                                             SCtransform_args))
@@ -796,9 +800,7 @@ make_so_single <- function(SO_unprocessed,
     }
 
     SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
-    if (scale_RNA_assay_when_SCT) {
-      SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
-    }
+
   } else if (normalization %in% c("LogNormalize", "RNA")) {
     SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
     SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO,
@@ -888,7 +890,6 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                     FindVariableFeatures_args,
                                     IntegrateData_args,
                                     hvf_determination_before_merge,
-                                    scale_RNA_assay_when_SCT,
                                     FindIntegrationAnchors_args,
                                     RunPCA_args,
                                     npcs,
@@ -902,6 +903,7 @@ make_so_multi_integrate <- function(SO_unprocessed,
   if (normalization == "SCT") {
     SO_unprocessed <- lapply(SO_unprocessed, function(x) {
       Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
+                                                           assay = "RNA",
                                                            seed.use = seeed,
                                                            verbose = verbose),
                                                       SCtransform_args))
@@ -918,6 +920,7 @@ make_so_multi_integrate <- function(SO_unprocessed,
       SCtransform_args[["variable.features.n"]] <- nhvf
       SO_unprocessed <- lapply(SO_unprocessed, function(x) {
         Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
+                                                             assay = "RNA",
                                                              seed.use = seeed,
                                                              verbose = verbose),
                                                         SCtransform_args))
@@ -1064,10 +1067,6 @@ make_so_multi_integrate <- function(SO_unprocessed,
     message("If running on a subset of the original object after running PrepSCTFindMarkers(), FindMarkers() should be invoked with recorrect_umi = FALSE.")
   }
 
-  ## independent of SCT or LogNormalize:
-  if (scale_RNA_assay_when_SCT && normalization == "SCT") {
-    SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose) # just for completeness
-  }
   SO <- Seurat::ScaleData(SO, assay = "integrated", verbose = verbose) # see https://satijalab.org/seurat/articles/integration_introduction.html
 
   SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
@@ -1099,7 +1098,6 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                   nhvf,
                                   vars.to.regress,
                                   FindVariableFeatures_args,
-                                  scale_RNA_assay_when_SCT,
                                   RunPCA_args,
                                   npcs,
                                   RunHarmony_args,
@@ -1121,6 +1119,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
 
       SO_unprocessed <- lapply(SO_unprocessed, function(x) {
         Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
+                                                             assay = "RNA",
                                                              seed.use = seeed,
                                                              verbose = verbose),
                                                         SCtransform_args))
@@ -1148,6 +1147,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                 assay = "RNA",
                                                                  seed.use = seeed,
                                                                  verbose = verbose),
                                                             SCtransform_args))
@@ -1168,6 +1168,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                                           features = intersect_features)),
                                        meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                 assay = "RNA",
                                                                  seed.use = seeed,
                                                                  verbose = verbose),
                                                             SCtransform_args))
@@ -1179,6 +1180,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
         nhvf <- new_nhvf
         SCtransform_args[["variable.features.n"]] <- nhvf
         SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                   assay = "RNA",
                                                                    seed.use = seeed,
                                                                    verbose = verbose),
                                                               SCtransform_args))
@@ -1200,9 +1202,6 @@ make_so_multi_harmony <- function(SO_unprocessed,
       }
     }
     SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
-    if (scale_RNA_assay_when_SCT) {
-      SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = verbose)
-    }
 
   } else if (normalization == "LogNormalize") {
 
@@ -1299,9 +1298,9 @@ make_so_multi_harmony <- function(SO_unprocessed,
 
   if (batch_corr == "harmony") {
     RunHarmony_args <- RunHarmony_args[which(!names(RunHarmony_args) %in% c("object", "assay.use", "verbose"))]
-    SO <- Gmisc::fastDoCall(harmony::RunHarmony, args = c(list(object = SO,
-                                                               assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA")),
+    SO <- Gmisc::fastDoCall(harmony::RunHarmony, args = c(list(object = SO),
                                                           RunHarmony_args))
+    # assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA")
   }
   return(SO)
 }
@@ -1349,3 +1348,6 @@ get_numeric_input <- function(prompt = "Enter a number: ") {
     }
   }
 }
+
+
+

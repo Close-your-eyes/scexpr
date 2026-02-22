@@ -4,7 +4,7 @@
 #' to be calculated in obj before calling this function.
 #'
 #' @param obj seurat object
-#' @param n_varfeat number of variable deature to visualize (cutoffs)
+#' @param n_varfeat number of variable feature to visualize (cutoffs)
 #'
 #' @returns patchwork of ggplots
 #' @export

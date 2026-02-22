@@ -2,10 +2,10 @@
 #'
 #' @param gene_ranks this becomes stats in fgsea_fun
 #' @param gene_sets this becomes pathways in fgsea_fun
-#' @param use_msigdbr
-#' @param msigdbr_args
-#' @param fgsea_fun
-#' @param fgsea_args
+#' @param use_msigdbr use gene sets from msigdb to test
+#' @param msigdbr_args arguments to msigdbr::msigdbr
+#' @param fgsea_fun which function to use for gsea
+#' @param fgsea_args arguments to fgsea_fun
 #' @param return_gene_sets set to FALSE in order to save memory when the same gene sets are used multiple times
 #' @param return_gene_sets_subset return the subset of each gene set that is actually found in gene_ranks
 #' @param ... arguments to .plotEnrichment
@@ -15,7 +15,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' #' # H: hallmark gene sets
+#' # H: hallmark gene sets
 #' # C1: positional gene sets
 #' # C2: curated gene sets
 #' # C3: regulatory target gene sets

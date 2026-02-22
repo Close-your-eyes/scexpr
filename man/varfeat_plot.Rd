@@ -9,7 +9,7 @@ varfeat_plot(obj, n_varfeat = seq(200, 2000, 200))
 \arguments{
 \item{obj}{seurat object}
 
-\item{n_varfeat}{number of variable deature to visualize (cutoffs)}
+\item{n_varfeat}{number of variable feature to visualize (cutoffs)}
 }
 \value{
 patchwork of ggplots

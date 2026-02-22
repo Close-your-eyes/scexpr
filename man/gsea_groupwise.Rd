@@ -12,9 +12,9 @@ gsea_groupwise(
 )
 }
 \arguments{
-\item{obj}{Seurat object}
+\item{obj}{Seurat object or gene x cell matrix}
 
-\item{group}{grouping column in obj meta.data}
+\item{group}{grouping column in obj meta.data or vector of length ncol(obj)}
 
 \item{fgseaMultilevel_args}{arguments to fgsea::fgseaMultilevel; named list of
 pathways is mandatory}

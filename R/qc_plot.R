@@ -194,6 +194,7 @@ qc_plot2 <- function(SO,
                      ),
                      geom2 = "boxplot",
                      save_path = NULL,
+                     reduction = "tsne",
                      save_as = c("png", "pdf")) {
 
 
@@ -216,13 +217,13 @@ qc_plot2 <- function(SO,
   breaks <- breaks[which(breaks != 0)]
 
 
-  qc_p1 <- suppressMessages(feature_plot2(SO,
-                                          features = c(gsub("_log$", "", qc_cols), "orig.ident", SO@misc$clusterings),
-                                          reduction = "UMAP",
-                                          get_data_args = list(shuffle = T, order_discr = F, qmax = 99.5)))
-
   red_name <- c(names(SO@misc$meta_clusterings), names(SO@misc$clusterings))
   clust_name <- unname(c(SO@misc$meta_clusterings, SO@misc$clusterings))
+
+  qc_p1 <- suppressMessages(feature_plot2(SO,
+                                          features = c(gsub("_log$", "", qc_cols), "orig.ident", SO@misc$clusterings),
+                                          reduction = reduction,
+                                          get_data_args = list(shuffle = T, order_discr = F, qmax = 99.5)))
 
   qc_p2 <- purrr::map2(stats::setNames(red_name, red_name), clust_name,  function(red_name, clust_name) {
     #clust_name <- SO@misc$meta_clusterings[red_name]

@@ -32,7 +32,6 @@
 #' @return
 #' @export
 #'
-#' @importFrom magrittr |>
 #'
 #' @examples
 composition_barplot <- function(SO,
@@ -208,8 +207,7 @@ composition_barplot <- function(SO,
   plot <- plot +
     do.call(ggplot2::geom_col, args = geom_col_args) +
     ggplot2::scale_fill_manual(values = col_pal) +
-    ggplot2::scale_y_continuous(breaks = breaks, ggplot2::expansion(mult = 0.01))
-
+    ggplot2::scale_y_continuous(breaks = breaks, expand = ggplot2::expansion(mult = 0.01))
 
   if (plot_rel_labels || plot_abs_labels) {
 
