@@ -432,10 +432,20 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
     SO <- subset(SO, cells = names(UMI_sum[which(UMI_sum >= min_UMI_var_feat)]))
   }
   # scDblFinder
-  SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = get_layer(obj = SO, assay = "RNA", layer = "counts"),
-                                                               subset.row = var_feat,
-                                                               dims = npcs)
-  SO@meta.data$dbl_score_log <- log1p(SO@meta.data$dbl_score)
+
+  # SO@meta.data$dbl_score <- scDblFinder::computeDoubletDensity(x = get_layer(obj = SO, assay = "RNA", layer = "counts"),
+  #                                                              subset.row = var_feat,
+  #                                                              dims = npcs)
+  #   SO@meta.data$dbl_score_log <- log1p(SO@meta.data$dbl_score)
+  scf <- scDblFinder::scDblFinder(sce = get_layer(obj = SO,
+                                                  assay = "RNA",
+                                                  layer = "counts"),
+                                  nfeatures = var_feat,
+                                  dims = npcs)
+  SO@meta.data$dbl_score <- scf@colData$scDblFinder.score
+  SO@meta.data$dbl_class <- scf@colData$scDblFinder.class
+
+
   return(SO)
 }
 
