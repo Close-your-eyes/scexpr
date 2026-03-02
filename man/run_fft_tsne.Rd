@@ -156,6 +156,8 @@ May require OpenMP.}
 \item{perplexity_list}{if perplexity==0 then perplexity combination will
 be used with values taken from perplexity_list.}
 
+\item{get_costs}{no idea}
+
 \item{df}{Degree of freedom of t-distribution, must be greater than 0.
 Values smaller than 1 correspond to heavier tails, which can often
 resolve substructure in the embedding. See Kobak et al. (2019) for

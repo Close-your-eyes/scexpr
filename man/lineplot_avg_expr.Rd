@@ -23,6 +23,14 @@ lineplot_avg_expr(
 
 \item{split}{another group as color scale}
 }
+\value{
+ggplot
+}
 \description{
 Make a lineplot of average gene expression across groups
+}
+\examples{
+\dontrun{
+gg <- lineplot_avg_expr(obj = so, features = c("CD3", "NKG7"), split = "cluster")
+}
 }

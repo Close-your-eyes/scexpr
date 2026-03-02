@@ -5,13 +5,16 @@
 #' @param obj_list list of Seurat objects.
 #' @param obj_ident_col new column name to identify origin of cells by object
 #'
-#' @returns
+#' @returns merged seurat
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' so <- merge_objects(obj_list = list(so1,so2,so3))
+#' }
 merge_objects <- function(obj_list,
                           obj_ident_col = "obj_ident") {
-  ## currently focussed on RNA assay
+  ## currently focused on RNA assay
   # no messages or warnings
   featlist <- purrr::map(obj_list, ~rownames(get_layer(.x, layer = "counts", assay = "RNA")))
   common_feat <- purrr::reduce(featlist, intersect)

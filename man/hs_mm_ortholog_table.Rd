@@ -12,11 +12,15 @@ hs_mm_ortholog_table(features_hs, features_mm)
 \item{features_mm}{vector of human genes (gene symbols)}
 }
 \value{
-a list with (i) a table of orthologs and (ii, iii) vectors of genes which no orthologs were found for
+a list with (i) a table of orthologs and
+(ii, iii) vectors of genes which no orthologs were found for
 }
 \description{
 A combined table with entries from ProjecTILs::Hs2Mm.convert.table and
 entries from a bioMart query is generated. features_hs is used
 to query bioMart. So, it is intended to look for mouse orthologs based
 on human features.
+}
+\examples{
+# hs_mm_ortholog_table(c("CD3", "CD4"), c("Cd8a", "Cd8b"))
 }

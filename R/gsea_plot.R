@@ -239,6 +239,7 @@ make_gsea_plot <- function(data,
     p2 <- strsplit(p_raw, "e")[[1]][2]
 
 
+    hjust <- 0
     if (annotation_pos[1] == "auto") {
       fac <- ifelse(data[["ES"]] > 0, 0.85, 0.75)
       annotation_pos[2] <- data[["ES"]] * fac # y

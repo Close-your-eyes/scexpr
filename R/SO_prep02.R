@@ -403,7 +403,7 @@ SO_prep02 <- function(SO_unprocessed,
   try(expr = {
     # quick to calculate
     # save disk space
-    SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
+    SO@assays[["RNA"]]@layers[["scale.data"]] <- matrix(NA)
   }, silent = T)
 
 

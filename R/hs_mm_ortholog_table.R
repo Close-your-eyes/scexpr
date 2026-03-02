@@ -10,10 +10,12 @@
 #'
 #' @importFrom magrittr %>%
 #'
-#' @return a list with (i) a table of orthologs and (ii, iii) vectors of genes which no orthologs were found for
+#' @return a list with (i) a table of orthologs and
+#' (ii, iii) vectors of genes which no orthologs were found for
 #' @export
 #'
 #' @examples
+#' # hs_mm_ortholog_table(c("CD3", "CD4"), c("Cd8a", "Cd8b"))
 hs_mm_ortholog_table <- function(features_hs,
                                  features_mm) {
 
@@ -26,6 +28,9 @@ hs_mm_ortholog_table <- function(features_hs,
   }
   if (!requireNamespace("scGate", quietly = T)) {
     remotes::install_github("carmonalab/scGate")
+  }
+  if (!requireNamespace("ProjecTILs", quietly = T)) {
+    remotes::install_github("carmonalab/STACAS")
   }
   if (!requireNamespace("ProjecTILs", quietly = T)) {
     remotes::install_github("carmonalab/ProjecTILs")

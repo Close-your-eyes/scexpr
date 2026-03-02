@@ -19,3 +19,8 @@ seurat object
 \description{
 Rename a reduction in Seurat at all necessary positions
 }
+\examples{
+\dontrun{
+so <- rename_reduction(obj = so, reduction = "XUMAP" new_name = "umap")
+}
+}

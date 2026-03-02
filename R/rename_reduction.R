@@ -8,6 +8,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' so <- rename_reduction(obj = so, reduction = "XUMAP" new_name = "umap")
+#' }
 rename_reduction <- function(obj,
                              reduction,
                              new_name) {

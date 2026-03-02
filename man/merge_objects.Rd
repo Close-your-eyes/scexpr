@@ -11,6 +11,14 @@ merge_objects(obj_list, obj_ident_col = "obj_ident")
 
 \item{obj_ident_col}{new column name to identify origin of cells by object}
 }
+\value{
+merged seurat
+}
 \description{
 Currently counts of RNA assay and meta data only.
+}
+\examples{
+\dontrun{
+so <- merge_objects(obj_list = list(so1,so2,so3))
+}
 }

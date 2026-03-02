@@ -167,7 +167,7 @@ volcano02_plot <- function(volc01_df,
   ylim <- minp1*1e-2
   vd[[y]][which(vd[[y]] == 0)] <- ylim
   if (n_min_p > 10) {
-    y_axis_expansion <- 15
+    y_axis_expansion <- 0.15
   } else {
     y_axis_expansion <- 0.02
   }
