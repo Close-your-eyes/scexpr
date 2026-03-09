@@ -164,7 +164,7 @@ feature_plot2 <- function(
     pt_size = 0.3,
     pt_size_fct = 1,
     col_expr = "tomato2",
-    col_non_expr = "grey85",
+    col_non_expr = "..auto..",
     col_ex_cells = "grey95",
     col_split = "grey30",
     col_na = "grey50",

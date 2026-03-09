@@ -5,6 +5,7 @@
 #' @param assay which assay
 #' @param group groups on x-axis
 #' @param split another group as color scale
+#' @param return_df
 #'
 #' @returns ggplot
 #' @export
@@ -17,11 +18,12 @@ lineplot_avg_expr <- function(obj,
                               features,
                               assay = "RNA",
                               group = "orig.ident",
-                              split = NULL) {
+                              split = NULL,
+                              return_df = F) {
 
   obj <- scexpr:::check.SO(SO = obj,
                            assay = assay,
-                           length = 1,
+                           #length = 1,
                            meta.col = c(group, split))
 
   if (missing(features)) {
@@ -30,14 +32,16 @@ lineplot_avg_expr <- function(obj,
 
   features <- scexpr:::check.features(SO = obj,
                                       features = features)
-  avgexpr <- scexpr::avg_expression(
-    obj = obj,
+
+  avgexpr <- purrr::map_dfr(obj, ~scexpr::avg_expression(
+    obj = .x,
     assay = assay,
     features = features,
     group = group,
     split = split,
-    return_as = "df"
-  )
+    return_as = "df"))
+
+
   if (is.null(split)) {
     line_mapping <- NULL
     point_mapping <- NULL
@@ -46,11 +50,25 @@ lineplot_avg_expr <- function(obj,
     point_mapping <- ggplot2::aes(color = !!rlang::sym(split))
   }
 
-  if (is.factor(obj@meta.data[[split]])) {
-    avgexpr[[split]] <- factor(avgexpr[[split]], levels = levels(obj@meta.data[[split]]))
+
+  fct_lvl <- unlist(purrr::map(obj, function(x) {
+    if (is.factor(x@meta.data[[split]])) {
+      levels(x@meta.data[[split]])
+    } else {
+      unique(x@meta.data[[split]])
+    }
+  }))
+  if (anyDuplicated(fct_lvl)) {
+    message(("same split factor level in different obj."))
+  }
+  fct_lvl <- unique(fct_lvl)
+  avgexpr[[split]] <- factor(avgexpr[[split]], levels = fct_lvl)
+
+  if (return_df) {
+    return(avgexpr)
   }
 
-  ggplot2::ggplot(avgexpr, ggplot2::aes(x = group, y = expr)) +
+  p <- ggplot2::ggplot(avgexpr, ggplot2::aes(x = group, y = expr)) +
     ggplot2::geom_line(mapping = line_mapping) +
     ggplot2::geom_point(mapping = point_mapping, size = 2) +
     #ggplot2::scale_color_manual(values = so@misc$cluster_color) +
@@ -63,4 +81,5 @@ lineplot_avg_expr <- function(obj,
     ggplot2::facet_wrap(ggplot2::vars(feature), scales = "free_y", axes = "all",
                         axis.labels = "margins")
 
+  return(p)
 }

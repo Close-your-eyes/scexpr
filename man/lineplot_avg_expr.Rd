@@ -9,7 +9,8 @@ lineplot_avg_expr(
   features,
   assay = "RNA",
   group = "orig.ident",
-  split = NULL
+  split = NULL,
+  return_df = F
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ lineplot_avg_expr(
 \item{group}{groups on x-axis}
 
 \item{split}{another group as color scale}
+
+\item{return_df}{}
 }
 \value{
 ggplot

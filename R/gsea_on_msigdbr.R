@@ -69,6 +69,7 @@ gsea_on_msigdbr <- function(gene_ranks,
     gene_sets.list <- c(gene_sets, .get.split.msigdbr(msigdbr_args = msigdbr_args))
     gene_sets <- gene_sets.list[["sets"]]
   }
+
   if (length(gene_sets) == 0) {
     stop("No gene_sets provided and use_msigdbr=F. Either manually provide gene_sets or set use_msigdbr=T to select sets from their.")
   }
@@ -83,8 +84,9 @@ gsea_on_msigdbr <- function(gene_ranks,
 
   results <- as.data.frame(Gmisc::fastDoCall(fgsea_fun, args = fgsea_args))
   if (use_msigdbr) {
-    results$pathway_cat <- gene_sets.list[["cats"]][results$pathway]
+    results <- dplyr::left_join(results, gene_sets.list[["sets_cats"]], by = c("pathway" = "gs_name"))
   }
+
 
   results$leadingEdge_sorted_chr <- purrr::map_chr(purrr::map(results$leadingEdge, sort), paste, collapse = ",")
   results$leadingEdge_size <- lengths(results$leadingEdge)
@@ -99,9 +101,6 @@ gsea_on_msigdbr <- function(gene_ranks,
               gene_ranks = gene_ranks))
 }
 
-
-
-
 .get.split.msigdbr <- function(msigdbr_args = list(
   db_species = "HS",
   species = "human",
@@ -110,12 +109,12 @@ gsea_on_msigdbr <- function(gene_ranks,
 
   sets <- purrr::map_dfr(msigdbr_args$collection, function(x) {
     msigdbr_args$collection <- x
-    Gmisc::fastDoCall(msigdbr::msigdbr, args = msigdbr_args)[,c("gs_collection", "gs_name", "gene_symbol")]
+    Gmisc::fastDoCall(msigdbr::msigdbr, args = msigdbr_args)[,c("gs_collection", "gs_subcollection", "gs_collection_name", "gs_description", "gs_name", "gs_exact_source", "gene_symbol")]
   })
 
   sets <- unique(sets) # some gene symbols exist in duplicates, but ENSEMBLE differs; make gene symbols unique
-  sets_cat <- unique(sets[,which(names(sets) %in% c("gs_collection", "gs_name"))])
-  return(list(sets = split(sets$gene_symbol, sets$gs_name), cats = stats::setNames(sets_cat$gs_collection, sets_cat$gs_name)))
+  sets_cat <- sets |> dplyr::select(-gene_symbol) |> dplyr::distinct()
+  return(list(sets = split(sets$gene_symbol, sets$gs_name), sets_cats = sets_cat))
 }
 
 

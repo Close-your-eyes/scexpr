@@ -118,7 +118,7 @@ feature_plot_data <- function(data,
                               pt_size = 0.3,
                               pt_size_fct = 1,
                               col_expr = "tomato2",
-                              col_non_expr = "grey85",
+                              col_non_expr = "..auto..",
                               col_ex_cells = "grey95",
                               col_split = "grey30",
                               col_na = "grey50",
@@ -266,7 +266,7 @@ feature_plot_data <- function(data,
     name_anno_pos <- rlang::arg_match(name_anno_pos, multiple = T)
     if (any(name_anno_pos == "..auto..")) {
       if (attr(data, "feature_type") %in% c("gene", "meta")) { # trivial but leave for now
-        if (nlevels(data[["SO.split"]]) > 1) {
+        if (nlevels(data[["SO.split"]]) > 1 || "split_feature" %in% names(attributes(data))) {
           name_anno_pos <- "title"
         } else if (nlevels(data[["SO.split"]]) == 1) {
           name_anno_pos <- "annotation"
@@ -291,12 +291,13 @@ feature_plot_data <- function(data,
   #   plot_traj <- F
   # }
 
+
   # get color palette
   col.pal <- get_col_pal(data = data,
-                         col_pal_c_args = col_pal_c_args,
-                         col_pal_d_args = col_pal_d_args)
+                                  col_pal_c_args = col_pal_c_args,
+                                  col_pal_d_args = col_pal_d_args)
 
-  data <- check.aliases(feature = attr(data, "feature"), feature_alias, data)
+  data <- scexpr:::check.aliases(feature = attr(data, "feature"), feature_alias, data)
 
   # excluded cells
   shapeby <- tryCatch(rlang::sym(attr(data, "shape_feature")), error = function(e) NULL)
@@ -307,7 +308,7 @@ feature_plot_data <- function(data,
     Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
 
   if (attr(data, "feature_type") == "gene") {
-    freqs <- get.freqs2(data = data)
+    freqs <- scexpr:::get.freqs2(data = data)
     plot <- do.call(feature_plot_gene, args = list(plot = plot,
                                                    freqs = freqs,
                                                    pt_size = pt_size,
@@ -338,38 +339,38 @@ feature_plot_data <- function(data,
       Gmisc::fastDoCall(ggplot2::guide_legend, args = shape_legend_args)
     })
 
-  plot <- add_facet(plot = plot,
-                    facet_grid_row_var = facet_grid_row_var,
-                    facet_scales = facet_scales,
-                    nrow_inner = nrow_inner,
-                    ncol_inner = ncol_inner)
+  plot <- scexpr:::add_facet(plot = plot,
+                             facet_grid_row_var = facet_grid_row_var,
+                             facet_scales = facet_scales,
+                             nrow_inner = nrow_inner,
+                             ncol_inner = ncol_inner)
 
-  plot <- add_color_scale(plot = plot,
-                          col.pal = col.pal,
-                          col_legend_c_args = col_legend_c_args,
-                          col_legend_d_args = col_legend_d_args,
-                          col_steps = col_steps,
-                          legendbreaks = legendbreaks,
-                          legendlabels = legendlabels,
-                          col_steps_nice = col_steps_nice,
-                          col_na = col_na,
-                          col_binary = col_binary,
-                          trans_log = col_trans_log)
+  plot <- scexpr:::add_color_scale(plot = plot,
+                                   col.pal = col.pal,
+                                   col_legend_c_args = col_legend_c_args,
+                                   col_legend_d_args = col_legend_d_args,
+                                   col_steps = col_steps,
+                                   legendbreaks = legendbreaks,
+                                   legendlabels = legendlabels,
+                                   col_steps_nice = col_steps_nice,
+                                   col_na = col_na,
+                                   col_binary = col_binary,
+                                   trans_log = col_trans_log)
 
-  plot <- add_axes_expansion(plot = plot,
-                             axes_lim_set = axes_lim_set,
-                             axes_lim_expand = axes_lim_expand)
+  plot <- scexpr:::add_axes_expansion(plot = plot,
+                                      axes_lim_set = axes_lim_set,
+                                      axes_lim_expand = axes_lim_expand)
 
   if (!is.null(name_anno_pos)) {
-    title_freq_df <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
-                               feature_cut = attr(data, "feature_cut", exact = T),
-                               feature_cut_expr = attr(data, "feature_cut_expr"),
-                               freq_df = freqs[["freq.expr"]],
-                               feature_italic = attr(data, "feature_type") == "gene",
-                               feature = attr(data, "feature"),
-                               name_anno = name,
-                               #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
-                               markdown = T)
+    title_freq_df <- scexpr:::get_title(feature_ex = attr(data, "feature_ex", exact = T),
+                                        feature_cut = attr(data, "feature_cut", exact = T),
+                                        feature_cut_expr = attr(data, "feature_cut_expr"),
+                                        freq_df = freqs[["freq.expr"]],
+                                        feature_italic = attr(data, "feature_type") == "gene",
+                                        feature = attr(data, "feature"),
+                                        name_anno = name,
+                                        #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
+                                        markdown = T)
 
     freq_df <-
       if (nlevels(data$SO.split) > 1 && length(unique(data$split_feature)) > 1) {
@@ -381,15 +382,15 @@ feature_plot_data <- function(data,
       } else {
         freqs$freq.expr
       }
-    annotation_freq_df <- get_title(feature_ex = attr(data, "feature_ex", exact = T),
-                                    feature_cut = attr(data, "feature_cut", exact = T),
-                                    feature_cut_expr = attr(data, "feature_cut_expr"),
-                                    freq_df = freq_df,
-                                    feature_italic = attr(data, "feature_type") == "gene",
-                                    feature = attr(data, "feature"),
-                                    name_anno = anno,
-                                    #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
-                                    markdown = T)
+    annotation_freq_df <- scexpr:::get_title(feature_ex = attr(data, "feature_ex", exact = T),
+                                             feature_cut = attr(data, "feature_cut", exact = T),
+                                             feature_cut_expr = attr(data, "feature_cut_expr"),
+                                             freq_df = freq_df,
+                                             feature_italic = attr(data, "feature_type") == "gene",
+                                             feature = attr(data, "feature"),
+                                             name_anno = anno,
+                                             #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
+                                             markdown = T)
 
     if ("title" %in% name_anno_pos) {
       plot <- plot + ggplot2::labs(title = title_freq_df$freq3)
@@ -399,17 +400,8 @@ feature_plot_data <- function(data,
     if ("annotation" %in% name_anno_pos) {
 
       if (!"text.color" %in% names(name_anno_args) || name_anno_args[["text.color"]] == "..auto..") {
-        bckgr <- plot[["theme"]][["plot.background"]][["fill"]]
-        if (is.null(bckgr) || is.na(bckgr)) {
-          bckgr <- plot[["theme"]][["plot.background"]][["colour"]]
-        } else if (is.null(bckgr) || is.na(bckgr)) {
-          bckgr <- ggplot2::get_theme()$plot.background[["fill"]]
-        } else if (is.null(bckgr) || is.na(bckgr)) {
-          bckgr <- ggplot2::get_theme()$plot.background[["colour"]]
-        } else {
-          bckgr <- "white"
-        }
-        name_anno_args[["text.color"]] <- brathering:::bw_txt(bckgr)
+        bckgr <- get_background_col(plot)
+        name_anno_args[["text.color"]] <- brathering:::bw_txt(bckgr, cutoff = 40)
       }
 
       empty_corner <- brathering::corner_scores(ggobj = plot)
@@ -543,7 +535,7 @@ feature_plot_gene <- function(plot,
                               pt_size = 0.3,
                               pt_size_fct = 1,
                               col_expr = "tomato2",
-                              col_non_expr = "grey85",
+                              col_non_expr = "..auto..",
                               col_binary = F,
                               col_split = "grey30",
                               freq_plot = T,
@@ -559,6 +551,12 @@ feature_plot_gene <- function(plot,
                                        mapping = ggplot2::aes(shape = !!shapeby),
                                        size = pt_size,
                                        color = col_split)
+  }
+
+  if (col_non_expr == "..auto..") {
+    bckgr <- get_background_col(plot)
+    suggest_bw <- brathering:::bw_txt(bckgr, cutoff = 40)
+    col_non_expr <- ifelse(suggest_bw == "white", "black", "grey85")
   }
 
   if (col_binary) {

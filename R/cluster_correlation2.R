@@ -138,6 +138,7 @@ cluster_correlation2 <- function(objs,
     # corr_df <- purrr::reduce(corr_dfs, dplyr::left_join, by = names(objs)[c(1,2)])
     # corr_df[[newcol]] <- purrr::map_dbl(asplit(corr_df[,-c(1,2)], 1), brathering::combine_corrcoeff)
     # long version
+
     corr_df <- purrr::map_dfr(corr_mats,
                               ~brathering::mat_to_df_long(x = .x,
                                                           rownames_to = names(objs)[1],
@@ -151,7 +152,7 @@ cluster_correlation2 <- function(objs,
       dplyr::mutate(!!method := ifelse(!!rlang::sym(ncellcol[2]) < min_cells, NA, !!rlang::sym(method))) |>
       dplyr::mutate(!!newcol := brathering::combine_corrcoeff(!!rlang::sym(method)),
                     .by = c(!!rlang::sym(names(objs)[1]), !!rlang::sym(names(objs)[2]))) |>
-      tidyr::pivot_wider(names_from = !!rlang::sym(split), values_from = c(!!rlang::sym(method), !!rlang::sym(ncellcol1), !!rlang::sym(ncellcol2)))
+      tidyr::pivot_wider(names_from = !!rlang::sym(split), values_from = c(!!rlang::sym(method), !!rlang::sym(ncellcol[1]), !!rlang::sym(ncellcol[2])))
 
     # back to matrix
     corr_mat <- brathering::df_long_to_mat(
@@ -238,7 +239,7 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
   if (methods::is(objs, "Seurat")) {
     objs <- list(objs, objs)
   }
-  objs <- check.SO(objs, assay = assay)
+  objs <- scexpr:::check.SO(objs, assay = assay)
   if (length(meta_cols) == 1) {
     meta_cols <- c(meta_cols, meta_cols)
   }
@@ -260,7 +261,7 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
 
   split_intersect <- NULL
   if (!is.null(split)) {
-    split <- check.features(objs, features = split, rownames = F)
+    split <- scexpr:::check.features(objs, features = split, rownames = F)
     split_intersect <- intersect(objs[[1]]@meta.data[[split]], objs[[2]]@meta.data[[split]])
     if (length(split_intersect) == 0) {
       stop("No intersecting levels in ", split, " column found in SOs.")
@@ -270,6 +271,7 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
       message("not all levels of split in obj1 and obj2 overlap or intersect.")
       message("Intersecting levels: ", paste(split_intersect, collapse = ", "), ".")
     }
+    split_intersect <- as.character(split_intersect)
     names(split_intersect) <- split_intersect
   }
   assay <- match.arg(assay, names(objs[[1]]@assays))
@@ -282,7 +284,7 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
   if (length(features) == 1 && features == "all") {
     features <- Reduce(intersect, purrr::map(objs, rownames))
   } else if (length(features) == 1 && features == "pca") {
-    features2 <- names(check.reduction(objs, reduction = "pca"))
+    features2 <- names(scexpr:::check.reduction(objs, reduction = "pca"))
     if (features != features2) {
       message("using pca: ", features2)
       features <- features2

@@ -524,7 +524,7 @@ get_col_pal <- function(data,
                                    col_pal_args = col_pal_c_args[-which(names(col_pal_c_args) == "name")])
   } else {
     col.pal <- colrr::make_col_pal(col_vec = col_pal_d_args[["name"]],
-                                   fct_lvls = levels(as.factor(data[["feature"]])),
+                                   fct_lvls = levels(forcats::fct_drop(data[["feature"]])), # as.factor
                                    missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_d_args), col_pal_d_args[["missing_fct_to_na"]], T),
                                    col_pal_args = col_pal_d_args[-which(names(col_pal_d_args) %in% c("name", "missing_fct_to_na"))])
     # if (length(col_pal_d_args[["name"]]) == 1 && !col_pal_d_args[["name"]] %in% grDevices::colors()) {
@@ -1673,4 +1673,21 @@ feat.check <- function(SO,
     levels <- c(levels, as.character(unique(SO@meta.data[,meta.col,drop=T])[which(!as.character(unique(SO@meta.data[,meta.col,drop=T])) %in% levels)]))
   }
   return(levels)
+}
+
+get_background_col <- function(plot) {
+  bckgr <- plot[["theme"]][["plot.background"]][["fill"]]
+  if (is.null(bckgr) || is.na(bckgr)) {
+    bckgr <- plot[["theme"]][["plot.background"]][["colour"]]
+  }
+  if (is.null(bckgr) || is.na(bckgr)) {
+    bckgr <- ggplot2::get_theme()$plot.background[["fill"]]
+  }
+  if (is.null(bckgr) || is.na(bckgr)) {
+    bckgr <- ggplot2::get_theme()$plot.background[["colour"]]
+  }
+  if (is.null(bckgr) || is.na(bckgr)) {
+    bckgr <- "white"
+  }
+  return(bckgr)
 }

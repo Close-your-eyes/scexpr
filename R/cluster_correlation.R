@@ -105,8 +105,8 @@ cluster_correlation <- function(SO,
   if (!is.null(split.by) && method != "pearson") {
     warning("Averaging correlation values may only be valid for pearson. See https://stats.stackexchange.com/questions/8019/averaging-correlation-values?noredirect=1&lq=1 .")
   }
-  meta.cols[1] <- check.features(SO[[1]], features = meta.cols[1], rownames = F)
-  meta.cols[2] <- check.features(SO[[2]], features = meta.cols[2], rownames = F)
+  meta.cols[1] <- scexpr:::check.features(SO[[1]], features = meta.cols[1], rownames = F)
+  meta.cols[2] <- scexpr:::check.features(SO[[2]], features = meta.cols[2], rownames = F)
 
   if (length(features) == 1 && features == "all") {
     features <- Reduce(intersect, lapply(SO, function(x) rownames(x)))
@@ -125,7 +125,7 @@ cluster_correlation <- function(SO,
 
   ### list of list, in case splitting is performed
   if (!is.null(split.by)) {
-    split.by <- .check.features(SO, features = split.by, rownames = F)
+    split.by <- scexpr:::check.features(SO, features = split.by, rownames = F)
     intersect_levels <- intersect(SO[[1]]@meta.data[,split.by], SO[[2]]@meta.data[,split.by])
     if (length(intersect_levels) == 0) {
       stop("No intersecting levels in ", split.by, " column found in SOs.")
