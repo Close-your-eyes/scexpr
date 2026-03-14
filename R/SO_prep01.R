@@ -849,11 +849,11 @@ cluster_on_metadata <- function(SO,
       message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
       qc_cols <- qc_cols[-which(qc_cols == "pct_mt")]
     }
+    qc_cols <- paste0(qc_cols, "_log")
+
     if ("dbl_score" %in% names(SO@meta.data)) {
       qc_cols <- c(qc_cols, "dbl_score")
     }
-    qc_cols <- paste0(qc_cols, "_log")
-
     if ("pct_soup_decontX" %in% names(SO@meta.data)) {
       qc_cols <- c(qc_cols, "pct_soup_decontX")
     }

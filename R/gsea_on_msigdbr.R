@@ -39,7 +39,17 @@ gsea_on_msigdbr <- function(gene_ranks,
                             msigdbr_args = list(
                               db_species = "HS",
                               species = "human",
-                              collection = c("C1","C2","C3","C4","C5","C6","C7","C8","H")
+                              collection = c(
+                                "C1",
+                                "C2",
+                                "C3",
+                                "C4",
+                                "C5",
+                                "C6",
+                                "C7",
+                                "C8",
+                                "H"
+                              )
                             ),
                             fgsea_fun = fgsea::fgseaMultilevel,
                             fgsea_args = list(),

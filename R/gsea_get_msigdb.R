@@ -74,11 +74,11 @@
 #' brathering::plot2(ures, size = 2)
 #' }
 gsea_get_msigdb <- function(collection = c("C1","C2","C3","C4","C5","C6","C7","C8","H"),
-                       msigdbr_args = list(
-                         db_species = "HS",
-                         species = "human"),
-                       return = c("list", "df"),
-                       return_df = c("reduced", "full")) {
+                            msigdbr_args = list(
+                              db_species = "HS",
+                              species = "human"),
+                            return = c("list", "df"),
+                            return_df = c("reduced", "full")) {
 
   return <- rlang::arg_match(return)
   return_df <- rlang::arg_match(return_df)

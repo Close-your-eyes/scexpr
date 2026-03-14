@@ -125,6 +125,7 @@ SO_prep02 <- function(SO_unprocessed,
 
   mydots <- list(...)
   options(warn = 1)
+  options(future.globals.maxSize = 8000 * 1024^2)
 
   reductions <- match.arg(tolower(reductions), c("umap", "som", "gqtsom", "tsne"), several.ok = T)
   normalization <- rlang::arg_match(normalization)
@@ -601,7 +602,6 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
     stop("SO_unprocessed has no names.")
   }
 
-
   # create objects from scratch to rm all previous traces like commands or so
   SO_unprocessed <- parallel::mclapply(SO_unprocessed, function(x) {
     get_layer(obj = x, assay = "RNA", layer = "counts") |>
@@ -609,6 +609,20 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
       SeuratObject::AddMetaData(x@meta.data) |>
       Seurat::NormalizeData(verbose = F, assay = "RNA")
   }, mc.cores = parallel::detectCores()-2)
+
+  if (batch_corr == "harmony") {
+    ids <- unlist(purrr::map(SO_unprocessed, ~unique(.x@meta.data[[RunHarmony_args[["group.by.vars"]]]])))
+    if (anyDuplicated(ids)) {
+      message("duplicate harmony group.by.vars found across SO. this may be unexpected.")
+    }
+    if (length(unique(ids)) == 1) {
+      message("only one harmony group.by.vars found. setting to names of SO.")
+      SO_unprocessed <- purrr::map(names(SO_unprocessed), function(x) {
+        SO_unprocessed[[x]]@meta.data[[RunHarmony_args[["group.by.vars"]]]] <- x
+        return(SO_unprocessed[[x]])
+      })
+    }
+  }
 
   if (is.null(samples)) {
     samples <- names(SO_unprocessed)
@@ -1294,7 +1308,6 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                      RunPCA_args))
   }
   SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
-
 
   if (batch_corr == "harmony") {
     RunHarmony_args <- RunHarmony_args[which(!names(RunHarmony_args) %in% c("object", "assay.use", "verbose"))]

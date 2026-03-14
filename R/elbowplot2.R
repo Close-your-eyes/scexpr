@@ -22,9 +22,12 @@ elbowplot2 <- function(obj,
     }
   }
 
-  out <- purrr::map(names(obj), function(x) {
+  out <- purrr::map(purrr::set_names(names(obj)), function(x) {
 
     pca <- tryCatch(expr = {
+      if (assay == "SCT") {
+        stop("This is a forced error")
+      }
       stats::prcomp(scexpr::get_layer(obj[[x]],
                                       assay = assay,
                                       layer = "scale.data",
@@ -71,9 +74,24 @@ elbowplot2 <- function(obj,
   })
 
   plist <- sapply(out, "[", 2)
-  df <- dplyr::bind_rows(sapply(out, "[", 1), .id = "obj")
+  df <- dplyr::bind_rows(purrr::set_names(sapply(out, "[", 1), names(out)), .id = "obj")
 
-  return(list(data = df, plot = patchwork::wrap_plots(plist, nrow = 1, axis_titles = "collect_y")))
+
+  plot_var <- ggplot2::ggplot(df, ggplot2::aes(x = pc, y = var, color = obj)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_point() +
+    ggplot2::scale_y_sqrt() +
+    ggplot2::scale_x_continuous() +
+    theme
+
+  plot_var_pct <- ggplot2::ggplot(df, ggplot2::aes(x = pc, y = var_pct, color = obj)) +
+    ggplot2::geom_line() +
+    ggplot2::geom_point() +
+    ggplot2::scale_x_continuous() +
+    theme
+
+  return(list(data = df, plot = patchwork::wrap_plots(plist, nrow = 1, axis_titles = "collect_y"),
+              plot_var = plot_var, plot_var_pct = plot_var_pct))
 
   # fit <- nls.multstart::nls_multstart(
   #   var ~ a * exp(-b * pc) + c,
@@ -119,3 +137,12 @@ elbowplot2 <- function(obj,
   # return(patchwork::wrap_plots(p1,p2,ncol = 1, axes = "collect_x"))
 
 }
+
+get_pca_captured_var <- function(obj, reduction = "pca") {
+
+  sum(obj@reductions[[reduction]]@stdev^2)
+  message("total var is approx. equal to nhvf (when pca was on scaled data): ", nrow(obj@reductions[[reduction]]@feature.loadings))
+}
+
+
+
