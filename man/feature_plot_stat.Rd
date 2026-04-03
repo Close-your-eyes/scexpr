@@ -2,56 +2,130 @@
 % Please edit documentation in R/feature_plot_stat.R
 \name{feature_plot_stat}
 \alias{feature_plot_stat}
-\title{Title}
+\title{Plot Feature Expression with Optional Statistics}
 \usage{
 feature_plot_stat(
   SO,
   features,
-  meta_col,
-  assay = "RNA",
-  layer = "data",
+  meta_col = "orig.ident",
+  get_data_args = list(assay = "RNA", layer = "data", cells = NULL),
   geom1 = c("jitter", "point"),
   geom2 = c("boxplot", "violin", "none"),
   plot_first = c("geom1", "geom2"),
   jitterwidth = 0.2,
   dodgewidth = 0.9,
-  label.size = 4,
-  label.angle = 0,
-  plot.expr.freq = F,
-  expr.freq.decimals = 2,
-  expr.freq.pct = F,
-  expr.freq.hjust = 0.3,
-  plot.non.expr = T,
-  plot.strip = T,
-  cells = NULL,
-  downsample = 1,
-  legend.title = "SO.split",
-  split.by = NULL,
-  pt.size = 0.5,
-  col.pal = colrr::col_pal("custom"),
-  col.na = "grey50",
+  expr_freq_size = 4,
+  expr_freq_angle = 90,
+  expr_freq_decimals = 2,
+  expr_freq_pct = F,
+  expr_freq_hjust = 0.3,
+  plot_non_expr = T,
+  plot_strip = T,
+  legend_title = "object",
+  pt_size = 0.5,
+  col_pal = colrr::col_pal("custom"),
+  col_na = "grey50",
   col_pal_args = list(missing_fct_to_na = T),
-  feature.aliases = NULL,
   feature_cut = NULL,
   feature_cut_expr = 0,
   feature_ex = NULL,
   theme = ggplot2::theme_bw(),
-  geom2_args = list(outlier.shape = NA),
+  geom2_args = list(outlier.shape = NA, alpha = 0.8),
   facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins"),
   axis_expansion_y_mult = c(0.02, 0.2)
 )
 }
 \arguments{
-\item{plot.expr.freq}{to plot labels of expression frequencies}
+\item{SO}{A Seurat object or a list of Seurat objects.}
 
-\item{expr.freq.decimals}{decimal precision of frequency labels}
+\item{features}{Character vector of feature names (e.g., genes) to plot.}
 
-\item{expr.freq.pct}{plot expression frequency in percent?}
+\item{meta_col}{Character scalar specifying the metadata column used for grouping.}
 
-\item{plot.non.expr}{do plot dots of non-expressers (0 UMIs)}
+\item{get_data_args}{List of arguments passed to \code{get_data()}, including
+\code{assay}, \code{layer}, and \code{cells}.}
 
-\item{axis_expansion_y_mult}{}
+\item{geom1}{Character. Type of point layer to use: \code{"jitter"} or \code{"point"}.}
+
+\item{geom2}{Character. Secondary geometry: \code{"boxplot"}, \code{"violin"}, or \code{"none"}.}
+
+\item{plot_first}{Character. Which geometry to plot first: \code{"geom1"} or \code{"geom2"}.}
+
+\item{jitterwidth}{Numeric. Width of jitter for point placement.}
+
+\item{dodgewidth}{Numeric. Width for position dodging.}
+
+\item{expr_freq_size}{Numeric. Text size for expression frequency labels; set to 0 to disable.}
+
+\item{expr_freq_angle}{Numeric. Angle of expression frequency text labels.}
+
+\item{expr_freq_decimals}{Integer. Number of decimal places for expression frequency.}
+
+\item{expr_freq_pct}{Logical. Whether to display expression frequency as percentage.}
+
+\item{expr_freq_hjust}{Numeric. Vertical offset for expression frequency labels.}
+
+\item{plot_non_expr}{Logical. Whether to include cells with zero expression.}
+
+\item{plot_strip}{Logical. Whether to display facet strip labels.}
+
+\item{legend_title}{Character. Title for the legend (used when multiple objects are provided).}
+
+\item{pt_size}{Numeric. Size of points in the plot.}
+
+\item{col_pal}{Color palette (vector or function) used for coloring groups.}
+
+\item{col_na}{Color used for missing values.}
+
+\item{col_pal_args}{List of additional arguments passed to \code{colrr::make_col_pal()}.}
+
+\item{feature_cut}{Optional filtering threshold for feature inclusion.}
+
+\item{feature_cut_expr}{Numeric. Expression threshold used with \code{feature_cut}.}
+
+\item{feature_ex}{Optional vector of features to exclude.}
+
+\item{theme}{A ggplot2 theme object applied to the plot.}
+
+\item{geom2_args}{List of additional arguments passed to the secondary geometry.}
+
+\item{facetting_args}{List of arguments passed to \code{ggplot2::facet_wrap()}.}
+
+\item{axis_expansion_y_mult}{Numeric vector of length 2 controlling y-axis expansion.}
+}
+\value{
+A \code{ggplot2} object.
 }
 \description{
-Title
+Creates faceted expression plots for one or more features (e.g., genes)
+from a Seurat object, grouped by a metadata column. Supports jitter/point
+overlays, violin/boxplots, and optional annotation of the percentage of
+expressing cells per group.
+}
+\details{
+The function extracts expression data using \code{get_data()} and visualizes
+it across groups defined by \code{meta_col}. Multiple features are displayed
+as facets. Optionally, the percentage (or fraction) of expressing cells
+(expression > 0) is computed per group and displayed as text annotations.
+
+When multiple Seurat objects are provided, they are combined and colored
+according to their origin. Custom color palettes are generated using the
+\pkg{colrr} package.
+}
+\examples{
+\dontrun{
+feature_plot_stat(
+  SO = seurat_obj,
+  features = c("CD3D", "MS4A1"),
+  meta_col = "cell_type",
+  geom1 = "jitter",
+  geom2 = "violin",
+  expr_freq_pct = TRUE
+)
+}
+
+}
+\seealso{
+\code{\link[ggplot2]{geom_point}}, \code{\link[ggplot2]{geom_violin}},
+\code{\link[ggplot2]{geom_boxplot}}
 }

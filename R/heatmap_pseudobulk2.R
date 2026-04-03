@@ -23,7 +23,7 @@
 #' if NULL and features is NULL, all features are plotted
 #' @param topn_metric which differential expression metric to apply for feature
 #' selection; only relevant if features_topn is not NULL
-#' @param min_pct for marker feature selection per only: min fraction of expressing
+#' @param min_pct for marker feature selection per only: min percent of expressing
 #' cells for a gene to become marker gene for a group
 #' @param max_padj for marker feature selection per only: max adjusted
 #' p-value for a gene to become marker gene
@@ -79,7 +79,7 @@
 #' @param featuregroup_style how to show feature groups, by colored axis text and/or separate facets
 #' @param featuregroup_col_name color legend name
 #' @param featuregroup_col_pal color palette name passed to colrr::col_pal
-#' @param min_pct_force
+#' @param min_pct_force apply min_pct even when features are given
 #'
 #' @importFrom zeallot %<-%
 #'
@@ -96,9 +96,9 @@ heatmap_pseudobulk2 <- function(SO,
                                 levels_calc = NULL,
                                 levels_plot = NULL,
                                 assay = "RNA",
-                                min_pct = 0.1,
+                                min_pct = 20,
                                 max_padj = 0.05,
-                                min_pct_force = F,
+                                min_pct_force = T,
                                 features = NULL,
                                 featuregroup_style = c("facet", "color"),
                                 featuregroup_col_name = "",
@@ -273,6 +273,12 @@ heatmap_pseudobulk2 <- function(SO,
       dplyr::filter(pct_in >= min_pct) |>
       dplyr::filter(group %in% unlist(levels_plot)) |>
       dplyr::pull(feature)
+    rm_feat <- setdiff(as.character(unique(wil_auc$feature)), select)
+    if (length(rm_feat)) {
+      message("features rm due to min_pct and min_pct_force (", length(rm_feat), "):")
+      message(paste(rm_feat, collapse = ", "))
+    }
+
     wil_auc <- wil_auc[which(wil_auc[["feature"]] %in% select),,drop = F]
   }
   # filter here after feature selection

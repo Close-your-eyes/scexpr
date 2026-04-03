@@ -32,6 +32,8 @@ volcano01_calc(
 
 \item{assay}{which assay to get expression data from}
 
+\item{layer}{which data layer}
+
 \item{neg_cells}{vector of cell names for the negative group of cells; genes which
 are expressed at higher level in this group will have a negative sign (minus); use Seurat::Cells()
 or Seurat::WhichCells() to select or use filter operations on SO@meta.data to select cells;
@@ -53,10 +55,14 @@ custom: matrixTests::row_wilcoxon_twosample w/o any modelling}
 are not left infinite but will be put at: "largest finite fold-change +/- fc_inf_squish"; such genes are indicated
 specifically}
 
+\item{p_zero_squish}{scales::oob_squish(df$p_val_adj, range = c(min(df$p_val_adj)/10^p_zero_squish, 1))}
+
 \item{min_pct}{numeric; only consider genes for the volcano plot which are expressed at least by this
 fraction of cells at least one group (neg_cells or pos_cells)}
 
 \item{p_adj}{method for p-value adjustment}
+
+\item{fc_thresh}{logfc.threshold in Seurat::FindMarkers}
 
 \item{mc.cores}{mc cores for parallel computing when method is MAST}
 

@@ -4,14 +4,7 @@
 \alias{find_markers_pairwise}
 \title{Find marker genes in pairwise comparisons}
 \usage{
-find_markers_pairwise(
-  obj,
-  group,
-  split = NULL,
-  mc.cores = 1,
-  redundant_return = T,
-  ...
-)
+find_markers_pairwise(obj, group, split = NULL, mc.cores = 1, ...)
 }
 \arguments{
 \item{obj}{Seurat object}
@@ -21,11 +14,6 @@ find_markers_pairwise(
 \item{split}{column in obj to split by before marker calculation}
 
 \item{mc.cores}{multiple threads?}
-
-\item{redundant_return}{with utils::combn unique combinations of ident.1 and
-ident.2 are calculation and returned as list of lists; by default this is
-made redundant by adding the flip order of ident.1 and ident.2 to create
-returned list of lists; with}
 
 \item{...}{arguments to Seurat::FindMarkers}
 }

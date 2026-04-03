@@ -99,7 +99,12 @@ feature_plot2(
   split_feature = NULL,
   shape_feature = NULL,
   title = NULL,
-  axes_arrows = F
+  axes_arrows = F,
+  img_plot = F,
+  img_subset_fct = 4,
+  img_col_conv_fun = colrr::hex_to_grey,
+  cell_hull_plot = F,
+  cell_hull_args = list(color = "grey30", linewidth = 0.1, alpha = 1)
 )
 }
 \arguments{

@@ -82,7 +82,13 @@ gsea_get_msigdb <- function(collection = c("C1","C2","C3","C4","C5","C6","C7","C
 
   return <- rlang::arg_match(return)
   return_df <- rlang::arg_match(return_df)
-  collection <- rlang::arg_match(collection, multiple = T)
+
+  if (msigdbr_args$db_species == "HS") {
+    collection <- rlang::arg_match(collection, values = c("C1","C2","C3","C4","C5","C6","C7","C8","H"), multiple = T)
+  } else if (msigdbr_args$db_species == "MM") {
+    collection <- rlang::arg_match(collection, values = c("M1", "M2", "M3", "M5", "M7", "M8", "MH"), multiple = T)
+  }
+
 
   sets <- purrr::map_dfr(collection, function(x) {
     y <- Gmisc::fastDoCall(what = msigdbr::msigdbr,

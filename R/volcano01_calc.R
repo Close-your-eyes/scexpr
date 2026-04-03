@@ -20,9 +20,9 @@
 #' @param method backend for DE calculation; any method from Seurat::FindMarkers;
 #' limma: intended for subsequent use MetaVolcanoR
 #' custom: matrixTests::row_wilcoxon_twosample w/o any modelling
-#' @param layer
-#' @param p_zero_squish
-#' @param fc_thresh
+#' @param layer which data layer
+#' @param p_zero_squish scales::oob_squish(df$p_val_adj, range = c(min(df$p_val_adj)/10^p_zero_squish, 1))
+#' @param fc_thresh logfc.threshold in Seurat::FindMarkers
 #' @param feature_plot_args
 #' @param mc.cores mc cores for parallel computing when method is MAST
 #' @param ... arguments to Seurat::FindMarkers

@@ -19,6 +19,21 @@
 hs_mm_ortholog_table <- function(features_hs,
                                  features_mm) {
 
+  ## get mouse orthologues
+  # mouse <- biomaRt::useMart("ensembl", dataset = "mmusculus_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
+  # human <- biomaRt::useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
+  #
+  #
+  # orthologs <- biomaRt::getLDS(
+  #   attributes = c("hgnc_symbol"),
+  #   filters    = "hgnc_symbol",
+  #   values     = marker4,
+  #   mart       = human,
+  #   attributesL = c("mgi_symbol"),
+  #   martL      = mouse
+  # )
+  # markerdf2tecprg_sub2 <- markerdf2tecprg_sub |>
+  #   dplyr::left_join(orthologs, by = c("feature" = "HGNC.symbol"))
 
   if (!requireNamespace("remotes", quietly = T)) {
     utils::install.packages("remotes")

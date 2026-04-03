@@ -29,7 +29,8 @@ SO_prep01(
   reduction = c("tsne", "umap"),
   diet_seurat = T,
   sample_prefix_to_cell_id = T,
-  early_exit = F
+  early_exit = F,
+  mc.cores = 1
 )
 }
 \arguments{
@@ -83,7 +84,7 @@ is simply done by addition; aggregation is done before feature removal (if featu
 
 \item{batch_corr}{which batch correction to apply for integration of different samples}
 
-\item{early_exit}{}
+\item{mc.cores}{}
 }
 \value{
 a list of Seurat object and data frame with marker genes for clusters based on feature expression

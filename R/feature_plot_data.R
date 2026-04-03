@@ -226,7 +226,12 @@ feature_plot_data <- function(data,
                               contour_path_label = NULL,
                               order_discr_explicit = NULL,
                               plot_all_across_split = F,
-                              axes_arrows) {
+                              axes_arrows,
+                              img_df = NULL,
+                              hull_df = NULL,
+                              cell_hull_args = list(color = "grey30",
+                                                    linewidth = 0.1,
+                                                    alpha = 1)) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -294,15 +299,36 @@ feature_plot_data <- function(data,
 
   # get color palette
   col.pal <- get_col_pal(data = data,
-                                  col_pal_c_args = col_pal_c_args,
-                                  col_pal_d_args = col_pal_d_args)
+                         col_pal_c_args = col_pal_c_args,
+                         col_pal_d_args = col_pal_d_args)
 
   data <- scexpr:::check.aliases(feature = attr(data, "feature"), feature_alias, data)
 
   # excluded cells
   shapeby <- tryCatch(rlang::sym(attr(data, "shape_feature")), error = function(e) NULL)
-  plot <-
-    ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(attr(data, "dim1")), y = !!rlang::sym(attr(data, "dim2")))) +
+
+
+  plot <- ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(attr(data, "dim1")), y = !!rlang::sym(attr(data, "dim2"))))
+
+  ## spatial data section
+
+  if (!is.null(img_df)) {
+    names(img_df)[c(1,2)] <- c(attr(data, "dim1"), attr(data, "dim2"))
+    plot <- plot +
+      ggplot2::geom_raster(data = img_df, ggplot2::aes(fill = color)) +
+      ggplot2::scale_fill_identity()
+  }
+
+  if (!is.null(hull_df)) {
+    names(hull_df)[c(1,2)] <- c(attr(data, "dim1"), attr(data, "dim2"))
+    plot <- plot +
+      ggnewscale::new_scale_fill() +
+      Gmisc::fastDoCall(ggplot2::geom_polygon,
+                        args = c(cell_hull_args, list(data = hull_df,
+                                                      mapping = ggplot2::aes(group = z))))
+  }
+
+  plot <- plot +
     ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells) +
     theme +
     Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
@@ -400,7 +426,7 @@ feature_plot_data <- function(data,
     if ("annotation" %in% name_anno_pos) {
 
       if (!"text.color" %in% names(name_anno_args) || name_anno_args[["text.color"]] == "..auto..") {
-        bckgr <- get_background_col(plot)
+        bckgr <- scexpr:::get_background_col(plot)
         name_anno_args[["text.color"]] <- brathering:::bw_txt(bckgr, cutoff = 40)
       }
 
@@ -489,8 +515,16 @@ feature_plot_data <- function(data,
 
   }
 
+
   if (axes_arrows) {
-    plot <- brathering::gg_axes_arrows(plot)
+    bckgr <- scexpr:::get_background_col(plot)
+    suggest_bw <- brathering:::bw_txt(bckgr, cutoff = 40)
+    plot <- brathering::gg_axes_arrows(plot,
+                                       annotate_args = list(size = 3, color = suggest_bw),
+                                       arrow_args = list(angle = 25,
+                                                         length = grid::unit(0.2, "cm"),
+                                                         type = "open"),
+                                       segment_args = list(linewidth = 0.2, color = suggest_bw))
   }
 
 
@@ -554,7 +588,7 @@ feature_plot_gene <- function(plot,
   }
 
   if (col_non_expr == "..auto..") {
-    bckgr <- get_background_col(plot)
+    bckgr <- scexpr:::get_background_col(plot)
     suggest_bw <- brathering:::bw_txt(bckgr, cutoff = 40)
     col_non_expr <- ifelse(suggest_bw == "white", "black", "grey85")
   }
@@ -564,10 +598,11 @@ feature_plot_gene <- function(plot,
       message("col_binary (+/-) may not be meaningful as there are negative expression values for ", attr(plot[["data"]], "feature"), ".")
     }
     plot[["data"]][["valuebin"]] <- ifelse(plot[["data"]][["feature"]] > 0, "+", "-")
-    plot <- plot + ggplot2::geom_point(
-      data = ~dplyr::filter(., cells == 1),
-      mapping = ggplot2::aes(shape = !!shapeby, color = valuebin),
-      size = pt_size*pt_size_fct) +
+    plot <- plot +
+      ggplot2::geom_point(
+        data = ~dplyr::filter(., cells == 1),
+        mapping = ggplot2::aes(shape = !!shapeby, color = valuebin),
+        size = pt_size*pt_size_fct) +
       ggplot2::scale_color_manual(values = c(col_non_expr, col_expr))
   } else {
     # non-expressers

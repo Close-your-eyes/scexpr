@@ -293,7 +293,14 @@ feature_plot2 <- function(
     split_feature = NULL,
     shape_feature = NULL,
     title = NULL,
-    axes_arrows = F
+    axes_arrows = F,
+    img_plot = F,
+    img_subset_fct = 4,
+    img_col_conv_fun = colrr::hex_to_grey,
+    cell_hull_plot = F,
+    cell_hull_args = list(color = "grey30",
+                          linewidth = 0.1,
+                          alpha = 1)
 ) {
 
   ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
@@ -345,6 +352,22 @@ feature_plot2 <- function(
                                                            feature_cut_expr = feature_cut_expr,
                                                            feature_ex = feature_ex),
                                                       get_data_args))
+
+  if (img_plot) {
+    img_df <- get_img(
+      obj = SO,
+      subset_factor = img_subset_fct,
+      col_conv_fun = img_col_conv_fun)
+  } else {
+    img_df <- NULL
+  }
+
+  if (cell_hull_plot) {
+    hull_df <- get_cell_hulls(obj = SO)
+  } else {
+    hull_df <- NULL
+  }
+
 
   plots <- purrr::map(data, ~Gmisc::fastDoCall(what = feature_plot_data,
                                                args = list(data = .x,
@@ -407,7 +430,10 @@ feature_plot2 <- function(
                                                            contour_path_label = contour_path_label,
                                                            col_split = col_split,
                                                            plot_all_across_split = plot_all_across_split,
-                                                           axes_arrows = axes_arrows)
+                                                           axes_arrows = axes_arrows,
+                                                           img_df = img_df,
+                                                           hull_df = hull_df,
+                                                           cell_hull_args = cell_hull_args)
   ))
 
   if (!is.null(strip_select)) {

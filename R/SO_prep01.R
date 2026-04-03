@@ -60,6 +60,8 @@
 #' @param SoupX_autoEstCont_args
 #' @param sample_prefix_to_cell_id
 #' @param early_exit
+#' @param reduction
+#' @param mc.cores
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -91,7 +93,8 @@ SO_prep01 <- function(data_dirs,
                       reduction = c("tsne", "umap"),
                       diet_seurat = T,
                       sample_prefix_to_cell_id = T,
-                      early_exit = F) {
+                      early_exit = F,
+                      mc.cores = 1) {
 
 
   install_pkgs(SoupX, scDblFinder, decontX)
@@ -126,7 +129,7 @@ SO_prep01 <- function(data_dirs,
   #SoupX_return <- T
 
   message("Reading filtered_feature_bc_matrix data.")
-  SO <- purrr::map(stats::setNames(names(ffbms), names(ffbms)), function(x) {
+  SO <- parallel::mclapply(stats::setNames(names(ffbms), names(ffbms)), function(x) {
 
     message(x)
     # this adds folder name prefix to cell names
@@ -158,7 +161,7 @@ SO_prep01 <- function(data_dirs,
                                       npcs = npcs)
     }
     return(SO)
-  })
+  }, mc.cores = mc.cores)
 
   if (early_exit) {
     return(SO)

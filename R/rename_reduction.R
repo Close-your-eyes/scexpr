@@ -15,14 +15,14 @@ rename_reduction <- function(obj,
                              reduction,
                              new_name) {
 
-  reduction <- scexpr:::check.reduction(SO = obj,
-                                        reduction = reduction)
+  # reduction <- scexpr:::check.reduction(SO = obj,
+  #                                       reduction = reduction)
 
   if (new_name %in% names(obj@reductions)) {
     stop("new name already exists in obj@reductions")
   }
 
-  names(obj@reductions)[reduction] <- new_name
+  names(obj@reductions)[which(names(obj@reductions) == reduction)] <- new_name
   obj@reductions[[new_name]]@key <- paste0(new_name, "_")
   colnames(obj@reductions[[new_name]]@cell.embeddings) <- paste0(new_name, "_", seq(1,ncol(obj@reductions[[new_name]]@cell.embeddings),1))
 

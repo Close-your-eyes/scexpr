@@ -34,7 +34,7 @@ silhoutte_plot <- function(obj,
     theme +
     ggplot2::scale_color_manual(values = col_pal) +
     ggplot2::scale_fill_manual(values = col_pal) +
-    theme(axis.text.x = ggplot2::element_blank(),
+    ggplot2::theme(axis.text.x = ggplot2::element_blank(),
           axis.title.x = ggplot2::element_blank(),
           axis.ticks.x = ggplot2::element_blank()) +
     ggplot2::labs(y = "silhouette width", color = clustering, fill = clustering)

@@ -15,7 +15,7 @@ SO_prep02(
   reductions = c("umap"),
   nhvf = 800,
   npcs = 20,
-  normalization = c("SCT", "LogNormalize"),
+  normalization = c("SCT", "LogNormalize", "RNA"),
   hvf_determination_before_merge = F,
   batch_corr = c("harmony", "integration", "none"),
   vars.to.regress = NULL,
@@ -27,10 +27,11 @@ SO_prep02(
   celltype_ref_clusters = NULL,
   diet_seurat = F,
   var_feature_filter = NULL,
+  var_feature_set = NULL,
   verbose = F,
   FindVariableFeatures_args = list(),
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = F),
-  RunPCA_args = list(),
+  RunPCA_args = list(weight.by.var = TRUE),
   RunUMAP_args = list(),
   RunTSNE_args = list(theta = 0.01),
   FindNeighbors_args = list(dims = 1:npcs),
@@ -74,7 +75,8 @@ or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures}
 \item{npcs}{number of principle components in calculate in pca and to
 consider for downstream functions like tSNE or UMAP}
 
-\item{normalization}{algorithm for normalization of UMIs}
+\item{normalization}{algorithm for normalization of UMIs, RNA and LogNormalize
+are the same}
 
 \item{hvf_determination_before_merge}{determine variable features before or after merging multiple samples;
 either by the standard LogNormalize workflow or by SCTransform function; this is most important for
@@ -112,6 +114,8 @@ when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay:
 this will affect downstream PCA, dimension reduction and clustering;
 e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]), value = T) to
 exclude T cell receptor gene segments}
+
+\item{var_feature_set}{set hvf manually}
 
 \item{verbose}{print messages and progress bars from functions}
 

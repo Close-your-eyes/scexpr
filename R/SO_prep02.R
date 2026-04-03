@@ -15,7 +15,8 @@
 #' or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures
 #' @param npcs number of principle components in calculate in pca and to
 #' consider for downstream functions like tSNE or UMAP
-#' @param normalization algorithm for normalization of UMIs
+#' @param normalization algorithm for normalization of UMIs, RNA and LogNormalize
+#' are the same
 #' @param batch_corr procedure for batch correction between samples in SO_unprocessed;
 #' only relevant if more than 1 sample is passed
 #' @param vars.to.regress passed to Seurat::SCTransform or Seurat::ScaleData; will be applied
@@ -62,6 +63,7 @@
 #' @param interactive_varfeat_selection only applies when hvf_determination_before_merge = F
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
 #' @param interactive_pc_selection do conduct interactive PC selection?
+#' @param var_feature_set set hvf manually
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -81,7 +83,7 @@ SO_prep02 <- function(SO_unprocessed,
                       reductions = c("umap"),
                       nhvf = 800,
                       npcs = 20,
-                      normalization = c("SCT", "LogNormalize"),
+                      normalization = c("SCT", "LogNormalize", "RNA"),
                       hvf_determination_before_merge = F,
                       batch_corr = c("harmony", "integration", "none"),
                       vars.to.regress = NULL,
@@ -93,6 +95,7 @@ SO_prep02 <- function(SO_unprocessed,
                       celltype_ref_clusters = NULL,
                       diet_seurat = F,
                       var_feature_filter = NULL,
+                      var_feature_set = NULL,
                       verbose = F,
                       FindVariableFeatures_args = list(),
                       SCtransform_args = list(
@@ -100,7 +103,7 @@ SO_prep02 <- function(SO_unprocessed,
                         method = "glmGamPoi",
                         conserve.memory = F
                       ),
-                      RunPCA_args = list(),
+                      RunPCA_args = list(weight.by.var = TRUE),
                       RunUMAP_args = list(),
                       RunTSNE_args = list(theta = 0.01),
                       FindNeighbors_args = list(dims = 1:npcs),
@@ -125,10 +128,19 @@ SO_prep02 <- function(SO_unprocessed,
 
   mydots <- list(...)
   options(warn = 1)
+
   options(future.globals.maxSize = 8000 * 1024^2)
+
+  # options(parallelly.availableCores.custom = function() {
+  #   ncores <- max(parallel::detectCores(), 1L, na.rm = TRUE)
+  #   ncores <- min(as.integer(0.75 * ncores), 4L)
+  #   max(1L, ncores)
+  # })
+
 
   reductions <- match.arg(tolower(reductions), c("umap", "som", "gqtsom", "tsne"), several.ok = T)
   normalization <- rlang::arg_match(normalization)
+  normalization <- ifelse(normalization == "RNA", "LogNormalize", normalization)
   batch_corr <- rlang::arg_match(batch_corr)
   downsample_method <- rlang::arg_match(downsample_method)
   save_ext <- rlang::arg_match(save_ext)
@@ -157,6 +169,8 @@ SO_prep02 <- function(SO_unprocessed,
     stop("save_path has to be a character; a path to a folder where to save Seurat objects to.")
   }
 
+  if (length(SO_unprocessed) == 1) {batch_corr <- "none"}
+
   celltype_label <- check_celltype_refs(celltype_refs, celltype_label)
   check_RunPCA_args(RunPCA_args)
   check_celltype_ref_clusters(celltype_ref_clusters,
@@ -164,19 +178,23 @@ SO_prep02 <- function(SO_unprocessed,
                               normalization,
                               FindClusters_args)
 
-  c(SO_unprocessed, samples) %<-% check_SO_unprocessed_and_samples(SO_unprocessed,
-                                                                   samples,
-                                                                   batch_corr,
-                                                                   RunHarmony_args,
-                                                                   verbose)
+  c(SO_unprocessed, samples) %<-% check_SO_unprocessed_and_samples(SO_unprocessed = SO_unprocessed,
+                                                                   samples = samples,
+                                                                   batch_corr = batch_corr,
+                                                                   RunHarmony_args = RunHarmony_args,
+                                                                   verbose = verbose,
+                                                                   cells = cells,
+                                                                   downsample = downsample,
+                                                                   min_cells = min_cells,
+                                                                   downsample_method = downsample_method)
 
 
-  SO_unprocessed <- subset_SO_unprocessed(
-    SO_unprocessed = SO_unprocessed,
-    cells = cells,
-    downsample = downsample,
-    min_cells = min_cells,
-    downsample_method = downsample_method)
+  # SO_unprocessed <- subset_SO_unprocessed(
+  #   SO_unprocessed = SO_unprocessed,
+  #   cells = cells,
+  #   downsample = downsample,
+  #   min_cells = min_cells,
+  #   downsample_method = downsample_method)
 
   if (length(SO_unprocessed) == 1) {batch_corr <- "none"}
 
@@ -190,6 +208,7 @@ SO_prep02 <- function(SO_unprocessed,
   if (interactive_pc_selection) {
     npcs <- max(50, npcs)
   }
+
 
   # cases:
   if (length(SO_unprocessed) == 1) {
@@ -206,7 +225,8 @@ SO_prep02 <- function(SO_unprocessed,
                          npcs,
                          interactive_varfeat_selection,
                          interactive_varfeat_selection_inds,
-                         interactive_pc_selection)
+                         interactive_pc_selection,
+                         var_feature_set)
   } else if (length(SO_unprocessed) > 1) {
     if (batch_corr %in% c("none", "harmony")) {
       SO <- make_so_multi_harmony(SO_unprocessed,
@@ -225,7 +245,8 @@ SO_prep02 <- function(SO_unprocessed,
                                   hvf_determination_before_merge,
                                   interactive_varfeat_selection,
                                   interactive_varfeat_selection_inds,
-                                  interactive_pc_selection)
+                                  interactive_pc_selection,
+                                  var_feature_set)
     } else if (batch_corr == "integration") {
       SO <- make_so_multi_integrate(SO_unprocessed,
                                     normalization,
@@ -243,10 +264,12 @@ SO_prep02 <- function(SO_unprocessed,
                                     npcs,
                                     interactive_varfeat_selection,
                                     interactive_varfeat_selection_inds,
-                                    interactive_pc_selection)
+                                    interactive_pc_selection,
+                                    var_feature_set)
     }
   }
 
+  rm(SO_unprocessed)
   nhvf <- length(Seurat::VariableFeatures(SO))
 
   ### do.call on large SeuratObject became super slow, not practicable!
@@ -266,7 +289,7 @@ SO_prep02 <- function(SO_unprocessed,
     tryCatch(expr = {
       SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
                                                              reduction = red,
-                                                            reduction.name = paste0("umap_", red),
+                                                             reduction.name = paste0("umap_", red),
                                                              seed.use = seeed,
                                                              verbose = verbose),
                                                         RunUMAP_args))
@@ -336,6 +359,7 @@ SO_prep02 <- function(SO_unprocessed,
     SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"), misc = list(GQTSOM_args, EmbedSOM_args))
   }
 
+  message("FindNeighbors and FindClusters")
   FindNeighbors_args <- FindNeighbors_args[which(!names(FindNeighbors_args) %in% c("object", "reduction", "verbose"))]
   if (!"dims" %in% names(FindNeighbors_args)) {
     FindNeighbors_args <- c(list(dims = 1:npcs), FindNeighbors_args)
@@ -350,10 +374,28 @@ SO_prep02 <- function(SO_unprocessed,
 
   names_wo_clust <- names(SO@meta.data)
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
-  SO <- Gmisc::fastDoCall(Seurat::FindClusters, args = c(list(object = SO,
-                                                              graph.name = names(SO@graphs)[2], # snn
-                                                              verbose = verbose),
-                                                         FindClusters_args))
+  if (!"resolution" %in% names(FindClusters_args)) {
+    FindClusters_args[["resolution"]] <- 0.8
+  }
+
+  cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
+                           snn = SO@graphs[[names(SO@graphs)[2]]],
+                           args = FindClusters_args,
+                           FUN = function(x, snn, args) {
+                             args$resolution <- x
+                             Gmisc::fastDoCall(Seurat::FindClusters,
+                                               args = c(list(object = snn,
+                                                             verbose = F),
+                                                        args))
+                           }, mc.cores = 8)
+  cl <- dplyr::bind_cols(cl)
+  names(cl) <- paste0(names(SO@graphs)[2], "_", names(cl))
+  SO <- Seurat::AddMetaData(SO, cl)
+
+  # SO <- Gmisc::fastDoCall(Seurat::FindClusters, args = c(list(object = SO,
+  #                                                             graph.name = names(SO@graphs)[2], # snn
+  #                                                             verbose = verbose),
+  #                                                        FindClusters_args))
 
   # add clusterings and their colors to Misc
   names_w_clust <- names(SO@meta.data)
@@ -404,18 +446,20 @@ SO_prep02 <- function(SO_unprocessed,
   try(expr = {
     # quick to calculate
     # save disk space
-    SO@assays[["RNA"]]@layers[["scale.data"]] <- matrix(NA)
+    SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
+   # SO@assays[["RNA"]]@layers[["scale.data"]] <- matrix(NA)
   }, silent = T)
 
 
-  if (verbose) {
-    message("saving to disk.")
-  }
+
   save.time <- format(as.POSIXct(Sys.time(), format = "%d-%b-%Y-%H:%M:%S"), "%y%m%d_%H%M%S")
   save.name <- paste("SO", export_prefix, normalization, batch_corr, downsample, nhvf, npcs, paste0(save.time, ".", save_ext), sep = "_")
   Seurat::Misc(SO, "object_name") <- save.name
 
   if (!is.null(save_path)) {
+    if (verbose) {
+      message("saving to disk.")
+    }
     dir.create(save_path, showWarnings = F, recursive = T)
     if (save_ext == "rds") {
       saveRDS(SO, compress = T, file = file.path(save_path, save.name))
@@ -575,7 +619,11 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
                                              samples,
                                              batch_corr,
                                              RunHarmony_args,
-                                             verbose) {
+                                             verbose,
+                                             cells,
+                                             downsample,
+                                             min_cells,
+                                             downsample_method) {
   if (methods::is(SO_unprocessed, "list")) {
     SO_unprocessed <- SO_unprocessed
   } else if (methods::is(SO_unprocessed, "character")) {
@@ -602,13 +650,20 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
     stop("SO_unprocessed has no names.")
   }
 
+  SO_unprocessed <- subset_SO_unprocessed(
+    SO_unprocessed = SO_unprocessed,
+    cells = cells,
+    downsample = downsample,
+    min_cells = min_cells,
+    downsample_method = downsample_method)
+
   # create objects from scratch to rm all previous traces like commands or so
   SO_unprocessed <- parallel::mclapply(SO_unprocessed, function(x) {
     get_layer(obj = x, assay = "RNA", layer = "counts") |>
       SeuratObject::CreateSeuratObject() |>
       SeuratObject::AddMetaData(x@meta.data) |>
       Seurat::NormalizeData(verbose = F, assay = "RNA")
-  }, mc.cores = parallel::detectCores()-2)
+  }, mc.cores = min(1, parallel::detectCores()-4))
 
   if (batch_corr == "harmony") {
     ids <- unlist(purrr::map(SO_unprocessed, ~unique(.x@meta.data[[RunHarmony_args[["group.by.vars"]]]])))
@@ -703,11 +758,21 @@ subset_SO_unprocessed <- function(SO_unprocessed,
       tryCatch(
         expr = {
           x <- Seurat::FindVariableFeatures(x, nfeatures = 500, verbose = F)
-          lvs <- Seurat::LeverageScore(get_layer(obj = x, assay = "RNA", layer = "data", features = Seurat::VariableFeatures(x)), verbose = F)
+          lvs <- Seurat::LeverageScore(get_layer(
+            obj = x,
+            assay = "RNA",
+            layer = "counts",
+            features = Seurat::VariableFeatures(x)
+          ), verbose = F)
         },
         error = function(err) {
           x <- Seurat::FindVariableFeatures(x, nfeatures = 200, verbose = F)
-          lvs <- Seurat::LeverageScore(get_layer(obj = x, assay = "RNA", layer = "data", features = Seurat::VariableFeatures(x)), verbose = F)
+          lvs <- Seurat::LeverageScore(get_layer(
+            obj = x,
+            assay = "RNA",
+            layer = "counts",
+            features = Seurat::VariableFeatures(x)
+          ), verbose = F)
         }
       )
       return(lvs)
@@ -776,7 +841,9 @@ make_so_single <- function(SO_unprocessed,
                            npcs,
                            interactive_varfeat_selection,
                            interactive_varfeat_selection_inds,
-                           interactive_pc_selection) {
+                           interactive_pc_selection,
+                           var_feature_set) {
+
   SO <- SO_unprocessed[[1]]
   rm(SO_unprocessed)
   if (normalization == "SCT") {
@@ -785,7 +852,11 @@ make_so_single <- function(SO_unprocessed,
                                                                seed.use = seeed,
                                                                verbose = verbose),
                                                           SCtransform_args))
-    if (interactive_varfeat_selection) {
+    if (!is.null(var_feature_set)) {
+      Seurat::VariableFeatures(SO) <- var_feature_set
+    }
+
+    if (interactive_varfeat_selection && is.null(var_feature_set)) {
       vfplot <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
       print(vfplot)
       new_nhvf <- get_numeric_input("select number of variable features.")
@@ -817,11 +888,16 @@ make_so_single <- function(SO_unprocessed,
 
   } else if (normalization %in% c("LogNormalize", "RNA")) {
     SO <- Seurat::NormalizeData(SO, verbose = verbose, assay = "RNA")
+
     SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO,
                                                                         assay = "RNA",
                                                                         verbose = verbose),
                                                                    FindVariableFeatures_args))
-    if (interactive_varfeat_selection) {
+    if (!is.null(var_feature_set)) {
+      Seurat::VariableFeatures(SO) <- var_feature_set
+    }
+
+    if (interactive_varfeat_selection && is.null(var_feature_set)) {
       vfplot <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
       print(vfplot)
       new_nhvf <- get_numeric_input("select number of variable features.")
@@ -854,9 +930,8 @@ make_so_single <- function(SO_unprocessed,
                                                         seed.use = seeed,
                                                         verbose = verbose),
                                                    RunPCA_args))
-
   if (interactive_pc_selection) {
-    print(Seurat::ElbowPlot(SO, ndims = npcs))
+    print(scexpr::elbowplot2(SO, npcs = npcs)[["plot"]])
     npcs <- get_numeric_input("select number of pc.")
     assign("npcs", npcs, envir = parent.frame())
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
@@ -909,21 +984,26 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                     npcs,
                                     interactive_varfeat_selection,
                                     interactive_varfeat_selection_inds,
-                                    interactive_pc_selection) {
+                                    interactive_pc_selection,
+                                    var_feature_set) {
 
   k.filter <- as.integer(min(200, min(sapply(SO_unprocessed, ncol))/2))
   k.score <- as.integer(min(30, min(sapply(SO_unprocessed, ncol))/6))
 
   if (normalization == "SCT") {
     SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-      Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
-                                                           assay = "RNA",
-                                                           seed.use = seeed,
-                                                           verbose = verbose),
-                                                      SCtransform_args))
+      x <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
+                                                                assay = "RNA",
+                                                                seed.use = seeed,
+                                                                verbose = verbose),
+                                                           SCtransform_args))
+      if (!is.null(var_feature_set)) {
+        Seurat::VariableFeatures(x) <- var_feature_set
+      }
+      return(x)
     })
 
-    if (interactive_varfeat_selection) {
+    if (interactive_varfeat_selection && is.null(var_feature_set)) {
       for (i in names(SO_unprocessed)) {
         vfplot <- varfeat_plot(SO_unprocessed[[i]], n_varfeat = interactive_varfeat_selection_inds) +
           patchwork::plot_annotation(title = i)
@@ -972,13 +1052,18 @@ make_so_multi_integrate <- function(SO_unprocessed,
                              assay = "RNA",
                              verbose = verbose)
     SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-      Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = x,
-                                                                    assay = "RNA",
-                                                                    verbose = verbose),
-                                                               FindVariableFeatures_args))
+
+      x <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = x,
+                                                                         assay = "RNA",
+                                                                         verbose = verbose),
+                                                                    FindVariableFeatures_args))
+      if (!is.null(var_feature_set)) {
+        Seurat::VariableFeatures(x) <- var_feature_set
+      }
+      return(x)
     })
 
-    if (interactive_varfeat_selection) {
+    if (interactive_varfeat_selection && is.null(var_feature_set)) {
       for (i in names(SO_unprocessed)) {
         vfplot <- varfeat_plot(SO_unprocessed[[i]], n_varfeat = interactive_varfeat_selection_inds) +
           patchwork::plot_annotation(title = i)
@@ -1089,7 +1174,7 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                                         verbose = verbose),
                                                    RunPCA_args))
   if (interactive_pc_selection) {
-    print(Seurat::ElbowPlot(SO, ndims = npcs))
+    print(scexpr::elbowplot2(SO, npcs = npcs)[["plot"]])
     npcs <- get_numeric_input("select number of pc.")
     assign("npcs", npcs, envir = parent.frame())
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
@@ -1119,7 +1204,8 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                   hvf_determination_before_merge,
                                   interactive_varfeat_selection,
                                   interactive_varfeat_selection_inds,
-                                  interactive_pc_selection) {
+                                  interactive_pc_selection,
+                                  var_feature_set) {
 
 
   ### run SCT separately on unmerged SOs?
@@ -1132,11 +1218,15 @@ make_so_multi_harmony <- function(SO_unprocessed,
     if (hvf_determination_before_merge) {
 
       SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-        Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
-                                                             assay = "RNA",
-                                                             seed.use = seeed,
-                                                             verbose = verbose),
-                                                        SCtransform_args))
+        x <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
+                                                                  assay = "RNA",
+                                                                  seed.use = seeed,
+                                                                  verbose = verbose),
+                                                             SCtransform_args))
+        if (!is.null(var_feature_set)) {
+          Seurat::VariableFeatures(x) <- var_feature_set
+        }
+        return(x)
       })
 
       if (!is.null(var_feature_filter)) {
@@ -1157,8 +1247,21 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                            nfeatures = nhvf,
                                                            fvf.nfeatures = nhvf)
 
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
-                                       meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+      # SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
+      #                                  meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+
+      ## better for memory
+      ## and much faster
+      meta.data <- purrr::map_dfr(SO_unprocessed, ~.x@meta.data)
+      SO_unprocessed <- purrr::map(SO_unprocessed,
+                                   get_layer,
+                                   layer = "counts")
+      SO <- Seurat::CreateSeuratObject(counts = chunk_wise_cbind(x = SO_unprocessed),
+                                       meta.data = meta.data)
+      rm(SO_unprocessed)
+
+
+
       #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
                                                                  assay = "RNA",
@@ -1176,18 +1279,36 @@ make_so_multi_harmony <- function(SO_unprocessed,
         print(feature_numbers)
         message("common features: ", feature_number_common)
       }
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed,
-                                                                          get_layer,
-                                                                          layer = "counts",
-                                                                          features = intersect_features)),
-                                       meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+
+      # SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed,
+      #                                                                     get_layer,
+      #                                                                     layer = "counts",
+      #                                                                     features = intersect_features)),
+      #                                  meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+
+      ## better for memory
+      ## and much faster
+      meta.data <- purrr::map_dfr(SO_unprocessed, ~.x@meta.data)
+      SO_unprocessed <- purrr::map(SO_unprocessed,
+                                   get_layer,
+                                   layer = "counts",
+                                   features = intersect_features)
+      SO <- Seurat::CreateSeuratObject(counts = chunk_wise_cbind(x = SO_unprocessed),
+                                       meta.data = meta.data)
+      rm(SO_unprocessed)
+
+
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
                                                                  assay = "RNA",
                                                                  seed.use = seeed,
                                                                  verbose = verbose),
                                                             SCtransform_args))
 
-      if (interactive_varfeat_selection) {
+      if (!is.null(var_feature_set)) {
+        Seurat::VariableFeatures(SO) <- var_feature_set
+      }
+
+      if (interactive_varfeat_selection && is.null(var_feature_set)) {
         vfplot <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
         print(vfplot)
         new_nhvf <- get_numeric_input("select number of variable features.")
@@ -1223,10 +1344,15 @@ make_so_multi_harmony <- function(SO_unprocessed,
       SO_unprocessed <- lapply(SO_unprocessed, FUN = Seurat::NormalizeData, assay = "RNA", verbose = verbose)
 
       SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-        Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = x,
-                                                                      assay = "RNA",
-                                                                      verbose = verbose),
-                                                                 FindVariableFeatures_args))
+
+        x <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = x,
+                                                                           assay = "RNA",
+                                                                           verbose = verbose),
+                                                                      FindVariableFeatures_args))
+        if (!is.null(var_feature_set)) {
+          Seurat::VariableFeatures(x) <- var_feature_set
+        }
+        return(x)
       })
       #SO_unprocessed <- lapply(SO_unprocessed, FUN = Seurat::FindVariableFeatures, assay = "RNA", selection.method = "vst", nfeatures = nhvf, verbose = verbose)
 
@@ -1249,22 +1375,44 @@ make_so_multi_harmony <- function(SO_unprocessed,
 
 
 
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
-                                       meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+      # SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
+      #                                  meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+      meta.data <- purrr::map_dfr(SO_unprocessed, ~.x@meta.data)
+      SO_unprocessed <- purrr::map(SO_unprocessed,
+                                   get_layer,
+                                   layer = "counts")
+      SO <- Seurat::CreateSeuratObject(counts = chunk_wise_cbind(x = SO_unprocessed),
+                                       meta.data = meta.data)
+      rm(SO_unprocessed)
+
+
       SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
       Seurat::VariableFeatures(SO) <- anchor.features
     } else {
-      SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
-                                       meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+      # SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO_unprocessed, get_layer, layer = "counts")),
+      #                                  meta.data = dplyr::bind_rows(purrr::map(SO_unprocessed, ~.x@meta.data)))
+      meta.data <- purrr::map_dfr(SO_unprocessed, ~.x@meta.data)
+      SO_unprocessed <- purrr::map(SO_unprocessed,
+                                   get_layer,
+                                   layer = "counts")
+      SO <- Seurat::CreateSeuratObject(counts = chunk_wise_cbind(x = SO_unprocessed),
+                                       meta.data = meta.data)
+      rm(SO_unprocessed)
+
       #SO <- merge(x = SO_unprocessed[[1]], y = SO_unprocessed[2:length(SO_unprocessed)], merge.data = T, collapse = T)
       SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = verbose)
+
       SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO,
                                                                           assay = "RNA",
                                                                           verbose = verbose),
                                                                      FindVariableFeatures_args))
 
-      if (interactive_varfeat_selection) {
-        vfplo <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
+      if (!is.null(var_feature_set)) {
+        Seurat::VariableFeatures(SO) <- var_feature_set
+      }
+
+      if (interactive_varfeat_selection && is.null(var_feature_set)) {
+        vfplot <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
         print(vfplot)
         new_nhvf <- get_numeric_input("select number of variable features.")
         nhvf <- new_nhvf
@@ -1298,7 +1446,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                         verbose = verbose),
                                                    RunPCA_args))
   if (interactive_pc_selection) {
-    print(Seurat::ElbowPlot(SO, ndims = npcs))
+    print(scexpr::elbowplot2(SO, npcs = npcs)[["plot"]])
     npcs <- get_numeric_input("select number of pc.")
     assign("npcs", npcs, envir = parent.frame())
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO,
@@ -1311,8 +1459,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
 
   if (batch_corr == "harmony") {
     RunHarmony_args <- RunHarmony_args[which(!names(RunHarmony_args) %in% c("object", "assay.use", "verbose"))]
-    SO <- Gmisc::fastDoCall(harmony::RunHarmony, args = c(list(object = SO),
-                                                          RunHarmony_args))
+    SO <- Gmisc::fastDoCall(harmony::RunHarmony, args = c(list(object = SO), RunHarmony_args))
     # assay.use = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA")
   }
   return(SO)
@@ -1364,3 +1511,14 @@ get_numeric_input <- function(prompt = "Enter a number: ") {
 
 
 
+chunk_wise_cbind <- function(x, nchunk = 0.2) {
+  ## better for memory
+  ## and much faster
+  if (nchunk < 1) {
+    nchunk <- length(x)*nchunk
+  }
+  chunks <- split(x, ceiling(seq_along(x)/nchunk))
+  partials <- purrr::map(chunks, ~do.call(cbind, .x))
+  result <- do.call(cbind, partials)
+  return(result)
+}

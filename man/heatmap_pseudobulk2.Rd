@@ -11,9 +11,9 @@ heatmap_pseudobulk2(
   levels_calc = NULL,
   levels_plot = NULL,
   assay = "RNA",
-  min_pct = 0.1,
+  min_pct = 20,
   max_padj = 0.05,
-  min_pct_force = F,
+  min_pct_force = T,
   features = NULL,
   featuregroup_style = c("facet", "color"),
   featuregroup_col_name = "",
@@ -75,13 +75,13 @@ in meta_cols are not unique}
 
 \item{assay}{which assay to obtain expression values from}
 
-\item{min_pct}{for marker feature selection per only: min fraction of expressing
+\item{min_pct}{for marker feature selection per only: min percent of expressing
 cells for a gene to become marker gene for a group}
 
 \item{max_padj}{for marker feature selection per only: max adjusted
 p-value for a gene to become marker gene}
 
-\item{min_pct_force}{}
+\item{min_pct_force}{apply min_pct even when features are given}
 
 \item{features}{choose which features to plot; if NULL features_topn becomes
 relevant}

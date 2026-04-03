@@ -523,8 +523,13 @@ get_col_pal <- function(data,
     col.pal <- colrr::make_col_pal(col_vec = col_pal_c_args[["name"]],
                                    col_pal_args = col_pal_c_args[-which(names(col_pal_c_args) == "name")])
   } else {
+
     col.pal <- colrr::make_col_pal(col_vec = col_pal_d_args[["name"]],
-                                   fct_lvls = levels(forcats::fct_drop(data[["feature"]])), # as.factor
+                                   fct_lvls = if (is.logical(data[["feature"]])) {
+                                     as.factor(data[["feature"]])
+                                   } else {
+                                     levels(forcats::fct_drop(data[["feature"]]))
+                                   }, # as.factor
                                    missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_d_args), col_pal_d_args[["missing_fct_to_na"]], T),
                                    col_pal_args = col_pal_d_args[-which(names(col_pal_d_args) %in% c("name", "missing_fct_to_na"))])
     # if (length(col_pal_d_args[["name"]]) == 1 && !col_pal_d_args[["name"]] %in% grDevices::colors()) {
@@ -1487,7 +1492,7 @@ check_nudge_list <- function(nudge_list,
     nudge_list <- list(nudge_list)
   }
   if (!length(nudge_list)) {
-   return(nudge_list)
+    return(nudge_list)
   }
   if (is.null(names(nudge_list)) && length(nudge_list) == 1) {
     #nudge_list <- list(nudge_list)

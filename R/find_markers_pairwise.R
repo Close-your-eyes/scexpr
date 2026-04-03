@@ -5,10 +5,6 @@
 #' @param mc.cores multiple threads?
 #' @param ... arguments to Seurat::FindMarkers
 #' @param split column in obj to split by before marker calculation
-#' @param redundant_return with utils::combn unique combinations of ident.1 and
-#' ident.2 are calculation and returned as list of lists; by default this is
-#' made redundant by adding the flip order of ident.1 and ident.2 to create
-#' returned list of lists; with
 #'
 #' @returns
 #' @export
@@ -31,26 +27,27 @@ find_markers_pairwise <- function(obj,
                                   #layer = "data",
                                   split = NULL,
                                   mc.cores = 1,
-                                  redundant_return = T,
                                   ...) {
 
   lvls <- as.character(unique(obj@meta.data[[group]]))
   all_pairs <- utils::combn(lvls, 2, simplify = F)
+  message(length(all_pairs), " pairwise combinations.")
   Seurat::Idents(obj) <- obj@meta.data[[group]]
   if (!is.null(split)) {
     obj <- Seurat::SplitObject(obj, split.by = split)
+    message("times ", length(obj), " splits.")
   } else {
     obj <- list(seurat = obj)
   }
 
-  out <- purrr::map_dfr(obj, function(obj) {
+  out <- purrr::map_dfr(obj, function(ob) {
     out <- parallel::mclapply(all_pairs, function(z) {
-      tryCatch(expr = {
-        out <- Seurat::FindMarkers(obj, ident.1 = z[1], ident.2 = z[2], ...) |>
+      out <- tryCatch(expr = {
+        Seurat::FindMarkers(ob, ident.1 = z[1], ident.2 = z[2], ...) |>
           dplyr::mutate(ident.1 = z[1], ident.2 = z[2]) |>
           tibble::rownames_to_column("gene")
       }, error = function(err) {
-        out <- NULL
+        NULL
       })
       return(out)
     }, mc.cores = mc.cores)

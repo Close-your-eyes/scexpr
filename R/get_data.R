@@ -76,12 +76,12 @@ get_data <- function(SO,
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
 
   # also check layer
-  SO <- check.SO(
+  SO <- scexpr:::check.SO(
     SO = SO,
     assay = assay,
     meta.col = meta_col)
   assay <- Seurat::DefaultAssay(SO[[1]])
-  cells <- check.and.get.cells(SO = SO,
+  cells <- scexpr:::check.and.get.cells(SO = SO,
                                assay = assay,
                                cells = cells,
                                feature_cut = feature_cut,
@@ -89,12 +89,12 @@ get_data <- function(SO,
                                feature_ex = feature_ex,
                                downsample = downsample)
 
-  feature <- check.features(SO = SO, features = feature)
-  label_feature <- check.features(SO = SO, features = label_feature, rownames = F)
-  contour_feature <- check.features(SO = SO, features = contour_feature, rownames = F)
-  split_feature <- check.features(SO = SO, features = split_feature, rownames = F)
-  shape_feature <- check.features(SO = SO, features = shape_feature, rownames = F)
-  reduction <- check.reduction(SO = SO, reduction = reduction, dims = dims)
+  feature <- scexpr:::check.features(SO = SO, features = feature)
+  label_feature <- scexpr:::check.features(SO = SO, features = label_feature, rownames = F)
+  contour_feature <- scexpr:::check.features(SO = SO, features = contour_feature, rownames = F)
+  split_feature <- scexpr:::check.features(SO = SO, features = split_feature, rownames = F)
+  shape_feature <- scexpr:::check.features(SO = SO, features = shape_feature, rownames = F)
+  reduction <- scexpr:::check.reduction(SO = SO, reduction = reduction, dims = dims)
   assay <- match.arg(assay, names(SO[[1]]@assays))
 
 

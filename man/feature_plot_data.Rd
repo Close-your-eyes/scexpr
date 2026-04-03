@@ -80,7 +80,10 @@ feature_plot_data(
   contour_path_label = NULL,
   order_discr_explicit = NULL,
   plot_all_across_split = F,
-  axes_arrows
+  axes_arrows,
+  img_df = NULL,
+  hull_df = NULL,
+  cell_hull_args = list(color = "grey30", linewidth = 0.1, alpha = 1)
 )
 }
 \arguments{
