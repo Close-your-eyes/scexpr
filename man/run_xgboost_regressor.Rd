@@ -30,7 +30,7 @@ run_xgboost_regressor(
 \item{split}{Numeric. Proportion of data used for training (default = 0.7).}
 
 \item{preprocess}{Character vector or \code{NULL}. Optional preprocessing steps
-passed to \code{caret::train()}, e.g. \code{c("center", "scale")}.}
+passed to \code{caret::train()}, e.g. \code{c("center", "scale", "medianImpute")}.}
 
 \item{train_iter}{Integer. Number of resampling iterations (default = 3).
 For cross-validation, this corresponds to the number of folds.}

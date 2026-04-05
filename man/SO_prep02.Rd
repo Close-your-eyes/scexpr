@@ -47,6 +47,7 @@ SO_prep02(
   interactive_varfeat_selection_inds = seq(max(nhvf/10, 50), min(3 * nhvf,
     nrow(SO_unprocessed[[1]])), length.out = 11),
   interactive_pc_selection = T,
+  use_nn_for_umap = F,
   ...
 )
 }

@@ -18,7 +18,7 @@
 #' @param split Numeric. Proportion of data used for training (default = 0.7).
 #'
 #' @param preprocess Character vector or \code{NULL}. Optional preprocessing steps
-#' passed to \code{caret::train()}, e.g. \code{c("center", "scale")}.
+#' passed to \code{caret::train()}, e.g. \code{c("center", "scale", "medianImpute")}.
 #'
 #' @param train_iter Integer. Number of resampling iterations (default = 3).
 #' For cross-validation, this corresponds to the number of folds.
@@ -278,6 +278,11 @@ run_xgboost_regressor <- function(df,
                                   seed = 42,
                                   ...) {
 
+  if (compareVersion(as.character(packageVersion("xgboost")), "1.8") == 1) {
+    message("https://stackoverflow.com/questions/79849114/new-version-of-xgboost-package-is-not-working-under-caret-environment")
+    stop("install old version of xgboost 1.7.11.1 like so: install.packages('xgboost', repos = 'https://p3m.dev/cran/2025-12-01')")
+  }
+
   if (!is.data.frame(df)) {
     stop("df must be data frame.")
   }
@@ -325,8 +330,7 @@ run_xgboost_regressor <- function(df,
     trControl = trControl,
     tuneLength = tuneLength,
     tuneGrid = tuneGrid,
-    metric = "RMSE",
-    ...
+    metric = "RMSE"
   )
 
   # Predictions
@@ -362,6 +366,7 @@ run_xgboost_regressor <- function(df,
     cor_feat = cor_feat,
     feat_imp = feat_imp,
     pred_full = pred_full,
+    pred_test = pred_test,
     label = df[,1],
     residuals = df[,1] - pred_full
   ))

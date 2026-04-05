@@ -23,7 +23,11 @@ convert_gene_ident <- function(x,
   # make sure all input are in output
   output <- unique(c(output, input))
 
-  mart <- biomaRt::useEnsembl("genes", dataset="hsapiens_gene_ensembl")
+  #Sys.setenv(ALL_PROXY = "YOUR_PROXY_HOST")
+  #Sys.setenv(ALL_PROXY = "")
+
+  # mart <- biomaRt::useEnsembl("genes", dataset="hsapiens_gene_ensembl")
+  mart <- biomaRt::useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
   res <- data.frame()
   i <- 1
 
@@ -46,27 +50,33 @@ convert_gene_ident <- function(x,
   }
   res$GRCh <- "38"
 
-  if (length(x) > 0) {
-    message("GRCh37")
-    mart <- biomaRt::useEnsembl("genes", dataset="hsapiens_gene_ensembl", GRCh=37)
-    i <- 1
-
-    while(length(x) > 0 && i <= length(input)) {
-      message(input[i])
-      res <- dplyr::bind_rows(res,
-                              biomaRt::getBM(
-                                attributes = output,
-                                filters    = input[i],
-                                values     = x,
-                                mart       = mart) |>
-                                dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
-                                dplyr::mutate(input = !!rlang::sym(input[i]))
-      )
-      x <- setdiff(x, res[[input[i]]])
-      i <- i + 1
-    }
-    res$GRCh[which(is.na(res$GRCh))] <- "37"
-  }
+  # if (length(x) > 0) {
+  #   message("GRCh37")
+  #
+  #   ## old version
+  #   mart <- biomaRt::useEnsembl(
+  #     biomart = "genes",
+  #     dataset = "hsapiens_gene_ensembl",
+  #     version = 75
+  #   )
+  #   # mart <- biomaRt::useEnsembl("genes", dataset="hsapiens_gene_ensembl", GRCh=37)
+  #   i <- 1
+  #
+  #   while(length(x) > 0 && i <= length(input)) {
+  #     message(input[i])
+  #     res <- dplyr::bind_rows(res,
+  #                             biomaRt::getBM(
+  #                               attributes = output,
+  #                               filters    = input[i],
+  #                               values     = x,
+  #                               mart       = mart) |>
+  #                               dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
+  #                               dplyr::mutate(input = !!rlang::sym(input[i])))
+  #     x <- setdiff(x, res[[input[i]]])
+  #     i <- i + 1
+  #   }
+  #   res$GRCh[which(is.na(res$GRCh))] <- "37"
+  # }
 
   res$description <- sapply(strsplit(res$description, " \\[Source"), "[", 1)
 

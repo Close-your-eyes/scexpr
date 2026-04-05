@@ -120,6 +120,7 @@ SO_prep02 <- function(SO_unprocessed,
                                                                min(3*nhvf, nrow(SO_unprocessed[[1]])),
                                                                length.out = 11),
                       interactive_pc_selection = T,
+                      use_nn_for_umap = F,
                       ...) {
 
   if (!requireNamespace("colrr", quietly = T)) {
@@ -169,7 +170,7 @@ SO_prep02 <- function(SO_unprocessed,
     stop("save_path has to be a character; a path to a folder where to save Seurat objects to.")
   }
 
-  if (length(SO_unprocessed) == 1) {batch_corr <- "none"}
+
 
   celltype_label <- check_celltype_refs(celltype_refs, celltype_label)
   check_RunPCA_args(RunPCA_args)
@@ -280,6 +281,17 @@ SO_prep02 <- function(SO_unprocessed,
   # gmisc::fastDoCall
 
   red <- switch(batch_corr, harmony = "harmony", integration = "pca", none = "pca")
+  names_wo_clust <- names(SO@meta.data)
+
+  SO <- calc_neighbor_and_cluster(SO = SO,
+                                  red = red,
+                                  npcs = npcs,
+                                  FindNeighbors_args = FindNeighbors_args,
+                                  FindClusters_args = FindClusters_args,
+                                  verbose = verbose,
+                                  mc.cores = 8)
+
+
   if (any(grepl("umap", reductions, ignore.case = T))) {
     RunUMAP_args <- RunUMAP_args[which(!names(RunUMAP_args) %in% c("object", "seed.use", "reduction", "verbose"))]
     if (!"dims" %in% names(RunUMAP_args)) {
@@ -287,17 +299,41 @@ SO_prep02 <- function(SO_unprocessed,
     }
 
     tryCatch(expr = {
-      SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
-                                                             reduction = red,
-                                                             reduction.name = paste0("umap_", red),
-                                                             seed.use = seeed,
-                                                             verbose = verbose),
-                                                        RunUMAP_args))
-      #SO <- rename_reduction(SO, reduction = "umap", new_name = paste0("umap_", red))
+      if (!use_nn_for_umap) {
+        SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
+                                                               reduction = red,
+                                                               reduction.name = paste0("umap_", red),
+                                                               seed.use = seeed,
+                                                               verbose = verbose),
+                                                          RunUMAP_args))
+      } else {
+        RunUMAP_args <- RunUMAP_args[which(names(RunUMAP_args) %in% names(formals(uwot::umap)))]
+        RunUMAP_args <- c(list(X = NULL,
+                               nn_method = list(idx = SO@misc$nn.ranked@nn.idx, dist = SO@misc$nn.ranked@nn.dist),
+                               seed = seeed,
+                               verbose = verbose),
+                          RunUMAP_args)
+        if (!"metric" %in% names(RunUMAP_args)) {
+          RunUMAP_args <- c(list(metric = "cosine"), RunUMAP_args)
+        }
+        if (!"n_neighbors" %in% names(RunUMAP_args)) {
+          RunUMAP_args <- c(list(n_neighbors = 30), RunUMAP_args)
+        }
+        if (!"min_dist" %in% names(RunUMAP_args)) {
+          RunUMAP_args <- c(list(min_dist = 0.3), RunUMAP_args)
+        }
+
+        RunUMAP_args <- RunUMAP_args[which(!duplicated(names(RunUMAP_args)))]
+        um <- Gmisc::fastDoCall(uwot::umap, RunUMAP_args)
+        rownames(um) <- Seurat::Cells(SO)
+        colnames(um) <- paste0("umap", red, "_", c(1,2))
+        SO@reductions[[paste0("umap_", red)]] <- SeuratObject::CreateDimReducObject(embeddings = um,
+                                                                                    assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"))
+      }
+
     }, error = function(err) {
       message("umap failed.")
     })
-    #SO <- Seurat::RunUMAP(object = SO, umap.method = "uwot", metric = "cosine", dims = 1:npcs, seed.use = seeed, reduction = red, verbose = verbose, ...)
   }
 
   if (any(grepl("tsne", reductions, ignore.case = T))) {
@@ -359,43 +395,7 @@ SO_prep02 <- function(SO_unprocessed,
     SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"), misc = list(GQTSOM_args, EmbedSOM_args))
   }
 
-  message("FindNeighbors and FindClusters")
-  FindNeighbors_args <- FindNeighbors_args[which(!names(FindNeighbors_args) %in% c("object", "reduction", "verbose"))]
-  if (!"dims" %in% names(FindNeighbors_args)) {
-    FindNeighbors_args <- c(list(dims = 1:npcs), FindNeighbors_args)
-  }
-  #graph_names <- paste0(SO@reductions[[red]]@assay.used, "_", ifelse(grepl("pca", red), "pca", "harmony"), "_", npcs, "_", c("nn", "snn"))
-  SO <- Gmisc::fastDoCall(Seurat::FindNeighbors, args = c(list(object = SO,
-                                                               reduction = red,
-                                                               verbose = verbose),
-                                                          FindNeighbors_args))
-  #  "_", npcs,
-  names(SO@graphs) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(SO@graphs))), "_", red, "_", c("nn", "snn"))
 
-  names_wo_clust <- names(SO@meta.data)
-  FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
-  if (!"resolution" %in% names(FindClusters_args)) {
-    FindClusters_args[["resolution"]] <- 0.8
-  }
-
-  cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
-                           snn = SO@graphs[[names(SO@graphs)[2]]],
-                           args = FindClusters_args,
-                           FUN = function(x, snn, args) {
-                             args$resolution <- x
-                             Gmisc::fastDoCall(Seurat::FindClusters,
-                                               args = c(list(object = snn,
-                                                             verbose = F),
-                                                        args))
-                           }, mc.cores = 8)
-  cl <- dplyr::bind_cols(cl)
-  names(cl) <- paste0(names(SO@graphs)[2], "_", names(cl))
-  SO <- Seurat::AddMetaData(SO, cl)
-
-  # SO <- Gmisc::fastDoCall(Seurat::FindClusters, args = c(list(object = SO,
-  #                                                             graph.name = names(SO@graphs)[2], # snn
-  #                                                             verbose = verbose),
-  #                                                        FindClusters_args))
 
   # add clusterings and their colors to Misc
   names_w_clust <- names(SO@meta.data)
@@ -447,7 +447,7 @@ SO_prep02 <- function(SO_unprocessed,
     # quick to calculate
     # save disk space
     SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
-   # SO@assays[["RNA"]]@layers[["scale.data"]] <- matrix(NA)
+    # SO@assays[["RNA"]]@layers[["scale.data"]] <- matrix(NA)
   }, silent = T)
 
 
@@ -1522,3 +1522,59 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
   result <- do.call(cbind, partials)
   return(result)
 }
+
+
+calc_neighbor_and_cluster <- function(SO,
+                                      red = "pca",
+                                      npcs = 10,
+                                      FindNeighbors_args = list(),
+                                      FindClusters_args = list(),
+                                      verbose = TRUE,
+                                      mc.cores = 8) {
+
+  # see /Volumes/CMS_SSD_2TB/R_scRNAseq/R_scripts/distance_matrices_and_umap.R
+  message("FindNeighbors and FindClusters")
+  FindNeighbors_args <- FindNeighbors_args[which(!names(FindNeighbors_args) %in% c("object", "reduction", "verbose"))]
+  # if (!"dims" %in% names(FindNeighbors_args)) {
+  #   FindNeighbors_args <- c(list(dims = 1:npcs), FindNeighbors_args)
+  # }
+  fun <- FindNeighbors2 # scexpr:::
+  # if (use_nn_from_findneighbors_for_umap) {
+  #   fun <- Seurat::FindNeighbors
+  # } else {
+  #   fun <- scexpr::FindNeighbors2
+  # }
+
+
+  nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = SO@reductions[[red]]@cell.embeddings[,1:npcs],
+                                                  verbose = verbose),
+                                             FindNeighbors_args))
+  SO@graphs <- nn_list[["graphs"]]
+  SO@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
+  #  "_", npcs,
+  names(SO@graphs) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(SO@graphs))), "_", red, "_", c("nn", "snn"))
+
+  FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
+  if (!"resolution" %in% names(FindClusters_args)) {
+    FindClusters_args[["resolution"]] <- 0.8
+  }
+
+  cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
+                           snn = SO@graphs[[names(SO@graphs)[2]]],
+                           args = FindClusters_args,
+                           FUN = function(x, snn, args) {
+                             args$resolution <- x
+                             Gmisc::fastDoCall(Seurat::FindClusters,
+                                               args = c(list(object = snn,
+                                                             verbose = F),
+                                                        args))
+                           }, mc.cores = 8)
+  cl <- dplyr::bind_cols(cl)
+  names(cl) <- paste0(names(SO@graphs)[2], "_", names(cl))
+  SO <- Seurat::AddMetaData(SO, cl)
+
+  return(SO)
+}
+
+
+

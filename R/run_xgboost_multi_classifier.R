@@ -489,3 +489,198 @@ run_xgboost_multi_classifier <- function(df,
 }
 
 
+
+run_xgboost_multi_classifier_tidymodels <- function(
+    df,
+    split = 0.7,
+    preprocess = NULL,
+    train_iter = 3,
+    train_method = c("cv", "boot", "none"),
+    train_search = c("grid", "random"),
+    tune_grid = NULL,
+    tune_length = 10,
+    seed = 42
+) {
+
+  base::set.seed(seed)
+
+
+  # checks
+
+  if (!base::is.data.frame(df)) {
+    base::stop("df must be data frame.")
+  }
+
+  if (!base::all(base::apply(df[, -1], 2, base::is.numeric))) {
+    base::stop("all columns except first must be numeric.")
+  }
+
+  df[[1]] <- base::as.factor(df[[1]])
+  outcome_name <- base::names(df)[1]
+
+
+  # split
+
+  split_obj <- rsample::initial_split(
+    df,
+    prop = split,
+    strata = rlang::sym(outcome_name)
+  )
+
+  train_data <- rsample::training(split_obj)
+  test_data  <- rsample::testing(split_obj)
+
+
+  # recipe
+
+  rec <- recipes::recipe(
+    stats::as.formula(base::paste(outcome_name, "~ .")),
+    data = train_data
+  )
+
+  if (!base::is.null(preprocess) && base::is.function(preprocess)) {
+    rec <- preprocess(rec)
+  }
+
+
+  # model
+
+  model <- parsnip::boost_tree(
+    trees = tune::tune(),
+    tree_depth = tune::tune(),
+    learn_rate = tune::tune(),
+    loss_reduction = tune::tune(),
+    sample_size = tune::tune(),
+    mtry = tune::tune(),
+    min_n = tune::tune()
+  ) |>
+    parsnip::set_engine("xgboost") |>
+    parsnip::set_mode("classification")
+
+
+  # workflow
+
+  wf <- workflows::workflow() |>
+    workflows::add_model(model) |>
+    workflows::add_recipe(rec)
+
+
+  # resampling
+
+  train_method <- rlang::arg_match(train_method)
+
+  resamples <- base::switch(
+    train_method,
+    cv = rsample::vfold_cv(
+      train_data,
+      v = train_iter,
+      strata = rlang::sym(outcome_name)
+    ),
+    boot = rsample::bootstraps(train_data, times = train_iter),
+    none = NULL
+  )
+
+
+  # tuning grid
+
+  if (base::is.null(tune_grid)) {
+
+    if (train_search == "grid") {
+      grid <- dials::grid_regular(
+        dials::parameters(wf),
+        levels = tune_length
+      )
+    } else {
+      grid <- dials::grid_random(
+        dials::parameters(wf),
+        size = tune_length
+      )
+    }
+
+  } else {
+    grid <- tune_grid
+  }
+
+
+  # fit / tune
+
+  if (!base::is.null(resamples)) {
+
+    tuned <- tune::tune_grid(
+      wf,
+      resamples = resamples,
+      grid = grid,
+      metrics = yardstick::metric_set(yardstick::accuracy),
+      control = tune::control_grid(verbose = TRUE)
+    )
+
+    best_params <- tune::select_best(tuned, metric = "accuracy")
+
+    final_wf <- workflows::finalize_workflow(wf, best_params)
+
+    fit_obj <- parsnip::fit(final_wf, data = train_data)
+
+  } else {
+
+    fit_obj <- parsnip::fit(wf, data = train_data)
+  }
+
+
+  # predictions
+
+  pred_test <- parsnip::predict(fit_obj, test_data) |>
+    dplyr::bind_cols(test_data)
+
+  pred_full <- parsnip::predict(fit_obj, df) |>
+    dplyr::bind_cols(df)
+
+
+  # confusion matrices
+
+  confmat_test <- yardstick::conf_mat(
+    pred_test,
+    truth = rlang::sym(outcome_name),
+    estimate = .pred_class
+  )
+
+  confmat_full <- yardstick::conf_mat(
+    pred_full,
+    truth = rlang::sym(outcome_name),
+    estimate = .pred_class
+  )
+
+
+  # feature correlation
+
+  feat_cor_mat <- stats::cor(base::as.matrix(df[, -1]))
+
+  cor_feat <- base::as.data.frame(base::as.table(feat_cor_mat)) |>
+    dplyr::filter(.data$Var1 != .data$Var2, .data$Freq >= 0.9)
+
+
+  # feature importance
+
+  feat_imp <- NULL
+
+  fitted_engine <- workflows::extract_fit_engine(fit_obj)
+
+  if (base::inherits(fitted_engine, "xgb.Booster")) {
+    feat_imp <- xgboost::xgb.importance(model = fitted_engine)
+  }
+
+
+  # outputs
+
+  return(base::list(
+    confmat_test = confmat_test,
+    model = fit_obj,
+    confmat_full = confmat_full,
+    pred_full = pred_full$.pred_class,
+    label = df[[1]],
+    mislabel = base::which(pred_full$.pred_class != df[[1]]),
+    feat_cor_mat = feat_cor_mat,
+    cor_feat = cor_feat,
+    feat_imp = feat_imp
+  ))
+}
+
