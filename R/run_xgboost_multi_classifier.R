@@ -25,12 +25,21 @@
 #' CLEAR YET
 #' @param seed random seed for reproducibility
 #' @param ... more args to caret::train
+#' @param train_repeat
 #'
 #' @returns list with train obj from caret and accessory info
 #' @export
 #'
 #' @examples
 #'\dontrun{
+#' ## try parallel computing
+#' num_cores <- parallel::detectCores()
+#' cl <- parallel::makeCluster(12)
+#' doParallel::registerDoParallel(cl)
+#'
+#' parallel::stopCluster(cl)
+#' foreach::registerDoSEQ()
+#'
 #' model <- run_xgboost_multi_classifier(tt,
 #'                                       train_search = "random",
 #'                                       method_model = "xgbTree",
@@ -317,6 +326,7 @@ run_xgboost_multi_classifier <- function(df,
                                          method_model = c("xgbTree", "rf", "glmnet"),
                                          method_train = c("cv", "repeatedcv", "boot", "boot632", "LOOCV", "none"),
                                          train_search = c("grid", "random"),
+                                         train_repeat = 1,
                                          tuneGrid = expand.grid(
                                            eta = c(0.01, 0.1),
                                            nrounds = c(100, 200),
@@ -388,9 +398,17 @@ run_xgboost_multi_classifier <- function(df,
     stop("all columns of df except first must be numeric.")
   }
 
+  if (anyNA(df[,1])) {
+    stop("NA in first column.")
+  }
+
+  if (length(unique((df[,1]))) == 1) {
+    stop("Only one level in first column.")
+  }
+
   if (any(make.names(df[,1]) != df[,1])) {
-    message("first column of df must valid R names as by make.names. will prefix with X.")
-    df[,1] <- paste0("X", df[,1])
+    message("first column of df must valid R names as by make.names. applying make.names.")
+    df[,1] <- make.names(df[,1])
   }
 
   method_model <- rlang::arg_match(method_model)
@@ -421,6 +439,7 @@ run_xgboost_multi_classifier <- function(df,
   trControl <- caret::trainControl(method = method_train,
                                    number = train_iter,
                                    search = train_search,
+                                   repeats = train_repeat,
                                    verboseIter = TRUE,
                                    classProbs = TRUE)
 
@@ -446,6 +465,7 @@ run_xgboost_multi_classifier <- function(df,
     trControl = trControl,
     tuneLength = tuneLength,
     tuneGrid = tuneGrid,
+    metric = "Accuracy",
     ...)
 
 

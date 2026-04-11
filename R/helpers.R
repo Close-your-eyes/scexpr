@@ -26,9 +26,9 @@ check.SO <- function(SO,
 
   if (is.null(names(SO)) && length(SO) > 1) {
     message("List of SO has no names. Naming them numerically in order as provided.")
-    names(SO) <- as.character(seq_along(SO))
+    names(SO) <- paste0("X", as.character(seq_along(SO)))
   } else if (is.null(names(SO))) {
-    names(SO) <- as.character(seq_along(SO))
+    names(SO) <- paste0("X", as.character(seq_along(SO)))
   }
 
   ## check if data has been scaled (compare to counts)

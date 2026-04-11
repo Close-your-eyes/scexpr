@@ -97,6 +97,11 @@ cluster_correlation <- function(SO,
     levels <- lapply(seq_along(SO), function(x) .check.levels(SO[[x]], meta.cols[x], levels = levels, append_by_missing = F))
   }
 
+  if (is.null(names(SO))) {
+    nme <- as.character(deparse(substitute(SO)))
+    nme <- make.unique(nme)
+    names(SO) <- strsplit(gsub("list\\(|\\)", "", nme), ", ")[[1]]
+  }
 
   ## names for SO are very important below. missing names will cause errors.
   SO <- check.SO(SO, assay = assay, length = 2)
@@ -204,6 +209,7 @@ cluster_correlation <- function(SO,
   # })
 
   # if one level in meta.col only, Seurat writes 'all' as column name but not the actual level, fix that
+  avg.expr <- purrr::map(avg.expr, ~.x[[1]])
   for (i in seq_along(avg.expr)) {
     if (all(colnames(avg.expr[[i]][[1]]) == "all")) {
       colnames(avg.expr[[i]][[1]]) <- unique(SO[[i]][[1]]@meta.data[,meta.cols[i]])
@@ -365,11 +371,14 @@ cluster_correlation <- function(SO,
           rep(colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[6], mid.white.strech.length),
           colrr::col_pal("RColorBrewer::RdBu", n = 11, direction = -1)[7:10])
 
-  cm.plot <- fcexpr::heatmap_long_df(cm.melt, groups = "Var1", features = "Var2", values = "value",
-                          colorsteps = NULL,
-                          fill = colrr::col_pal("spectral", direction = -1),
-                          feature_order = "hclust",
-                          group_order = "hclust")
+  cm.plot <- fcexpr::heatmap_long_df(
+    cm.melt,
+    groups = "Var1",
+    features = "Var2",
+    values = "value",
+    colorsteps = NULL,
+    fill = colrr::col_pal("spectral", direction = -1)
+  )
 
   # cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
   #   ggplot2::geom_tile(colour = "black") +

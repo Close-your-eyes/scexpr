@@ -12,6 +12,7 @@ run_xgboost_regressor(
   method_model = c("xgbTree", "rf", "glmnet"),
   method_train = c("cv", "repeatedcv", "boot", "boot632", "LOOCV", "none"),
   train_search = c("grid", "random"),
+  train_repeat = 1,
   tuneGrid = expand.grid(eta = c(0.01, 0.1), nrounds = c(100, 200), max_depth = c(6, 9),
     gamma = c(0, 1), colsample_bytree = c(0.6, 0.8), min_child_weight = c(1, 5),
     subsample = c(0.7, 1)),
@@ -113,6 +114,14 @@ Random search is recommended for large parameter spaces.
 }
 \examples{
 \dontrun{
+## try parallel computing
+num_cores <- parallel::detectCores()
+cl <- parallel::makeCluster(12)
+doParallel::registerDoParallel(cl)
+
+parallel::stopCluster(cl)
+foreach::registerDoSEQ()
+
 ggbwlot <- function(resamps) {
 
   rmse_long <- resamps$values |>

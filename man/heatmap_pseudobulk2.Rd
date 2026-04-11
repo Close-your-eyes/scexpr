@@ -53,7 +53,14 @@ heatmap_pseudobulk2(
     legend.position = "right", legend.direction = "vertical", legend.box = "horizontal"),
   repel_args = list(featurelabels_width = 0.2, featurelabels_nudhe_x = -1),
   sec_axis = F,
-  convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME")
+  convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
+  pvals = NULL,
+  pval_features = NULL,
+  pval_max = 0.01,
+  pval_symnum_args = list(cutpoints = c(0, 0.0001, Inf), symbols = c("*", "ns")),
+  pval_filter = c("top", "pos_fc"),
+  pval_logfc = "logFC",
+  pval_text_args = list(size = 5, vjust = 0.75)
 )
 }
 \arguments{
@@ -170,6 +177,8 @@ needed}
 
 \item{convert_gene_identifier_args}{arguments to
 scexpr::convert_gene_identifier}
+
+\item{pval_text_args}{}
 }
 \description{
 Plot a heatmap of average gene transcription of transcriptomes by

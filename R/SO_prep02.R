@@ -64,6 +64,7 @@
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
 #' @param interactive_pc_selection do conduct interactive PC selection?
 #' @param var_feature_set set hvf manually
+#' @param use_nn_for_umap
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export

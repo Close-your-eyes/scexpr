@@ -10,7 +10,8 @@ labeltransfer_singler(
   ref_labels,
   test_clusters = NULL,
   name_prefix = NULL,
-  singler_args = list(de.method = "wilcox", fine.tune = T, aggr.ref = F),
+  trainsingler_args = list(de.method = "wilcox", aggr.ref = F),
+  classifysingler_args = list(fine.tune = T),
   get_layer_args = list(layer = "data", assay = "RNA")
 )
 }
@@ -30,16 +31,18 @@ idents of length ncol(test_obj)}
 
 \item{name_prefix}{prefix to all returned columns}
 
-\item{singler_args}{arguments to SingleR::SingleR}
-
 \item{get_layer_args}{arguments to scexpr::get_layer (applies when test_obj
 or ref_obj is Seurat)}
+
+\item{singler_args}{arguments to SingleR::SingleR}
 }
 \value{
 list of data frame, matrix, named vector, score plot of SingleR
 results
 }
 \description{
+Multiple references: run the function multiple times, then use
+SingleR::combineRecomputedResults, see example.
 How SingleR computes. Marker selection: For each label, SingleR identifies genes
 that distinguish it from the others (de.method argument). Scoring: For a given
 query cell, it computes correlation between that cell’s expression profile and
@@ -67,5 +70,36 @@ out <- labeltransfer_singler(test_obj = seu_test,
                              ref_labels = seu_ref@meta.data$celltypes,
                              test_clusters = seu_test@meta.data$SCT_snn_res.0.8,
                              name_prefix = "enghard")
+
+## singler scores are context dependend
+## i.e. relative to whats in the ref
+## scores from muto_lt1 are different to muto_lt2
+## even though same genes are used
+muto_lt1 <- labeltransfer_singler(test_obj = so,
+                                  ref_obj = muto,
+                                  test_clusters = "SCT_pca_snn_res.0.4",
+                                  ref_labels = "celltype_muto")
+genes <- muto_lt$singler_obj@metadata$de.genes
+genes <- purrr::map(genes, ~.x[c("PT", "PT_VCAM1")])
+genes <- genes[c("PT", "PT_VCAM1")]
+muto_lt2 <- labeltransfer_singler(test_obj = so,
+                                  ref_obj = subset(muto, celltype_muto \%in\% c("PT", "PT_VCAM1")),
+                                  test_clusters = "SCT_pca_snn_res.0.4",
+                                  ref_labels = "celltype_muto",
+                                  singler_args = list(de.method = "wilcox",
+                                                      fine.tune = T,
+                                                      aggr.ref = F,
+                                                      genes = genes))
+
+## multiple references:
+klocke_lt <- labeltransfer_singler(test_obj = so,
+                                   ref_obj = klocke,
+                                   test_clusters = "SCT_pca_snn_res.0.4",
+                                   ref_labels = "renalcellgroup")
+combined_lt <- SingleR::combineRecomputedResults(results = list(muto_lt[["singler_obj"]],
+                                                                klocke_lt[["singler_obj"]]),
+                                                 test = muto_lt$test_obj,
+                                                 trained = list(muto_lt[["singler_train"]],
+                                                                klocke_lt[["singler_train"]]))
 }
 }

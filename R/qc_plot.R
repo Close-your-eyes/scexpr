@@ -320,7 +320,7 @@ make_stat_plot <- function(SO, feature, clust_name, geom2, breaks) {
 
   plot <- feature_plot_stat(SO,
                             features = feature,
-                            col.pal = SO@misc$clustering_colors,
+                            #meta_col = SO@misc$clustering_colors,
                             meta_col = clust_name,
                             geom2 = geom2,
                             jitterwidth = 0.3) +

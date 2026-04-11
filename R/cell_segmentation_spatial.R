@@ -104,7 +104,7 @@ get_mask_subset <- function(obj,
     hull_filter <- dplyr::slice(cell_coords, grDevices::chull(x, y))
     # brathering::plot2(hull_filter)
   }
-browser()
+
   # mask matrix to df
 
   mask <- raw_img_array_to_df(raw_array = mask,

@@ -12,6 +12,7 @@ run_xgboost_multi_classifier(
   method_model = c("xgbTree", "rf", "glmnet"),
   method_train = c("cv", "repeatedcv", "boot", "boot632", "LOOCV", "none"),
   train_search = c("grid", "random"),
+  train_repeat = 1,
   tuneGrid = expand.grid(eta = c(0.01, 0.1), nrounds = c(100, 200), max_depth = c(6, 9),
     gamma = c(0, 1), colsample_bytree = c(0.6, 0.8), min_child_weight = c(1, 5),
     subsample = c(0.7, 1)),
@@ -39,6 +40,8 @@ see all models: https://topepo.github.io/caret/available-models.html}
 
 \item{train_search}{search arg of caret::trainControl}
 
+\item{train_repeat}{}
+
 \item{tuneGrid}{tuneGrid arg of caret::train; set NULL and search=random to
 have 30 combinations automatically picked; when search is random it is
 the permitted range per parameter; when search is grid it gives all parameter
@@ -63,6 +66,14 @@ try with https://www.tidymodels.org/ somewhen.
 }
 \examples{
 \dontrun{
+## try parallel computing
+num_cores <- parallel::detectCores()
+cl <- parallel::makeCluster(12)
+doParallel::registerDoParallel(cl)
+
+parallel::stopCluster(cl)
+foreach::registerDoSEQ()
+
 model <- run_xgboost_multi_classifier(tt,
                                       train_search = "random",
                                       method_model = "xgbTree",

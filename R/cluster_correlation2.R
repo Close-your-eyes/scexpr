@@ -29,14 +29,16 @@
 cluster_correlation2 <- function(objs,
                                  meta_cols,
                                  split = NULL,
-                                 features = c("all", "pca"), # pairwise DEG?
+                                 features = c("pca", "all"), # pairwise DEG?
                                  assay = "RNA",
                                  layer = "data",
-                                 method = c("pearson","spearman", "kendall", "kendall_zi"),
+                                 method = c("spearman", "pearson", "kendall", "kendall_zi"),
                                  heatmap_long_df_args = list(
                                    fill = colrr::col_pal("spectral", direction = -1),
-                                   colorsteps = "..auto.."
-                                 ),
+                                   values_zscored = F,
+                                   colorsteps = 10,
+                                   theme_args = list(panel.grid = ggplot2::element_blank(),
+                                                     axis.text.x = ggplot2::element_text(angle = 35, hjust = 1))),
                                  heatmap_ordering_args = list(
                                    feature_order = "hclust",
                                    group_order = "hclust"),
@@ -67,6 +69,11 @@ cluster_correlation2 <- function(objs,
   }
   if (!requireNamespace("brathering", quietly = T)) {
     devtools::install_github("Close-your-eyes/brathering")
+  }
+
+  if (is.null(names(objs))) {
+    nme <- as.character(deparse(substitute(objs)))
+    names(objs) <- strsplit(gsub("list\\(|\\)", "", nme), ", ")[[1]]
   }
 
   c(objs,
@@ -165,11 +172,15 @@ cluster_correlation2 <- function(objs,
   } else {
     # no split
     corrobj <- psych::corr.test(
-      avg_expr[[1]],
-      y = avg_expr[[2]],
-      method = method
-    )
+      x = avg_expr[[1]][[1]],
+      y = avg_expr[[2]][[1]],
+      method = method)
+
     corr_mat <- corrobj[["r"]]
+    apply(avg_expr[[1]][[1]], 2, sd)
+    apply(avg_expr[[2]][[1]], 2, sd)
+    any(is.infinite(avg_expr[[2]][[1]][,1]))
+    tt <- avg_expr[["klocke"]][[1]]
   }
 
   # cell count w/o split
@@ -189,6 +200,7 @@ cluster_correlation2 <- function(objs,
     dplyr::left_join(cells[[2]], by = names(objs)[2])
 
   # ordering before NA may be introduced
+
   rdf <- Gmisc::fastDoCall(what = fcexpr::heatmap_ordering,
                            args = c(list(df = rdf,
                                          groups = names(rdf)[1],

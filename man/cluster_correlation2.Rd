@@ -8,12 +8,14 @@ cluster_correlation2(
   objs,
   meta_cols,
   split = NULL,
-  features = c("all", "pca"),
+  features = c("pca", "all"),
   assay = "RNA",
   layer = "data",
-  method = c("pearson", "spearman", "kendall", "kendall_zi"),
+  method = c("spearman", "pearson", "kendall", "kendall_zi"),
   heatmap_long_df_args = list(fill = colrr::col_pal("spectral", direction = -1),
-    colorsteps = "..auto.."),
+    values_zscored = F, colorsteps = 10, theme_args = list(panel.grid =
+    ggplot2::element_blank(), axis.text.x = ggplot2::element_text(angle = 35, hjust =
+    1))),
   heatmap_ordering_args = list(feature_order = "hclust", group_order = "hclust"),
   lower_tri = F,
   min_cells = 1,

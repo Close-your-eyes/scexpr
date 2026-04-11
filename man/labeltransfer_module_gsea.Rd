@@ -26,7 +26,24 @@ list
 }
 \description{
 In comparison to labeltransfer_singler a test object and modules (gene sets)
-are stater material but not a ref object. Modules may be DE genes defining a
+are starter material but not a ref object. Modules may be DE genes defining a
 cell population in another dataset. Module score and test for enrichment with
 fgsea are used to find matching populations (clusters) in test_obj.
+}
+\examples{
+\dontrun{
+  ## get modules/celltype signatrex from reference
+  ref_modules <- scexpr::find_all_marker(ref, meta_col = "celltype_ref")
+  ref_modules2 <- ref_modules |>
+    dplyr::filter(avg_log2FC>1.5 & pct_in>30 & padj<0.00001) # filter for relevant markers
+
+  # optionally filter for variable features in test object
+  # ref_modules2 <- ref_modules2 |> dplyr::filter(feature \%in\% scexpr::get_var_features(test))
+  ref_modules_lst <- split(ref_modules2$feature, ref_modules2$group)
+
+  res <- labeltransfer_module_gsea(test,
+                                   test_clusters = "SCT_pca_snn_res.2", # use an overclustering
+                                   modules = ref_modules_lst,
+                                   AddModuleScore_UCell_args = list(ncores = 8, name = "")) #leave name = ""
+}
 }

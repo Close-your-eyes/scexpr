@@ -600,7 +600,11 @@ feature_plot_gene <- function(plot,
     plot[["data"]][["valuebin"]] <- ifelse(plot[["data"]][["feature"]] > 0, "+", "-")
     plot <- plot +
       ggplot2::geom_point(
-        data = ~dplyr::filter(., cells == 1),
+        data = ~dplyr::filter(., cells == 1 & valuebin == "-"),
+        mapping = ggplot2::aes(shape = !!shapeby, color = valuebin),
+        size = pt_size) +
+      ggplot2::geom_point(
+        data = ~dplyr::filter(., cells == 1 & valuebin == "+"),
         mapping = ggplot2::aes(shape = !!shapeby, color = valuebin),
         size = pt_size*pt_size_fct) +
       ggplot2::scale_color_manual(values = c(col_non_expr, col_expr))

@@ -46,15 +46,15 @@
 #'                              name_prefix = "enghard")
 #' }
 labeltransfer_singler2 <- function(test_obj,
-                                  ref_obj,
-                                  ref_labels,
-                                  test_clusters = NULL,
-                                  name_prefix = NULL,
-                                  singler_args = list(de.method = "wilcox",
-                                                      fine.tune = T,
-                                                      aggr.ref = F),
-                                  get_layer_args = list(layer = "data",
-                                                        assay = "RNA")) {
+                                   ref_obj,
+                                   ref_labels,
+                                   test_clusters = NULL,
+                                   name_prefix = NULL,
+                                   singler_args = list(de.method = "wilcox",
+                                                       fine.tune = T,
+                                                       aggr.ref = F),
+                                   get_layer_args = list(layer = "data",
+                                                         assay = "RNA")) {
 
   if (!requireNamespace("SingleR", quietly = T)) {
     BiocManager::install("SingleR")
@@ -133,12 +133,12 @@ labeltransfer_singler2 <- function(test_obj,
                                rownames_to = "test_cells")
   names(score_df_sc)[-1] <- paste0(names(score_df_sc)[-1], "_sc")
   score_df_sc <- score_df_sc |>
-  dplyr::left_join(
-    score_df_sc |>
-      dplyr::filter(is_label_sc) |>
-      dplyr::select(!!rlang::sym("test_cells"), !!rlang::sym(paste0(ref_labels_name, "_sc"))) |>
-      dplyr::rename(!!paste0(paste0(ref_labels_name, "_sc"), "_assigned_label") := !!rlang::sym(paste0(ref_labels_name, "_sc"))),
-    by = dplyr::join_by(!!rlang::sym("test_cells")))
+    dplyr::left_join(
+      score_df_sc |>
+        dplyr::filter(is_label_sc) |>
+        dplyr::select(!!rlang::sym("test_cells"), !!rlang::sym(paste0(ref_labels_name, "_sc"))) |>
+        dplyr::rename(!!paste0(paste0(ref_labels_name, "_sc"), "_assigned_label") := !!rlang::sym(paste0(ref_labels_name, "_sc"))),
+      by = dplyr::join_by(!!rlang::sym("test_cells")))
 
   if (!is.null(test_clusters)) {
     labels_clust <- Gmisc::fastDoCall(SingleR::SingleR,
@@ -160,9 +160,9 @@ labeltransfer_singler2 <- function(test_obj,
     score_mat_clust <- labels_clust@listData[["scores"]]
     rownames(score_mat_clust) <- labels_clust@rownames
     score_df_clust <- prep_score_df(score_mat_clust, lablist_clust,
-                                 ref_labels_name,
-                                 labels_name, prunelabels_name,
-                                 rownames_to = test_clusters_name)
+                                    ref_labels_name,
+                                    labels_name, prunelabels_name,
+                                    rownames_to = test_clusters_name)
     names(score_df_clust)[-1] <- paste0(names(score_df_clust)[-1], "_clust")
   }
 
@@ -303,76 +303,4 @@ labeltransfer_singler2 <- function(test_obj,
 }
 
 
-prep_test_vars <- function(test_obj, test_clusters, get_layer_args) {
-  test_clusters_name <- "test_cells" # default when no clause below applies
-  if (methods::is(test_obj, "Seurat")) {
-    if (!is.null(test_clusters)) {
-      if (!test_clusters %in% names(test_obj@meta.data)) {
-        stop(test_clusters, " not found in test_obj@meta.data.")
-      }
-      test_clusters_name <- test_clusters
-      test_clusters <- test_obj@meta.data[[test_clusters]]
-    }
-    test_obj <- Gmisc::fastDoCall(get_layer, c(list(obj = test_obj), get_layer_args))
-  } else if (methods::is(test_obj, "matrix") || methods::is(test_obj, "sparseMatrix")) {
-    if (!is.null(test_clusters)) {
-      test_clusters_name <- "test_clusters"
-    }
-  } else {
-    stop("test_obj must be Seurat or (sparse) matrix")
-  }
-  if (!is.null(test_clusters) && !is.factor(test_clusters)) {
-    test_clusters <- as.factor(test_clusters)
-  }
-  return(list(test_obj, test_clusters, test_clusters_name))
-}
 
-prep_ref_vars <- function(ref_obj, ref_labels, get_layer_args) {
-
-  ref_labels_name <- "ref_labels"
-  if (methods::is(ref_obj, "Seurat")) {
-    if (!ref_labels %in% names(ref_obj@meta.data)) {
-      message("labeltransfer_singler: ", ref_labels, " not found.")
-      return(NULL)
-    }
-    ref_labels_name <- ref_labels
-    ref_labels <- ref_obj@meta.data[[ref_labels]]
-    ref_obj <-  Gmisc::fastDoCall(get_layer, c(list(obj = ref_obj), get_layer_args))
-  } else if (methods::is(ref_obj, "SummarizedExperiment")) {
-    if (!ref_labels %in% names(ref_obj@colData@listData)) {
-      message("labeltransfer_singler: ", ref_labels, " not found.")
-      return(NULL)
-    }
-    ref_labels_name <- ref_labels
-    ref_labels <- ref_obj@colData@listData[[ref_labels]]
-  } else if (!methods::is(ref_obj, "matrix") && !methods::is(ref_obj, "sparseMatrix")) {
-    stop("ref_obj must be Seurat, SummarizedExperiment or (sparse) matrix")
-  }
-
-  return(list(ref_obj, ref_labels, ref_labels_name))
-}
-
-prep_score_df <- function(score_mat, lablist, ref_labels_name,
-                          labels_name, prunelabels_name,
-                          rownames_to) {
-  score_df <- brathering::mat_to_df_long(
-    score_mat,
-    colnames_to = ref_labels_name,
-    rownames_to = rownames_to,
-    values_to = "score") |>
-    dplyr::mutate(is_max_score = score == max(score), .by = !!rlang::sym(rownames_to)) |>
-    dplyr::left_join(utils::stack(lablist[[labels_name]]) |>
-                       dplyr::mutate(ind = as.character(ind)) |>
-                       dplyr::rename(!!rlang::sym(ref_labels_name) := values,
-                                     !!rlang::sym(rownames_to) := ind) |>
-                       dplyr::mutate(is_label = T),
-                     by = c(ref_labels_name, rownames_to)) |>
-    dplyr::left_join(utils::stack(lablist[[prunelabels_name]]) |>
-                       dplyr::mutate(ind = as.character(ind)) |>
-                       dplyr::rename(!!rlang::sym(ref_labels_name) := values,
-                                     !!rlang::sym(rownames_to) := ind) |>
-                       dplyr::mutate(is_pruned_label = T),
-                     by = c(ref_labels_name, rownames_to)) |>
-    dplyr::mutate(is_label = ifelse(is.na(is_label), F, is_label),
-                  is_pruned_label = ifelse(is.na(is_pruned_label), F, is_pruned_label))
-}

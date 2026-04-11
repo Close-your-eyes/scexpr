@@ -91,6 +91,14 @@
 #'
 #' @examples
 #'\dontrun{
+#' ## try parallel computing
+#' num_cores <- parallel::detectCores()
+#' cl <- parallel::makeCluster(12)
+#' doParallel::registerDoParallel(cl)
+#'
+#' parallel::stopCluster(cl)
+#' foreach::registerDoSEQ()
+#'
 #' ggbwlot <- function(resamps) {
 #'
 #'   rmse_long <- resamps$values |>
@@ -266,6 +274,7 @@ run_xgboost_regressor <- function(df,
                                   method_model = c("xgbTree", "rf", "glmnet"),
                                   method_train = c("cv", "repeatedcv", "boot", "boot632", "LOOCV", "none"),
                                   train_search = c("grid", "random"),
+                                  train_repeat = 1,
                                   tuneGrid = expand.grid(
                                     eta = c(0.01, 0.1),
                                     nrounds = c(100, 200),
@@ -318,6 +327,7 @@ run_xgboost_regressor <- function(df,
     method = method_train,
     number = train_iter,
     search = train_search,
+    repeats = train_repeat,
     verboseIter = TRUE
   )
 

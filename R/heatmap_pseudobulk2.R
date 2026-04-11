@@ -80,6 +80,13 @@
 #' @param featuregroup_col_name color legend name
 #' @param featuregroup_col_pal color palette name passed to colrr::col_pal
 #' @param min_pct_force apply min_pct even when features are given
+#' @param pvals
+#' @param pval_features
+#' @param pval_max
+#' @param pval_symnum_args
+#' @param pval_filter
+#' @param pval_logfc
+#' @param pval_text_args
 #'
 #' @importFrom zeallot %<-%
 #'
@@ -159,7 +166,15 @@ heatmap_pseudobulk2 <- function(SO,
                                 repel_args = list(featurelabels_width = 0.2,
                                                   featurelabels_nudhe_x = -1),
                                 sec_axis = F,
-                                convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME")) {
+                                convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
+                                pvals = NULL,
+                                pval_features = NULL,
+                                pval_max = 0.01,
+                                pval_symnum_args = list(cutpoints = c(0, 0.0001, Inf),
+                                                        symbols = c("*", "ns")),
+                                pval_filter = c("top", "pos_fc"),
+                                pval_logfc = "logFC",
+                                pval_text_args = list(size = 5, vjust = 0.75)) {
 
   if (!requireNamespace("devtools", quietly = T)) {
     utils::install.packages("devtools")
@@ -178,6 +193,7 @@ heatmap_pseudobulk2 <- function(SO,
   group_order <- rlang::arg_match(group_order)
   topn_metric <- rlang::arg_match(topn_metric, multiple = T)
   featuregroup_style <- rlang::arg_match(featuregroup_style, multiple = T)
+  pval_filter <- rlang::arg_match(pval_filter)
 
   if (!is.null(features_topn)) {
     features_topn <- max(1, features_topn)
@@ -291,6 +307,9 @@ heatmap_pseudobulk2 <- function(SO,
     featuregroup <- "featgroup"
   }
 
+
+
+  dotsizes <- if (dotplot) "pct_in" else NULL
   # fcexpr::
   plot <- fcexpr::heatmap_long_df(df = wil_auc,
                                   groups = "group",
@@ -300,7 +319,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   featuregroup_col_name = featuregroup_col_name,
                                   featuregroup_col_pal = featuregroup_col_pal,
                                   values = values,
-                                  dotsizes = if (dotplot) "pct_in" else NULL,
+                                  dotsizes = dotsizes,
                                   dotsize_range = dotsize_range,
                                   features_topn = NULL,
                                   # irrelevant as features_topn is handled above
@@ -326,7 +345,14 @@ heatmap_pseudobulk2 <- function(SO,
                                   repel_args = repel_args,
                                   theme = theme,
                                   heatmap_ordering_args = list(feature_order = feature_order,
-                                                               group_order = group_order))
+                                                               group_order = group_order),
+                          pvals = pvals,
+                          pval_features = pval_features,
+                          pval_max = pval_max,
+                          pval_symnum_args = pval_symnum_args,
+                          pval_filter = pval_filter,
+                          pval_logfc = pval_logfc,
+                          pval_text_args = pval_text_args)
 
 
   # if (!is.null(feature_groups)) {

@@ -18,7 +18,8 @@ image_feature_plot(
   axes_hide = T,
   col_pal_c_args = list(name = "spectral", direction = -1),
   col_pal_d_args = list(name = "custom"),
-  col_binary = F
+  col_binary = F,
+  expr_only = F
 )
 }
 \arguments{
@@ -58,6 +59,8 @@ using \code{colrr::make_col_pal()}. Must include \code{name}.}
 
 \item{col_pal_d_args}{List. Arguments for discrete color palette generation
 using \code{colrr::make_col_pal()}. Must include \code{name}.}
+
+\item{expr_only}{}
 }
 \value{
 A \code{ggplot2} object representing the spatial visualization.
