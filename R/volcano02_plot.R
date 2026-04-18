@@ -47,6 +47,8 @@
 #' @param cut_plot_summary plot number of genes outside of cut values
 #' @param col_line cut line colors
 #' @param linewidth cut line linewidth
+#' @param arrows left and right arrow for x axis title separated by space; first index used;
+#' use colrr::theme_material with unicode arrows
 #'
 #' @returns ggplot object
 #' @export
@@ -107,7 +109,8 @@ volcano02_plot <- function(volc01_df,
                                                        segment.alpha = 0.4,
                                                        min.segment.length = 1),
                            col_line = "grey50",
-                           linewidth = 0.5) {
+                           linewidth = 0.5,
+                           arrows = c("<-- -->", "\u2190 \u2192")) {
 
   if (!requireNamespace("colrr", quietly = T)) {
     devtools::install_github("Close-your-eyes/colrr")
@@ -198,6 +201,7 @@ volcano02_plot <- function(volc01_df,
   xrng <- range(vd[[x]])
   x_absmax <- max(abs(xrng))
 
+  arrows <- strsplit(arrows[1], " ")[[1]][c(1,2)]
   ## main plotting code lines
   vp <- vp +
     ggplot2::geom_point(color = pt_col, alpha = pt_alpha, size = pt_size) +
@@ -209,7 +213,7 @@ volcano02_plot <- function(volc01_df,
                                 expand = ggplot2::expansion(mult = c(0, y_axis_expansion))) +
     # ggplot2::labs(x = bquote(bold(.(att$neg_name)) ~ " <-- " ~ log[2] ~ "FC" ~ " --> " ~ bold(.(att$pos_name))),
     #               y = if (minus_log10_y) bquote(-log[10]~.(rlang::sym(y))) else y) +
-    ggplot2::labs(x = paste0(att$neg_name, "  <--  ", x, "  -->  ", att$pos_name),
+    ggplot2::labs(x = paste0(att$neg_name, " ", arrows[1], " ", x, " ", arrows[2], " ", att$pos_name),
                   y = if (minus_log10_y) paste0("-log10 ", y) else y) +
     ggplot2::xlim(ifelse(x_symm, -x_absmax, xrng[1]) - x_expnd, ifelse(x_symm, x_absmax, xrng[2]) + x_expnd)
 

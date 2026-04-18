@@ -68,9 +68,9 @@ get_layer <- function(obj,
 
   }
 
-  if (layer == "data" && brathering::is_int_like(x)) {
-    message("data layer is all integers. should not be. did you run NormalizeData?")
-  }
+  # if (layer == "data" && brathering::is_int_like(x)) {
+  #   message("data layer is all integers. should not be. did you run NormalizeData?")
+  # }
 
   if (all(dim(x) == c(0,0))) {
     message("get_layer: layer ", layer, " is empty.")

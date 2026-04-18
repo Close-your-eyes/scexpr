@@ -4,7 +4,15 @@
 \alias{find_markers_pairwise}
 \title{Find marker genes in pairwise comparisons}
 \usage{
-find_markers_pairwise(obj, group, split = NULL, mc.cores = 1, ...)
+find_markers_pairwise(
+  obj,
+  group = NULL,
+  split = NULL,
+  mc.cores = 1,
+  method = c("scexpr", "seurat"),
+  redundant = F,
+  ...
+)
 }
 \arguments{
 \item{obj}{Seurat object}

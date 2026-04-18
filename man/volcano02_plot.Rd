@@ -45,7 +45,8 @@ volcano02_plot(
     max.iter = 30000, segment.color = "grey30", segment.alpha = 0.4, min.segment.length =
     1),
   col_line = "grey50",
-  linewidth = 0.5
+  linewidth = 0.5,
+  arrows = c("<-- -->", "← →")
 )
 }
 \arguments{
@@ -132,6 +133,9 @@ repelling to left and right}
 \item{col_line}{cut line colors}
 
 \item{linewidth}{cut line linewidth}
+
+\item{arrows}{left and right arrow for x axis title separated by space; first index used;
+use colrr::theme_material with unicode arrows}
 }
 \value{
 ggplot object

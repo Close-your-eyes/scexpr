@@ -8,7 +8,6 @@
 #' GENENAME GENETYPE GO GOALL IPI MAP OMIM ONTOLOGY ONTOLOGYALL
 #' PATH PFAM PMID PROSITE REFSEQ SYMBOL UCSCKG UNIPROT
 #'
-#' @param idents character vector of gene indentifiers
 #' @param ident_in type of identifier provided in idents
 #' @param ident_out type(s) of identifier(s) to return
 #' @param species

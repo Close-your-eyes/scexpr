@@ -59,9 +59,13 @@
 #' @param diet_seurat
 #' @param SoupX_autoEstCont_args
 #' @param sample_prefix_to_cell_id
-#' @param early_exit
-#' @param reduction
-#' @param mc.cores
+#' @param early_exit only read count matrices without much processing (no dim red etc)
+#' @param reduction which reduction(s) to calculate
+#' @param mc.cores parallel computing (speed up reading many samples)
+#' @param equalize_feature_order only relevant if early_exit: filter for equal features and order them
+#' @param common_cells only relevant if early_exit: filter for equal cells,
+#' e.g. when same sample was mapped differently and slightly different cells
+#' were annotated by CellRanger
 #'
 #' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
 #' @export
@@ -94,6 +98,8 @@ SO_prep01 <- function(data_dirs,
                       diet_seurat = T,
                       sample_prefix_to_cell_id = T,
                       early_exit = F,
+                      equalize_feature_order = F,
+                      common_cells = F,
                       mc.cores = 1) {
 
 
@@ -129,38 +135,59 @@ SO_prep01 <- function(data_dirs,
   #SoupX_return <- T
 
   message("Reading filtered_feature_bc_matrix data.")
-  SO <- parallel::mclapply(stats::setNames(names(ffbms), names(ffbms)), function(x) {
+  SO <- parallel::mclapply(purrr::set_names(names(ffbms)), function(x) {
 
     message(x)
     # this adds folder name prefix to cell names
     #names(x) <- basename(dirname(x))
 
     # not SO yet but matrix only
-    SO <- read_10X_data(path = ffbms[x],
-                        cells = cells,
-                        min_UMI = min_UMI,
-                        name = x,
-                        sample_prefix_to_cell_id = sample_prefix_to_cell_id,
-                        invert_cells = invert_cells)
+    mat <- read_10X_data(path = ffbms[x],
+                         cells = cells,
+                         min_UMI = min_UMI,
+                         name = x,
+                         sample_prefix_to_cell_id = sample_prefix_to_cell_id,
+                         invert_cells = invert_cells)
+    return(mat)
+
+  }, mc.cores = mc.cores)
+
+
+  if (early_exit) {
+    ## check it here, otherwise it is done it is done in SO_prep02
+    if (equalize_feature_order) {
+      SO <- scexpr:::make_equal_feature_order(SO)
+    }
+    if (common_cells) {
+      SO <- make_equal_cells(SO)
+    }
+  }
+
+  SO <- parallel::mclapply(purrr::set_names(names(SO)), function(x) {
 
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
-      SO <- aggregate_or_remove_features(filt_data = SO,
-                                         feature_rm = feature_rm,
-                                         feature_aggr = feature_aggr)
+      SO[[x]] <- aggregate_or_remove_features(filt_data = SO[[x]],
+                                              feature_rm = feature_rm,
+                                              feature_aggr = feature_aggr)
     }
 
-    message("Creating initial Seurat object with ", ncol(SO), " cells.")
-    SO <- Seurat::CreateSeuratObject(counts = SO)
-    SO@meta.data$orig.ident <- x
+    message("Creating initial Seurat object with ", ncol(SO[[x]]), " cells.")
+    SO[[x]] <- Seurat::CreateSeuratObject(counts = SO[[x]])
+    SO[[x]]@meta.data$orig.ident <- x
 
     # doublet score calculation with not yet merged data
     if (scDblFinder) {
-      SO <- add_dbl_score_to_metadata(SO = SO,
-                                      nhvf = nhvf,
-                                      min_UMI_var_feat = min_UMI_var_feat,
-                                      npcs = npcs)
+      tryCatch(expr = {
+        SO[[x]] <- add_dbl_score_to_metadata(SO = SO[[x]],
+                                             nhvf = nhvf,
+                                             min_UMI_var_feat = min_UMI_var_feat,
+                                             npcs = npcs)
+      }, error = function(err){
+        err
+      })
+
     }
-    return(SO)
+    return(SO[[x]])
   }, mc.cores = mc.cores)
 
   if (early_exit) {
@@ -332,6 +359,7 @@ check_dir <- function(data_dirs, SoupX = F) {
   if (is.null(names(dir_roots))) {
     names(dir_roots) <- basename(dir_roots)
     names(dir_roots)[which(names(dir_roots) == "outs")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "outs")]
+    names(dir_roots)[which(names(dir_roots) == "count")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "count")]
   }
 
   if (any(duplicated(names(dir_roots)))) {
@@ -925,3 +953,31 @@ cluster_on_metadata <- function(SO,
   })
 
 }
+# purrr::map(cells, head)
+
+make_equal_cells <- function(x) {
+  # x: list of vectors
+  cells <- purrr::map(x, colnames)
+
+  # remove prefix
+  cells_rmprefix <- purrr::map(purrr::set_names(names(cells)), function(x) {
+    cells[[x]] <- gsub(x, "", cells[[x]])
+    return(cells[[x]])
+  })
+
+  lens <- purrr::map_dbl(cells_rmprefix, length)
+  if (length(unique(lens)) > 1) {
+    # different features
+    common_cells <- purrr::reduce(cells_rmprefix, intersect)
+    match_inds <- purrr::map(cells_rmprefix, ~which(.x %in% common_cells))
+    x <- purrr::map2(x, match_inds, function(x,y) x[,y])
+    message("different cells across input samples. reducing to common: n = ", length(common_cells))
+    message("original: ")
+    print(lens)
+  }
+  # no ordering of cells yet
+
+  return(x)
+}
+
+

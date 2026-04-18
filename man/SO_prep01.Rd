@@ -30,6 +30,8 @@ SO_prep01(
   diet_seurat = T,
   sample_prefix_to_cell_id = T,
   early_exit = F,
+  equalize_feature_order = F,
+  common_cells = F,
   mc.cores = 1
 )
 }
@@ -84,7 +86,17 @@ is simply done by addition; aggregation is done before feature removal (if featu
 
 \item{batch_corr}{which batch correction to apply for integration of different samples}
 
-\item{mc.cores}{}
+\item{reduction}{which reduction(s) to calculate}
+
+\item{early_exit}{only read count matrices without much processing (no dim red etc)}
+
+\item{equalize_feature_order}{only relevant if early_exit: filter for equal features and order them}
+
+\item{common_cells}{only relevant if early_exit: filter for equal cells,
+e.g. when same sample was mapped differently and slightly different cells
+were annotated by CellRanger}
+
+\item{mc.cores}{parallel computing (speed up reading many samples)}
 }
 \value{
 a list of Seurat object and data frame with marker genes for clusters based on feature expression

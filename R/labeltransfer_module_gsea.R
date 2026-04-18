@@ -130,7 +130,7 @@ labeltransfer_module_gsea <- function(test_obj,
   resdf <- purrr::map_dfr(res, ~.x[["data"]]) |>
     dplyr::mutate(padj2 = -log(padj))
 
-
+## plot ES as NES was NA sometimes
   scores_plot2 <- fcexpr::heatmap_long_df(resdf,
                                           groups = "pathway",
                                           features = test_clusters,
@@ -139,7 +139,8 @@ labeltransfer_module_gsea <- function(test_obj,
                                           values_zscored = F,
                                           theme_args = list(panel.grid = ggplot2::element_blank(),
                                                             axis.text.x = ggplot2::element_text(angle = 40, hjust = 1))) +
-    ggplot2::geom_text(data = dplyr::slice_max(resdf, order_by = ES,
+    ggplot2::geom_text(data = dplyr::slice_max(resdf,
+                                               order_by = ES,
                                                n = 1,
                                                by = !!rlang::sym(test_clusters)),
                        mapping = ggplot2::aes(label = round(ES, 2)))

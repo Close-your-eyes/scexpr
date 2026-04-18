@@ -22,12 +22,21 @@
 #' markers_pairwise_seurat_full <- scexpr:::make_list_of_lists_redundant(markers_pairwise_seurat)
 #'}
 find_markers_pairwise <- function(obj,
-                                  group,
+                                  group = NULL,
                                   #assay = "RNA",
                                   #layer = "data",
                                   split = NULL,
                                   mc.cores = 1,
+                                  method = c("scexpr", "seurat"),
+                                  redundant = F,
                                   ...) {
+
+  method <- rlang::arg_match(method)
+
+  if (is.null(group)) {
+    obj <- purrr::map(obj, ~SeuratObject::AddMetaData(.x, Seurat::Idents(.x), col.name = "group"))
+    group <- "group"
+  }
 
   lvls <- as.character(unique(obj@meta.data[[group]]))
   all_pairs <- utils::combn(lvls, 2, simplify = F)
@@ -43,9 +52,29 @@ find_markers_pairwise <- function(obj,
   out <- purrr::map_dfr(obj, function(ob) {
     out <- parallel::mclapply(all_pairs, function(z) {
       out <- tryCatch(expr = {
-        Seurat::FindMarkers(ob, ident.1 = z[1], ident.2 = z[2], ...) |>
-          dplyr::mutate(ident.1 = z[1], ident.2 = z[2]) |>
-          tibble::rownames_to_column("gene")
+        if (method == "scexpr") {
+          temp <- find_all_marker(subset(ob, idents = z)) |>
+            dplyr::rename("ident.1" = group) |>
+            dplyr::select(-avgExpr, -statistic)
+          temp <- split(temp, temp$ident.1)
+          temp <- purrr::map(temp, ~.x |> dplyr::mutate(ident.2 = setdiff(z, ident.1)))
+          ## this comes redundant by default
+          if (redundant) {
+            dplyr::bind_rows(temp)
+          } else {
+            temp[[1]] # just return first half
+          }
+        } else if (method == "seurat") {
+          temp <- Seurat::FindMarkers(ob, ident.1 = z[1], ident.2 = z[2], ...) |>
+            dplyr::mutate(ident.1 = z[1], ident.2 = z[2]) |>
+            tibble::rownames_to_column("feature")
+          ## must be made redundant if required
+          if (redundant) {
+            tt <- dplyr::bind_rows(temp, flip_marker_df(temp))
+          } else {
+            temp
+          }
+        }
       }, error = function(err) {
         NULL
       })
@@ -75,6 +104,7 @@ find_markers_pairwise <- function(obj,
 
 make_list_of_lists_redundant <- function(x) {
   # assumes list depth of 2
+  # could move to brathering
   all_names <- unique(c(names(x), unlist(purrr::map(x, names))))
   sep <- brathering::find_sep(all_names)
   flat <- purrr::list_flatten(x, name_spec = paste0("{outer}", sep, "{inner}"))
@@ -85,6 +115,25 @@ make_list_of_lists_redundant <- function(x) {
 
   return(brathering::list_unflatten(flat_join, sep = sep))
 }
+
+flip_marker_df <- function(df) {
+
+  if ("pct_in" %in% names(df)) {
+    ## from scexpr::find_markers_pairwise
+    df <- df |> dplyr::rename("ident.2" = ident.1, "ident.1" = ident.2,
+                              "pct_in" = pct_out, "pct_out" = pct_in) |>
+      dplyr::mutate(logFC = -1*logFC, avg_log2FC = -1*avg_log2FC)
+  } else if ("pct.1" %in% names(df)) {
+    ## from seurat::FindMarkers
+    df <- df |> dplyr::rename("ident.2" = ident.1, "ident.1" = ident.2,
+                              "pct.1" = pct.2, "pct.2" = pct.1) |>
+      dplyr::mutate(avg_log2FC = -1*avg_log2FC)
+  } else {
+    stop("df not recognized.")
+  }
+  return(df)
+}
+
 
 
 #

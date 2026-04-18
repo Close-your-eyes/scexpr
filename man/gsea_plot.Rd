@@ -58,7 +58,8 @@ a vector gene names to plot}
 
 \item{plot_leadingEdge_size}{plot the size (n genes) of the leading edge}
 
-\item{annotation_pos}{vector of x and y value where to plot gsea stats}
+\item{annotation_pos}{vector of x and y value where to plot gsea stats;
+or auto for automatic positioning}
 
 \item{annotation_size}{size of annotation (geom_text size)}
 

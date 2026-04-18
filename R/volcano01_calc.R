@@ -171,7 +171,10 @@ volcano01_calc <- function(SO,
     if (assay != "RNA") {
       stop("multiple SO: only RNA currently")
     }
-    SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO, get_layer, layer = "counts")),
+
+    SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO, get_layer,
+                                                                        layer = "counts",
+                                                                        features = intersect_features)),
                                      meta.data = dplyr::bind_rows(purrr::map(SO, ~.x@meta.data)))
     SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
   } else {
@@ -199,6 +202,7 @@ volcano01_calc <- function(SO,
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   # DefaultAssay set above
+
   vd <- calculate_DEG(SO = SO,
                       layer = layer,
                       ngc = ngc,
@@ -279,6 +283,7 @@ calculate_DEG <- function(SO,
       }
       options(mc.cores = mc.cores)
     }
+   # tt <- get_data(SO, feature = "MALAT1", try_df = T, reduction = NULL)
 
     Seurat::Idents(SO) <- SO@meta.data[,1,drop=T]
     df <- Seurat::FindMarkers(Seurat::GetAssay(SO, Seurat::DefaultAssay(SO)),

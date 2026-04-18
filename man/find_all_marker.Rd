@@ -6,7 +6,7 @@
 \usage{
 find_all_marker(
   obj,
-  meta_col,
+  meta_col = NULL,
   assay = "RNA",
   layer = "data",
   calc_avglog2fc = T,

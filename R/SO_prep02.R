@@ -1396,6 +1396,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
       SO_unprocessed <- purrr::map(SO_unprocessed,
                                    get_layer,
                                    layer = "counts")
+
       SO <- Seurat::CreateSeuratObject(counts = chunk_wise_cbind(x = SO_unprocessed),
                                        meta.data = meta.data)
       rm(SO_unprocessed)
@@ -1515,9 +1516,13 @@ get_numeric_input <- function(prompt = "Enter a number: ") {
 chunk_wise_cbind <- function(x, nchunk = 0.2) {
   ## better for memory
   ## and much faster
+
   if (nchunk < 1) {
     nchunk <- length(x)*nchunk
   }
+
+  x <- make_equal_feature_order(x)
+
   chunks <- split(x, ceiling(seq_along(x)/nchunk))
   partials <- purrr::map(chunks, ~do.call(cbind, .x))
   result <- do.call(cbind, partials)
@@ -1578,4 +1583,31 @@ calc_neighbor_and_cluster <- function(SO,
 }
 
 
+make_equal_feature_order <-  function(x) {
+  # x: list of vectors
+  feats <- purrr::map(x, rownames)
+  lens <- purrr::map_dbl(feats, length)
+  if (length(unique(lens)) > 1) {
+    # different features
+    common_feats <- purrr::reduce(feats, intersect)
+    message("different features across input samples. reducing to common: n = ", length(common_feats))
+    message("original: ")
+    print(lens)
+    message("check new global variable: feature_overlap_df")
 
+    featsdf <- purrr::map(names(feats), function(x) data.frame(x = feats[[x]], y = feats[[x]]))
+    featsdf <- purrr::reduce(featsdf, dplyr::full_join, by = "x")
+    names(featsdf)[-1] <- names(feats)
+    feature_overlap_df <<- featsdf
+
+  } else {
+    # same lens but also same order?
+    if (!all(purrr::map_lgl(feats, ~all(.x == feats[[1]])))) {
+      message("different features order across input samples. will equalize order of features.")
+    }
+    common_feats <- feats[[1]]
+  }
+
+  x <- purrr::map(x, ~.x[common_feats,])
+  return(x)
+}

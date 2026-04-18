@@ -13,7 +13,8 @@
 #' @param theme ggplot theme
 #' @param plot_leadingEdge_rank plot a vertical line at the rank of max ES
 #' @param plot_leadingEdge_size plot the size (n genes) of the leading edge
-#' @param annotation_pos vector of x and y value where to plot gsea stats
+#' @param annotation_pos vector of x and y value where to plot gsea stats;
+#' or auto for automatic positioning
 #' @param annotation_size size of annotation (geom_text size)
 #' @param annotation_with_name
 #' @param ticks_height length or height of gene ticks

@@ -18,7 +18,7 @@
 #'
 #' @examples
 find_all_marker <- function(obj,
-                            meta_col,
+                            meta_col = NULL,
                             assay = "RNA",
                             layer = "data",
                             calc_avglog2fc = T,
@@ -28,8 +28,7 @@ find_all_marker <- function(obj,
 
   obj <- scexpr:::check.SO(
     obj,
-    assay = assay
-  )
+    assay = assay)
 
   ## get shared features with expr>0
   presto_feat <- purrr::map(obj, ~Matrix::rowSums(get_layer(
@@ -37,10 +36,16 @@ find_all_marker <- function(obj,
     layer = layer,
     assay = assay
   )))
+
   common_feat <- purrr::reduce(purrr::map(presto_feat, names), intersect)
   presto_feat <- purrr::map(presto_feat, ~.x[common_feat])
-  sums <- colSums(do.call(rbind, presto_feat))
+  sums <- Matrix::colSums(do.call(rbind, presto_feat))
   presto_feat <- names(which(sums>0))
+
+  if (is.null(meta_col)) {
+    obj <- purrr::map(obj, ~SeuratObject::AddMetaData(.x, Seurat::Idents(.x), col.name = "meta_col"))
+    meta_col <- "meta_col"
+  }
 
   # presto_feat <- unique(unlist(purrr::map(obj, ~names(which(Matrix::rowSums(get_layer(
   #   obj = .x,
@@ -101,7 +106,7 @@ find_all_marker <- function(obj,
       df <- tibble::tibble(
         group = g,
         feature = rownames(X),
-        avg_log2FC = avg_log2FC
+        avg_log2FC = unname(avg_log2FC)
       )
 
       return(df)

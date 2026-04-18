@@ -13,8 +13,6 @@ convert_gene_identifier(
 )
 }
 \arguments{
-\item{idents}{character vector of gene indentifiers}
-
 \item{ident_in}{type of identifier provided in idents}
 
 \item{ident_out}{type(s) of identifier(s) to return}
