@@ -66,8 +66,6 @@ or auto for automatic positioning}
 \item{zscore_lims}{breaks at which to cut the color scale (which is zscore),
 if very few ranks fill a zscore range it is pointless to plot such very small
 rectangle}
-
-\item{plot_ranking_color}{}
 }
 \description{
 Plot results from scexpr::gsea_on_msigdbr

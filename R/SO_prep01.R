@@ -152,6 +152,9 @@ SO_prep01 <- function(data_dirs,
 
   }, mc.cores = mc.cores)
 
+  if (is.null(SO)) {
+    stop("SO is NULL. check.")
+  }
 
   if (early_exit) {
     ## check it here, otherwise it is done it is done in SO_prep02
@@ -404,7 +407,8 @@ install_pkgs <- function(SoupX, scDblFinder, decontX) {
     utils::install.packages("SoupX")
   }
   if (scDblFinder && !requireNamespace("scDblFinder", quietly = T)) {
-    BiocManager::install("scDblFinder")
+    # BiocManager::install("scDblFinder")
+    pak::pak("plger/scDblFinder")
   }
   if (decontX && !requireNamespace("celda", quietly = T)) {
     BiocManager::install("celda")
@@ -488,6 +492,7 @@ read_10X_data <- function(path,
                           sample_prefix_to_cell_id = T,
                           invert_cells = F) {
 
+
   h5files <- list.files(path, pattern = "\\.h5$", full.names = T)
   if (length(h5files)) {
     if (length(h5files) > 1 && verbose) {
@@ -497,7 +502,7 @@ read_10X_data <- function(path,
   } else {
     filt_data <- Seurat::Read10X(data.dir = path)
   }
-
+  #filt_data <- Seurat::ReadSTARsolo(data.dir = path)
   if (is.list(filt_data)) {
     if (verbose) message("filtered_feature_bc_matrix is a list. Using 'Gene Expression' index")
     filt_data <- filt_data[["Gene Expression"]]
@@ -874,8 +879,8 @@ cluster_on_metadata <- function(SO,
       SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MRP[SL]"), "pct_mribo")
     } else if (!any(grepl("^MT-", rownames(SO))) && any(grepl("^mt-", rownames(SO)))) {
       SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^mt-"), "pct_mt")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]-"), "pct_ribo")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]-"), "pct_mribo")
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]"), "pct_ribo")
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]"), "pct_mribo")
     } else {
       message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
       qc_cols <- qc_cols[-which(qc_cols == "pct_mt")]
@@ -936,10 +941,9 @@ cluster_on_metadata <- function(SO,
       clusters <- Seurat::FindClusters(Seurat::FindNeighbors(meta2, annoy.metric = "cosine", verbose = F)$snn,
                                        resolution = resolution_meta,
                                        verbose = F)
-      nclust <- apply(clusters, 2, function(x) length(unique(x)))
-      candidates <- names(nclust)[which(dplyr::between(nclust, 1,12))]
-      choice <- ifelse(!length(candidates), names(nclust)[1], candidates[length(candidates)])
-      clusters <- clusters[,choice,drop = F]
+
+      clusters <- pad_default_cluster_numbers(x = clusters)
+      clusters <- choose_top_ncluster_in_range(x = clusters)
 
       # add reduction belonging to the meta clustering as name
       metaclustname <- stats::setNames(paste0("meta_PC", nn, "_", colnames(clusters)), reductioname)
@@ -953,7 +957,18 @@ cluster_on_metadata <- function(SO,
   })
 
 }
-# purrr::map(cells, head)
+
+choose_top_ncluster_in_range <- function(x, range = c(1,12)) {
+
+  nclust <- apply(x, 2, function(y) length(unique(y)))
+  nclust <- sort(nclust)
+  candidates <- names(nclust)[which(dplyr::between(nclust, range[1], range[2]))]
+  choice <- ifelse(!length(candidates), names(nclust)[1], candidates[length(candidates)])
+  x <- x[,choice,drop = F]
+  return(x)
+
+}
+
 
 make_equal_cells <- function(x) {
   # x: list of vectors

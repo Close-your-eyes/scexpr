@@ -33,8 +33,6 @@ is gsea}
 
 \item{get_layer_args}{args to scexpr::getLayer in scexpr::gsea_groupwise
 when method_score is gsea}
-
-\item{gsea_overcluster_resolution}{}
 }
 \value{
 list

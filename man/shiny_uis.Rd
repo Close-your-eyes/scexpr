@@ -6,9 +6,6 @@
 \usage{
 shiny_uis(name = c("single_volcano_sc", "multi_clustering_volcano_sc"))
 }
-\arguments{
-\item{name}{}
-}
 \description{
 Title
 }

@@ -318,6 +318,13 @@
 #'
 #' glm_model$confmat_test$overall
 #' glm_model$confmat_test$table
+#'
+#' final_model <- model[["trainobj"]][["finalModel"]]
+#' lambda_opt <- model[["trainobj"]][["bestTune"]]$lambda
+#' coefs <- coef(final_model, lambda_opt)
+#' coefs <- purrr::map(coefs, ~as.data.frame(.x))
+#' coefs <- purrr::map_dfc(names(coefs), ~setNames(coefs[[.x]], .x))
+#'
 #' }
 run_xgboost_multi_classifier <- function(df,
                                          split = 0.7,

@@ -19,6 +19,8 @@
 #' @param fun2 function applied after fun, e.g. log1p. base:identity is neutral
 #' fun and does nothing
 #' @param split column in meta.data to split by before aggregation
+#' @param return_as how or what to return
+#' @param na_to_zero impute NA values to zero?
 #'
 #' @returns matrix with average expression values or list thereof when
 #' !is.null(split)
@@ -34,7 +36,8 @@ avg_expression <- function(obj,
                            split = NULL,
                            fun = Matrix::rowMeans,
                            fun2 = base::identity,
-                           return_as = c("list", "df")) {
+                           return_as = c("list", "df"),
+                           na_to_zero = F) {
 
   return_as <- rlang::arg_match(return_as)
 
@@ -71,6 +74,14 @@ avg_expression <- function(obj,
     obj <- do.call(cbind, obj)
     return(obj)
   })
+
+  if (na_to_zero) {
+    ## impute NA with zeros
+    out <- purrr::map(out, function(x) {
+      x[which(is.na(x))] <- 0
+      return(x)
+    })
+  }
 
   if (return_as == "df") {
     out <- purrr::map(

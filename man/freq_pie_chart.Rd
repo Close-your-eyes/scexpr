@@ -2,7 +2,7 @@
 % Please edit documentation in R/freq_pie_chart.R
 \name{freq_pie_chart}
 \alias{freq_pie_chart}
-\title{Title}
+\title{Frequency pie chart from metadata}
 \usage{
 freq_pie_chart(
   SO,
@@ -11,6 +11,7 @@ freq_pie_chart(
   fill = colrr::col_pal("custom"),
   fill_na = "grey50",
   color = "white",
+  color_text = "..auto..",
   radius_inside = 0.3,
   label_outside = c("none", "abs", "rel"),
   label_inside = c("rel", "abs", "none"),
@@ -25,19 +26,82 @@ freq_pie_chart(
   label_rel_pct = F,
   label_rel_dec = 2,
   legend_title = NULL,
-  theme_args = list(panel.grid = ggplot2::element_blank(), axis.title =
-    ggplot2::element_blank(), axis.text = ggplot2::element_blank(), axis.ticks =
-    ggplot2::element_blank(), panel.background = ggplot2::element_rect(fill = "white")),
+  theme = ggplot2::theme_classic(),
+  theme_args = list(panel.grid = ggplot2::element_blank(), axis.title.x =
+    ggplot2::element_blank(), axis.title.y = ggplot2::element_blank(), axis.text.x =
+    ggplot2::element_blank(), axis.text.y = ggplot2::element_blank(), axis.ticks.x =
+    ggplot2::element_blank(), axis.ticks.y = ggplot2::element_blank(), axis.line.x =
+    ggplot2::element_blank(), axis.line.y = ggplot2::element_blank()),
   col_pal_args = list(missing_fct_to_na = T)
 )
 }
 \arguments{
-\item{SO}{Seurat object or data frame}
+\item{SO}{A Seurat object or a data frame. If a Seurat object is provided,
+its \code{meta.data} slot will be used.}
 
-\item{meta_col}{column from meta data to use}
+\item{meta_col}{Character scalar. Column name in metadata used to compute frequencies.}
 
-\item{theme_args}{}
+\item{order}{Optional character vector specifying the order of categories in the plot.}
+
+\item{fill}{A vector of fill colors or a palette function. Defaults to
+\code{colrr::col_pal("custom")}.}
+
+\item{fill_na}{Color used for missing values. Defaults to \code{"grey50"}.}
+
+\item{color}{Border color of pie slices. Defaults to \code{"white"}.}
+
+\item{color_text}{Color of label text. Defaults to automatic selection.}
+
+\item{radius_inside}{Numeric. Inner radius of the pie chart (for donut charts).}
+
+\item{label_outside}{Character. Type of labels outside the pie. One of
+\code{"none"}, \code{"abs"}, or \code{"rel"}.}
+
+\item{label_inside}{Character. Type of labels inside the pie. One of
+\code{"rel"}, \code{"abs"}, or \code{"none"}.}
+
+\item{label_rel_cutoff}{Numeric. Minimum relative fraction required to display labels.}
+
+\item{label_size}{Numeric. Text size of labels.}
+
+\item{label_radius_inside}{Numeric. Radial position for inside labels.}
+
+\item{label_radius_outside}{Numeric. Radial position for outside labels.}
+
+\item{label_angle_inside}{Numeric or \code{"circle"}. Angle for inside labels.}
+
+\item{label_angle_outside}{Numeric or \code{"circle"}. Angle for outside labels.}
+
+\item{label_overlap}{Character. Strategy for overlapping labels. One of
+\code{"ignore"}, \code{"alternate"}, or \code{"outside"}.}
+
+\item{overlap_outside_radius}{Numeric. Radius used when resolving label overlap outside.}
+
+\item{label_rel_pct}{Logical. Whether to display relative values as percentages.}
+
+\item{label_rel_dec}{Integer. Number of decimal places for relative labels.}
+
+\item{legend_title}{Optional character. Title of the legend.}
+
+\item{theme}{A ggplot2 theme object. Defaults to \code{ggplot2::theme_classic()}.}
+
+\item{theme_args}{A named list of additional theme modifications applied via
+\code{ggplot2::theme()}.}
+
+\item{col_pal_args}{List of arguments passed to \code{colrr::col_pal()}.}
+}
+\value{
+A ggplot2 object representing the pie chart.
 }
 \description{
-Title
+Creates a pie chart showing the frequency distribution of a metadata column
+from a Seurat object or a data frame. This function is a wrapper around
+\code{brathering::piechart()} with convenient defaults for single-cell workflows.
+}
+\details{
+This function automatically installs the required packages
+\code{colrr} and \code{brathering} if they are not already available.
+
+Internally, it extracts the selected metadata column and forwards all
+arguments to \code{brathering::piechart()}.
 }

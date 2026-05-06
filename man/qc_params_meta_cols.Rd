@@ -12,9 +12,6 @@ qc_params_meta_cols(
   theme = ggplot2::theme_bw()
 )
 }
-\arguments{
-\item{...}{}
-}
 \description{
 Title
 }

@@ -14,7 +14,8 @@ avg_expression(
   split = NULL,
   fun = Matrix::rowMeans,
   fun2 = base::identity,
-  return_as = c("list", "df")
+  return_as = c("list", "df"),
+  na_to_zero = F
 )
 }
 \arguments{
@@ -36,6 +37,10 @@ avg_expression(
 
 \item{fun2}{function applied after fun, e.g. log1p. base:identity is neutral
 fun and does nothing}
+
+\item{return_as}{how or what to return}
+
+\item{na_to_zero}{impute NA values to zero?}
 }
 \value{
 matrix with average expression values or list thereof when

@@ -287,10 +287,15 @@ SO_prep02 <- function(SO_unprocessed,
   SO <- calc_neighbor_and_cluster(SO = SO,
                                   red = red,
                                   npcs = npcs,
+                                  normalization = normalization,
                                   FindNeighbors_args = FindNeighbors_args,
                                   FindClusters_args = FindClusters_args,
                                   verbose = verbose,
                                   mc.cores = 8)
+
+  ## pick clustering with decent cluster number
+  ## derive cluster markers
+  ## re-define hvf and re-run pca / harmony
 
 
   if (any(grepl("umap", reductions, ignore.case = T))) {
@@ -403,22 +408,26 @@ SO_prep02 <- function(SO_unprocessed,
   SeuratObject::Misc(SO, "clusterings") <- setdiff(names_w_clust, names_wo_clust)
   try(expr = {
     all_cluster <- unique(unname(unlist(SO@meta.data[,SeuratObject::Misc(SO, "clusterings")])))
-    all_cluster <- all_cluster[order(as.numeric(all_cluster))]
+    # all_cluster <- all_cluster[order(as.numeric(all_cluster))]
+    all_cluster <- sort(all_cluster)
     SeuratObject::Misc(SO, "clustering_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(all_cluster))), nm = all_cluster)
   }, silent = T)
   origids <- sort(unique(SO@meta.data$orig.ident))
   SeuratObject::Misc(SO, "orig.ident_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(origids))), nm = origids)
 
   # add meta cols
+  SO@meta.data$id <- rownames(SO@meta.data)
   try(expr = {
     # when metacols exist from SO_prep01 rownames_to_col (tibble) throws error
-    newmeta <- tibble::rownames_to_column(SO@meta.data, "id") |> dplyr::select(id)
+    newmeta <- SO@meta.data[,"id",drop = F]
     rownames(newmeta) <- newmeta$id
     newmeta$barcode <- stringr::str_extract(newmeta$id, "[ATCG]{1,}-1$")
+    newmeta$barcode <- dplyr::coalesce(newmeta$barcode, stringr::str_extract(newmeta$id, "[ATCG]{1,}$"))
     newmeta$prefix <- stringr::str_replace(newmeta$id, newmeta$barcode, "")
     newmeta$prefix <- gsub("_{1,}$", "", newmeta$prefix)
     newmeta$prefix <- gsub("\\.{1,}$", "", newmeta$prefix)
     newmeta$prefix <- gsub("-{1,}$", "", newmeta$prefix)
+    newmeta <- newmeta[,-which(names(newmeta) == "id")]
     SO <- SeuratObject::AddMetaData(SO, newmeta)
   }, silent = T)
 
@@ -625,6 +634,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
                                              downsample,
                                              min_cells,
                                              downsample_method) {
+
   if (methods::is(SO_unprocessed, "list")) {
     SO_unprocessed <- SO_unprocessed
   } else if (methods::is(SO_unprocessed, "character")) {
@@ -666,7 +676,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
       Seurat::NormalizeData(verbose = F, assay = "RNA")
   }, mc.cores = min(1, parallel::detectCores()-4))
 
-  if (batch_corr == "harmony") {
+  if (batch_corr == "harmony" && length(SO_unprocessed) > 1) {
     ids <- unlist(purrr::map(SO_unprocessed, ~unique(.x@meta.data[[RunHarmony_args[["group.by.vars"]]]])))
     if (anyDuplicated(ids)) {
       message("duplicate harmony group.by.vars found across SO. this may be unexpected.")
@@ -687,6 +697,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
       message("samples not found in SO_unprocessed: ", samples[which(!samples %in% names(SO_unprocessed))])
     }
   }
+
   samples <- names(SO_unprocessed)[which(grepl(paste(samples, collapse = "|"), names(SO_unprocessed)))]
   SO_unprocessed <- SO_unprocessed[which(names(SO_unprocessed) %in% samples)]
 
@@ -1533,6 +1544,7 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 calc_neighbor_and_cluster <- function(SO,
                                       red = "pca",
                                       npcs = 10,
+                                      normalization = "RNA",
                                       FindNeighbors_args = list(),
                                       FindClusters_args = list(),
                                       verbose = TRUE,
@@ -1555,10 +1567,15 @@ calc_neighbor_and_cluster <- function(SO,
   nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = SO@reductions[[red]]@cell.embeddings[,1:npcs],
                                                   verbose = verbose),
                                              FindNeighbors_args))
+
+  #  "_", npcs,
+  # names(nn_list[["graphs"]]) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(nn_list[["graphs"]]))), "_", red, "_", c("nn", "snn"))
+  norm <- ifelse(normalization %in% c("RNA", "LogNormalize"), "RNA", "SCT")
+  names(nn_list[["graphs"]]) <- paste0(norm, "_", red, "_", c("nn", "snn"))
+
+
   SO@graphs <- nn_list[["graphs"]]
   SO@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
-  #  "_", npcs,
-  names(SO@graphs) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(SO@graphs))), "_", red, "_", c("nn", "snn"))
 
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   if (!"resolution" %in% names(FindClusters_args)) {
@@ -1575,11 +1592,25 @@ calc_neighbor_and_cluster <- function(SO,
                                                              verbose = F),
                                                         args))
                            }, mc.cores = 8)
+
   cl <- dplyr::bind_cols(cl)
+  cl <- pad_default_cluster_numbers(cl)
   names(cl) <- paste0(names(SO@graphs)[2], "_", names(cl))
+
   SO <- Seurat::AddMetaData(SO, cl)
 
   return(SO)
+}
+
+pad_default_cluster_numbers <- function(x, minlen = 2) {
+
+  padlen <- min(minlen, max(nchar(as.character(unname(unlist(x))))))
+  x |>
+    dplyr::mutate(dplyr::across(dplyr::everything(), as.character)) |>
+    dplyr::mutate(dplyr::across(dplyr::everything(), as.numeric)) |>
+    dplyr::mutate(dplyr::across(dplyr::everything(), ~.x+1)) |>
+    dplyr::mutate(dplyr::across(dplyr::everything(), ~brathering::pad_num_in_str(x = .x, len = padlen)))
+
 }
 
 

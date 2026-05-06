@@ -370,7 +370,7 @@ feature_plot_data <- function(data,
                              facet_scales = facet_scales,
                              nrow_inner = nrow_inner,
                              ncol_inner = ncol_inner)
-
+#
   plot <- scexpr:::add_color_scale(plot = plot,
                                    col.pal = col.pal,
                                    col_legend_c_args = col_legend_c_args,

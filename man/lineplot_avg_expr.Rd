@@ -23,8 +23,6 @@ lineplot_avg_expr(
 \item{group}{groups on x-axis}
 
 \item{split}{another group as color scale}
-
-\item{return_df}{}
 }
 \value{
 ggplot

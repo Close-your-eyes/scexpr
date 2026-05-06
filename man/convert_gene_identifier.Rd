@@ -16,8 +16,6 @@ convert_gene_identifier(
 \item{ident_in}{type of identifier provided in idents}
 
 \item{ident_out}{type(s) of identifier(s) to return}
-
-\item{return}{}
 }
 \description{
 Convert gene identifiers from ident_in to ident_out with AnnotationDbi while taking care of known duplicates and providing aliases.

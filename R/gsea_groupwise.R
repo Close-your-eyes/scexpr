@@ -18,6 +18,7 @@ gsea_groupwise <- function(obj,
                            group,
                            fgseaMultilevel_args = list(pathways = list()),
                            get_layer_args = list()) {
+
   if (!requireNamespace("fgsea", quietly = TRUE)) {
     BiocManager::install("fgsea")
   }

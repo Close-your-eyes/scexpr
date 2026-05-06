@@ -176,9 +176,10 @@ feature_plot_stat <- function(SO,
   geom1pos <- if (geom1 == "jitter" && jitterwidth > 0) ggplot2::position_jitterdodge(jitter.width = jitterwidth, dodge.width = dodgewidth) else ggplot2::position_dodge(width = dodgewidth)
 
   col_pal <- colrr::make_col_pal(col_vec = col_pal,
-                                 fct_lvls = if (is.factor(data[[color_aes]])) levels(data[[color_aes]]) else unique(data[[color_aes]]),
+                                 fct_lvls = if (is.factor(data[[color_aes]])) levels(data[[color_aes]]) else sort(unique(data[[color_aes]])),
                                  missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_args), col_pal_args[["missing_fct_to_na"]], T),
                                  col_pal_args = col_pal_args[-which(names(col_pal_args) %in% c("name", "missing_fct_to_na"))])
+
 
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +

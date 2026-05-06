@@ -87,8 +87,8 @@ cluster_correlation2 <- function(objs,
       meta_cols = meta_cols,
       split = split,
       assay = assay,
-      features = features,
-      method)
+      features = features[1],
+      method = method[1])
 
   avg_expr <- purrr::map2(
     objs,
@@ -246,7 +246,12 @@ cluster_correlation2 <- function(objs,
   return(ret)
 }
 
-checks <- function(objs, meta_cols, split, assay, features, method) {
+checks <- function(objs,
+                   meta_cols,
+                   split,
+                   assay,
+                   features,
+                   method) {
 
   if (methods::is(objs, "Seurat")) {
     objs <- list(objs, objs)
@@ -290,7 +295,8 @@ checks <- function(objs, meta_cols, split, assay, features, method) {
   method = match.arg(method, c("pearson","spearman", "kendall", "kendall_zi"))
 
   if (length(features) %in% c(1,2) && length(intersect(features, c("all", "pca"))) == 2) {
-    features <- match.arg(features, choices = c("all", "pca"))
+    #features <- match.arg(features, choices = c("all", "pca"))
+    features <- features[1]
   }
 
   if (length(features) == 1 && features == "all") {

@@ -12,9 +12,6 @@ cluster_gene_sets_by_leadingEdge(
   seed = 42
 )
 }
-\arguments{
-\item{FindClusters_args}{}
-}
 \description{
 Title
 }

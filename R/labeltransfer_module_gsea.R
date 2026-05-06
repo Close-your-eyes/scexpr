@@ -33,7 +33,7 @@
 labeltransfer_module_gsea <- function(test_obj,
                                       test_clusters,
                                       modules,
-                                      AddModuleScore_UCell_args = list(ncores = 1,
+                                      AddModuleScore_UCell_args = list(ncores = 8,
                                                                        name = "")) {
   if (!requireNamespace("UCell", quietly = T)) {
     BiocManager::install("UCell")
@@ -91,17 +91,24 @@ labeltransfer_module_gsea <- function(test_obj,
     rownames_to = test_clusters,
     values_to = "score")
 
+  score_df_avg_long2 <- score_df_avg_long |>
+    dplyr::slice_max(order_by = score,
+                     n = 1,
+                     by = !!rlang::sym(test_clusters)) |>
+    dplyr::mutate(label = round(score, 2)) |>
+    dplyr::mutate(label = gsub("0\\.", ".", as.character(label)))
   scores_plot <- fcexpr::heatmap_long_df(score_df_avg_long,
                                          groups = "module",
+                                         theme = colrr::theme_material(),
                                          features = test_clusters,
                                          values = "score",
                                          values_zscored = F) +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
-    ggplot2::geom_text(data = dplyr::slice_max(score_df_avg_long, order_by = score,
-                                               n = 1,
-                                               by = !!rlang::sym(test_clusters)),
-                       mapping = ggplot2::aes(label = round(score, 2)))
-
+    ggplot2::geom_text(data = score_df_avg_long2,
+                       fontface = "bold",
+                       mapping = ggplot2::aes(label = label),
+                       color = "#8B7500FF")
+ # colrr::col_pal("custom")
   # get order from plot
   xyorder <- brathering::gg_get_axis_text(scores_plot)
   score_df_avg <- score_df_avg[xyorder$y,]
@@ -130,21 +137,30 @@ labeltransfer_module_gsea <- function(test_obj,
   resdf <- purrr::map_dfr(res, ~.x[["data"]]) |>
     dplyr::mutate(padj2 = -log(padj))
 
+
 ## plot ES as NES was NA sometimes
+resdf2 <- resdf |>
+  dplyr::slice_max(order_by = ES,
+                   n = 1,
+                   by = !!rlang::sym(test_clusters)) |>
+  dplyr::mutate(label = round(ES, 2)) |>
+  dplyr::mutate(label = gsub("0\\.", ".", as.character(label)))
   scores_plot2 <- fcexpr::heatmap_long_df(resdf,
                                           groups = "pathway",
                                           features = test_clusters,
                                           values = "ES",
+                                          theme = colrr::theme_material(),
                                           dotsizes = "padj2",
                                           values_zscored = F,
                                           theme_args = list(panel.grid = ggplot2::element_blank(),
                                                             axis.text.x = ggplot2::element_text(angle = 40, hjust = 1))) +
-    ggplot2::geom_text(data = dplyr::slice_max(resdf,
-                                               order_by = ES,
-                                               n = 1,
-                                               by = !!rlang::sym(test_clusters)),
-                       mapping = ggplot2::aes(label = round(ES, 2)))
+    ggplot2::geom_text(data = resdf2,
+                       fontface = "bold",
+                       mapping = ggplot2::aes(label = label),
+                       color = "#00BFFFFF")
+  # colrr::col_pal("custom")
   xyorder2 <- brathering::gg_get_axis_text(scores_plot2)
+
 
   score_best2 <- dplyr::slice_max(
     resdf,

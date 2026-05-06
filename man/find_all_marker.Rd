@@ -12,6 +12,7 @@ find_all_marker(
   calc_avglog2fc = T,
   eps = 0.000001,
   features = NULL,
+  na_rm = F,
   mc.cores = 1
 )
 }

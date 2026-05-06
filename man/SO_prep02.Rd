@@ -154,8 +154,6 @@ exclude T cell receptor gene segments}
 
 \item{interactive_pc_selection}{do conduct interactive PC selection?}
 
-\item{use_nn_for_umap}{}
-
 \item{...}{not used yet}
 }
 \value{

@@ -14,9 +14,6 @@ freq_expression(
   format_pct = F
 )
 }
-\arguments{
-\item{format_pct}{}
-}
 \description{
 Title
 }

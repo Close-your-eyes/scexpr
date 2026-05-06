@@ -40,8 +40,6 @@ see all models: https://topepo.github.io/caret/available-models.html}
 
 \item{train_search}{search arg of caret::trainControl}
 
-\item{train_repeat}{}
-
 \item{tuneGrid}{tuneGrid arg of caret::train; set NULL and search=random to
 have 30 combinations automatically picked; when search is random it is
 the permitted range per parameter; when search is grid it gives all parameter
@@ -352,5 +350,12 @@ rf_model$confmat_test$table
 
 glm_model$confmat_test$overall
 glm_model$confmat_test$table
+
+final_model <- model[["trainobj"]][["finalModel"]]
+lambda_opt <- model[["trainobj"]][["bestTune"]]$lambda
+coefs <- coef(final_model, lambda_opt)
+coefs <- purrr::map(coefs, ~as.data.frame(.x))
+coefs <- purrr::map_dfc(names(coefs), ~setNames(coefs[[.x]], .x))
+
 }
 }

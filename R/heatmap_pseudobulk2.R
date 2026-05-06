@@ -250,7 +250,7 @@ heatmap_pseudobulk2 <- function(SO,
       features = features,
       levels_plot = levels_plot,
       meta_col = meta_col,
-      feature_order)
+      feature_order = feature_order)
   # groups not present in levels_plot become NA in wil_auc
 
   # optional scaling
@@ -278,7 +278,8 @@ heatmap_pseudobulk2 <- function(SO,
       dplyr::filter(pct_in >= min_pct) |>
       dplyr::filter(padj <= max_padj) |>
       dplyr::slice_max(order_by = avgExpr, n = 1, by = feature) |>
-      dplyr::slice_max(order_by = tibble::tibble(!!!rlang::syms(as.list(topn_metric))), n = features_topn, by = group, with_ties = topn_ties) |>
+      dplyr::slice_max(order_by = tibble::tibble(!!!rlang::syms(as.list(topn_metric))), n = features_topn,
+                       by = group, with_ties = topn_ties) |>
       # filter here but not in determine_features to not bias feature selection by levels_plot
       dplyr::filter(group %in% unlist(levels_plot)) |>
       dplyr::pull(feature)
@@ -291,8 +292,8 @@ heatmap_pseudobulk2 <- function(SO,
       dplyr::pull(feature)
     rm_feat <- setdiff(as.character(unique(wil_auc$feature)), select)
     if (length(rm_feat)) {
-      message("features rm due to min_pct and min_pct_force (", length(rm_feat), "):")
-      message(paste(rm_feat, collapse = ", "))
+      message("features rm due to min_pct and min_pct_force (", length(rm_feat), ")")
+      #message(paste(rm_feat, collapse = ", "))
     }
 
     wil_auc <- wil_auc[which(wil_auc[["feature"]] %in% select),,drop = F]
@@ -395,11 +396,13 @@ heatmap_pseudobulk2 <- function(SO,
 }
 
 check.levels <- function(SO, meta_col, levels = NULL, append_by_missing = F) {
+
   if (any(is.null(levels)) || any(is.na(levels))) {
     levels <- as.character(unique(SO@meta.data[,meta_col,drop=T]))
-    if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
-      levels <- as.character(sort(as.numeric(unique(levels))))
-    }
+    # problem: converts 01, 02, 03 to 1,2,3
+    # if (suppressWarnings(!any(is.na(as.numeric(levels))))) {
+    #   levels <- as.character(sort(as.numeric(unique(levels))))
+    # }
   } else {
     if (any(!levels %in% unique(SO@meta.data[,meta_col,drop=T]))) {
       print(paste0("levels not found in meta_col: ", paste(levels[which(!levels %in% unique(SO@meta.data[,meta_col,drop=T]))], collapse = ", ")))
@@ -551,6 +554,7 @@ check.levels <- function(SO, meta_col, levels = NULL, append_by_missing = F) {
 
 
 check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
+
   ## checking meta_col, levels_plot and levels_calc
   if (is.null(meta_col)) {
     SO <- lapply(SO, function(x) {
@@ -570,6 +574,7 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
       stop("One of meta_col across SO is numeric. Please make it factor or character.")
     }
   }
+
 
 
   # this will only apply if length(SO)==1 and levels_plot and levels_calc are vectors

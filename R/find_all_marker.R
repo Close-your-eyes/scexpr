@@ -24,6 +24,7 @@ find_all_marker <- function(obj,
                             calc_avglog2fc = T,
                             eps = 1e-6,
                             features = NULL,
+                            na_rm = F,
                             mc.cores = 1) {
 
   obj <- scexpr:::check.SO(
@@ -43,6 +44,7 @@ find_all_marker <- function(obj,
   presto_feat <- names(which(sums>0))
 
   if (is.null(meta_col)) {
+    message("using Idents.")
     obj <- purrr::map(obj, ~SeuratObject::AddMetaData(.x, Seurat::Idents(.x), col.name = "meta_col"))
     meta_col <- "meta_col"
   }
@@ -67,10 +69,19 @@ find_all_marker <- function(obj,
                           obj = .x,
                           layer = layer,
                           assay = assay,
-                          features = presto_feat
-                        ))
-  )
+                          features = presto_feat)))
+
   y <- unlist(purrr::map2(obj, meta_col, ~.x@meta.data[,.y,drop=T]), use.names = F)
+
+  if (anyNA(y)) {
+    if (na_rm) {
+      X <- X[, which(!is.na(y))]
+      y <- y[which(!is.na(y))]
+    } else {
+      y[which(is.na(y))] <- "NA"
+    }
+  }
+
   wil_auc_raw <- presto::wilcoxauc(X = X, y = y)
 
   if (calc_avglog2fc) {

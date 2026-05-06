@@ -6,16 +6,13 @@
 \usage{
 qc_plot2(
   SO,
-  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log",
+  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score",
     "pct_soup_decontX", "pct_soup_SoupX"),
   geom2 = "boxplot",
   save_path = NULL,
   reduction = "tsne",
   save_as = c("png", "pdf")
 )
-}
-\arguments{
-\item{save_path}{}
 }
 \description{
 Title

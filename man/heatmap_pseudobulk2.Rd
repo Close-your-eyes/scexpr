@@ -177,8 +177,6 @@ needed}
 
 \item{convert_gene_identifier_args}{arguments to
 scexpr::convert_gene_identifier}
-
-\item{pval_text_args}{}
 }
 \description{
 Plot a heatmap of average gene transcription of transcriptomes by

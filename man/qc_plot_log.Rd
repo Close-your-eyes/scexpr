@@ -7,7 +7,7 @@
 qc_plot_log(
   SO1,
   SO2 = NULL,
-  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score_log"),
+  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score"),
   x_cat = "orig.ident",
   sec_axis_lin = T
 )

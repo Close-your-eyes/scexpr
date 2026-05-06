@@ -6,9 +6,6 @@
 \usage{
 avg_log2fc_seuratlike(mat1, mat2)
 }
-\arguments{
-\item{mat2}{}
-}
 \description{
 Title
 }

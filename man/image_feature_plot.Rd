@@ -59,8 +59,6 @@ using \code{colrr::make_col_pal()}. Must include \code{name}.}
 
 \item{col_pal_d_args}{List. Arguments for discrete color palette generation
 using \code{colrr::make_col_pal()}. Must include \code{name}.}
-
-\item{expr_only}{}
 }
 \value{
 A \code{ggplot2} object representing the spatial visualization.

@@ -22,7 +22,7 @@ qc_plot_log <- function(SO1,
                           "nCount_RNA_log",
                           "nFeature_RNA_log",
                           "pct_mt_log",
-                          "dbl_score_log"),
+                          "dbl_score"),
                         x_cat = "orig.ident",
                         sec_axis_lin = T) {
 
@@ -188,7 +188,7 @@ qc_plot2 <- function(SO,
                        "nCount_RNA_log",
                        "nFeature_RNA_log",
                        "pct_mt_log",
-                       "dbl_score_log",
+                       "dbl_score",
                        "pct_soup_decontX",
                        "pct_soup_SoupX"
                      ),
@@ -227,6 +227,7 @@ qc_plot2 <- function(SO,
 
   qc_p2 <- purrr::map2(stats::setNames(red_name, red_name), clust_name,  function(red_name, clust_name) {
     #clust_name <- SO@misc$meta_clusterings[red_name]
+
     p1 <- patchwork::wrap_plots(feature_plot2(SO,
                                               features = clust_name,
                                               reduction = red_name,
@@ -316,10 +317,13 @@ qc_plot2 <- function(SO,
 }
 
 
+### coloring in feature_plot_stat?
+
 make_stat_plot <- function(SO, feature, clust_name, geom2, breaks) {
 
-  plot <- feature_plot_stat(SO,
+  plot <- feature_plot_stat(SO = SO,
                             features = feature,
+                            expr_freq_size = 0,
                             #meta_col = SO@misc$clustering_colors,
                             meta_col = clust_name,
                             geom2 = geom2,
