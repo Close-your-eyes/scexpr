@@ -11,7 +11,7 @@ SO_prep02(
   min_cells = 50,
   downsample = 1,
   downsample_method = c("uniform", "leverage"),
-  export_prefix = NULL,
+  export_prefix = "",
   reductions = c("umap"),
   nhvf = 800,
   npcs = 20,
@@ -19,7 +19,7 @@ SO_prep02(
   hvf_determination_before_merge = F,
   batch_corr = c("harmony", "integration", "none"),
   vars.to.regress = NULL,
-  seeed = 42,
+  seed = 42,
   save_path = NULL,
   save_ext = c("rds", "zap"),
   celltype_refs = NULL,
@@ -32,7 +32,7 @@ SO_prep02(
   FindVariableFeatures_args = list(),
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = F),
   RunPCA_args = list(weight.by.var = TRUE),
-  RunUMAP_args = list(),
+  RunUMAP_args = list(metric = "cosine"),
   RunTSNE_args = list(theta = 0.01),
   FindNeighbors_args = list(dims = 1:npcs),
   FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
@@ -94,7 +94,7 @@ used to regress out a variable in meta.data which may be sample-specific; other 
 it may not be meaningful to regress a sample-specific variable and perform batch_corr;
 rather vars.to.regress may be used in combination with batch_corr to regress percent_mito or so}
 
-\item{seeed}{seed passed to several methods}
+\item{seed}{seed passed to several methods}
 
 \item{save_path}{folder to save the resulting Seurat object as rds-file to}
 

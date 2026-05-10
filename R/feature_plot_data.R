@@ -16,7 +16,7 @@
 #' @param col_pal_d_args for discrete color
 #' @param col_steps NULL to have normal colorbar, auto for default colorsteps,
 #' a single number or a vector of explicit steps; may not work with any number
-#' when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used
+#' when col_steps_nice is TRUE; colrr::get_scale_color_fun is used
 #' @param col_steps_nice algorithmic determination of pretty steps,
 #' see ggplot2::scale_color_stepsn
 #' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
@@ -298,9 +298,9 @@ feature_plot_data <- function(data,
 
 
   # get color palette
-  col.pal <- get_col_pal(data = data,
-                         col_pal_c_args = col_pal_c_args,
-                         col_pal_d_args = col_pal_d_args)
+  col.pal <- scexpr:::get_col_pal(data = data,
+                                  col_pal_c_args = col_pal_c_args,
+                                  col_pal_d_args = col_pal_d_args)
 
   data <- scexpr:::check.aliases(feature = attr(data, "feature"), feature_alias, data)
 
@@ -370,7 +370,7 @@ feature_plot_data <- function(data,
                              facet_scales = facet_scales,
                              nrow_inner = nrow_inner,
                              ncol_inner = ncol_inner)
-#
+
   plot <- scexpr:::add_color_scale(plot = plot,
                                    col.pal = col.pal,
                                    col_legend_c_args = col_legend_c_args,

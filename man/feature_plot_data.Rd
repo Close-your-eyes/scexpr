@@ -114,7 +114,7 @@ a single color or (iii) a vector of colors}
 
 \item{col_steps}{NULL to have normal colorbar, auto for default colorsteps,
 a single number or a vector of explicit steps; may not work with any number
-when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used}
+when col_steps_nice is TRUE; colrr::get_scale_color_fun is used}
 
 \item{col_steps_nice}{algorithmic determination of pretty steps,
 see ggplot2::scale_color_stepsn}

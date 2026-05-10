@@ -33,7 +33,7 @@
 #' @param col_pal_d_args for discrete color
 #' @param col_steps NULL to have normal colorbar, auto for default colorsteps,
 #' a single number or a vector of explicit steps; may not work with any number
-#' when col_steps_nice is TRUE; colrr::get_color_scale_continuous is used
+#' when col_steps_nice is TRUE; colrr::get_scale_color_fun is used
 #' @param col_steps_nice algorithmic determination of pretty steps,
 #' see ggplot2::scale_color_stepsn
 #' @param legendbreaks a single number, a vector of explicit breaks, or "auto"

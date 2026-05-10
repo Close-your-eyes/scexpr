@@ -187,6 +187,7 @@ SO_prep04 <- function(SO,
     FindNeighbors_args <- c(list(dims = 1:npcs), FindNeighbors_args)
   }
 #  "_", npcs,
+  #browser()
   graph_names <- paste0(SO@reductions[[red]]@assay.used, "_", ifelse(grepl("pca", red), "pca", "harmony"), "_", c("nn", "snn"))
   SO <- Gmisc::fastDoCall(Seurat::FindNeighbors, args = c(list(object = SO,
                                                                reduction = red,

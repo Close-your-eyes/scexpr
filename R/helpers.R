@@ -544,8 +544,20 @@ get_col_pal <- function(data,
 
 add_color_scale <- function(plot,
                             col.pal,
-                            col_legend_c_args = col_legend_c_args,
-                            col_legend_d_args = col_legend_d_args,
+                            col_legend_c_args = list(title = "..auto.."),
+                            col_legend_d_args = list(title = "..auto.."),
+                            # col_legend_c_args = list(
+                            #   barwidth = 0.5,
+                            #   barheight = 8,
+                            #   title = "..auto..",
+                            #   order = 1
+                            # ),
+                            # col_legend_d_args = list(
+                            #   nrow = 10,
+                            #   override.aes = list(size = 4),
+                            #   title = "..auto..",
+                            #   order = 1
+                            # ),
                             col_steps = "..auto..",
                             legendbreaks = "..auto..",
                             legendlabels = "..auto..",
@@ -604,19 +616,19 @@ add_color_scale <- function(plot,
           message("qmax and/or qmin not shown in legend.")
         }
 
-        scale_color <- colrr::get_color_scale_continuous(values = plot[["data"]][["feature"]],
-                                                         zscored = F,
-                                                         colorsteps = col_steps,
-                                                         legendbreaks = legendbreaks,
-                                                         legendlabels = legendlabels,
-                                                         colors = col.pal,
-                                                         colorsteps_nice = col_steps_nice,
-                                                         type = "color",
-                                                         col_na = col_na,
-                                                         qmin = attr(plot[["data"]], "qmin"),
-                                                         qmax = attr(plot[["data"]], "qmax"),
-                                                         scale.min = scale.min,
-                                                         trans_log = trans_log)
+        #type = "color",
+        scale_color <- colrr::get_scale_color_fun(values = plot[["data"]][["feature"]],
+                                                  zscored = F,
+                                                  steps = col_steps,
+                                                  legendbreaks = legendbreaks,
+                                                  legendlabels = legendlabels,
+                                                  palette = col.pal,
+                                                  steps_nice = col_steps_nice,
+                                                  col_na = col_na,
+                                                  qmin = attr(plot[["data"]], "qmin"),
+                                                  qmax = attr(plot[["data"]], "qmax"),
+                                                  scale_min = scale.min,
+                                                  trans_log = trans_log)
 
         if (grepl("coloursteps", scale_color[["guide"]])) {
           guide_fun <- ggplot2::guide_colorsteps
