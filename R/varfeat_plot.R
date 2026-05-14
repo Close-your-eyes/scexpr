@@ -12,7 +12,7 @@
 #' @examples
 varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
 
-  hvfdat <- Seurat::HVFInfo(obj)
+  hvfdat <- SeuratObject::HVFInfo(obj)
   names(n_varfeat) <- n_varfeat
   if (all(c("mean", "variance.standardized") %in% names(hvfdat))) {
     xvar <- "mean"

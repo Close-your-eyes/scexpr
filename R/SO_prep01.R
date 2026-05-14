@@ -157,6 +157,15 @@ SO_prep01 <- function(data_dirs,
   }
 
   if (early_exit) {
+    if (any(grepl("^MT-", rownames(SO))) && !any(grepl("^mt-", rownames(SO)))) {
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^RP[SL]"), "pct_ribo")
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MRP[SL]"), "pct_mribo")
+    } else if (!any(grepl("^MT-", rownames(SO))) && any(grepl("^mt-", rownames(SO)))) {
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^mt-"), "pct_mt")
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]"), "pct_ribo")
+      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]"), "pct_mribo")
+    }
     ## check it here, otherwise it is done it is done in SO_prep02
     if (equalize_feature_order) {
       SO <- scexpr:::make_equal_feature_order(SO)
@@ -443,6 +452,7 @@ resolution_checks <- function(resolution_meta, resolution_SoupX, resolution, PCs
 }
 
 add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
+
   var_feat <- Seurat::VariableFeatures(Seurat::FindVariableFeatures(SO,
                                                                     selection.method = "vst",
                                                                     nfeatures = nhvf,

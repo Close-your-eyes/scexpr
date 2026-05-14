@@ -102,9 +102,9 @@ SO_prep02 <- function(SO_unprocessed,
                       SCtransform_args = list(
                         vst.flavor = "v2",
                         method = "glmGamPoi",
-                        conserve.memory = F
+                        conserve.memory = T
                       ),
-                      RunPCA_args = list(weight.by.var = TRUE),
+                      RunPCA_args = list(weight.by.var = T),
                       RunUMAP_args = list(metric = "cosine"),
                       RunTSNE_args = list(theta = 0.01),
                       FindNeighbors_args = list(dims = 1:npcs),
@@ -127,7 +127,7 @@ SO_prep02 <- function(SO_unprocessed,
   pkg_checks()
   mydots <- list(...)
   options(warn = 1)
-  options(future.globals.maxSize = 8000 * 1024^2)
+  options(future.globals.maxSize = 20 * 1024^3)
 
   # options(parallelly.availableCores.custom = function() {
   #   ncores <- max(parallel::detectCores(), 1L, na.rm = TRUE)
@@ -488,14 +488,14 @@ make_so_single <- function(SO_unprocessed,
   SO <- SO_unprocessed[[1]]
   rm(SO_unprocessed)
   if (normalization == "SCT") {
-    SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
-                                                               assay = "RNA"),
-                                                          SCtransform_args))
+
     if (!is.null(var_feature_set)) {
       Seurat::VariableFeatures(SO) <- var_feature_set
     }
 
     if (interactive_varfeat_selection && is.null(var_feature_set)) {
+      SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO),
+                                                                     FindVariableFeatures_args))
       vfplot <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
       print(vfplot)
       SCtransform_args[["variable.features.n"]] <- get_numeric_input("select number of variable features.")
@@ -503,6 +503,9 @@ make_so_single <- function(SO_unprocessed,
                                                                  assay = "RNA"),
                                                             SCtransform_args))
     } else {
+      SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                 assay = "RNA"),
+                                                            SCtransform_args))
       varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
     }
 
@@ -878,15 +881,23 @@ make_so_multi_harmony <- function(SO_unprocessed,
       rm(SO_unprocessed)
 
 
-      SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
-                                                                 assay = "RNA"),
-                                                            SCtransform_args))
+
+
+
+      ## dont run SCTransform twice.
+      # future::plan(strategy = "multisession", workers = 2)
+      # future::plan(strategy = "sequential") # was faster
+      # SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+      #                                                            assay = "RNA"),
+      #                                                       SCtransform_args))
 
       if (!is.null(var_feature_set)) {
         Seurat::VariableFeatures(SO) <- var_feature_set
       }
 
       if (interactive_varfeat_selection && is.null(var_feature_set)) {
+        SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO),
+                                                                       FindVariableFeatures_args))
         vfplot <- varfeat_plot(SO, n_varfeat = interactive_varfeat_selection_inds)
         print(vfplot)
         SCtransform_args[["variable.features.n"]] <- get_numeric_input("select number of variable features.")
@@ -894,6 +905,9 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                                    assay = "RNA"),
                                                               SCtransform_args))
       } else {
+        SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
+                                                                   assay = "RNA"),
+                                                              SCtransform_args))
         varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
       }
 
@@ -1116,12 +1130,13 @@ check_RunPCA_args <- function(RunPCA_args,
   #RunPCA_args <- c(list(reduction.name = redname), RunPCA_args)
 
 
-  if (!"ndims.print" %in% names(RunPCA_args)) {
-    RunPCA_args <- c(list(ndims.print = 0), RunPCA_args)
-  }
-  if (!"nfeatures.print" %in% names(RunPCA_args)) {
-    RunPCA_args <- c(list(nfeatures.print = 0), RunPCA_args)
-  }
+  # if (!"ndims.print" %in% names(RunPCA_args)) {
+  #   RunPCA_args <- c(list(ndims.print = 0), RunPCA_args)
+  # }
+  # if (!"nfeatures.print" %in% names(RunPCA_args)) {
+  #   RunPCA_args <- c(list(nfeatures.print = 0), RunPCA_args)
+  # }
+
   if ("reduction.key" %in% names(RunPCA_args)) {
     message("reduction.key in RunPCA_args not used.")
     RunPCA_args <- RunPCA_args[-which(names(RunPCA_args) == "reduction.key")]
@@ -1208,13 +1223,13 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
   if (methods::is(SO_unprocessed, "list")) {
     SO_unprocessed <- SO_unprocessed
   } else if (methods::is(SO_unprocessed, "character")) {
-    if (!file.exists(SO_unprocessed)) {
+    if (!any(file.exists(SO_unprocessed))) {
       stop(paste0(SO_unprocessed, "not found."))
     } else {
-      if (!grepl("\\.rds$", SO_unprocessed, ignore.case = T)) {
-        stop("SO_unprocessed has to be an .rds file.")
+      if (!any(grepl("\\.rds$", SO_unprocessed, ignore.case = T))) {
+        stop("all SO_unprocessed have to be .rds files.")
       }
-      SO_unprocessed <- readRDS(SO_unprocessed)
+      SO_unprocessed <- unlist(purrr::map(SO_unprocessed, readRDS))
     }
   } else {
     stop("SO_unprocessed has to be named list of splitted Seurat objects or a path (character) to an .rds file of those. If it is only one Seurat object (one sample)

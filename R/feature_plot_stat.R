@@ -79,6 +79,7 @@ feature_plot_stat <- function(SO,
                               expr_freq_decimals = 2,
                               expr_freq_pct = F,
                               expr_freq_hjust = 0.3,
+                              expr_freq_y_equal_max = F,
                               plot_non_expr = T,
                               plot_strip = T,
                               legend_title = "object",
@@ -162,6 +163,9 @@ feature_plot_stat <- function(SO,
   }
   names(data)[which(names(data) == "SO.split")] <- legend_title
 
+  if (expr_freq_y_equal_max) {
+    stat$max.feat.expr <- max(stat$max.feat.expr)
+  }
 
   if (!plot_non_expr) {
     data <- dplyr::filter(data, feature > 0)
@@ -205,6 +209,7 @@ feature_plot_stat <- function(SO,
 
 
   if (expr_freq_size>0) {
+
     plot <- plot +
       ggplot2::geom_text(data = stat,
                          color = "black",
