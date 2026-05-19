@@ -928,7 +928,9 @@ cluster_on_metadata <- function(SO,
     for (nn in PCs_to_meta_clustering) {
       meta2 <- dplyr::select(SO@meta.data, dplyr::all_of(qc_cols), residuals)
       if (nn > 0) {
-        meta2 <- cbind(meta2, SO@reductions[[ifelse(batch_corr == "harmony" && length(ffbms) > 1, "harmony", "pca")]]@cell.embeddings[,1:nn]) # length(ffbms) or length(data_dirs)
+        meta2 <- cbind(meta2, SO@reductions[[ifelse(batch_corr == "harmony" && length(ffbms) > 1,
+                                                    grep("^harmony", names(SO@reductions), value = T),
+                                                    grep("^pca", names(SO@reductions), value = T))]]@cell.embeddings[,1:nn]) # length(ffbms) or length(data_dirs)
       }
 
       meta2 <- brathering::scale2(meta2)
@@ -952,7 +954,7 @@ cluster_on_metadata <- function(SO,
                                        resolution = resolution_meta,
                                        verbose = F)
 
-      clusters <- pad_default_cluster_numbers(x = clusters)
+      clusters <- scexpr:::pad_default_cluster_numbers(x = clusters)
       clusters <- choose_top_ncluster_in_range(x = clusters)
 
       # add reduction belonging to the meta clustering as name

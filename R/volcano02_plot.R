@@ -164,7 +164,7 @@ volcano02_plot <- function(volc01_df,
   }
 
   ## fix zero p-values
-  n_min_p <- sum(vd[[y]] == 0)
+  n_min_p <- sum(vd[[y]] == 0, na.rm = T)
   p1 <- vd[[y]][which(vd[[y]] > 0)]
   minp1 <- min(p1)
   ylim <- minp1*1e-2
