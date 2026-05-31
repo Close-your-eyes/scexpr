@@ -4,12 +4,21 @@
 \alias{merge_objects}
 \title{Merge list of Seurat objects}
 \usage{
-merge_objects(obj_list, obj_ident_col = "obj_ident")
+merge_objects(
+  obj_list,
+  obj_ident_col = "obj_ident",
+  merge_reductions = F,
+  misc_from_first = F
+)
 }
 \arguments{
 \item{obj_list}{list of Seurat objects.}
 
 \item{obj_ident_col}{new column name to identify origin of cells by object}
+
+\item{merge_reductions}{try to merge reductions?}
+
+\item{misc_from_first}{use misc slot from first obj in list?}
 }
 \value{
 merged seurat

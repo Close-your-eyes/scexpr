@@ -27,7 +27,7 @@ feature_plot2(
   col_na = "grey50",
   col_binary = F,
   col_pal_c_args = list(name = "spectral", direction = -1),
-  col_pal_d_args = list(name = "custom", missing_fct_to_na = T),
+  col_pal_d_args = list(name = "..auto..", missing_fct_to_na = T),
   col_steps = "..auto..",
   col_steps_nice = T,
   col_trans_log = F,

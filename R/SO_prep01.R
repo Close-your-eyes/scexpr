@@ -157,15 +157,7 @@ SO_prep01 <- function(data_dirs,
   }
 
   if (early_exit) {
-    if (any(grepl("^MT-", rownames(SO))) && !any(grepl("^mt-", rownames(SO)))) {
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^RP[SL]"), "pct_ribo")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MRP[SL]"), "pct_mribo")
-    } else if (!any(grepl("^MT-", rownames(SO))) && any(grepl("^mt-", rownames(SO)))) {
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^mt-"), "pct_mt")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]"), "pct_ribo")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]"), "pct_mribo")
-    }
+    SO <- add_pct_featset_and_cc(SO)
     ## check it here, otherwise it is done it is done in SO_prep02
     if (equalize_feature_order) {
       SO <- scexpr:::make_equal_feature_order(SO)
@@ -883,16 +875,8 @@ cluster_on_metadata <- function(SO,
     #tt <- grep("^MT-", rownames(SO), value=T)
 
     qc_cols <- c("nCount_RNA", "nFeature_RNA", "pct_mt")
-    if (any(grepl("^MT-", rownames(SO))) && !any(grepl("^mt-", rownames(SO)))) {
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^RP[SL]"), "pct_ribo")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MRP[SL]"), "pct_mribo")
-    } else if (!any(grepl("^MT-", rownames(SO))) && any(grepl("^mt-", rownames(SO)))) {
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^mt-"), "pct_mt")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]"), "pct_ribo")
-      SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]"), "pct_mribo")
-    } else {
-      message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
+    SO <- add_pct_featset_and_cc(SO)
+    if (!"pct_mt" %in% names(SO@meta.data)) {
       qc_cols <- qc_cols[-which(qc_cols == "pct_mt")]
     }
     qc_cols <- paste0(qc_cols, "_log")
@@ -1008,3 +992,25 @@ make_equal_cells <- function(x) {
 }
 
 
+add_pct_featset_and_cc <- function(SO) {
+  if (any(grepl("^MT-", rownames(SO))) && !any(grepl("^mt-", rownames(SO)))) {
+    # human
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^RP[SL]"), "pct_ribo")
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MRP[SL]"), "pct_mribo")
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT[1-2][A-Z]$"), "pct_metallothionein")
+
+    cc_genes <- get_cell_cycle_genesets()[["cc_lst"]]
+    cc_genes_seu <- cc_genes[c("seurat_2019_g2m", "seurat_2019_s")]
+    names(cc_genes_seu) <- c("G2M_score", "S_score")
+    SO <- UCell::AddModuleScore_UCell(SO, features = cc_genes_seu, ncores = 4, name = "")
+  } else if (!any(grepl("^MT-", rownames(SO))) && any(grepl("^mt-", rownames(SO)))) {
+    # mouse
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^mt-"), "pct_mt")
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]"), "pct_ribo")
+    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]"), "pct_mribo")
+  } else {
+    message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
+  }
+  return(SO)
+}

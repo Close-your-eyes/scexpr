@@ -4,6 +4,8 @@
 #'
 #' @param obj_list list of Seurat objects.
 #' @param obj_ident_col new column name to identify origin of cells by object
+#' @param merge_reductions try to merge reductions?
+#' @param misc_from_first use misc slot from first obj in list?
 #'
 #' @returns merged seurat
 #' @export
@@ -13,7 +15,9 @@
 #' so <- merge_objects(obj_list = list(so1,so2,so3))
 #' }
 merge_objects <- function(obj_list,
-                          obj_ident_col = "obj_ident") {
+                          obj_ident_col = "obj_ident",
+                          merge_reductions = F,
+                          misc_from_first = F) {
 
   ## currently focused on RNA assay
   # no messages or warnings
@@ -37,6 +41,35 @@ merge_objects <- function(obj_list,
   obj_merge <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(obj_list, get_layer, assay = "RNA", layer = "counts", features = common_feat)),
                                           meta.data = purrr::map_dfr(obj_list, ~.x@meta.data))
   obj_merge <- Seurat::NormalizeData(obj_merge)
+
+  if (merge_reductions) {
+    ## no check for equal columns of reduction
+    # no check for duplicate cellname
+    redlst <- purrr::map(obj_list, ~names(.x@reductions))
+    if (any(is.null(redlst))) {
+      message("some obj w/o reductions.")
+    } else {
+      redcommon <- purrr::reduce(redlst, intersect)
+      if (!length(redcommon)) {
+        message("no common reductions")
+      } else {
+        for (x in redcommon) {
+          obj_merge@reductions[[x]] <- Seurat::CreateDimReducObject(
+            embeddings = do.call(rbind, purrr::map(obj_list, function(y) y@reductions[[x]]@cell.embeddings)),
+            assay = obj_list[[1]]@reductions[[x]]@assay.used,
+            key = obj_list[[1]]@reductions[[x]]@key
+          )
+        }
+      }
+    }
+  }
+
+  if (misc_from_first) {
+    for (x in names(obj_list[[1]]@misc)) {
+      obj_merge@misc[[x]] <- obj_list[[1]]@misc[[x]]
+    }
+  }
+
   if (!is.null(names(obj_list))) {
     obj_names <- names(obj_list)
   } else {

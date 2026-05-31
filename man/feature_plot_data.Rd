@@ -20,7 +20,7 @@ feature_plot_data(
   col_steps_nice = T,
   col_trans_log = F,
   col_legend_c_args = list(barwidth = 0.5, barheight = 8, title = "..auto..", order = 1),
-  col_legend_d_args = list(nrow = 10, override.aes = list(size = 4), title = "..auto..",
+  col_legend_d_args = list(nrow = 12, override.aes = list(size = 4), title = "..auto..",
     order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "..auto..",
@@ -80,7 +80,7 @@ feature_plot_data(
   contour_path_label = NULL,
   order_discr_explicit = NULL,
   plot_all_across_split = F,
-  axes_arrows,
+  axes_arrows = F,
   img_df = NULL,
   hull_df = NULL,
   cell_hull_args = list(color = "grey30", linewidth = 0.1, alpha = 1)

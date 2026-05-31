@@ -107,6 +107,10 @@
 #' algorithmic decision based on freq_plot; freq is removed for meta features;
 #' feature_cut_ex is adjusted if either element is missing
 #' @param axes_arrows plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)
+#' @param col_trans_log
+#' @param img_df
+#' @param hull_df
+#' @param cell_hull_args
 #'
 #' @return
 #' @export
@@ -132,7 +136,7 @@ feature_plot_data <- function(data,
                                                        barheight = 8,
                                                        title = "..auto..",
                                                        order = 1),
-                              col_legend_d_args = list(nrow = 10,
+                              col_legend_d_args = list(nrow = 12,
                                                        override.aes = list(size = 4),
                                                        title = "..auto..",
                                                        order = 1),
@@ -226,7 +230,7 @@ feature_plot_data <- function(data,
                               contour_path_label = NULL,
                               order_discr_explicit = NULL,
                               plot_all_across_split = F,
-                              axes_arrows,
+                              axes_arrows = F,
                               img_df = NULL,
                               hull_df = NULL,
                               cell_hull_args = list(color = "grey30",
@@ -296,6 +300,9 @@ feature_plot_data <- function(data,
   #   plot_traj <- F
   # }
 
+  if (is.null(col_pal_d_args[["name"]])) {
+    col_pal_d_args[["name"]] <- "custom"
+  }
 
   # get color palette
   col.pal <- scexpr:::get_col_pal(data = data,

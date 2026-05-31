@@ -22,7 +22,7 @@ get_cell_cycle_genesets <- function() {
   # vroom::vroom_write(seur_whit_df, file = "/Users/chris/Documents/R_packages/scexpr/inst/extdata/human_cell_cycle.tsv")
   #
 
-  df <- vroom::vroom(system.file("extdata", "human_cell_cycle.tsv", package = "scexpr"))
+  df <- vroom::vroom(system.file("extdata", "human_cell_cycle.tsv", package = "scexpr"), show_col_types = F, progress = F)
   df$gene_set <- tolower(df$gene_set)
   lst <- split(df$feature, df$gene_set)
 

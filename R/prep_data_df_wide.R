@@ -3,6 +3,7 @@
 #' From a wide data frame with any kind of expression values,
 #' prepare a list of data frames ready to pass to feature_plot_data.
 #'
+#' @param data
 #' @param feature columns that are features to plot as color scale
 #' @param reduction columns that are dimension reduction
 #' @param qmin lower quantile of feature values where to cut the color scale
@@ -128,7 +129,7 @@ prep_data_df_wide <- function(data,
     data <- purrr::map(data, function(x) {
       if (is.numeric(x[["feature"]])) {
         x[["feature"]] <- scales::squish(x[["feature"]], range = c(stats::quantile(x[["feature"]], qmin), stats::quantile(x[["feature"]], qmax)))
-        
+
         ## dont do this here as non scrnaseq data are provided
         # if (all(x[["feature"]] >= 0)) { # > 0 or >= 0 ?!
         #   # expression is always greater than 0 and non-expresser are excluded

@@ -174,7 +174,7 @@ feature_plot2 <- function(
       direction = -1
     ),
     col_pal_d_args = list(
-      name = "custom",
+      name = "..auto..",
       missing_fct_to_na = T
     ),
     col_steps = "..auto..",
@@ -369,72 +369,96 @@ feature_plot2 <- function(
   }
 
 
-  plots <- purrr::map(data, ~Gmisc::fastDoCall(what = feature_plot_data,
-                                               args = list(data = .x,
-                                                           col_binary = col_binary,
-                                                           col_expr = col_expr,
-                                                           col_ex_cells = col_ex_cells,
-                                                           col_na = col_na,
-                                                           col_non_expr = col_non_expr,
-                                                           col_pal_c_args = col_pal_c_args,
-                                                           col_pal_d_args = col_pal_d_args,
-                                                           col_legend_c_args = col_legend_c_args,
-                                                           col_legend_d_args = col_legend_d_args,
-                                                           col_steps = col_steps,
-                                                           col_trans_log = col_trans_log,
-                                                           facet_grid_row_var = facet_grid_row_var,
-                                                           feature_alias = feature_alias,
-                                                           freq_size = freq_size,
-                                                           freq_pos = freq_pos,
-                                                           freq_plot = freq_plot,
-                                                           freq_col = freq_col,
-                                                           name = name,
-                                                           anno = anno,
-                                                           name_anno_pos = name_anno_pos,
-                                                           name_anno_args = name_anno_args,
-                                                           legendbreaks = legendbreaks,
-                                                           legendlabels = legendlabels,
-                                                           col_steps_nice = col_steps_nice,
-                                                           ncol_inner = ncol_inner,
-                                                           nrow_inner = nrow_inner,
-                                                           pt_size = pt_size,
-                                                           pt_size_fct = pt_size_fct,
-                                                           shape_legend_args = shape_legend_args,
-                                                           shape_legend_hide = shape_legend_hide,
-                                                           facet_scales = facet_scales,
-                                                           theme = theme,
-                                                           theme_args = theme_args,
-                                                           axes_lim_set = axes_lim_set,
-                                                           axes_lim_expand = axes_lim_expand,
-                                                           label_filter_cells = label_filter_cells,
-                                                           label_center_fun = label_center_fun,
-                                                           label_nudge = label_nudge,
-                                                           label_repel = label_repel,
-                                                           label_multi_try = label_multi_try,
-                                                           label_multi_max = label_multi_max,
-                                                           label_args = label_args,
-                                                           order_discr_explicit = order_discr_explicit,
-                                                           contour_filter_cells = contour_filter_cells,
-                                                           contour_rm_outlier = contour_rm_outlier,
-                                                           contour_rm_lowfreq_subcluster = contour_rm_lowfreq_subcluster,
-                                                           contour_multi_try = contour_multi_try,
-                                                           contour_multi_max = contour_multi_max,
-                                                           contour_col_pal_args = contour_col_pal_args,
-                                                           contour_args = contour_args,
-                                                           contour_label_nudge = contour_label_nudge,
-                                                           contour_label_args = contour_label_args,
-                                                           contour_same_across_split = contour_same_across_split,
-                                                           contour_expr_freq = contour_expr_freq,
-                                                           contour_ggnewscale = contour_ggnewscale,
-                                                           contour_fun = contour_fun,
-                                                           contour_path_label = contour_path_label,
-                                                           col_split = col_split,
-                                                           plot_all_across_split = plot_all_across_split,
-                                                           axes_arrows = axes_arrows,
-                                                           img_df = img_df,
-                                                           hull_df = hull_df,
-                                                           cell_hull_args = cell_hull_args)
-  ))
+  if (is.null(col_pal_d_args[["name"]])) {
+    col_pal_d_args[["name"]] <- "custom"
+  }
+  col_pal_d_args_lst <- purrr::map(data, function(x) {
+    y <- col_pal_d_args
+    if (y[["name"]][1] == "..auto..") {
+      y[["name"]] <- "custom"
+    }
+    return(y)
+  })
+
+  if (col_pal_d_args[["name"]][1] == "..auto..") {
+    if ("metacolors" %in% names(SO@misc) && is.list(SO@misc[["metacolors"]])) {
+      for (i in names(col_pal_d_args_lst)) {
+        if (i %in% names(SO@misc[["metacolors"]])) {
+          col_pal_d_args_lst[[i]][["name"]] <- SO@misc[["metacolors"]][[i]]
+        }
+      }
+    }
+  }
+
+
+  plots <- purrr::map2(data,
+                       col_pal_d_args_lst,
+                       ~Gmisc::fastDoCall(what = feature_plot_data,
+                                          args = list(data = .x,
+                                                      col_binary = col_binary,
+                                                      col_expr = col_expr,
+                                                      col_ex_cells = col_ex_cells,
+                                                      col_na = col_na,
+                                                      col_non_expr = col_non_expr,
+                                                      col_pal_c_args = col_pal_c_args,
+                                                      col_pal_d_args = .y,
+                                                      col_legend_c_args = col_legend_c_args,
+                                                      col_legend_d_args = col_legend_d_args,
+                                                      col_steps = col_steps,
+                                                      col_trans_log = col_trans_log,
+                                                      facet_grid_row_var = facet_grid_row_var,
+                                                      feature_alias = feature_alias,
+                                                      freq_size = freq_size,
+                                                      freq_pos = freq_pos,
+                                                      freq_plot = freq_plot,
+                                                      freq_col = freq_col,
+                                                      name = name,
+                                                      anno = anno,
+                                                      name_anno_pos = name_anno_pos,
+                                                      name_anno_args = name_anno_args,
+                                                      legendbreaks = legendbreaks,
+                                                      legendlabels = legendlabels,
+                                                      col_steps_nice = col_steps_nice,
+                                                      ncol_inner = ncol_inner,
+                                                      nrow_inner = nrow_inner,
+                                                      pt_size = pt_size,
+                                                      pt_size_fct = pt_size_fct,
+                                                      shape_legend_args = shape_legend_args,
+                                                      shape_legend_hide = shape_legend_hide,
+                                                      facet_scales = facet_scales,
+                                                      theme = theme,
+                                                      theme_args = theme_args,
+                                                      axes_lim_set = axes_lim_set,
+                                                      axes_lim_expand = axes_lim_expand,
+                                                      label_filter_cells = label_filter_cells,
+                                                      label_center_fun = label_center_fun,
+                                                      label_nudge = label_nudge,
+                                                      label_repel = label_repel,
+                                                      label_multi_try = label_multi_try,
+                                                      label_multi_max = label_multi_max,
+                                                      label_args = label_args,
+                                                      order_discr_explicit = order_discr_explicit,
+                                                      contour_filter_cells = contour_filter_cells,
+                                                      contour_rm_outlier = contour_rm_outlier,
+                                                      contour_rm_lowfreq_subcluster = contour_rm_lowfreq_subcluster,
+                                                      contour_multi_try = contour_multi_try,
+                                                      contour_multi_max = contour_multi_max,
+                                                      contour_col_pal_args = contour_col_pal_args,
+                                                      contour_args = contour_args,
+                                                      contour_label_nudge = contour_label_nudge,
+                                                      contour_label_args = contour_label_args,
+                                                      contour_same_across_split = contour_same_across_split,
+                                                      contour_expr_freq = contour_expr_freq,
+                                                      contour_ggnewscale = contour_ggnewscale,
+                                                      contour_fun = contour_fun,
+                                                      contour_path_label = contour_path_label,
+                                                      col_split = col_split,
+                                                      plot_all_across_split = plot_all_across_split,
+                                                      axes_arrows = axes_arrows,
+                                                      img_df = img_df,
+                                                      hull_df = hull_df,
+                                                      cell_hull_args = cell_hull_args)
+                       ))
 
   if (!is.null(strip_select)) {
     for (i in 1:length(plots)) {

@@ -157,11 +157,11 @@ SO_prep02 <- function(SO_unprocessed,
                                         celltype_label = celltype_label)
 
   RunPCA_args <- check_RunPCA_args(#obj = SO,
-                                   RunPCA_args = RunPCA_args,
-                                   normalization = normalization,
-                                   npcs = npcs,
-                                   seed = seed,
-                                   verbose = verbose)
+    RunPCA_args = RunPCA_args,
+    normalization = normalization,
+    npcs = npcs,
+    seed = seed,
+    verbose = verbose)
 
   RunHarmony_args <- check_RunHarmony_args(RunHarmony_args = RunHarmony_args,
                                            RunPCA_args = RunPCA_args)
@@ -385,14 +385,19 @@ SO_prep02 <- function(SO_unprocessed,
   # add clusterings and their colors to Misc
   names_w_clust <- names(SO@meta.data)
   SeuratObject::Misc(SO, "clusterings") <- setdiff(names_w_clust, names_wo_clust)
-  try(expr = {
-    all_cluster <- unique(unname(unlist(SO@meta.data[,SeuratObject::Misc(SO, "clusterings")])))
-    # all_cluster <- all_cluster[order(as.numeric(all_cluster))]
-    all_cluster <- sort(all_cluster)
-    SeuratObject::Misc(SO, "clustering_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(all_cluster))), nm = all_cluster)
-  }, silent = T)
-  origids <- sort(unique(SO@meta.data$orig.ident))
-  SeuratObject::Misc(SO, "orig.ident_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(origids))), nm = origids)
+
+  for (i in c(SeuratObject::Misc(SO, "clusterings"), "orig.ident")) {
+    SO <- add_group_color_to_misc(obj = SO, meta_col = i)
+  }
+
+  # try(expr = {
+  #   all_cluster <- unique(unname(unlist(SO@meta.data[,SeuratObject::Misc(SO, "clusterings")])))
+  #   # all_cluster <- all_cluster[order(as.numeric(all_cluster))]
+  #   all_cluster <- sort(all_cluster)
+  #   SeuratObject::Misc(SO, "clustering_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(all_cluster))), nm = all_cluster)
+  # }, silent = T)
+  # origids <- sort(unique(SO@meta.data$orig.ident))
+  # SeuratObject::Misc(SO, "orig.ident_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(origids))), nm = origids)
 
   # add meta cols
   SO@meta.data$id <- rownames(SO@meta.data)
@@ -1524,14 +1529,14 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 }
 
 
-calc_neighbor_and_cluster <- function(SO,
+calc_neighbor_and_cluster <- function(obj,
                                       red = "pca",
                                       npcs = 10,
                                       normalization = "RNA",
-                                      FindNeighbors_args = list(),
-                                      FindClusters_args = list(),
+                                      FindNeighbors_args = list(dims = 1:npcs),
+                                      FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                                       verbose = TRUE,
-                                      mc.cores = 8) {
+                                      mc.cores = 10) {
 
   # see /Volumes/CMS_SSD_2TB/R_scRNAseq/R_scripts/distance_matrices_and_umap.R
   message("FindNeighbors and FindClusters")
@@ -1546,19 +1551,24 @@ calc_neighbor_and_cluster <- function(SO,
   #   fun <- scexpr::FindNeighbors2
   # }
 
-
-  nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = SO@reductions[[red]]@cell.embeddings[,1:npcs],
+  if (methods::is(obj, "Seurat")) {
+    object <- obj@reductions[[red]]@cell.embeddings[,1:npcs]
+  } else {
+    object <- obj
+  }
+  nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = object,
                                                   verbose = verbose),
                                              FindNeighbors_args))
 
   #  "_", npcs,
   # names(nn_list[["graphs"]]) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(nn_list[["graphs"]]))), "_", red, "_", c("nn", "snn"))
   # norm <- ifelse(normalization %in% c("RNA", "LogNormalize"), "RNA", "SCT")
-  names(nn_list[["graphs"]]) <- paste0(red, "_", c("nn", "snn")) # norm, "_",
 
-
-  SO@graphs <- nn_list[["graphs"]]
-  SO@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
+  if (methods::is(obj, "Seurat")) {
+    names(nn_list[["graphs"]]) <- paste0(red, "_", c("nn", "snn")) # norm, "_",
+    obj@graphs <- nn_list[["graphs"]]
+    obj@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
+  }
 
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   if (!"resolution" %in% names(FindClusters_args)) {
@@ -1566,7 +1576,7 @@ calc_neighbor_and_cluster <- function(SO,
   }
 
   cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
-                           snn = SO@graphs[[names(SO@graphs)[2]]],
+                           snn = nn_list[["graphs"]][["snn"]],
                            args = FindClusters_args,
                            FUN = function(x, snn, args) {
                              args$resolution <- x
@@ -1574,16 +1584,19 @@ calc_neighbor_and_cluster <- function(SO,
                                                args = c(list(object = snn,
                                                              verbose = F),
                                                         args))
-                           }, mc.cores = 8)
+                           }, mc.cores = mc.cores)
 
   cl <- dplyr::bind_cols(cl)
   cl <- pad_default_cluster_numbers(cl)
-  names(cl) <- paste0(names(SO@graphs)[2], "_", names(cl))
+  names(cl) <- paste0(names(nn_list[["graphs"]])[2], "_", names(cl))
   #names(cl) <- unname(sapply(brathering::strsplit2(names(cl), "_"), "[", 2))
 
-  SO <- Seurat::AddMetaData(SO, cl)
-
-  return(SO)
+  if (methods::is(obj, "Seurat")) {
+    obj <- Seurat::AddMetaData(obj, cl)
+    return(obj)
+  } else {
+    return(cl)
+  }
 }
 
 pad_default_cluster_numbers <- function(x, minlen = 2) {
