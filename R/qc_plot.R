@@ -226,28 +226,23 @@ qc_plot2 <- function(SO,
                                           get_data_args = list(shuffle = T, order_discr = F, qmax = 99.5)))
 
   qc_p2 <- purrr::map2(stats::setNames(red_name, red_name), clust_name,  function(red_name, clust_name) {
-    #clust_name <- SO@misc$meta_clusterings[red_name]
-
     p1 <- patchwork::wrap_plots(feature_plot2(SO,
                                               features = clust_name,
                                               reduction = red_name,
-                                              pt.size = 0.5,
-                                              col_pal_d_args = list(name = SO@misc$clustering_colors)),
+                                              pt.size = 0.5),
                                 feature_plot2(SO,
                                               features = "orig.ident",
                                               reduction = red_name,
                                               pt.size = 0.5,
-                                              get_data_args = list(shuffle = T, order_discr = F),
-                                              col_pal_d_args = list(name = SO@misc$orig.ident_colors)),
+                                              get_data_args = list(shuffle = T, order_discr = F)),
                                 freq_pie_chart(
                                   SO = SO,
                                   meta_col = clust_name,
-                                  fill = SO@misc$clustering_colors,
                                   label_rel_cutoff = 0.04)[["plot"]] +
                                   ggplot2::theme(panel.background = ggplot2::element_rect(fill = "white")),
                                 ncol = 1,
                                 heights = c(0.35,0.35,0.3)
-                                )
+    )
     p2 <- purrr::map(stats::setNames(qc_cols, qc_cols), function(feature) {
       make_stat_plot(
         SO = SO,
@@ -289,7 +284,8 @@ qc_plot2 <- function(SO,
       device = save_as,
       path = save_path,
       width = 10,
-      height = 7
+      height = 7,
+      create.dir = T
     )
 
     for (i in names(qc_p2)) {
@@ -336,8 +332,9 @@ make_stat_plot <- function(SO, feature, clust_name, geom2, breaks) {
 
   if (grepl("_log$", feature)) {
     plot <- plot +
-      ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.), breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data[[feature]]))),
-                                                                                                     which(breaks < max(expm1(SO@meta.data[[feature]]))))]))
+      ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~ expm1(.),
+                                                               breaks = breaks[intersect(which(breaks > min(expm1(SO@meta.data[[feature]]))),
+                                                                                         which(breaks < max(expm1(SO@meta.data[[feature]]))))]))
   }
   return(plot)
 }

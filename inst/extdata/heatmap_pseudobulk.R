@@ -154,10 +154,10 @@ heatmap_pseudobulk <- function(SO,
     utils::install.packages("devtools")
   }
   if (!requireNamespace("presto", quietly = T)) {
-    devtools::install_github("immunogenomics/presto")
+    pak::pak("immunogenomics/presto")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   # set to 2 when features are provided

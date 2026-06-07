@@ -263,14 +263,14 @@ SO_prep02 <- function(SO_unprocessed,
   )
   names_wo_clust <- names(SO@meta.data)
 
-  SO <- calc_neighbor_and_cluster(SO = SO,
+  SO <- calc_neighbor_and_cluster(obj = SO,
                                   red = red,
                                   npcs = RunPCA_args[["npcs"]],
                                   normalization = normalization,
                                   FindNeighbors_args = FindNeighbors_args,
                                   FindClusters_args = FindClusters_args,
                                   verbose = verbose,
-                                  mc.cores = 8)
+                                  mc.cores = 10)
 
   ## pick clustering with decent cluster number
   ## derive cluster markers
@@ -355,7 +355,7 @@ SO_prep02 <- function(SO_unprocessed,
       utils::install.packages("devtools")
     }
     if (!requireNamespace("EmbedSOM", quietly = T)) {
-      devtools::install_github("exaexa/EmbedSOM")
+      pak::pak("exaexa/EmbedSOM")
     }
 
     SOM_args <- SOM_args[which(!names(SOM_args) %in% c("data"))]
@@ -370,7 +370,7 @@ SO_prep02 <- function(SO_unprocessed,
       utils::install.packages("devtools")
     }
     if (!requireNamespace("EmbedSOM", quietly = T)) {
-      devtools::install_github("exaexa/EmbedSOM")
+      pak::pak("exaexa/EmbedSOM")
     }
 
     GQTSOM_args <- GQTSOM_args[which(!names(GQTSOM_args) %in% c("data"))]
@@ -1529,10 +1529,98 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 }
 
 
+#' Calculate nearest-neighbor graphs and clustering assignments
+#'
+#' Computes nearest-neighbor (NN) and shared nearest-neighbor (SNN) graphs
+#' from a dimensional reduction (typically PCA) and performs clustering
+#' across one or more resolutions using Seurat's clustering framework.
+#'
+#' For Seurat objects, the resulting NN/SNN graphs are stored in
+#' `obj@graphs`, ranked neighbors are stored in `obj@misc[["nn.ranked"]]`,
+#' and cluster assignments are added to the metadata.
+#'
+#' @param obj A Seurat object containing a dimensional reduction specified by
+#'   `red`, or a matrix of cell embeddings/features to be used directly for
+#'   neighbor calculation.
+#' @param red Character scalar specifying the dimensional reduction to use
+#'   when `obj` is a Seurat object. Default is `"pca"`.
+#' @param npcs Integer specifying the number of dimensions/components from the
+#'   reduction to use. Default is `10`.
+#' @param FindNeighbors_args Named list of additional arguments passed to
+#'   `FindNeighbors2()`. Arguments `object`, `reduction`, and `verbose`
+#'   are ignored if supplied. By default, `dims = 1:npcs`.
+#' @param FindClusters_args Named list of additional arguments passed to
+#'   `Seurat::FindClusters()`. Arguments `object` and `verbose`
+#'   are ignored if supplied. By default, clustering is performed at
+#'   resolutions `0.1` through `0.8`.
+#' @param verbose Logical indicating whether progress messages should be
+#'   printed. Default is `TRUE`.
+#' @param mc.cores Integer specifying the number of CPU cores to use for
+#'   parallel clustering across resolutions. Passed to
+#'   `parallel::mclapply()`. Default is `10`.
+#'
+#' @details
+#' The function first computes nearest-neighbor and shared nearest-neighbor
+#' graphs using `FindNeighbors2()`. Clustering is then performed separately
+#' for each requested resolution using the SNN graph.
+#'
+#' Cluster labels are post-processed with
+#' `pad_default_cluster_numbers()` and added as metadata columns with names
+#' of the form:
+#'
+#' \preformatted{
+#' <reduction>_snn_res_<resolution>
+#' }
+#'
+#' For example:
+#'
+#' \preformatted{
+#' pca_snn_res_0.4
+#' pca_snn_res_0.8
+#' }
+#'
+#' @return
+#' If `obj` is a Seurat object, returns the modified Seurat object with:
+#' \itemize{
+#'   \item NN and SNN graphs stored in `@graphs`.
+#'   \item Ranked nearest neighbors stored in `@misc[["nn.ranked"]]`.
+#'   \item Cluster assignments added to metadata.
+#' }
+#'
+#' Otherwise, returns a data frame containing cluster assignments for all
+#' requested resolutions.
+#'
+#' @seealso
+#' \code{\link[Seurat]{FindClusters}},
+#' \code{\link[Seurat]{FindNeighbors}}
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Cluster a Seurat object using the first 20 PCs
+#' seu <- calc_neighbor_and_cluster(
+#'   seu,
+#'   red = "pca",
+#'   npcs = 20
+#' )
+#'
+#' # Run clustering at custom resolutions
+#' seu <- calc_neighbor_and_cluster(
+#'   seu,
+#'   FindClusters_args = list(
+#'     resolution = c(0.2, 0.5, 1.0)
+#'   )
+#' )
+#'
+#' # Use a matrix of embeddings directly
+#' cl <- calc_neighbor_and_cluster(
+#'   Embeddings(seu, "pca")[, 1:20]
+#' )
+#' }
 calc_neighbor_and_cluster <- function(obj,
                                       red = "pca",
                                       npcs = 10,
-                                      normalization = "RNA",
                                       FindNeighbors_args = list(dims = 1:npcs),
                                       FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                                       verbose = TRUE,
@@ -1560,10 +1648,6 @@ calc_neighbor_and_cluster <- function(obj,
                                                   verbose = verbose),
                                              FindNeighbors_args))
 
-  #  "_", npcs,
-  # names(nn_list[["graphs"]]) <- paste0(gsub("_nn$", "", gsub("_snn$", "", names(nn_list[["graphs"]]))), "_", red, "_", c("nn", "snn"))
-  # norm <- ifelse(normalization %in% c("RNA", "LogNormalize"), "RNA", "SCT")
-
   if (methods::is(obj, "Seurat")) {
     names(nn_list[["graphs"]]) <- paste0(red, "_", c("nn", "snn")) # norm, "_",
     obj@graphs <- nn_list[["graphs"]]
@@ -1576,7 +1660,7 @@ calc_neighbor_and_cluster <- function(obj,
   }
 
   cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
-                           snn = nn_list[["graphs"]][["snn"]],
+                           snn = nn_list[["graphs"]][[2]],
                            args = FindClusters_args,
                            FUN = function(x, snn, args) {
                              args$resolution <- x
@@ -1588,7 +1672,8 @@ calc_neighbor_and_cluster <- function(obj,
 
   cl <- dplyr::bind_cols(cl)
   cl <- pad_default_cluster_numbers(cl)
-  names(cl) <- paste0(names(nn_list[["graphs"]])[2], "_", names(cl))
+  names(cl) <- paste0(names(nn_list[["graphs"]])[2], "_", gsub("res\\.", "res_", names(cl)))
+  names(cl) <- sub("(res_[1-9])$", "\\1.0", names(cl))
   #names(cl) <- unname(sapply(brathering::strsplit2(names(cl), "_"), "[", 2))
 
   if (methods::is(obj, "Seurat")) {
@@ -1643,7 +1728,7 @@ make_equal_feature_order <-  function(x) {
 
 pkg_checks <- function() {
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
   if (!requireNamespace("BiocManager", quietly = T)) {
     utils::install.packages("BiocManager")
@@ -1657,8 +1742,8 @@ pkg_checks <- function() {
   if (!requireNamespace("harmony", quietly = T)) {
     utils::install.packages("harmony")
   }
-  if (!requireNamespace("zap", quietly = T)) {
-    devtools::install_github("coolbutuseless/zap")
-  }
+  # if (!requireNamespace("zap", quietly = T)) {
+  #   pak::pak("coolbutuseless/zap")
+  # }
 }
 

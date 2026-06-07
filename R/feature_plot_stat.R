@@ -34,6 +34,12 @@
 #' @param geom2_args List of additional arguments passed to the secondary geometry.
 #' @param facetting_args List of arguments passed to \code{ggplot2::facet_wrap()}.
 #' @param axis_expansion_y_mult Numeric vector of length 2 controlling y-axis expansion.
+#' @param geom3 geom only plotted on expressing cells (feature>0). when ..auto..
+#' a boxplot is plotted only on those groups where median across all cells is zero.
+#' @param expr_freq_y_equal_max
+#' @param theme_args args to theme
+#' @param geom3_args args to geom3
+#' @param add_pwc add default ggpubr::geom_pwc?
 #'
 #' @details
 #' The function extracts expression data using \code{get_data()} and visualizes
@@ -69,8 +75,9 @@ feature_plot_stat <- function(SO,
                               get_data_args = list(assay = "RNA",
                                                    layer = "data",
                                                    cells = NULL),
-                              geom1 = c("jitter", "point"),
+                              geom1 = c("jitter", "point", "sina", "none"),
                               geom2 = c("boxplot", "violin", "none"),
+                              geom3 = c("none", "boxplot", "violin", "..auto.."),
                               plot_first = c("geom1", "geom2"),
                               jitterwidth = 0.2,
                               dodgewidth = 0.9,
@@ -84,42 +91,54 @@ feature_plot_stat <- function(SO,
                               plot_strip = T,
                               legend_title = "object",
                               pt_size = 0.5,
-                              col_pal = colrr::col_pal("custom"),
+                              col_pal = "..auto..",
                               col_na = "grey50",
                               col_pal_args = list(missing_fct_to_na = T),
                               feature_cut = NULL,
                               feature_cut_expr = 0,
                               feature_ex = NULL,
-                              theme = ggplot2::theme_bw(),
-                              geom2_args = list(outlier.shape = NA, alpha = 0.8),
+                              theme = colrr::theme_material(white = T, style = "prismy"),
+                              theme_args = list(strip.text.x = ggtext::element_markdown(margin = ggplot2::margin(2,0,2,0, unit = "pt")),
+                                                axis.text.x = ggplot2::element_text(angle = 30, hjust = 1)),
+                              geom2_args = list(outlier.shape = NA, alpha = 0.7),
+                              geom3_args = list(outlier.shape = NA, alpha = 0.5, width = 0.4),
                               facetting_args = list(scales = "free_y",
                                                     axes = "all",
                                                     axis.labels = "margins"),
-                              axis_expansion_y_mult = c(0.02,0.2)) {
+                              axis_expansion_y_mult = c(0.02,0.125),
+                              add_pwc = F) {
+
+
+  # handle facetting
+  # check fun from promotion
+
+
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   if (missing(SO)) {
     stop("Seurat object list or feature vector is missing.")
   }
-  if (missing(meta_col)) {
+  if (is.na(meta_col) || missing(meta_col) || meta_col == "" || is.null(meta_col)) {
     stop("meta_col required.")
+  }
+  if (length(meta_col) > 1) {
+    meta_col <- meta_col[1]
+    message("Please provide only one meta_col. Using first element of meta_col.")
   }
 
   geom1 <- rlang::arg_match(geom1)
   geom2 <- rlang::arg_match(geom2)
+  geom3 <- rlang::arg_match(geom3)
   plot_first <- rlang::arg_match(plot_first)
 
   SO <- scexpr:::check.SO(SO = SO, assay = get_data_args[["assay"]])
   assay <- Seurat::DefaultAssay(SO[[1]])
   features <- scexpr:::check.features(SO = SO, features = features, meta.data = T)
-  if (length(meta_col) > 1) {
-    stop("Please provide only one meta_col.")
-  }
-
   meta_col <- scexpr:::check.features(SO = SO, features = meta_col, rownames = F)
+
   get_data_args[["cells"]] <- scexpr:::check.and.get.cells(SO = SO,
                                                            assay = get_data_args[["assay"]],
                                                            cells = get_data_args[["cells"]],
@@ -142,14 +161,23 @@ feature_plot_stat <- function(SO,
   #                  meta_col = meta_col,
   #                  #try_df = T,
   #                  split_feature = split_feature)
+  all_gene_feat <- unique(unlist(purrr::map(SO, scexpr:::get_gene_features)))
   data <- dplyr::bind_rows(data, .id = "feature_split") ## different features
 
   # split_feature requires testing - include in pivoting etc and geom_text
   #data <- tidyr::pivot_longer(data, dplyr::all_of(features), names_to = "feature_split", values_to = "expr")
 
+  ylab <- "feature"
+  if (all(features %in% all_gene_feat)) {
+    if (get_data_args[["layer"]] == "data") {
+      ylab <- "norm UMI"
+    } else if (get_data_args[["layer"]] == "counts") {
+      ylab <- "UMI"
+    }
+  }
+
   if (expr_freq_size>0) {
-    stat <-
-      data |>
+    stat <- data |>
       dplyr::mutate(max.feat.expr = max(feature), .by = feature_split) |>
       dplyr::group_by(dplyr::across(dplyr::all_of(c("feature_split", meta_col, "SO.split", "max.feat.expr")))) |>
       dplyr::summarise(pct.expr = sum(feature > 0)/dplyr::n(), .groups = "drop") |>
@@ -158,10 +186,20 @@ feature_plot_stat <- function(SO,
                                                            pct.expr >= 0.01 ~ paste0(round(pct.expr*100, expr_freq_decimals), " %"))) |>
       dplyr::mutate(pct.expr.adjust = dplyr::case_when(pct.expr == 0 ~ "0",
                                                        pct.expr > 0 & pct.expr < 0.01 ~ "> 0.01",
-                                                       pct.expr >= 0.01 ~ as.character(round(pct.expr, expr_freq_decimals))))
+                                                       pct.expr >= 0.01 ~ as.character(round(pct.expr, expr_freq_decimals)))) |>
+      dplyr::filter(feature_split %in% all_gene_feat) |>
+      dplyr::mutate(feature_split = paste0("*", feature_split, "*"))
+
     names(stat)[which(names(stat) == "SO.split")] <- legend_title
   }
   names(data)[which(names(data) == "SO.split")] <- legend_title
+  data <- data |>
+    dplyr::mutate(feature_split = ifelse(feature_split %in% all_gene_feat,
+                                         paste0("*", feature_split, "*"),
+                                         feature_split))
+  features <- ifelse(features %in% all_gene_feat,
+                     paste0("*", features, "*"),
+                     features)
 
   if (expr_freq_y_equal_max) {
     stat$max.feat.expr <- max(stat$max.feat.expr)
@@ -171,79 +209,119 @@ feature_plot_stat <- function(SO,
     data <- dplyr::filter(data, feature > 0)
   }
 
+  geom1pos <- if (geom1 == "jitter" && jitterwidth > 0) ggplot2::position_jitterdodge(jitter.width = jitterwidth, dodge.width = dodgewidth) else ggplot2::position_dodge(width = dodgewidth)
 
+  if (geom3 != "none") {
+    if (geom3 == "..auto..") {
+      datasummary <- dplyr::summarise(data, median = median(feature), .by = c(!!rlang::sym(meta_col), feature_split))
+      median0 <- datasummary |> dplyr::filter(median == 0)
+      datageom3 <- data |>
+        dplyr::filter(feature > 0) |>
+        dplyr::filter(!!rlang::sym(meta_col) %in% median0[[meta_col]] & feature_split %in% median0[["feature_split"]])
+    } else {
+      datageom3 <- dplyr::filter(data, feature > 0)
+    }
+  } else {
+    datageom3 <- data
+  }
+
+  geom1_layer <- switch(geom1,
+                  "jitter" = ggplot2::geom_point(size = pt_size, position = geom1pos),
+                  "point" = ggplot2::geom_point(size = pt_size, position = geom1pos),
+                  "sina" = ggforce::geom_sina(size = pt_size),
+                  "none" = ggplot2::geom_blank())
   geom2 <- switch(geom2,
                   "violin" = ggplot2::geom_violin,
                   "boxplot" = ggplot2::geom_boxplot,
                   "none" = ggplot2::geom_blank)
+  geom3 <- switch(geom3,
+                  "violin" = ggplot2::geom_violin,
+                  "boxplot" = ggplot2::geom_boxplot,
+                  "..auto.." = ggplot2::geom_boxplot,
+                  "none" = ggplot2::geom_blank)
+
   color_aes <- ifelse(length(SO) > 1, legend_title, meta_col)
-  geom1pos <- if (geom1 == "jitter" && jitterwidth > 0) ggplot2::position_jitterdodge(jitter.width = jitterwidth, dodge.width = dodgewidth) else ggplot2::position_dodge(width = dodgewidth)
+
+
+  if (col_pal[1] == "..auto..") {
+    if ("metacolors" %in% names(SO[[1]]@misc) && is.list(SO[[1]]@misc[["metacolors"]])) {
+      if (meta_col %in% names(SO[[1]]@misc[["metacolors"]])) {
+        col_pal <- SO[[1]]@misc[["metacolors"]][[meta_col]]
+      } else {
+        col_pal <- colrr::col_pal("custom")
+      }
+    } else {
+      col_pal <- colrr::col_pal("custom")
+    }
+  }
+
+  if (length(SO) == 1 && !"legend.position" %in% names(theme_args)) {
+    theme_args <- c(theme_args, list(legend.position = "none"))
+  }
+
+  if (!plot_strip) {
+    theme_args <- c(theme_args, list(strip.background = ggplot2::element_blank(),
+                                     strip.text.x = ggplot2::element_blank()))
+  }
 
   col_pal <- colrr::make_col_pal(col_vec = col_pal,
                                  fct_lvls = if (is.factor(data[[color_aes]])) levels(data[[color_aes]]) else sort(unique(data[[color_aes]])),
                                  missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_args), col_pal_args[["missing_fct_to_na"]], T),
                                  col_pal_args = col_pal_args[-which(names(col_pal_args) %in% c("name", "missing_fct_to_na"))])
 
-
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +
-    ggplot2::scale_color_manual(values = col_pal, na.value = col_na) +
     theme +
-    Gmisc::fastDoCall(ggplot2::facet_wrap, args = c(list(facets = ggplot2::vars(factor(feature_split, features))), facetting_args))
+    ggplot2::scale_color_manual(values = col_pal, na.value = col_na) +
+    Gmisc::fastDoCall(ggplot2::facet_wrap, args = c(list(facets = ggplot2::vars(factor(feature_split, features))), facetting_args)) +
+    ggplot2::labs(y = ylab) +
+    Gmisc::fastDoCall(ggplot2::theme, args = theme_args) +
+    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = axis_expansion_y_mult))
 
-  if (plot_first == "geom1") {
-    plot <- plot +
-      ggplot2::geom_point(size = pt_size, position = geom1pos) +
-      suppressWarnings(Gmisc::fastDoCall(geom2, args = c(list(position = ggplot2::position_dodge(width = dodgewidth)),
-                                                         geom2_args)))
-  } else if (plot_first == "geom2") {
-    plot <- plot +
-      suppressWarnings(Gmisc::fastDoCall(geom2, args = c(list(position = ggplot2::position_dodge(width = dodgewidth)),
-                                                         geom2_args))) +
-      ggplot2::geom_point(size = pt_size, position = geom1pos)
-  }
+  bckgr_col <- brathering::gg_get_theme_element(plot, element = "plot.background")@fill
 
+  # geom1_layer <- ggplot2::geom_point(size = pt_size, position = geom1pos)
 
+  geom2_layer <- suppressWarnings(Gmisc::fastDoCall(
+    geom2,
+    args = c(list(
+      position = ggplot2::position_dodge(width = dodgewidth),
+      fill = bckgr_col
+    ), geom2_args)
+  ))
 
-  ##ggforce::geom_sina()
+  geom3_layer <- suppressWarnings(Gmisc::fastDoCall(
+    geom3,
+    args = c(list(
+      position = ggplot2::position_dodge(width = dodgewidth),
+      fill = bckgr_col,
+      data = datageom3
+    ), geom3_args)
+  ))
 
+  plot <- plot + switch(
+    plot_first,
+    geom1 = list(geom1_layer, geom2_layer, geom3_layer),
+    geom2 = list(geom2_layer, geom3_layer, geom1_layer)
+  )
 
   if (expr_freq_size>0) {
-
     plot <- plot +
       ggplot2::geom_text(data = stat,
-                         color = "black",
+                         color = brathering:::bw_txt(bckgr_col),
                          ggplot2::aes(label = !!rlang::sym(ifelse(expr_freq_pct,
                                                                   "pct.expr.adjust.pct",
                                                                   "pct.expr.adjust")),
                                       y = max.feat.expr + expr_freq_hjust),
                          position = ggplot2::position_dodge(width = 0.75),
                          size = expr_freq_size, show.legend = F,
-                         angle = expr_freq_angle) +
-      ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = axis_expansion_y_mult))
-    #expand_limits
+                         angle = expr_freq_angle)
   }
 
-  if (length(SO) == 1) {
-    plot <- plot + ggplot2::theme(legend.position = "none")
-  }
-  if (!plot_strip) {
-    plot <- plot + ggplot2::theme(strip.background = ggplot2::element_blank(), strip.text.x = ggplot2::element_blank())
-  } else {
-    if (all(features %in% rownames(SO[[1]]))) {
-      plot <- plot + ggplot2::theme(strip.text.x = ggplot2::element_text(face = "italic"))
-    }
-  }
-  if (all(features %in% rownames(SO[[1]]))) {
-    if (get_data_args[["layer"]] == "data") {
-      plot <- plot + ggplot2::labs(y = "norm UMI")
-    }
-    if (get_data_args[["layer"]] == "counts") {
-      plot <- plot + ggplot2::labs(y = "UMI")
-    }
+  if (add_pwc) {
+    plot <- plot + ggpubr::geom_pwc(label = "p.signif", tip.length = 0)
   }
 
-  plot <- plot + ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 30, hjust = 1))
 
   return(plot)
 }

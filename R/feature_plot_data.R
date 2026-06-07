@@ -238,10 +238,10 @@ feature_plot_data <- function(data,
                                                     alpha = 1)) {
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   if (!is.data.frame(data)) {

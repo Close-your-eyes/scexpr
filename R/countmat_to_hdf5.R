@@ -33,7 +33,7 @@ countmat_to_hdf5 <- function(mat,
     BiocManager::install("DropletUtils")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   types <- rlang::arg_match(types, multiple = T)

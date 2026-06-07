@@ -18,7 +18,8 @@ gsea_plot_summary(
   x_expand_mult = c(0.1, 0.1),
   theme = colrr::theme_material(white = T),
   col_pal = colrr::col_pal(name = "spectral", direction = -1),
-  title = NULL
+  title = NULL,
+  plot_order = c("NES", "leadingEdge_size_rel", "ES", "padj")
 )
 }
 \arguments{

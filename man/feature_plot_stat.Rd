@@ -9,8 +9,9 @@ feature_plot_stat(
   features,
   meta_col = "orig.ident",
   get_data_args = list(assay = "RNA", layer = "data", cells = NULL),
-  geom1 = c("jitter", "point"),
+  geom1 = c("jitter", "point", "sina", "none"),
   geom2 = c("boxplot", "violin", "none"),
+  geom3 = c("none", "boxplot", "violin", "..auto.."),
   plot_first = c("geom1", "geom2"),
   jitterwidth = 0.2,
   dodgewidth = 0.9,
@@ -24,16 +25,20 @@ feature_plot_stat(
   plot_strip = T,
   legend_title = "object",
   pt_size = 0.5,
-  col_pal = colrr::col_pal("custom"),
+  col_pal = "..auto..",
   col_na = "grey50",
   col_pal_args = list(missing_fct_to_na = T),
   feature_cut = NULL,
   feature_cut_expr = 0,
   feature_ex = NULL,
-  theme = ggplot2::theme_bw(),
-  geom2_args = list(outlier.shape = NA, alpha = 0.8),
+  theme = colrr::theme_material(white = T, style = "prismy"),
+  theme_args = list(strip.text.x = ggtext::element_markdown(margin = ggplot2::margin(2,
+    0, 2, 0, unit = "pt")), axis.text.x = ggplot2::element_text(angle = 30, hjust = 1)),
+  geom2_args = list(outlier.shape = NA, alpha = 0.7),
+  geom3_args = list(outlier.shape = NA, alpha = 0.5, width = 0.4),
   facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins"),
-  axis_expansion_y_mult = c(0.02, 0.2)
+  axis_expansion_y_mult = c(0.02, 0.125),
+  add_pwc = F
 )
 }
 \arguments{
@@ -49,6 +54,9 @@ feature_plot_stat(
 \item{geom1}{Character. Type of point layer to use: \code{"jitter"} or \code{"point"}.}
 
 \item{geom2}{Character. Secondary geometry: \code{"boxplot"}, \code{"violin"}, or \code{"none"}.}
+
+\item{geom3}{geom only plotted on expressing cells (feature>0). when ..auto..
+a boxplot is plotted only on those groups where median across all cells is zero.}
 
 \item{plot_first}{Character. Which geometry to plot first: \code{"geom1"} or \code{"geom2"}.}
 
@@ -88,11 +96,17 @@ feature_plot_stat(
 
 \item{theme}{A ggplot2 theme object applied to the plot.}
 
+\item{theme_args}{args to theme}
+
 \item{geom2_args}{List of additional arguments passed to the secondary geometry.}
+
+\item{geom3_args}{args to geom3}
 
 \item{facetting_args}{List of arguments passed to \code{ggplot2::facet_wrap()}.}
 
 \item{axis_expansion_y_mult}{Numeric vector of length 2 controlling y-axis expansion.}
+
+\item{add_pwc}{add default ggpubr::geom_pwc?}
 }
 \value{
 A \code{ggplot2} object.

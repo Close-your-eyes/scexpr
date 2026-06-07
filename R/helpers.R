@@ -479,7 +479,7 @@ get_title <- function(feature_ex = NULL,
 get_legend_text <- function(data,
                             type = c("gene", "meta")) {
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   type <- rlang::arg_match(type)
@@ -516,7 +516,7 @@ get_col_pal <- function(data,
                         col_pal_d_args) {
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   if (is.numeric(data[["feature"]])) {
@@ -567,7 +567,7 @@ add_color_scale <- function(plot,
                             trans_log = F) {
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   if (col_binary && "title" %in% names(col_legend_d_args)) {
@@ -721,7 +721,7 @@ add_axes_expansion <- function(plot,
                                axes_lim_expand = list()) {
 
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   # lists can be w/o names
@@ -807,7 +807,7 @@ add_labels <- function(plot = plot,
                        finalize_plotting = F) {
 
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   data <- plot[["data"]] #|> tidyr::pivot_wider(names_from = feat, values_from = value)
@@ -1051,7 +1051,7 @@ add_contour <- function(plot,
                         finalize_plotting_expr_freq_labels = F) {
 
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
 
@@ -1402,7 +1402,7 @@ co_add_feature_and_contour_labels <- function(plot,
                                               contour_label_nudge,
                                               contour_label_args) {
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   dimcol1 <- attr(plot[["data"]], "dim1")

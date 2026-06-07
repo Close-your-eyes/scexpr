@@ -14,6 +14,7 @@
 #' @param theme ggplot theme
 #' @param col_pal color palette for continuous fill
 #' @param title plot title
+#' @param plot_order
 #'
 #' @returns ggplot
 #' @export
@@ -44,13 +45,15 @@ gsea_plot_summary <- function(gsea_df,
                               x_expand_mult = c(0.1, 0.1),
                               theme = colrr::theme_material(white = T),
                               col_pal = colrr::col_pal(name = "spectral", direction = -1),
-                              title = NULL) {
+                              title = NULL,
+                              plot_order = c("NES", "leadingEdge_size_rel", "ES", "padj")) {
 
   x <- rlang::arg_match(x)
   y <- rlang::arg_match(y)
   fill <- rlang::arg_match(fill)
   size <- rlang::arg_match(size)
   geom <- rlang::arg_match(geom)
+  plot_order <- rlang::arg_match(plot_order)
 
   if (add_size_to_y) {
     gsea_df <- dplyr::mutate(gsea_df, !!y := paste0(!!rlang::sym(y), " (", size, ")"))
@@ -91,6 +94,7 @@ gsea_plot_summary <- function(gsea_df,
   }
 
 
+gsea_df <- dplyr::arrange(gsea_df, -!!rlang::sym(plot_order))
   p <- ggplot2::ggplot(gsea_df, ggplot2::aes(x = !!rlang::sym(x), y = !!rlang::sym(y))) +
     theme +
     ggplot2::scale_fill_gradientn(colors = col_pal) +

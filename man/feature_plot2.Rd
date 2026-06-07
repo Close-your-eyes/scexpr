@@ -32,7 +32,7 @@ feature_plot2(
   col_steps_nice = T,
   col_trans_log = F,
   col_legend_c_args = list(barwidth = 0.5, barheight = 8, title = "..auto..", order = 1),
-  col_legend_d_args = list(nrow = 10, override.aes = list(size = 4), title = "..auto..",
+  col_legend_d_args = list(nrow = 12, override.aes = list(size = 4), title = "..auto..",
     order = 1),
   legendbreaks = "minmidmax",
   legendlabels = "..auto..",

@@ -39,13 +39,13 @@ labeltransfer_module_gsea <- function(test_obj,
     BiocManager::install("UCell")
   }
   if (!requireNamespace("fgsea", quietly = T)) {
-    devtools::install_github("alserglab/fgsea")
+    pak::pak("alserglab/fgsea")
   }
   if (!requireNamespace("fcexpr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/fcexpr")
+    pak::pak("Close-your-eyes/fcexpr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   message("GSEA results may give a nice picture of similarities.")

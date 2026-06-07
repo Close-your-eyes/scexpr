@@ -17,8 +17,6 @@
 #' @param heatmap_long_df_args arguments to fcexpr::heatmap_long_df for plotting
 #' results
 #' @param heatmap_ordering_args arguments to fcexpr::heatmap_ordering
-#' @param lower_tri for a symmetric matrix when only one obj is provided:
-#' plot the lower triangle only? (remove redundancy)
 #' @param min_cells min cell number in both groups to calc correlation
 #' @param avg_expression_args args to scexpr::avg_expression
 #'
@@ -37,12 +35,12 @@ cluster_correlation2 <- function(objs,
                                    fill = colrr::col_pal("spectral", direction = -1),
                                    values_zscored = F,
                                    colorsteps = 10,
+                                   lower_tri = F,
                                    theme_args = list(panel.grid = ggplot2::element_blank(),
                                                      axis.text.x = ggplot2::element_text(angle = 35, hjust = 1))),
                                  heatmap_ordering_args = list(
                                    feature_order = "hclust",
                                    group_order = "hclust"),
-                                 lower_tri = F,
                                  min_cells = 1,
                                  avg_expression_args = list(fun = Matrix::rowMeans,
                                                             fun2 = base::identity)) {
@@ -62,13 +60,13 @@ cluster_correlation2 <- function(objs,
   # meta_cols <- "cluster"
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
   if (!requireNamespace("fcexpr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/fcexpr")
+    pak::pak("Close-your-eyes/fcexpr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   if (is.null(names(objs))) {
@@ -208,21 +206,21 @@ cluster_correlation2 <- function(objs,
                                          values = method),
                                     heatmap_ordering_args))
 
-  if (lower_tri) {
-    # if (ncol(corr_mat) != nrow(corr_mat)) {
-    #   message("Correlation matrix is not quadratic. Returning the lower triangle may not yield intended results.")
-    # }
-    rdfmat <- brathering::df_long_to_mat(rdf, to_rows = names(objs)[1], to_cols = names(objs)[2], values = method)
-    rdfmat[which(!lower.tri(rdfmat))] <- NA
-    rdf <- brathering::mat_to_df_long(rdfmat,
-                                      rownames_to = names(objs)[1],
-                                      colnames_to = names(objs)[2],
-                                      values_to = method) |>
-      dplyr::left_join(cells[[1]], by = names(objs)[1]) |>
-      dplyr::left_join(cells[[2]], by = names(objs)[2])
-    #dplyr::mutate(!!rlang::sym(names(objs)[1]) := factor(!!rlang::sym(names(objs)[1]), levels = levels(rdf[[names(objs)[1]]]))) |>
-    #dplyr::mutate(!!rlang::sym(names(objs)[2]) := factor(!!rlang::sym(names(objs)[2]), levels = levels(rdf[[names(objs)[2]]])))
-  }
+  # if (lower_tri) {
+  #   # if (ncol(corr_mat) != nrow(corr_mat)) {
+  #   #   message("Correlation matrix is not quadratic. Returning the lower triangle may not yield intended results.")
+  #   # }
+  #   rdfmat <- brathering::df_long_to_mat(rdf, to_rows = names(objs)[1], to_cols = names(objs)[2], values = method)
+  #   rdfmat[which(!lower.tri(rdfmat))] <- NA
+  #   rdf <- brathering::mat_to_df_long(rdfmat,
+  #                                     rownames_to = names(objs)[1],
+  #                                     colnames_to = names(objs)[2],
+  #                                     values_to = method) |>
+  #     dplyr::left_join(cells[[1]], by = names(objs)[1]) |>
+  #     dplyr::left_join(cells[[2]], by = names(objs)[2])
+  #   #dplyr::mutate(!!rlang::sym(names(objs)[1]) := factor(!!rlang::sym(names(objs)[1]), levels = levels(rdf[[names(objs)[1]]]))) |>
+  #   #dplyr::mutate(!!rlang::sym(names(objs)[2]) := factor(!!rlang::sym(names(objs)[2]), levels = levels(rdf[[names(objs)[2]]])))
+  # }
 
   # set corr value to NA when min_cells is not met by both groups
   # option for min_cells in both vs. in at least one
@@ -230,7 +228,7 @@ cluster_correlation2 <- function(objs,
     dplyr::mutate(!!rlang::sym(method) := ifelse(!!rlang::sym(ncellcol[1]) < min_cells, NA, !!rlang::sym(method))) |>
     dplyr::mutate(!!rlang::sym(method) := ifelse(!!rlang::sym(ncellcol[2]) < min_cells, NA, !!rlang::sym(method)))
 
-  plot <- Gmisc::fastDoCall(what = fcexpr::heatmap_long_df,
+  plot <- Gmisc::fastDoCall(what = heatmap_long_df, #fcexpr::
                             args = c(list(df = rdf_plot,
                                           groups = names(rdf)[1],
                                           features = names(rdf)[2],

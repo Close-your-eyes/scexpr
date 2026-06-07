@@ -113,7 +113,7 @@ volcano02_plot <- function(volc01_df,
                            arrows = c("<-- -->", "\u2190 \u2192")) {
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   vd <- as.data.frame(volc01_df)
@@ -307,24 +307,53 @@ volcano02_plot <- function(volc01_df,
       vd2 <- vd
     }
     if (length(label_topn_metric) == 1 && label_topn_metric == "y") {
-      f_lab <- dplyr::top_n(vd2, -label_topn, !!rlang::sym(y))
-    } else if (length(label_topn_metric) == 2) {
 
-      f_lab.p.val <- dplyr::top_n(vd2, -label_topn, !!rlang::sym(y))
-      # exclude lower 20 % of p-values for labeling according to logfc
-      temp <- dplyr::filter(vd2, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
-      f_lab.logfc <- dplyr::bind_rows(
-        dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
-        dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
-      )
+      if (length(label_topn) == 1) {
+        f_lab <- dplyr::top_n(vd2, -label_topn, !!rlang::sym(y))
+      } else if (length(label_topn) == 2) {
+        f_lab1 <- vd2 |> dplyr::filter(!!rlang::sym(x) < 0) |> dplyr::top_n(-label_topn[1], !!rlang::sym(y))
+        f_lab2 <- vd2 |> dplyr::filter(!!rlang::sym(x) > 0) |> dplyr::top_n(-label_topn[2], !!rlang::sym(y))
+        f_lab <- dplyr::bind_rows(f_lab1, f_lab2)
+      }
+
+    } else if (length(label_topn_metric) == 2) {
+      if (length(label_topn) == 1) {
+        f_lab.p.val <- dplyr::top_n(vd2, -label_topn, !!rlang::sym(y))
+        # exclude lower 20 % of p-values for labeling according to logfc
+        temp <- dplyr::filter(vd2, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+        f_lab.logfc <- dplyr::bind_rows(
+          dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
+          dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
+        )
+      } else if (length(label_topn) == 2) {
+        f_lab.p.val1 <- vd2 |> dplyr::filter(!!rlang::sym(x) < 0) |> dplyr::top_n(-label_topn[1], !!rlang::sym(y))
+        f_lab.p.val2 <- vd2 |> dplyr::filter(!!rlang::sym(x) > 0) |> dplyr::top_n(-label_topn[2], !!rlang::sym(y))
+        f_lab.p.val <- dplyr::bind_rows(f_lab.p.val1, f_lab.p.val2)
+        # exclude lower 20 % of p-values for labeling according to logfc
+        temp <- vd2 |> dplyr::filter(!!rlang::sym(x) < 0) |> dplyr::filter(-log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+        f_lab.logfc1 <- dplyr::top_n(temp, -(label_topn[1]), !!rlang::sym(x))
+        temp <- vd2 |> dplyr::filter(!!rlang::sym(x) > 0) |> dplyr::filter(-log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+        f_lab.logfc2 <- dplyr::top_n(temp, label_topn[2], !!rlang::sym(x))
+        f_lab.logfc <- dplyr::bind_rows(f_lab.logfc1, f_lab.logfc2)
+      }
       f_lab <- dplyr::bind_rows(f_lab.logfc, f_lab.p.val) |> dplyr::distinct()
+
     } else if (label_topn_metric == 1 && label_topn_metric == "x") {
-      # exclude lower 20 % of p-values for labeling according to logfc
-      temp <- dplyr::filter(vd2, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
-      f_lab <- dplyr::bind_rows(
-        dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
-        dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
-      )
+
+      if (length(label_topn) == 1) {
+        # exclude lower 20 % of p-values for labeling according to logfc
+        temp <- dplyr::filter(vd2, -log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+        f_lab <- dplyr::bind_rows(
+          dplyr::top_n(temp, label_topn/2, !!rlang::sym(x)),
+          dplyr::top_n(temp, -(label_topn/2), !!rlang::sym(x))
+        )
+      } else if (length(label_topn) == 2) {
+        temp <- vd2 |> dplyr::filter(!!rlang::sym(x) < 0) |> dplyr::filter(-log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+        f_lab.logfc1 <- dplyr::top_n(temp, -(label_topn[1]), !!rlang::sym(x))
+        temp <- vd2 |> dplyr::filter(!!rlang::sym(x) > 0) |> dplyr::filter(-log10(!!rlang::sym(y)) > 0.2*max(-log10(!!rlang::sym(y))))
+        f_lab.logfc2 <- dplyr::top_n(temp, label_topn[2], !!rlang::sym(x))
+        f_lab <- dplyr::bind_rows(f_lab.logfc1, f_lab.logfc2)
+      }
     }
 
   } else {

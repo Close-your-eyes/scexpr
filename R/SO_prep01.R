@@ -419,7 +419,7 @@ install_pkgs <- function(SoupX, scDblFinder, decontX) {
   }
 
   if (!requireNamespace("presto", quietly = T)) {
-    devtools::install_github("immunogenomics/presto")
+    pak::pak("immunogenomics/presto")
   }
 }
 
@@ -831,7 +831,7 @@ run_soupx <- function(ffbms,
 
 run_decontx <- function(SO, resolution, nhvf) {
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
   message("Running decontX.")
   SO <- purrr::map(SO, function(SO) {
@@ -863,9 +863,7 @@ cluster_on_metadata <- function(SO,
                                 PCs_to_meta_clustering,
                                 ffbms,
                                 resolution_meta) {
-  if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
-  }
+
   SO <- purrr::map(SO, function(SO) {
 
     # differentiate mouse, human or no MT-genes at all
@@ -917,7 +915,7 @@ cluster_on_metadata <- function(SO,
                                                     grep("^pca", names(SO@reductions), value = T))]]@cell.embeddings[,1:nn]) # length(ffbms) or length(data_dirs)
       }
 
-      meta2 <- brathering::scale2(meta2)
+      meta2 <- apply(meta2, 2, function(x) scales::rescale(x, to = c(0,1)))
       #https://datascience.stackexchange.com/questions/27726/when-to-use-cosine-simlarity-over-euclidean-similarity
       # with cosine metric: relative composition is more important
       umap_dims <- suppressWarnings(uwot::umap(X = meta2, metric = "cosine"))
@@ -941,11 +939,14 @@ cluster_on_metadata <- function(SO,
       clusters <- scexpr:::pad_default_cluster_numbers(x = clusters)
       clusters <- choose_top_ncluster_in_range(x = clusters)
 
+
       # add reduction belonging to the meta clustering as name
       metaclustname <- stats::setNames(paste0("meta_PC", nn, "_", colnames(clusters)), reductioname)
       colnames(clusters) <- metaclustname
       SO <- Seurat::AddMetaData(SO, cbind(umap_dims, clusters))
 
+      suppressWarnings(SeuratObject::Misc(SO, "metacolors") <- c(SeuratObject::Misc(SO, "metacolors"),
+                                                                 stats::setNames(list(colrr::col_pal("custom", n = sort(unique(clusters[,1])), return = "c")), nm = unname(metaclustname))))
       suppressWarnings(SeuratObject::Misc(SO, "meta_clusterings") <- c(SeuratObject::Misc(SO, "meta_clusterings"), metaclustname))
     }
 
@@ -992,25 +993,45 @@ make_equal_cells <- function(x) {
 }
 
 
-add_pct_featset_and_cc <- function(SO) {
-  if (any(grepl("^MT-", rownames(SO))) && !any(grepl("^mt-", rownames(SO)))) {
-    # human
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT-"), "pct_mt")
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^RP[SL]"), "pct_ribo")
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MRP[SL]"), "pct_mribo")
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^MT[1-2][A-Z]$"), "pct_metallothionein")
+
+#' Add typical feature set pct and cell cycle score
+#'
+#' @param obj seurat object
+#' @param species human or mouse or ..auto.. for guessing
+#'
+#' @returns obj with updated meta data
+#' @export
+#'
+#' @examples
+add_pct_featset_and_cc <- function(obj, species = "..auto..") {
+
+  if (species == "..auto..") {
+    if (any(grepl("^MT-", rownames(obj))) && !any(grepl("^mt-", rownames(obj)))) {
+      species <- "human"
+    } else if (!any(grepl("^MT-", rownames(obj))) && any(grepl("^mt-", rownames(obj)))) {
+      species <- "mouse"
+    } else {
+      message("Species could not be guessed. Provide human or mouse.")
+    }
+  } else {
+    species <- rlang::arg_match(species, values = c("human", "mouse"))
+  }
+
+  if (species == "human") {
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^MT-"), "pct_mt")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^RP[SL]"), "pct_ribo")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^MRP[SL]"), "pct_mribo")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^MT[1-2][A-Z]$"), "pct_metallothionein")
 
     cc_genes <- get_cell_cycle_genesets()[["cc_lst"]]
     cc_genes_seu <- cc_genes[c("seurat_2019_g2m", "seurat_2019_s")]
     names(cc_genes_seu) <- c("G2M_score", "S_score")
-    SO <- UCell::AddModuleScore_UCell(SO, features = cc_genes_seu, ncores = 4, name = "")
-  } else if (!any(grepl("^MT-", rownames(SO))) && any(grepl("^mt-", rownames(SO)))) {
-    # mouse
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^mt-"), "pct_mt")
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Rp[sl]"), "pct_ribo")
-    SO <- Seurat::AddMetaData(SO, Seurat::PercentageFeatureSet(SO, pattern = "^Mrp[sl]"), "pct_mribo")
-  } else {
-    message("No mitochondrial genes could be identified from gene names - none starting with MT- (human) or mt- (mouse).")
+    obj <- UCell::AddModuleScore_UCell(obj, features = cc_genes_seu, ncores = 4, name = "")
+  } else if (species == "mouse") {
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^mt-"), "pct_mt")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^Rp[sl]"), "pct_ribo")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^Mrp[sl]"), "pct_mribo")
   }
-  return(SO)
+
+  return(obj)
 }

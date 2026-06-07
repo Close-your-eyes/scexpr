@@ -82,12 +82,12 @@ get_data <- function(SO,
     meta.col = meta_col)
   assay <- Seurat::DefaultAssay(SO[[1]])
   cells <- scexpr:::check.and.get.cells(SO = SO,
-                               assay = assay,
-                               cells = cells,
-                               feature_cut = feature_cut,
-                               feature_cut_expr = feature_cut_expr,
-                               feature_ex = feature_ex,
-                               downsample = downsample)
+                                        assay = assay,
+                                        cells = cells,
+                                        feature_cut = feature_cut,
+                                        feature_cut_expr = feature_cut_expr,
+                                        feature_ex = feature_ex,
+                                        downsample = downsample)
 
   feature <- scexpr:::check.features(SO = SO, features = feature)
   label_feature <- scexpr:::check.features(SO = SO, features = label_feature, rownames = F)
@@ -409,4 +409,11 @@ thaw_cols <- function(df, classes) {
 
   return(df)
 }
+
+get_gene_features <- function(obj) {
+  genes <- unique(unlist(purrr::map(SeuratObject::Assays(obj),
+                                    ~rownames(get_layer(obj, assay = .x, layer = "counts")))))
+  return(genes)
+}
+
 

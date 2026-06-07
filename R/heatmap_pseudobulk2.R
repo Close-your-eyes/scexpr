@@ -180,13 +180,13 @@ heatmap_pseudobulk2 <- function(SO,
     utils::install.packages("devtools")
   }
   if (!requireNamespace("presto", quietly = T)) {
-    devtools::install_github("immunogenomics/presto")
+    pak::pak("immunogenomics/presto")
   }
   if (!requireNamespace("fcexpr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/fcexpr")
+    pak::pak("Close-your-eyes/fcexpr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   feature_order <- rlang::arg_match(feature_order)
@@ -312,6 +312,7 @@ heatmap_pseudobulk2 <- function(SO,
 
   dotsizes <- if (dotplot) "pct_in" else NULL
   # fcexpr::
+
   plot <- fcexpr::heatmap_long_df(df = wil_auc,
                                   groups = "group",
                                   features = "feature",
@@ -347,13 +348,13 @@ heatmap_pseudobulk2 <- function(SO,
                                   theme = theme,
                                   heatmap_ordering_args = list(feature_order = feature_order,
                                                                group_order = group_order),
-                          pvals = pvals,
-                          pval_features = pval_features,
-                          pval_max = pval_max,
-                          pval_symnum_args = pval_symnum_args,
-                          pval_filter = pval_filter,
-                          pval_logfc = pval_logfc,
-                          pval_text_args = pval_text_args)
+                                  pvals = pvals,
+                                  pval_features = pval_features,
+                                  pval_max = pval_max,
+                                  pval_symnum_args = pval_symnum_args,
+                                  pval_filter = pval_filter,
+                                  pval_logfc = pval_logfc,
+                                  pval_text_args = pval_text_args)
 
 
   # if (!is.null(feature_groups)) {

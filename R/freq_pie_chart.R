@@ -51,7 +51,7 @@
 freq_pie_chart <- function(SO,
                            meta_col,
                            order = NULL,
-                           fill = colrr::col_pal("custom"),
+                           fill = "..auto..",
                            fill_na = "grey50",
                            color = "white",
                            color_text = "..auto..",
@@ -83,11 +83,28 @@ freq_pie_chart <- function(SO,
 
   #  panel.background = ggplot2::element_rect(fill = "white")
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
+
+  if (fill[1] == "..auto..") {
+    if (methods::is(SO, "Seurat")) {
+      if ("metacolors" %in% names(SO@misc) && is.list(SO@misc[["metacolors"]])) {
+        if (meta_col %in% names(SO@misc[["metacolors"]])) {
+          fill <- SO@misc[["metacolors"]][[meta_col]]
+        } else {
+          fill <- colrr::col_pal("custom")
+        }
+      } else {
+        fill <- colrr::col_pal("custom")
+      }
+    } else {
+      fill <- colrr::col_pal("custom")
+    }
+  }
+
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data
   }

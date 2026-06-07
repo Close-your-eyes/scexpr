@@ -92,7 +92,7 @@ volcano01_calc <- function(SO,
                            ...) {
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   default_warn <- getOption("warn")

@@ -187,7 +187,7 @@ feature_plot2 <- function(
       order = 1
     ),
     col_legend_d_args = list(
-      nrow = 10,
+      nrow = 12,
       override.aes = list(size = 4),
       title = "..auto..",
       order = 1
@@ -315,7 +315,7 @@ feature_plot2 <- function(
   contour_ggnewscale <- F # T not tested yet
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   if (missing(features)) {

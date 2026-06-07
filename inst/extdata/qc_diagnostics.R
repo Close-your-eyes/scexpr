@@ -89,7 +89,7 @@ qc_diagnostic <- function(data_dirs,
   message("newer function version: scexpr::SO_prep01")
 
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
   if (!requireNamespace("matrixStats", quietly = T)) {
     utils::install.packages("matrixStats")
@@ -104,7 +104,7 @@ qc_diagnostic <- function(data_dirs,
     utils::install.packages("devtools")
   }
   if (!requireNamespace("presto", quietly = T)) {
-    devtools::install_github("immunogenomics/presto")
+    pak::pak("immunogenomics/presto")
   }
   if (!requireNamespace("BiocManager", quietly = T)) {
     utils::install.packages("BiocManager")

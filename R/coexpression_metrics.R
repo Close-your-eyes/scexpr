@@ -35,7 +35,7 @@ coexpression_metrics <- function(obj,
   # weights?
 
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   lay <- scexpr::get_layer(

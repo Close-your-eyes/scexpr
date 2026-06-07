@@ -58,7 +58,7 @@ cluster_correlation <- function(SO,
                                 mid.white.strech.length = 4) {
 
   if (!requireNamespace("colrr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/colrr")
+    pak::pak("Close-your-eyes/colrr")
   }
 
   if (length(features) == 1 || length(features) == 2 && length(intersect(features, c("all", "pca"))) == 2) {

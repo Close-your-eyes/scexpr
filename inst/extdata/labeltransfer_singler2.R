@@ -60,10 +60,10 @@ labeltransfer_singler2 <- function(test_obj,
     BiocManager::install("SingleR")
   }
   if (!requireNamespace("fcexpr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/fcexpr")
+    pak::pak("Close-your-eyes/fcexpr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   if (missing(ref_labels) || !length(ref_labels)) {

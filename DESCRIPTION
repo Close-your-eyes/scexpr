@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Ways to analyze scRNAseq data sets.
-Version: 0.1.1
+Version: 0.1.3
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -41,7 +41,9 @@ Imports:
     Rcpp,
     zeallot,
     BiocManager,
-    reshape2
+    reshape2,
+    uwot,
+    ggpointdensity
 Suggests: 
     presto,
     patchwork,
@@ -49,8 +51,6 @@ Suggests:
     celda,
     psych,
     scDblFinder,
-    uwot,
-    ggpointdensity,
     clustree,
     limma,
     fgsea,

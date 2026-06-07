@@ -62,7 +62,7 @@ hla_typing <- function(hla_ref,
     BiocManager::install("Biostrings")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
   lapply_fun <- match.fun(lapply_fun)

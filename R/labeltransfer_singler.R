@@ -222,10 +222,10 @@ check_depends <- function() {
     BiocManager::install("SingleR")
   }
   if (!requireNamespace("fcexpr", quietly = T)) {
-    devtools::install_github("Close-your-eyes/fcexpr")
+    pak::pak("Close-your-eyes/fcexpr")
   }
   if (!requireNamespace("brathering", quietly = T)) {
-    devtools::install_github("Close-your-eyes/brathering")
+    pak::pak("Close-your-eyes/brathering")
   }
 
 }
