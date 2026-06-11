@@ -305,11 +305,6 @@ feature_plot2 <- function(
 
   ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 
-  ## add axis arrows, shortened:
-  #p_blood <- p_blood + guides(x = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$x.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$x.range[1])))/4 ),
-  #                          y = ggh4x::guide_axis_truncated(trunc_lower = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1], trunc_upper = ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1] + abs(min(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])) - max(c(ggplot_build(p)$layout$panel_params[[1]]$y.range[2], ggplot_build(p_blood)$layout$panel_params[[1]]$y.range[1])))/4 ))
-
-
   ## label position calculation is not facetted!!
 
   contour_ggnewscale <- F # T not tested yet
@@ -318,16 +313,22 @@ feature_plot2 <- function(
     pak::pak("Close-your-eyes/colrr")
   }
 
+  SO <- scexpr:::check.SO(SO = SO)
+
   if (missing(features)) {
-    if (!is.null(Seurat::Idents(SO))) {
-      SO <- Seurat::AddMetaData(SO, Seurat::Idents(SO), col.name = "Idents")
+    if (all(purrr::map_lgl(SO, ~!is.null(Seurat::Idents(.x))))) {
+      SO <- purrr::map(SO, ~Seurat::AddMetaData(.x, Seurat::Idents(.x), col.name = "Idents"))
       features <- "Idents"
-    } else if ("seurat_clusters" %in% names(SO@meta.data)) {
+    } else if (all(purrr::map_lgl(SO, ~"seurat_clusters" %in% names(.x@meta.data)))) {
       features <- "seurat_clusters"
-    } else if ("orig.ident" %in% names(SO@meta.data)) {
+    } else if (all(purrr::map_lgl(SO, ~"orig.ident" %in% names(.x@meta.data)))) {
       features <- "orig.ident"
     } else {
-      features <- names(SO@meta.data)[1]
+      sharedfeat <- Reduce(intersect, purrr::map(SO, ~names(.x@meta.data)))
+      if (!length(sharedfeat)) {
+        stop("no common feature found.")
+      }
+      features <- sharedfeat[1]
     }
   }
 
@@ -354,8 +355,11 @@ feature_plot2 <- function(
                                                       get_data_args))
 
   if (img_plot) {
+    if (length(SO)>1) {
+      stop("img_plot only with one SO.")
+    }
     img_df <- get_img(
-      obj = SO,
+      obj = SO[[1]],
       subset_factor = img_subset_fct,
       col_conv_fun = img_col_conv_fun)
   } else {
@@ -363,7 +367,10 @@ feature_plot2 <- function(
   }
 
   if (cell_hull_plot) {
-    hull_df <- get_cell_hulls(obj = SO)
+    if (length(SO)>1) {
+      stop("cell_hull_plot only with one SO.")
+    }
+    hull_df <- get_cell_hulls(obj = SO[[1]])
   } else {
     hull_df <- NULL
   }
@@ -380,11 +387,13 @@ feature_plot2 <- function(
     return(y)
   })
 
+
   if (col_pal_d_args[["name"]][1] == "..auto..") {
-    if ("metacolors" %in% names(SO@misc) && is.list(SO@misc[["metacolors"]])) {
+    if (all(purrr::map_lgl(SO, ~"metacolors" %in% names(.x@misc))) && all(purrr::map_lgl(SO, ~is.list(.x@misc[["metacolors"]])))) {
       for (i in names(col_pal_d_args_lst)) {
-        if (i %in% names(SO@misc[["metacolors"]])) {
-          col_pal_d_args_lst[[i]][["name"]] <- SO@misc[["metacolors"]][[i]]
+        if (all(purrr::map_lgl(SO, ~i %in% names(.x@misc[["metacolors"]])))) {
+          y <- purrr::list_c(purrr::map(SO, ~.x@misc[["metacolors"]][[i]]))
+          col_pal_d_args_lst[[i]][["name"]] <- y[which(!duplicated(names(y)))]
         }
       }
     }

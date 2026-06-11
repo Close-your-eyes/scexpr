@@ -2,20 +2,79 @@
 % Please edit documentation in R/find_marker_in_expr_dich.R
 \name{find_marker_in_expr_dich}
 \alias{find_marker_in_expr_dich}
-\title{Find marker genes in expressing cells; dichotomous}
+\title{Find marker features among expressing cells between two groups}
 \usage{
 find_marker_in_expr_dich(obj, group, get_layer_args = list(), mc.cores = 4)
 }
 \arguments{
-\item{obj}{seurat object or gene x cell matrix (cells as columns)}
+\item{obj}{A Seurat object or a numeric matrix with features (e.g. genes)
+in rows and cells in columns.}
 
-\item{group}{meta column in object or group vector of length ncol(obj);
-must have two levels}
+\item{group}{Either:
+\itemize{
+\item a character string giving the name of a metadata column in a
+Seurat object, or
+\item a vector of length \code{ncol(obj)} defining two cell groups.
+}
+Exactly two groups must be present.}
 
-\item{get_layer_args}{args to get_layer}
+\item{get_layer_args}{Named list of additional arguments passed to
+\code{get_layer()} when \code{obj} is a Seurat object.}
 
-\item{mc.cores}{parallel computing: mc.cores}
+\item{mc.cores}{Number of cores passed to
+\code{\link[parallel]{mclapply}}.}
+}
+\value{
+A data frame with one row per tested feature containing:
+\describe{
+\item{feature}{Feature (gene) name.}
+\item{pval}{Wilcoxon rank-sum test p-value.}
+\item{mean_diff}{Difference in mean expression among expressing cells
+(\code{group.1 - group.2}).}
+\item{log2fc}{Log2 fold-change of mean expression among expressing
+cells (\code{group.1 / group.2}).}
+\item{pct.1}{Fraction of cells expressing the feature in group 1.}
+\item{pct.2}{Fraction of cells expressing the feature in group 2.}
+\item{padj}{Benjamini-Hochberg adjusted p-value.}
+\item{group.1}{Name of the first group.}
+\item{group.2}{Name of the second group.}
+}
+
+Features with no expressing cells in either group are excluded from the
+results.
 }
 \description{
-Find marker genes in expressing cells; dichotomous
+Performs differential expression testing between two groups using only
+cells with non-zero expression for each feature. For every feature (gene),
+the function compares expression values among expressing cells in the two
+groups using a Wilcoxon rank-sum test.
+}
+\details{
+Unlike standard marker detection methods that include zero-expression cells,
+this function evaluates differences conditional on expression, making it
+useful for identifying changes in expression magnitude among expressing
+cells rather than changes in detection rate.
+
+For each feature, cells with expression values greater than zero are
+extracted separately within each group. A Wilcoxon rank-sum test is then
+performed on these non-zero values only. Features with no expressing cells
+in either group are skipped.
+
+This approach is useful when the biological question concerns expression
+levels among expressing cells rather than overall abundance driven by
+differences in detection frequency.
+}
+\examples{
+# Using a Seurat object
+res <- find_marker_in_expr_dich(
+  obj = seu,
+  group = "cell_type"
+)
+
+# Using an expression matrix
+grp <- rep(c("A", "B"), each = ncol(mat) / 2)
+res <- find_marker_in_expr_dich(
+  obj = mat,
+  group = grp
+)
 }

@@ -2,19 +2,83 @@
 % Please edit documentation in R/find_marker_in_expr_dich.R
 \name{find_marker_in_expr_all}
 \alias{find_marker_in_expr_all}
-\title{Find marker genes in expressing cells}
+\title{Find marker features among expressing cells using one-vs-rest comparisons}
 \usage{
 find_marker_in_expr_all(obj, group, get_layer_args = list(), mc.cores = 4)
 }
 \arguments{
-\item{obj}{seurat object or gene x cell matrix (cells as columns)}
+\item{obj}{A Seurat object or a numeric matrix with features (e.g. genes)
+in rows and cells in columns.}
 
-\item{group}{meta column in object or group vector of length ncol(obj)}
+\item{group}{Either:
+\itemize{
+\item a character string giving the name of a metadata column in a
+Seurat object, or
+\item a vector of length \code{ncol(obj)} defining cell group
+assignments.
+}}
 
-\item{get_layer_args}{args to get_layer}
+\item{get_layer_args}{Named list of additional arguments passed to
+\code{get_layer()} when \code{obj} is a Seurat object.}
 
-\item{mc.cores}{parallel computing: mc.cores}
+\item{mc.cores}{Number of cores passed to
+\code{\link[parallel]{mclapply}}.}
+}
+\value{
+A data frame containing marker statistics for all one-vs-rest
+comparisons. The output includes the columns returned by
+\code{find_marker_in_expr_dich()}:
+\describe{
+\item{feature}{Feature (gene) name.}
+\item{pval}{Wilcoxon rank-sum test p-value.}
+\item{mean_diff}{Difference in mean expression among expressing cells
+(\code{group.1 - group.2}).}
+\item{log2fc}{Log2 fold-change of mean expression among expressing
+cells (\code{group.1 / group.2}).}
+\item{pct.1}{Fraction of cells expressing the feature in the target
+group.}
+\item{pct.2}{Fraction of cells expressing the feature in all remaining
+cells.}
+\item{padj}{Benjamini-Hochberg adjusted p-value.}
+\item{group.1}{Target group being tested.}
+\item{group.2}{Reference population (all other cells).}
+}
 }
 \description{
-Find marker genes in expressing cells
+Performs differential expression testing for each group against all
+remaining cells, using only cells with non-zero expression for each
+feature. For every unique group level, the function calls
+\code{find_marker_in_expr_dich()} to compare that group against the union
+of all other groups.
+}
+\details{
+This function is useful for identifying group-specific marker features
+when more than two groups are present.
+
+For each unique value in \code{group}, a binary grouping variable is
+created consisting of:
+\itemize{
+\item the focal group, and
+\item all remaining cells combined.
+}
+
+Differential expression is then performed using
+\code{find_marker_in_expr_dich()}, which evaluates expression differences
+only among expressing cells (expression > 0).
+}
+\examples{
+# One-vs-rest marker analysis from a Seurat object
+res <- find_marker_in_expr_all(
+  obj = seu,
+  group = "cell_type"
+)
+
+# One-vs-rest marker analysis from a matrix
+res <- find_marker_in_expr_all(
+  obj = mat,
+  group = cluster_ids
+)
+}
+\seealso{
+\code{\link{find_marker_in_expr_dich}}
 }

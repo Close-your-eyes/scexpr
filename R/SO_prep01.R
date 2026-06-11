@@ -100,7 +100,7 @@ SO_prep01 <- function(data_dirs,
                       early_exit = F,
                       equalize_feature_order = F,
                       common_cells = F,
-                      mc.cores = 1) {
+                      mc.cores = 4) {
 
 
   install_pkgs(SoupX, scDblFinder, decontX)
@@ -157,7 +157,6 @@ SO_prep01 <- function(data_dirs,
   }
 
   if (early_exit) {
-    SO <- add_pct_featset_and_cc(SO)
     ## check it here, otherwise it is done it is done in SO_prep02
     if (equalize_feature_order) {
       SO <- scexpr:::make_equal_feature_order(SO)
@@ -167,32 +166,40 @@ SO_prep01 <- function(data_dirs,
     }
   }
 
-  SO <- parallel::mclapply(purrr::set_names(names(SO)), function(x) {
+
+  SO <- parallel::mclapply(SO, function(x) {
 
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
-      SO[[x]] <- aggregate_or_remove_features(filt_data = SO[[x]],
-                                              feature_rm = feature_rm,
-                                              feature_aggr = feature_aggr)
+      x <- aggregate_or_remove_features(filt_data = x,
+                                        feature_rm = feature_rm,
+                                        feature_aggr = feature_aggr)
     }
 
-    message("Creating initial Seurat object with ", ncol(SO[[x]]), " cells.")
-    SO[[x]] <- Seurat::CreateSeuratObject(counts = SO[[x]])
-    SO[[x]]@meta.data$orig.ident <- x
+    message("Creating initial Seurat object with ", ncol(x), " cells.")
+    x <- Seurat::CreateSeuratObject(counts = x)
+
+    if (early_exit) {
+      x <- add_pct_featset_and_cc(x)
+    }
 
     # doublet score calculation with not yet merged data
     if (scDblFinder) {
       tryCatch(expr = {
-        SO[[x]] <- add_dbl_score_to_metadata(SO = SO[[x]],
-                                             nhvf = nhvf,
-                                             min_UMI_var_feat = min_UMI_var_feat,
-                                             npcs = npcs)
+        x <- add_dbl_score_to_metadata(SO = x,
+                                       nhvf = nhvf,
+                                       min_UMI_var_feat = min_UMI_var_feat,
+                                       npcs = npcs)
       }, error = function(err){
         err
       })
 
     }
-    return(SO[[x]])
+    return(x)
   }, mc.cores = mc.cores)
+
+  for (i in names(SO)) {
+    SO[[i]]@meta.data$orig.ident <- i
+  }
 
   if (early_exit) {
     return(SO)
@@ -1006,13 +1013,7 @@ make_equal_cells <- function(x) {
 add_pct_featset_and_cc <- function(obj, species = "..auto..") {
 
   if (species == "..auto..") {
-    if (any(grepl("^MT-", rownames(obj))) && !any(grepl("^mt-", rownames(obj)))) {
-      species <- "human"
-    } else if (!any(grepl("^MT-", rownames(obj))) && any(grepl("^mt-", rownames(obj)))) {
-      species <- "mouse"
-    } else {
-      message("Species could not be guessed. Provide human or mouse.")
-    }
+    species <- guess_species(scexpr:::get_gene_features(obj))
   } else {
     species <- rlang::arg_match(species, values = c("human", "mouse"))
   }
@@ -1034,4 +1035,14 @@ add_pct_featset_and_cc <- function(obj, species = "..auto..") {
   }
 
   return(obj)
+}
+
+guess_species <- function(genes) {
+
+  human_like <- mean(grepl("^(MT-|RPL|RPS|HLA-)", genes))
+  mouse_like <- mean(grepl("^(mt-|Rpl|Rps|H2-)", genes))
+
+  species <- if (human_like > mouse_like) "human" else "mouse"
+
+  return(species)
 }

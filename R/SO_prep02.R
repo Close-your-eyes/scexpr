@@ -102,7 +102,8 @@ SO_prep02 <- function(SO_unprocessed,
                       SCtransform_args = list(
                         vst.flavor = "v2",
                         method = "glmGamPoi",
-                        conserve.memory = T
+                        conserve.memory = T,
+                        residual_type = "pearson"
                       ),
                       RunPCA_args = list(weight.by.var = T),
                       RunUMAP_args = list(metric = "cosine"),
@@ -266,7 +267,6 @@ SO_prep02 <- function(SO_unprocessed,
   SO <- calc_neighbor_and_cluster(obj = SO,
                                   red = red,
                                   npcs = RunPCA_args[["npcs"]],
-                                  normalization = normalization,
                                   FindNeighbors_args = FindNeighbors_args,
                                   FindClusters_args = FindClusters_args,
                                   verbose = verbose,
@@ -1310,14 +1310,15 @@ subset_SO_unprocessed <- function(SO_unprocessed,
                                   downsample,
                                   min_cells,
                                   downsample_method) {
-
   if (!is.null(cells)) {
-    SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-      inds <- which(Seurat::Cells(x) %in% cells)
+    SO_unprocessed <- purrr::map(SO_unprocessed, function(x) {
+      #objcells <- Seurat::Cells(x)
+      objcells <- rownames(x@meta.data)
+      inds <- which(objcells %in% cells)
       if (length(inds) == 0) {
         return(NULL)
       }
-      return(subset(x, cells = Seurat::Cells(x)[which(Seurat::Cells(x) %in% cells)]))
+      return(subset(x, cells = objcells[which(objcells %in% cells)]))
     })
   }
 

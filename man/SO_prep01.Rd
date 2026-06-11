@@ -32,7 +32,7 @@ SO_prep01(
   early_exit = F,
   equalize_feature_order = F,
   common_cells = F,
-  mc.cores = 1
+  mc.cores = 4
 )
 }
 \arguments{

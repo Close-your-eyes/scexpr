@@ -2,24 +2,76 @@
 % Please edit documentation in R/compare_UMI_matrices.R
 \name{compare_UMI_matrices}
 \alias{compare_UMI_matrices}
-\title{Compare entries of two compatible UMI matrices}
+\title{Compare two UMI count matrices}
 \usage{
 compare_UMI_matrices(mat1, mat2)
 }
 \arguments{
-\item{mat1}{matrix 1 with rownames and colnames}
+\item{mat1}{First UMI count matrix. Rows should represent features and
+columns should represent cells. Must contain rownames and colnames.}
 
-\item{mat2}{matrix 2 with rownames and colnames}
+\item{mat2}{Second UMI count matrix. Rows should represent features and
+columns should represent cells. Must contain rownames and colnames.}
 }
 \value{
-list with measures of differences or errors, as a whole and rowwise
+A list with two data frames:
+
+\describe{
+\item{matrixwise_error}{
+One-row summary of differences between the aligned matrices.
+Contains:
+\describe{
+\item{RMSE}{Root mean squared error across all matrix entries.}
+\item{total_diff}{Sum of absolute differences,
+\eqn{\sum |mat1 - mat2|}.}
+\item{rel_diff}{Total absolute difference relative to the average
+total UMI count,
+\eqn{\sum |mat1 - mat2| / ((\sum mat1 + \sum mat2)/2)}.}
+\item{abs_unequal_entry}{Number of matrix entries with different
+values between matrices.}
+\item{rel_unequal_entry}{Fraction of entries that differ,
+\eqn{abs\_unequal\_entry / (nrow \times ncol)}.}
+}
+}
+
+\item{rowwise_error}{
+Feature-wise summary of differences, with one row per feature
+(matrix row). Contains:
+\describe{
+\item{rowname}{Feature identifier.}
+\item{RMSE}{Root mean squared error across all cells for the feature.}
+\item{abs_umi}{Average total abundance of the feature across the two
+matrices,
+\eqn{(rowSums(mat1) + rowSums(mat2))/2}.}
+\item{abs_err}{Signed difference in abundance,
+\eqn{rowSums(mat1 - mat2)}. Positive values indicate larger counts
+in \code{mat1}.}
+\item{total_diff}{Sum of absolute per-cell differences for the
+feature,
+\eqn{rowSums(|mat1 - mat2|)}.}
+\item{rel_total_diff}{Feature-level total absolute difference relative
+to feature abundance,
+\eqn{total\_diff / abs\_umi}.}
+\item{abs_umi_group}{Abundance bin derived from \code{abs_umi} for
+stratified analyses and plotting.}
+}
+}
+}
 }
 \description{
-Matrices will be reduces to matching rownames and columnnames.
-Then root mean square error (RSME), total and relative differences in UMIs counts
-are computed. This is done for matrix as a whole as well as rowwise. Rows are expected
-to contain features. It is expected that matrices contain positive values only.
-An error will not be thrown if this is violated.
+Compares two UMI count matrices after aligning them to their shared
+rownames (features) and colnames (cells). Rows and columns that are not
+present in both matrices are discarded before comparison.
+}
+\details{
+The function computes several measures of disagreement between matrices,
+both globally and for each feature. Metrics include root mean squared
+error (RMSE), absolute differences in UMI counts, and relative differences
+normalized by total abundance.
+
+Sparse matrices from the Matrix package are supported and processed
+without densification, making the function suitable for large
+single-cell expression matrices.
 }
 \examples{
 \dontrun{

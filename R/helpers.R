@@ -1,5 +1,5 @@
 check.SO <- function(SO,
-                     assay,
+                     assay = NULL,
                      meta.col = NULL,
                      cells = NULL,
                      length = NULL) {
@@ -16,8 +16,14 @@ check.SO <- function(SO,
   if (!is.null(meta.col) && length(check.features(SO, meta.col, rownames = F)) == 0) {
     stop("meta.col not found in all objects.")
   }
-
-  assay <- match.arg(assay, Reduce(intersect, lapply(SO, function(x) names(x@assays))))
+  assays <- Reduce(intersect, purrr::map(SO, ~names(.x@assays)))
+  if (!length(assays)) {
+    stop("no common assay found.")
+  }
+  if (is.null(assay)) {
+    assay <- assays[1]
+  }
+  assay <- match.arg(assay, assays)
 
   SO <- lapply(SO, function(x) {
     Seurat::DefaultAssay(x) <- assay
