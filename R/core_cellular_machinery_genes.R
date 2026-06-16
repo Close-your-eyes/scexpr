@@ -225,10 +225,16 @@ core_cellular_machinery_genes <- function(obj = NULL) {
     )
   )
 
+  # tfs <- dorothea::dorothea_hs |> dplyr::distinct(tf) |> dplyr::pull(tf)
+  tfs <- vroom::vroom(system.file("extdata", "collectri_tf.tsv.gz", package = "scexpr")) |>
+    dplyr::distinct(source) |>
+    dplyr::pull(source)
+
   if (is.null(obj)) {
     return(list(
       cellular_machinery_patterns = cellular_machinery_patterns,
-      core_cell_biology_patterns = core_cell_biology_patterns
+      core_cell_biology_patterns = core_cell_biology_patterns,
+      transcription_factors = tfs
     ))
   } else {
     genes <- scexpr:::get_gene_features(obj)

@@ -1341,17 +1341,16 @@ subset_SO_unprocessed <- function(SO_unprocessed,
   }
 
   if (downsample_method == "uniform") {
-    if (downsample < 1) {
-      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(
-        x,
-        cells = sample(Seurat::Cells(x), size = as.integer(downsample*length(Seurat::Cells(x))), replace = FALSE)
-      ))
-    } else if (downsample > 1) {
-      SO_unprocessed <- lapply(SO_unprocessed, function(x) subset(
-        x,
-        cells = sample(Seurat::Cells(x), size = min(downsample, length(Seurat::Cells(x))), replace = FALSE)
-      ))
-    }
+
+    SO_unprocessed <- purrr::map(SO_unprocessed, ~downsample_seurat(obj = .x, downsample = downsample))
+    # if (downsample < 1) {
+    #   size <- purrr::map(SO_unprocessed, ~as.integer(downsample*length(Seurat::Cells(.x))))
+    # } else if (downsample > 1) {
+    #   size <- purrr::map(SO_unprocessed, ~min(downsample, length(Seurat::Cells(.x))))
+    # }
+    # cells <- purrr::map2(SO_unprocessed, size, ~sample(Seurat::Cells(.x), size = .y, replace = FALSE))
+    # SO_unprocessed <- purrr::map2(SO_unprocessed, cells, ~subset(.x, cells = .y))
+
   }
   if (downsample_method == "leverage") {
     if (downsample < 1) {

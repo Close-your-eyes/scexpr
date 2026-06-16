@@ -55,6 +55,8 @@ gsea_plot_summary <- function(gsea_df,
   geom <- rlang::arg_match(geom)
   plot_order <- rlang::arg_match(plot_order)
 
+  gsea_df <- tidyr::drop_na(gsea_df)
+
   if (add_size_to_y) {
     gsea_df <- dplyr::mutate(gsea_df, !!y := paste0(!!rlang::sym(y), " (", size, ")"))
   }

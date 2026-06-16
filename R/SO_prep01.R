@@ -371,6 +371,7 @@ check_dir <- function(data_dirs, SoupX = F) {
     names(dir_roots) <- basename(dir_roots)
     names(dir_roots)[which(names(dir_roots) == "outs")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "outs")]
     names(dir_roots)[which(names(dir_roots) == "count")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "count")]
+    names(dir_roots)[which(names(dir_roots) == "SoupX")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "SoupX")]
   }
 
   if (any(duplicated(names(dir_roots)))) {
@@ -1018,9 +1019,16 @@ add_pct_featset_and_cc <- function(obj, species = "..auto..") {
     species <- rlang::arg_match(species, values = c("human", "mouse"))
   }
 
+  # RPS* (cytosolic small subunit)
+  # RPL* (cytosolic large subunit)
+  # MRPS* (mitochondrial small subunit)
+  # MRPL* (mitochondrial large subunit)
   if (species == "human") {
     obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^MT-"), "pct_mt")
-    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^RP[SL]"), "pct_ribo")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^HSP"), "pct_hsp")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^(FOS|FOSB|JUN|JUNB|ATF3|EGR1|DUSP1|HSPA1A|HSPA1B)$"), "pct_iestress")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^HB[ABDEGMQZ]"), "pct_hb")
+    obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^RP[SL][0-9]+[A-Z]?$"), "pct_ribo")
     obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^MRP[SL]"), "pct_mribo")
     obj <- Seurat::AddMetaData(obj, Seurat::PercentageFeatureSet(obj, pattern = "^MT[1-2][A-Z]$"), "pct_metallothionein")
 

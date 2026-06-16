@@ -97,6 +97,7 @@ labeltransfer_module_gsea <- function(test_obj,
                      by = !!rlang::sym(test_clusters)) |>
     dplyr::mutate(label = round(score, 2)) |>
     dplyr::mutate(label = gsub("0\\.", ".", as.character(label)))
+
   scores_plot <- fcexpr::heatmap_long_df(score_df_avg_long,
                                          groups = "module",
                                          theme = colrr::theme_material(),
@@ -110,6 +111,7 @@ labeltransfer_module_gsea <- function(test_obj,
                        color = "#8B7500FF")
  # colrr::col_pal("custom")
   # get order from plot
+
   xyorder <- brathering::gg_get_axis_text(scores_plot)
   score_df_avg <- score_df_avg[xyorder$y,]
 

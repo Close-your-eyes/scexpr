@@ -7,7 +7,7 @@
 run_xgboost_multi_classifier(
   df,
   split = 0.7,
-  preprocess = NULL,
+  preprocess = c("center", "scale", "nzv", "corr"),
   train_iter = 3,
   method_model = c("xgbTree", "rf", "glmnet"),
   method_train = c("cv", "repeatedcv", "boot", "boot632", "LOOCV", "none"),
@@ -17,7 +17,7 @@ run_xgboost_multi_classifier(
     gamma = c(0, 1), colsample_bytree = c(0.6, 0.8), min_child_weight = c(1, 5),
     subsample = c(0.7, 1)),
   tuneLength = 3,
-  seed = 42,
+  seed = sample.int(.Machine$integer.max, 1),
   ...
 )
 }
@@ -62,6 +62,34 @@ list with train obj from caret and accessory info
 xgbTree, randomForest of generazed linear model (see examples)
 try with https://www.tidymodels.org/ somewhen.
 }
+\details{
+\tabular{lll}{
+   Metric \tab Meaning \tab Range \cr
+   Accuracy \tab Fraction of correct predictions \tab 0–1 \cr
+   Precision \tab How often predicted class labels are correct \tab 0–1 \cr
+   Recall (Sensitivity) \tab How many true cases are found \tab 0–1 \cr
+   F1-score \tab Balance between Precision and Recall \tab 0–1 \cr
+   AUC \tab Ranking ability of classifier \tab 0.5–1 \cr
+}
+
+
+F1-score:
+This is the harmonic mean of Precision and Recall.
+Unlike an ordinary average, the harmonic mean punishes imbalance.
+
+accuracy = correct pred /all pred
+precision = TP / TP+FP
+recall = TP / TP+FN
+F1 score = 2 x precision x recall / (precision+recall)
+
+AUC:
+For multiclass problems there is no single ROC curve.
+pROC::multiclass.roc() computes a multiclass extension based on pairwise class comparisons.
+
+Macro vs Micro Averaging:
+For multiclass metrics:
+Macro: Compute each class separately. Then average.
+}
 \examples{
 \dontrun{
 ## try parallel computing
@@ -69,6 +97,7 @@ num_cores <- parallel::detectCores()
 cl <- parallel::makeCluster(12)
 doParallel::registerDoParallel(cl)
 
+# after finish, run
 parallel::stopCluster(cl)
 foreach::registerDoSEQ()
 

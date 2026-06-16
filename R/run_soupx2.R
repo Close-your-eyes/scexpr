@@ -31,11 +31,12 @@ run_soupx2 <- function(filt,
                                       so_prep_args)) ## get cluster and dr; filt list handled internally
   }
 
+
   if (is.list(raw)) {
     raw <- purrr::reduce(raw, cbind)
   }
   sc <- SoupX::SoupChannel(tod = raw, toc = get_layer(obj, assay = "RNA", layer = "counts"))
-  sc = SoupX::setClusters(sc, stats::setNames(obj$seurat_clusters, colnames(obj)))
+  sc = SoupX::setClusters(sc, stats::setNames(obj@meta.data[[obj@misc[["clusterings"]][length(obj@misc[["clusterings"]])]]], colnames(obj)))
   # last reduction should be umap or tsne; first are pca and maybe harmony
   sc = SoupX::setDR(sc, obj@reductions[[length(obj@reductions)]]@cell.embeddings[colnames(sc$toc),])
 

@@ -3,6 +3,31 @@
 #' xgbTree, randomForest of generazed linear model (see examples)
 #' try with https://www.tidymodels.org/ somewhen.
 #'
+#' | Metric               | Meaning                                      | Range
+#' | -------------------- | -------------------------------------------- | -----
+#' | Accuracy             | Fraction of correct predictions              | 0–1
+#' | Precision            | How often predicted class labels are correct | 0–1
+#' | Recall (Sensitivity) | How many true cases are found                | 0–1
+#' | F1-score             | Balance between Precision and Recall         | 0–1
+#' | AUC                  | Ranking ability of classifier                | 0.5–1
+#'
+#' F1-score:
+#' This is the harmonic mean of Precision and Recall.
+#' Unlike an ordinary average, the harmonic mean punishes imbalance.
+#'
+#' accuracy = correct pred /all pred
+#' precision = TP / TP+FP
+#' recall = TP / TP+FN
+#' F1 score = 2 x precision x recall / (precision+recall)
+#'
+#' AUC:
+#' For multiclass problems there is no single ROC curve.
+#' pROC::multiclass.roc() computes a multiclass extension based on pairwise class comparisons.
+#'
+#' Macro vs Micro Averaging:
+#' For multiclass metrics:
+#' Macro: Compute each class separately. Then average.
+#'
 #' @param df data frame with classes in first column (=character). otherwise
 #' numeric columns only.
 #' @param split train/test split fraction
@@ -37,6 +62,7 @@
 #' cl <- parallel::makeCluster(12)
 #' doParallel::registerDoParallel(cl)
 #'
+#' # after finish, run
 #' parallel::stopCluster(cl)
 #' foreach::registerDoSEQ()
 #'
@@ -328,7 +354,7 @@
 #' }
 run_xgboost_multi_classifier <- function(df,
                                          split = 0.7,
-                                         preprocess = NULL,
+                                         preprocess = c("center", "scale", "nzv", "corr"),
                                          train_iter = 3,
                                          method_model = c("xgbTree", "rf", "glmnet"),
                                          method_train = c("cv", "repeatedcv", "boot", "boot632", "LOOCV", "none"),
@@ -343,7 +369,7 @@ run_xgboost_multi_classifier <- function(df,
                                            min_child_weight = c(1, 5),
                                            subsample = c(0.7, 1)),
                                          tuneLength = 3,
-                                         seed = 42,
+                                         seed = sample.int(.Machine$integer.max, 1),
                                          ...) {
 
 
@@ -460,7 +486,7 @@ run_xgboost_multi_classifier <- function(df,
   # however, required seeds depends on method and resamples
   # needed seeds = (number of resamples) + 1
   # with method_train = cv and 5 folds: 5 + 1
-  # maybe just set seed once before caret::tain for now
+  # maybe just set seed once before caret::train for now
 
   #requireNamespaceQuietStop <- caret:::requireNamespaceQuietStop
   set.seed(seed)
@@ -481,6 +507,10 @@ run_xgboost_multi_classifier <- function(df,
   pred_label_test <- stats::predict(trainobj, newdata = test_data)
   confmat_test <- caret::confusionMatrix(pred_label_test, as.factor(test_data[,1]))
 
+  # on train data
+  pred_label_train <- stats::predict(trainobj, newdata = train_data)
+  confmat_train <- caret::confusionMatrix(pred_label_train, as.factor(train_data[,1]))
+
   # on full data
   pred_label_full <- stats::predict(trainobj, newdata = df[,-1])
   confmat_full <- caret::confusionMatrix(pred_label_full, as.factor(df[,1]))
@@ -500,18 +530,41 @@ run_xgboost_multi_classifier <- function(df,
     message(nrow(feat_imp), " of ", length(trainobj[["coefnames"]]), " features used in model. Checkout feat_imp.")
   }
 
+  pred_prob_test  <- stats::predict(trainobj, newdata = test_data, type = "prob")
+  pred_prob_train <- stats::predict(trainobj, newdata = train_data, type = "prob")
+  pred_prob_full  <- stats::predict(trainobj, newdata = df, type = "prob")
 
+  metrics_test <- calc_metrics(
+    pred_label = pred_label_test,
+    truth = test_data[, 1],
+    pred_prob = pred_prob_test)
+
+  metrics_train <- calc_metrics(
+    pred_label = pred_label_train,
+    truth = train_data[, 1],
+    pred_prob = pred_prob_train)
+
+  metrics_full <- calc_metrics(
+    pred_label = pred_label_full,
+    truth = df[, 1],
+    pred_prob = pred_prob_full)
 
   return(list(
-    confmat_test = confmat_test,
     trainobj = trainobj,
     feat_cor_mat = feat_cor_mat,
     cor_feat = cor_feat,
     feat_imp = feat_imp,
-    confmat_full = confmat_full,
-    pred_label_full = pred_label_full,
-    label = label,
-    mislabel = which(pred_label_full != label)
+    confmat = list(test = confmat_test,
+                   train = confmat_train,
+                   full = confmat_full),
+    metrics = list(test = metrics_test,
+                   train = metrics_train,
+                   full = metrics_full),
+    label = list(truth_full = label,
+                 pred_full = pred_label_full,
+                 mis = which(pred_label_full != label),
+                 train_index = train_index),
+    seed = seed
   ))
 }
 
@@ -711,3 +764,57 @@ run_xgboost_multi_classifier_tidymodels <- function(
   ))
 }
 
+
+
+calc_metrics <- function(pred_label, truth, pred_prob = NULL) {
+  truth <- as.factor(truth)
+  pred_label <- as.factor(pred_label)
+
+  cm <- caret::confusionMatrix(
+    pred_label,
+    truth,
+    mode = "everything"
+  )
+
+  accuracy <- unname(cm$overall["Accuracy"])
+
+  by_class <- as.data.frame(cm$byClass)
+
+  precision <- mean(by_class$Precision, na.rm = TRUE)
+  recall    <- mean(by_class$Recall, na.rm = TRUE)
+  f1        <- mean(by_class$F1, na.rm = TRUE)
+
+  auc <- NA_real_
+
+  if (!is.null(pred_prob)) {
+    if (nlevels(truth) == 2) {
+      positive_class <- levels(truth)[2]
+
+      auc <- as.numeric(
+        pROC::auc(
+          pROC::roc(
+            response = truth,
+            predictor = pred_prob[[positive_class]],
+            levels = levels(truth),
+            quiet = TRUE
+          )
+        )
+      )
+    } else {
+      auc <- as.numeric(
+        pROC::multiclass.roc(
+          response = truth,
+          predictor = as.matrix(pred_prob[, levels(truth), drop = FALSE])
+        )$auc
+      )
+    }
+  }
+
+  return(list(
+    accuracy = accuracy,
+    precision_macro = precision,
+    recall_macro = recall,
+    f1_macro = f1,
+    auc = auc,
+    by_class = by_class))
+}
