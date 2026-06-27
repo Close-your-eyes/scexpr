@@ -6,6 +6,12 @@
 \usage{
 get_cell_cycle_genesets()
 }
+\value{
+list of different cell cycle associated gene sets
+}
 \description{
 Get cell cycle markers from Seurat and Whitfield and scran
+}
+\examples{
+ccgenelsz <- get_cell_cycle_genesets()
 }

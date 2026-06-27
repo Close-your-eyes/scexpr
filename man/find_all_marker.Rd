@@ -41,3 +41,8 @@ data frame with DEG
 Column logFC is difference in group means, not logFC. But avg_log2FC
 in Seurat style can be added.
 }
+\examples{
+\dontrun{
+marker <- scexpr::find_all_marker(so, meta_col = "orig.ident")
+}
+}

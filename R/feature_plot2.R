@@ -1,147 +1,178 @@
-#' Plot features of single cell transcriptomes on a dimension reduction map
+#' Plot one or more features on a single-cell dimension reduction map
 #'
-#' This function wraps around scexpr::get_data, scexpr::feature_plot_data
-#' and optional combination of plots with patchwork.
+#' Creates feature plots from one Seurat object or a list of Seurat objects.
+#' This is a high-level wrapper around `scexpr::get_data()` and
+#' `scexpr::feature_plot_data()`. For multiple features, plots can optionally
+#' be combined with `patchwork`.
 #'
-#' @param SO one Seurat object or a list of multiple ones
-#' @param features vector of features to fetch (genes or column names in
-#' meta data)
-#' @param reduction reduction to fetch from reductions slot of SO
-#' @param dims dimensions of the selected reduction to extract from SO
-#' @param assay which assay to get expression data from
-#' @param cells vector of cell names to select for regular plotting (=1),
-#' deselected ones are plotted with color col_ex_cells (=0) in feature_plot
-#' @param get_data_args further arguments to scexpr::get_data
-#' @param combine do combine plots for multiple features with patchwork
-#' @param ncol_combine number of columns when combine
-#' @param nrow_combine number of rows when combine
-#' @param strip_select numeric: which facet strips to plot, NULL: plot all
-#' @param ... several feature arguments to scexpr::get_data, for convenience,
-#' like feature_ex or split_feature
-#' @param pt_size point size
-#' @param pt_size_fct factor of size increase for expressers
-#' @param col_expr color expressers
-#' @param col_non_expr color non expressers
-#' @param col_ex_cells color excluded cells
-#' @param col_split color for all cells across facets, requires
-#' plot_all_across_split = T and a split_feature in get_data or ...
-#' @param col_na color for NA values
-#' @param col_binary dichotomous coloring of expresser and non expresser
-#' @param col_pal_c_args for continuous color: arguments to colrr::col_pal,
-#' name can be (i) name of a color palette invoking colrr::col_pal, (ii)
-#' a single color or (iii) a vector of colors
-#' @param col_pal_d_args for discrete color
-#' @param col_steps NULL to have normal colorbar, auto for default colorsteps,
-#' a single number or a vector of explicit steps; may not work with any number
-#' when col_steps_nice is TRUE; colrr::get_scale_color_fun is used
-#' @param col_steps_nice algorithmic determination of pretty steps,
-#' see ggplot2::scale_color_stepsn
-#' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
-#' for ggplot default or "minmidmax" for three breaks at minimum, middle and
-#' maximum of value range
-#' @param legendlabels labels for breaks, e.g. c("min", "mid", "max")
-#' @param shape_legend_args arguments to ggplot2::guide_legend for shapes,
-#' requires a shape_feature in get_data or ...
-#' @param shape_legend_hide do not show shape legend?
-#' @param feature_alias named vector of aliases for features, old = new; e.g.
-#' c("FAIM3" = "FCMR", "MS4A1" = "CD20")
-#' @param freq_plot do plot frequency of expressers? TRUE, FALSE or ..auto..
-#' for decision based on number of SOs
-#' @param freq_pos where to plot, xy coordinates
-#' @param freq_size font size of frequency annotation
-#' @param name_anno_pos where to plot name_anno, NULL to omit plotting, '..auto..'
-#' for automatic decision between title, annotation or NULL; title and annotation
-#' simultaneously also possible
-#' @param name_anno_args arguments to ggplot2::annotate when name_anno_pos
-#' contains 'annotation'
-#' @param theme ggplot theme to use
-#' @param theme_args arguments to ggplot2::theme
-#' @param facet_scales passed as scales argument of facet_wrap, relevant when
-#' number of SO > 1 and/or feature_split is given
-#' @param facet_grid_row_var forces using facet_grid instead of facet_wrap,
-#' facet_grid_row_var is a string that appears as row label on facets
-#' @param nrow_inner row number for facets
-#' @param ncol_inner col number for facets
-#' @param axes_lim_set set axes limits like
-#' list(UMAP_1 = c(-10,10), UMAP_2 = c(-12,13))
-#' @param axes_lim_expand extend axes limits, syntax like axes_lim_set
-#' @param label_filter_cells when feature_label is provided; only consider
-#' cells which are not excluded for label position calculation
-#' @param label_center_fun how to calculate label position
-#' @param label_nudge named list of xy-values how to shift labels, names must
-#' be the values of feature_label
-#' @param label_repel do repel labels to avoid overlap with ggrepel?
-#' @param label_multi_try try to label split clusters with one label each?
-#' @param label_args arguments to ggtext::geom_richtext
-#' @param contour_filter_cells when feature_contour is provided; only consider
-#' cells which are not excluded for contour calculation
-#' @param contour_rm_outlier per value (group, cluster) in feature_contour: remove
-#' outlier points to avoid ugly contours? uses brathering::outlier
-#' @param contour_rm_lowfreq_subcluster groups in feature_contour are checked for
-#' split clusters with diptest and mclust, do remove low frequency subclusters
-#' to avoid ugly contours?
-#' @param contour_col_pal_args discrete colors of contours, see col_pal_c_args
-#' @param contour_args arguments to geom_density_2d
-#' @param contour_expr_freq do plot expression frequency per group/cluster of
-#' feature_contour
-#' @param contour_label_nudge one xy value pair to nudge contour_expr_freq
-#' labels
-#' @param contour_label_args arguments to ggtext::geom_richtext for
-#' contour_expr_freq
-#' @param contour_same_across_split have the same contours across feature_split
-#' facets
-#' @param contour_fun function for contour drawing, either one of:
-#' ggplot2::geom_density2d, geomtextpath::geom_textpath,
-#' geomtextpath::geom_labelpath; geomtexpath functions require a
-#' contour_path_label
-#' @param contour_path_label if geomtextpath used as contour_fun,
-#' what label to draw, could be an attached meta feature that is unique to each
-#' group or expression frequency via: 'pct'
-#' @param order_discr_explicit explicit plotting order for discrete meta features,
-#' can be an incomplete vector of feature values, use leading '^' to plot a
-#' group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")
-#' @param plot_all_across_split do plot all cells across feature_split in
-#' col_split?
-#' @param feature_ex
-#' @param feature_cut
-#' @param feature_cut_expr
-#' @param combine_guides passed to patchwork::wrap_plots, NULL or collect
-#' @param label_multi_max
-#' @param contour_multi_try
-#' @param contour_multi_max
-#' @param freq_col
-#' @param col_legend_c_args arguments to ggplot2::guide_colorsteps,
-#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
-#' @param col_legend_d_args arguments to ggplot2::guide_colorsteps,
-#' ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-#' continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()
-#' @param label_feature
-#' @param contour_feature
-#' @param split_feature
-#' @param shape_feature
-#' @param title add a superordinate title
-#' @param name name of the plot, any string possible, understands glue
-#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-#' where freq is global expression frequency and feature_cut_ex is a collapsed
-#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-#' algorithmic decision based on freq_plot; freq is removed for meta features;
-#' feature_cut_ex is adjusted if either element is missing
-#' @param anno name of the plot, any string possible, understands glue
-#' syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-#' where freq is global expression frequency and feature_cut_ex is a collapsed
-#' string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-#' algorithmic decision based on freq_plot; freq is removed for meta features;
-#' feature_cut_ex is adjusted if either element is missing
-#' @param axes_arrows plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)
+#' @param SO A Seurat object or a list of Seurat objects.
+#' @param features Character vector of features to plot. Features may be gene
+#'   names or metadata column names. If missing, the function attempts to use
+#'   `Idents`, `seurat_clusters`, `orig.ident`, or the first shared metadata
+#'   column.
+#' @param reduction Name of the dimensionality reduction to use.
+#' @param dims Numeric vector of length 2 specifying the dimensions to plot.
+#' @param assay Assay used to fetch expression values.
+#' @param cells Optional vector of cell names to highlight. Non-selected cells
+#'   are drawn as excluded cells.
+#' @param get_data_args Additional arguments passed to `scexpr::get_data()`.
+#' @param combine Logical; combine plots for multiple features with
+#'   `patchwork::wrap_plots()`.
+#' @param combine_guides Passed to `patchwork::wrap_plots(guides = )`.
+#'   Usually `NULL` or `"collect"`.
+#' @param ncol_combine Number of columns in the combined patchwork layout.
+#' @param nrow_combine Number of rows in the combined patchwork layout.
+#' @param strip_select Numeric vector selecting which plot indices keep facet
+#'   strip labels. Other plots have facet strips hidden.
+#' @param ... Convenience arguments forwarded to `scexpr::get_data()`, including
+#'   `feature_ex`, `feature_cut`, `feature_cut_expr`, `label_feature`,
+#'   `contour_feature`, `split_feature`, and `shape_feature`.
+#'
+#' @section Feature selection and filtering:
+#' @param feature_ex Optional feature used to exclude cells.
+#' @param feature_cut Optional feature used for expression/value cutoff-based
+#'   filtering.
+#' @param feature_cut_expr Cutoff value for `feature_cut`.
+#' @param label_feature Optional metadata feature used for label placement.
+#' @param contour_feature Optional metadata feature used for contour groups.
+#' @param split_feature Optional metadata feature used to split plots into
+#'   facets.
+#' @param shape_feature Optional metadata feature mapped to point shape.
+#'
+#' @section Point appearance:
+#' @param pt_size Base point size.
+#' @param pt_size_fct Multiplicative size factor for expressing cells.
+#' @param col_expr Colour used for expressing cells.
+#' @param col_non_expr Colour used for non-expressing cells. `"..auto.."` chooses
+#'   a suitable colour based on the plot background.
+#' @param col_ex_cells Colour used for excluded cells.
+#' @param col_split Colour used for background cells across split facets when
+#'   `plot_all_across_split = TRUE`.
+#' @param col_na Colour used for missing values.
+#' @param col_binary Logical; show gene expression as binary expressing vs.
+#'   non-expressing values.
+#'
+#' @section Colour scales:
+#' @param col_pal_c_args Arguments for continuous colour palettes.
+#' @param col_pal_d_args Arguments for discrete colour palettes. If
+#'   `name = "..auto.."`, colours may be read from `SO@misc$metacolors`.
+#' @param col_steps Colour step specification: `NULL`, `"..auto.."`, a number of
+#'   bins, or explicit break values.
+#' @param col_steps_nice Logical; use pretty step breaks.
+#' @param col_trans_log Logical; apply logarithmic colour transformation.
+#' @param col_legend_c_args Arguments passed to the continuous colour guide.
+#' @param col_legend_d_args Arguments passed to the discrete colour guide.
+#' @param legendbreaks Legend break specification.
+#' @param legendlabels Optional labels for legend breaks.
+#'
+#' @section Legends:
+#' @param shape_legend_args Arguments passed to `ggplot2::guide_legend()` for
+#'   shape legends.
+#' @param shape_legend_hide Logical; hide the shape legend.
+#'
+#' @section Titles and annotations:
+#' @param feature_alias Named character vector mapping original feature names to
+#'   display aliases.
+#' @param freq_plot Logical or `"..auto.."`; draw expression frequency labels.
+#' @param freq_pos Position of frequency labels.
+#' @param freq_size Font size of frequency labels.
+#' @param freq_col Colour of frequency labels.
+#' @param name Plot title template. Supports glue-style variables
+#'   `{feature}`, `{freq}`, and `{feature_cut_ex}`.
+#' @param anno Plot annotation template. Supports the same variables as `name`.
+#' @param name_anno_pos Where to draw name/annotation text: `"title"`,
+#'   `"annotation"`, both, `NULL`, or `"..auto.."`.
+#' @param name_anno_args Arguments passed to annotation layers.
+#' @param title Optional superordinate title. Added as a patchwork annotation
+#'   for combined plots, otherwise as a ggplot title.
+#'
+#' @section Themes and facets:
+#' @param theme Base ggplot theme.
+#' @param theme_args Additional arguments passed to `ggplot2::theme()`.
+#' @param facet_scales Facet scale behaviour.
+#' @param facet_grid_row_var Optional variable used as row variable in
+#'   `facet_grid()`.
+#' @param nrow_inner Number of rows for inner facets.
+#' @param ncol_inner Number of columns for inner facets.
+#'
+#' @section Axes:
+#' @param axes_lim_set Named list of fixed axis limits.
+#' @param axes_lim_expand Named list of axis expansion values.
+#' @param axes_arrows Logical; draw coordinate axes as arrows.
+#'
+#' @section Labels:
+#' @param label_filter_cells Restrict label position calculation to included
+#'   cells.
+#' @param label_center_fun Method for label centres: `"median"` or `"mean"`.
+#' @param label_nudge Named list of x/y nudges for labels.
+#' @param label_repel Logical; repel labels to avoid overlap.
+#' @param label_multi_try Try to label split clusters separately.
+#' @param label_multi_max Maximum number of labels per split cluster attempt.
+#' @param label_args Arguments passed to label geoms.
+#'
+#' @section Contours:
+#' @param contour_filter_cells Restrict contour calculation to included cells.
+#' @param contour_rm_outlier Remove outlier cells before drawing contours.
+#' @param contour_rm_lowfreq_subcluster Remove low-frequency subclusters before
+#'   drawing contours.
+#' @param contour_multi_try Try to draw contours for split clusters separately.
+#' @param contour_multi_max Maximum number of contour groups per split attempt.
+#' @param contour_col_pal_args Colour palette arguments for contours.
+#' @param contour_args Arguments passed to the contour geom.
+#' @param contour_label_nudge Nudges for contour labels.
+#' @param contour_label_args Arguments for contour labels.
+#' @param contour_same_across_split Use identical contours across split facets.
+#' @param contour_expr_freq Logical; label contour groups with expression
+#'   frequency.
+#' @param contour_fun Contour drawing function.
+#' @param contour_path_label Label used when `contour_fun` is a text-path geom.
+#'
+#' @section Ordering and split plotting:
+#' @param order_discr_explicit Explicit drawing order for discrete metadata
+#'   values. Use leading `^` to draw a group first and trailing `$` to draw it
+#'   last, e.g. `c("^healthy", "disease$")`.
+#' @param plot_all_across_split Logical; draw all cells in each split facet
+#'   using `col_split`.
+#'
+#' @section Spatial plotting:
+#' @param img_plot Logical; draw the spatial image underneath the points.
+#'   Supported only for a single Seurat object.
+#' @param img_subset_fct Subsampling factor passed to `get_img()`.
+#' @param img_col_conv_fun Function used to convert image colours.
+#' @param cell_hull_plot Logical; draw cell hull polygons. Supported only for a
+#'   single Seurat object.
+#' @param cell_hull_args Arguments passed to the hull polygon layer.
 #'
 #' @return
-#' @export
+#' A `ggplot2` object, a list of `ggplot2` objects, or a `patchwork` object,
+#' depending on `features` and `combine`.
 #'
-#' @importFrom zeallot %<-%
+#' @details
+#' `feature_plot2()` first retrieves plotting data with `scexpr::get_data()`,
+#' then calls `scexpr::feature_plot_data()` for each requested feature. When
+#' more than one feature is supplied and `combine = TRUE`, the individual plots
+#' are combined using `patchwork::wrap_plots()`.
+#'
+#' If `features` is omitted, the function tries to choose a sensible metadata
+#' feature automatically, preferring active Seurat identities, then
+#' `seurat_clusters`, then `orig.ident`, and finally the first shared metadata
+#' column across all provided Seurat objects.
+#'
+#' @seealso
+#' `scexpr::get_data()`, `scexpr::feature_plot_data()`,
+#' `patchwork::wrap_plots()`
 #'
 #' @examples
+#' feature_plot2(
+#'   SO,
+#'   features = c("MS4A1", "CD3D"),
+#'   reduction = "umap",
+#'   assay = "RNA",
+#'   combine = TRUE,
+#'   ncol_combine = 2
+#' )
 #'
+#' @export
 feature_plot2 <- function(
     SO,
     features,
@@ -182,7 +213,7 @@ feature_plot2 <- function(
     col_trans_log = F,
     col_legend_c_args = list(
       barwidth = 0.5,
-      barheight = 8,
+      barheight = 7,
       title = "..auto..",
       order = 1
     ),
@@ -387,7 +418,7 @@ feature_plot2 <- function(
     return(y)
   })
 
-
+#browser()
   if (col_pal_d_args[["name"]][1] == "..auto..") {
     if (all(purrr::map_lgl(SO, ~"metacolors" %in% names(.x@misc))) && all(purrr::map_lgl(SO, ~is.list(.x@misc[["metacolors"]])))) {
       for (i in names(col_pal_d_args_lst)) {

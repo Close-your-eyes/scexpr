@@ -38,9 +38,6 @@ SO_prep02(
   FindNeighbors_args = list(dims = 1:npcs),
   FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
   RunHarmony_args = list(group.by.vars = "orig.ident"),
-  SOM_args = list(),
-  GQTSOM_args = list(),
-  EmbedSOM_args = list(),
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
   join_layers = T,
@@ -69,7 +66,7 @@ or an absolute number of cells per object (downsample > 1 & downsample >= min_ce
 \item{export_prefix}{prefix to the output rds file}
 
 \item{reductions}{which reduction to calculate, one of multiple of
-c("umap", "som", "gqtsom", "tsne")}
+c("umap", "tsne")}
 
 \item{nhvf}{number high variables features, passed to Seurat::SCTransform
 or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures}
@@ -114,7 +111,7 @@ when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay:
 
 \item{var_feature_filter}{character vector of features which are to exclude from variable features;
 this will affect downstream PCA, dimension reduction and clustering;
-e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]), value = T) to
+e.g.: var_feature_filter = \verb{grep("^TR[ABGD]V", rownames(SOqc_split[[1]])}, value = T) to
 exclude T cell receptor gene segments}
 
 \item{var_feature_set}{set hvf manually}
@@ -137,15 +134,9 @@ exclude T cell receptor gene segments}
 
 \item{RunHarmony_args}{arguments to harmony::RunHarmony}
 
-\item{SOM_args}{arguments to EmbedSOM::SOM}
-
-\item{GQTSOM_args}{arguments to EmbedSOM::GQTSOM}
-
-\item{EmbedSOM_args}{arguments to EmbedSOM::EmbedSOM}
-
 \item{FindIntegrationAnchors_args}{arguments to Seurat::FindIntegrationAnchors}
 
-\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[\link{1}], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
+\item{IntegrateData_args}{by default features.to.integrate = rownames(Seurat::GetAssayData(\code{SO_unprocessed[[1]]}, assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))}
 
 \item{join_layers}{run SeuratObject::JoinLayers in the end?}
 
@@ -154,6 +145,8 @@ exclude T cell receptor gene segments}
 \item{interactive_varfeat_selection_inds}{only applies when hvf_determination_before_merge = F}
 
 \item{interactive_pc_selection}{do conduct interactive PC selection?}
+
+\item{use_nn_for_umap}{re-use nearest neighbor graph from cluster calc for umap?}
 
 \item{...}{not used yet}
 }

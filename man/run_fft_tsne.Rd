@@ -47,7 +47,7 @@ run_fft_tsne(
 \arguments{
 \item{SO}{numeric matrix with observations as rows}
 
-\item{reduction}{which reduction from SO@reductions to use}
+\item{reduction}{which reduction from SO reduction slot to use}
 
 \item{dims_in}{which dims from reduction; if NULL all are used;
 provide as numeric vector, e.g. 1:12}
@@ -122,16 +122,15 @@ interpolation points per sub-interval}
 
 \item{intervals_per_integer}{See min_num_intervals}
 
-\item{min_num_intervals}{Let maxloc = ceil(max(max(X)))
-and minloc = floor(min(min(X))). i.e. the points are in
-a \link{minloc}^no_dims by \link{maxloc}^no_dims interval/square.
-The number of intervals in each dimension is either
-min_num_intervals or ceil((maxloc -
-minloc)/intervals_per_integer), whichever is
-larger. min_num_intervals must be an integer >0,
-and intervals_per_integer must be >0. Default:
-min_num_intervals=50, intervals_per_integer =
-1}
+\item{min_num_intervals}{Minimum number of intervals per dimension.
+Let \code{maxloc = ceiling(max(X))} and \code{minloc = floor(min(X))}, so that
+the data lie within the hyperrectangle \verb{[minloc, maxloc]^no_dims}.
+The number of intervals in each dimension is
+\code{max(min_num_intervals, ceiling((maxloc - minloc) / intervals_per_integer))}.
+\code{min_num_intervals} must be a positive integer, and
+\code{intervals_per_integer} must be positive.
+Defaults are \code{min_num_intervals = 50} and
+\code{intervals_per_integer = 1}.}
 
 \item{K}{Number of nearest neighbors to get when using fixed sigma}
 
@@ -177,4 +176,11 @@ and run g++ -std=c++11 -O3  src/sptree.cpp src/tsne.cpp src/nbodyfft.cpp  -o bin
 Then copy binary to path:
 e.g. sudo cp /Users/chris/FIt-SNE/bin/fast_tsne /usr/local/bin/
 On Windows, buy a Mac.
+}
+\examples{
+\dontrun{
+so <- run_fft_tsne(obj = so,
+reduction = "harmony",
+reduction.name = paste0("tsne_", "harmony"))
+}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/gsea_on_msigdbr.R
 \name{gsea_on_msigdbr}
 \alias{gsea_on_msigdbr}
-\title{Convenient wrapper around fgsea function}
+\title{Run gene set enrichment analysis with fgsea and optional MSigDB gene sets}
 \usage{
 gsea_on_msigdbr(
   gene_ranks,
@@ -18,29 +18,91 @@ gsea_on_msigdbr(
 )
 }
 \arguments{
-\item{gene_ranks}{this becomes stats in fgsea_fun}
+\item{gene_ranks}{Named numeric vector of gene-level ranking statistics.
+Names must be gene identifiers matching the identifiers in \code{gene_sets}.}
 
-\item{gene_sets}{this becomes pathways in fgsea_fun}
+\item{gene_sets}{Named list of gene sets, where each element is a character
+vector of gene identifiers. Used as \code{pathways} in \code{fgsea_fun}.}
 
-\item{return_gene_sets_subset}{return the subset of each gene set that is actually found in gene_ranks}
+\item{return_gene_sets_subset}{Logical. If \code{TRUE}, return each gene set
+restricted to genes present in \code{gene_ranks}.}
 
-\item{return_gene_sets}{set to FALSE in order to save memory when the same gene sets are used multiple times}
+\item{return_gene_sets}{Logical. If \code{TRUE}, return the full gene set list in
+the output. Set to \code{FALSE} to reduce memory use when repeatedly using the
+same gene sets.}
 
-\item{use_msigdbr}{use gene sets from msigdb to test}
+\item{use_msigdbr}{Logical. If \code{TRUE}, retrieve gene sets from MSigDB using
+\code{msigdbr::msigdbr()} and combine them with any manually supplied \code{gene_sets}.}
 
-\item{msigdbr_args}{arguments to msigdbr::msigdbr}
+\item{msigdbr_args}{Named list of arguments passed to
+\code{msigdbr::msigdbr()}. By default, human Hallmark and C1--C8 collections are
+used.}
 
-\item{fgsea_fun}{which function to use for gsea}
+\item{fgsea_fun}{Function used to run GSEA. Defaults to
+\code{fgsea::fgseaMultilevel}.}
 
-\item{fgsea_args}{arguments to fgsea_fun}
+\item{fgsea_args}{Named list of additional arguments passed to \code{fgsea_fun}.
+If \code{pathways} or \code{stats} are not supplied, they are filled from \code{gene_sets}
+and \code{gene_ranks}, respectively.}
 
-\item{...}{arguments to .plotEnrichment}
+\item{...}{Currently unused; reserved for future extensions.}
+}
+\value{
+A named list with:
+\describe{
+\item{data}{A data frame of fgsea results, optionally joined with MSigDB
+collection metadata. Additional columns include sorted leading-edge genes,
+leading-edge size, relative leading-edge size, and leading-edge rank.}
+\item{gene_sets}{The gene sets used for enrichment, or \code{NULL} when
+\code{return_gene_sets = FALSE}.}
+\item{gene_sets.subset}{Gene sets restricted to genes found in
+\code{gene_ranks}, or \code{NULL} when \code{return_gene_sets_subset = FALSE}.}
+\item{gene_ranks}{The input ranking vector.}
+}
 }
 \description{
-Convenient wrapper around fgsea function
+Convenient wrapper around an \code{fgsea} function, with optional retrieval of
+gene sets from MSigDB via \code{msigdbr}. The input \code{gene_ranks} is passed as
+\code{stats}, and \code{gene_sets} is passed as \code{pathways} to \code{fgsea_fun}.
+}
+\details{
+\code{gene_ranks} should usually be sorted in decreasing order before running
+GSEA, although \code{fgsea} can operate on named numeric vectors directly.
+
+When \code{use_msigdbr = TRUE}, gene sets are retrieved using \code{.get.split.msigdbr()}
+and MSigDB metadata such as collection, subcollection, description, and exact
+source are merged into the result table.
 }
 \examples{
 \dontrun{
+## Compute signal-to-noise gene ranks for one cluster
+s2n <- scexpr::gsea_s2n_groupwise(
+  obj = so,
+  group = "integrated_snn_res.0.7"
+)
+
+gene_ranks <- sort(s2n[, "20"], decreasing = TRUE)
+
+## Use MSigDB gene sets through msigdbr
+gsea_res <- gsea_on_msigdbr(
+  gene_ranks = gene_ranks,
+  use_msigdbr = TRUE
+)
+
+head(gsea_res$data)
+
+## Reuse gene sets across many calls
+gene_sets <- scexpr:::.get.split.msigdbr()$sets
+
+gsea_res <- gsea_on_msigdbr(
+  gene_ranks = gene_ranks,
+  gene_sets = gene_sets,
+  use_msigdbr = FALSE,
+  return_gene_sets = FALSE
+)
+
+## Available MSigDB collections
+msigdbr::msigdbr_collections()
 # H: hallmark gene sets
 # C1: positional gene sets
 # C2: curated gene sets
@@ -50,11 +112,5 @@ Convenient wrapper around fgsea function
 # C6: oncogenic signature gene sets
 # C7: immunologic signature gene sets
 # C8: cell type signature gene sets
-s2ntab <- scexpr::gsea_s2n_groupwise(obj = so, group = "integrated_snn_res.0.7")
-msiggsea <- gsea_on_msigdbr(gene_ranks = s2ntab[,"20"], use_msigdbr = T)
-# get gene sets from msigdbr, split to a named list
-gene_sets <- scexpr:::.get.split.msigdbr()
-msigdbr::msigdbr_collections()
-# provide gene_sets manually and leave use_msigdbr = F in case gsea_on_msigdbr is called many times with the same gene_sets
 }
 }

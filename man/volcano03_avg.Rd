@@ -9,8 +9,8 @@ volcano03_avg(volc01_df_list, neg_name, pos_name, logfc_avg_fun = mean)
 \arguments{
 \item{volc01_df_list}{list of data frames from scexpr::volcano01_calc}
 
-\item{neg_name}{name of negative cells, can be missing, then
-inferred from volc01_df_list[\link{1}], added as attribute}
+\item{neg_name}{Name of the negative group. If \code{NULL}, the name is
+inferred from the first data frame in \code{volc01_df_list}.}
 
 \item{pos_name}{see neg_name}
 

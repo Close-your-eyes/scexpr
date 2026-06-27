@@ -56,9 +56,9 @@
 #' @param ffbms named paths to folders with raw/filtered feature matrix files or .h5 files; this will skip any procedure with data_dirs
 #' @param rfbms named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs
 #' @param batch_corr which batch correction to apply for integration of different samples
-#' @param diet_seurat
-#' @param SoupX_autoEstCont_args
-#' @param sample_prefix_to_cell_id
+#' @param diet_seurat run diet seurat?
+#' @param SoupX_autoEstCont_args args to autoEstCont
+#' @param sample_prefix_to_cell_id add sample prefix to cell names? i.e. sample folder names
 #' @param early_exit only read count matrices without much processing (no dim red etc)
 #' @param reduction which reduction(s) to calculate
 #' @param mc.cores parallel computing (speed up reading many samples)
@@ -73,6 +73,11 @@
 #' @importFrom zeallot %<-%
 #'
 #' @examples
+#' \dontrun{
+#' # root folder with filtered/raw feature matrices
+#' samples <- list.dirs(datadir, recursive = F)
+#' out <- SO_prep01(samples)
+#' }
 SO_prep01 <- function(data_dirs,
                       nhvf = 2000,
                       npcs = 10,
@@ -1011,6 +1016,9 @@ make_equal_cells <- function(x) {
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' so <- add_pct_featset_and_cc(so)
+#' }
 add_pct_featset_and_cc <- function(obj, species = "..auto..") {
 
   if (species == "..auto..") {

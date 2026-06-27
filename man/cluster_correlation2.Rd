@@ -49,7 +49,15 @@ results}
 
 \item{avg_expression_args}{args to scexpr::avg_expression}
 }
+\value{
+list of data frames and plot
+}
 \description{
 Check https://github.com/skinnider/dismay and https://github.com/tpq/propr
 propr could not be made for 2 matrices yet.
+}
+\examples{
+\dontrun{
+clustcorr <- cluster_correlation2(so, meta_cols = "SCT_harmony_snn_res.0.1")
+}
 }

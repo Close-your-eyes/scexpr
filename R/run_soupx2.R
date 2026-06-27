@@ -1,6 +1,6 @@
 #' Run default SoupX pipeline
 #'
-#' @param filt filtered gene x cell matrix or list thereof; when list everything
+#' @param filt filtered gene x cell matrix or list thereof; when list: everything
 #' is treated as one
 #' @param raw raw gene x cell matrix or list thereof
 #' @param obj provide seurat object instead of filt
@@ -13,6 +13,11 @@
 #' @export
 #'
 #' @examples
+#'\dontrun{
+#' filt <- Seurat::Read10X_h5("filtered_feature_bc_matrix.h5")
+#' raw <- Seurat::Read10X_h5("raw_feature_bc_matrix.h5")
+#' so <- run_soupx2(filt, raw)
+#' }
 run_soupx2 <- function(filt,
                        raw,
                        obj = NULL,

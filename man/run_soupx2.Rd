@@ -14,7 +14,7 @@ run_soupx2(
 )
 }
 \arguments{
-\item{filt}{filtered gene x cell matrix or list thereof; when list everything
+\item{filt}{filtered gene x cell matrix or list thereof; when list: everything
 is treated as one}
 
 \item{raw}{raw gene x cell matrix or list thereof}
@@ -33,4 +33,11 @@ Seurat object with SOUPX corrected counts
 }
 \description{
 Run default SoupX pipeline
+}
+\examples{
+\dontrun{
+filt <- Seurat::Read10X_h5("filtered_feature_bc_matrix.h5")
+raw <- Seurat::Read10X_h5("raw_feature_bc_matrix.h5")
+so <- run_soupx2(filt, raw)
+}
 }

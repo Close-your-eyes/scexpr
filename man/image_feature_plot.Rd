@@ -59,6 +59,10 @@ using \code{colrr::make_col_pal()}. Must include \code{name}.}
 
 \item{col_pal_d_args}{List. Arguments for discrete color palette generation
 using \code{colrr::make_col_pal()}. Must include \code{name}.}
+
+\item{col_binary}{binary color scale of expressers vs non-expressers}
+
+\item{expr_only}{plot expressers only}
 }
 \value{
 A \code{ggplot2} object representing the spatial visualization.

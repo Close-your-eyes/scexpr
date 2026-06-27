@@ -1,14 +1,54 @@
-#' Title
+#' Cluster gene sets by leading-edge gene overlap
 #'
-#' @param gsea_data_df
-#' @param umap_args
-#' @param FindNeighbors_args
-#' @param FindClusters_args
+#' Clusters GSEA pathways based on the genes present in their leading-edge
+#' subsets. A binary pathway-by-gene matrix is created from the `leadingEdge`
+#' column, then embedded with UMAP and clustered with Seurat's neighbor and
+#' clustering functions.
+#'
+#' @param gsea_data_df Data frame containing GSEA results. Must include a
+#'   `pathway` column and a list-column named `leadingEdge`, where each element
+#'   is a character vector of leading-edge genes.
+#' @param umap_args Named list of additional arguments passed to `uwot::umap()`.
+#' @param FindNeighbors_args Named list of additional arguments passed to
+#'   `Seurat::FindNeighbors()`.
+#' @param FindClusters_args Named list of additional arguments passed to
+#'   `Seurat::FindClusters()`. Defaults to `list(resolution = 0.6)`.
+#' @param seed Random seed used before UMAP, neighbor finding and clustering.
 #'
 #' @return
-#' @export
+#' A named list with three elements:
+#' \describe{
+#'   \item{`data`}{Input `gsea_data_df` joined with UMAP coordinates and cluster
+#'   assignments for each pathway.}
+#'   \item{`LE_elements`}{Binary matrix indicating whether each leading-edge
+#'   gene is present in each pathway. Rows are pathways and columns are genes.}
+#'   \item{`gene_freq_by_cluster`}{Data frame with the frequency of each
+#'   leading-edge gene within each pathway cluster.}
+#' }
+#'
+#' @details
+#' The function first collects all unique leading-edge genes and converts each
+#' pathway's leading-edge set into a binary vector. Rows correspond to pathways
+#' and columns correspond to genes.
+#'
+#' Pathways are embedded in two dimensions with `uwot::umap()` and clustered
+#' using `Seurat::FindNeighbors()` followed by `Seurat::FindClusters()`.
+#'
+#' The `gene_freq_by_cluster` output can be used to identify genes that are
+#' recurrently represented among pathways assigned to the same cluster.
 #'
 #' @examples
+#' \dontrun{
+#' clustered <- cluster_gene_sets_by_leadingEdge(gsea_data_df)
+#'
+#' ggplot2::ggplot(
+#'   clustered$data,
+#'   ggplot2::aes(UMAP_1, UMAP_2, color = cluster)
+#' ) +
+#'   ggplot2::geom_point()
+#' }
+#'
+#' @export
 cluster_gene_sets_by_leadingEdge <- function(gsea_data_df,
                                              umap_args = list(),
                                              FindNeighbors_args = list(),

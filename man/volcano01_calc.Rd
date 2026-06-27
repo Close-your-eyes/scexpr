@@ -64,6 +64,8 @@ fraction of cells at least one group (neg_cells or pos_cells)}
 
 \item{fc_thresh}{logfc.threshold in Seurat::FindMarkers}
 
+\item{feature_plot_args}{arguments to feature_plot2}
+
 \item{mc.cores}{mc cores for parallel computing when method is MAST}
 
 \item{...}{arguments to Seurat::FindMarkers}

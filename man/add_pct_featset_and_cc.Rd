@@ -17,3 +17,8 @@ obj with updated meta data
 \description{
 Add typical feature set pct and cell cycle score
 }
+\examples{
+\dontrun{
+so <- add_pct_featset_and_cc(so)
+}
+}

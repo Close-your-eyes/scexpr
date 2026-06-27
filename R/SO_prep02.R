@@ -10,7 +10,7 @@
 #' or an absolute number of cells per object (downsample > 1 & downsample >= min_cells)
 #' @param export_prefix prefix to the output rds file
 #' @param reductions which reduction to calculate, one of multiple of
-#' c("umap", "som", "gqtsom", "tsne")
+#' c("umap", "tsne")
 #' @param nhvf number high variables features, passed to Seurat::SCTransform
 #' or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures
 #' @param npcs number of principle components in calculate in pca and to
@@ -36,7 +36,7 @@
 #' @param verbose print messages and progress bars from functions
 #' @param var_feature_filter character vector of features which are to exclude from variable features;
 #' this will affect downstream PCA, dimension reduction and clustering;
-#' e.g.: var_feature_filter = grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T) to
+#' e.g.: var_feature_filter = `grep("^TR[ABGD]V", rownames(SOqc_split[[1]])`, value = T) to
 #' exclude T cell receptor gene segments
 #' @param hvf_determination_before_merge determine variable features before or after merging multiple samples;
 #' either by the standard LogNormalize workflow or by SCTransform function; this is most important for
@@ -50,11 +50,8 @@
 #' @param FindNeighbors_args arguments to Seurat::FindNeighbors
 #' @param FindClusters_args arguments to Seurat::FindClusters
 #' @param RunHarmony_args arguments to harmony::RunHarmony
-#' @param SOM_args arguments to EmbedSOM::SOM
-#' @param GQTSOM_args arguments to EmbedSOM::GQTSOM
-#' @param EmbedSOM_args arguments to EmbedSOM::EmbedSOM
 #' @param FindIntegrationAnchors_args arguments to Seurat::FindIntegrationAnchors
-#' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(SO_unprocessed[[1]], assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
+#' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(`SO_unprocessed[[1]]`, assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
 #' @param RunPCA_args arguments to Seurat::RunUMAP
 #' @param ... not used yet
 #' @param downsample_method how to downsample?
@@ -64,7 +61,7 @@
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
 #' @param interactive_pc_selection do conduct interactive PC selection?
 #' @param var_feature_set set hvf manually
-#' @param use_nn_for_umap
+#' @param use_nn_for_umap re-use nearest neighbor graph from cluster calc for umap?
 #'
 #' @return Seurat Object, as R object and saved to disk as rds file
 #' @export
@@ -111,9 +108,6 @@ SO_prep02 <- function(SO_unprocessed,
                       FindNeighbors_args = list(dims = 1:npcs),
                       FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                       RunHarmony_args = list(group.by.vars = "orig.ident"),
-                      SOM_args = list(),
-                      GQTSOM_args = list(),
-                      EmbedSOM_args = list(),
                       FindIntegrationAnchors_args = list(reduction = "rpca"),
                       IntegrateData_args = list(),
                       join_layers = T,
@@ -349,38 +343,6 @@ SO_prep02 <- function(SO_unprocessed,
 
     #SO <- Seurat::RunTSNE(object = SO, dims = 1:npcs, seed.use = seed, reduction = red, verbose = verbose, num_threads = 0, ...)
   }
-
-  if (any(grepl("^som$", reductions, ignore.case = T))) {
-    if (!requireNamespace("devtools", quietly = T)) {
-      utils::install.packages("devtools")
-    }
-    if (!requireNamespace("EmbedSOM", quietly = T)) {
-      pak::pak("exaexa/EmbedSOM")
-    }
-
-    SOM_args <- SOM_args[which(!names(SOM_args) %in% c("data"))]
-    map <- Gmisc::fastDoCall(EmbedSOM::SOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings)), SOM_args)
-    EmbedSOM_args <- EmbedSOM_args[which(!names(EmbedSOM_args) %in% c("data", "map"))]
-    ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
-    SO[["SOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "SOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"), misc = list(SOM_args, EmbedSOM_args))
-  }
-
-  if (any(grepl("^gqtsom$", reductions, ignore.case = T))) {
-    if (!requireNamespace("devtools", quietly = T)) {
-      utils::install.packages("devtools")
-    }
-    if (!requireNamespace("EmbedSOM", quietly = T)) {
-      pak::pak("exaexa/EmbedSOM")
-    }
-
-    GQTSOM_args <- GQTSOM_args[which(!names(GQTSOM_args) %in% c("data"))]
-    map <- Gmisc::fastDoCall(EmbedSOM::GQTSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings)), GQTSOM_args)
-    EmbedSOM_args <- EmbedSOM_args[which(!names(EmbedSOM_args) %in% c("data", "map"))]
-    ES <- Gmisc::fastDoCall(EmbedSOM::EmbedSOM, args = c(list(data = SO@reductions[[red]]@cell.embeddings, map = map)), EmbedSOM_args)
-    SO[["GQTSOM"]] <- Seurat::CreateDimReducObject(embeddings = ES, key = "GQTSOM_", assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"), misc = list(GQTSOM_args, EmbedSOM_args))
-  }
-
-
 
   # add clusterings and their colors to Misc
   names_w_clust <- names(SO@meta.data)
@@ -1322,10 +1284,11 @@ subset_SO_unprocessed <- function(SO_unprocessed,
     })
   }
 
-  if (any(sapply(SO_unprocessed, is.null))) {
-    message("No cells found for: ", paste(names(SO_unprocessed)[which(sapply(SO_unprocessed, is.null))], collapse = ", "))
-    SO_unprocessed <- SO_unprocessed[which(!sapply(SO_unprocessed, is.null))]
-    if (length(SO_unprocessed) == 0) {
+  isnull <- purrr::map_lgl(SO_unprocessed, is.null)
+  if (any(isnull)) {
+    message("No cells found for: ", paste(names(SO_unprocessed)[which(isnull)], collapse = ", "))
+    SO_unprocessed <- SO_unprocessed[which(!isnull)]
+    if (!length(SO_unprocessed)) {
       stop("No Seurat objects left after filtering for cells.")
     }
   }
@@ -1335,24 +1298,14 @@ subset_SO_unprocessed <- function(SO_unprocessed,
     downsample <- min_cells
   } else if (downsample < 1) {
     # check if downsampling forces samples in SO_unprocessed below min_cells
-    if (any(sapply(SO_unprocessed, function(x) as.integer(downsample*length(Seurat::Cells(x)))) < min_cells)) {
+    if (any(purrr::map(SO_unprocessed, ~as.integer(downsample*length(Seurat::Cells(.x)))) < min_cells)) {
       message("downsampling leads some samples to drop below min_cells.")
     }
   }
 
   if (downsample_method == "uniform") {
-
     SO_unprocessed <- purrr::map(SO_unprocessed, ~downsample_seurat(obj = .x, downsample = downsample))
-    # if (downsample < 1) {
-    #   size <- purrr::map(SO_unprocessed, ~as.integer(downsample*length(Seurat::Cells(.x))))
-    # } else if (downsample > 1) {
-    #   size <- purrr::map(SO_unprocessed, ~min(downsample, length(Seurat::Cells(.x))))
-    # }
-    # cells <- purrr::map2(SO_unprocessed, size, ~sample(Seurat::Cells(.x), size = .y, replace = FALSE))
-    # SO_unprocessed <- purrr::map2(SO_unprocessed, cells, ~subset(.x, cells = .y))
-
-  }
-  if (downsample_method == "leverage") {
+  } else {
     if (downsample < 1) {
       ncells <- purrr::map(SO_unprocessed, ~as.integer(downsample*length(Seurat::Cells(.x))))
     } else if (downsample > 1) {
@@ -1390,10 +1343,9 @@ subset_SO_unprocessed <- function(SO_unprocessed,
                                   ))
   }
 
-
   # remove samples with insufficient number of cells
-  rm.nm <- names(SO_unprocessed[which(sapply(SO_unprocessed, function(x){length(Seurat::Cells(x)) < min_cells}))])
-  if (length(rm.nm) > 0) {
+  rm.nm <- names(SO_unprocessed[which(purrr::map_lgl(SO_unprocessed, ~length(Seurat::Cells(.x)) < min_cells))])
+  if (length(rm.nm)) {
     SO_unprocessed <- SO_unprocessed[which(!names(SO_unprocessed) %in% rm.nm)]
     message("samples removed due to min.cells: ", paste(rm.nm, collapse = ","))
   }

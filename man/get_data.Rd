@@ -85,6 +85,8 @@ order; if !order and !shuffle the provided order is not altered}
 
 \item{shape_feature}{feature to shape plotted points by}
 
+\item{trajectory_slot}{not used currently}
+
 \item{downsample}{random downsample cells which will completely remove them
 from returned data frame and hence influence statistics and plotting}
 
@@ -103,4 +105,10 @@ a list of data frame
 }
 \description{
 Get data frame for plotting from Seurat object(s)
+}
+\examples{
+\dontrun{
+datadf <- get_data(so, c("CD3E", "orig.ident"), try_df = T)
+datalst <- get_data(so, c("CD3E", "orig.ident"), try_df = F)
+}
 }

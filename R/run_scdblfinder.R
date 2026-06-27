@@ -10,7 +10,6 @@
 #' @param ... args to SO_prep02
 #'
 #' @returns seurat
-#' @export
 #'
 #' @examples
 add_doublets <- function(obj,
@@ -34,6 +33,9 @@ add_doublets <- function(obj,
   if (is.null(samples)) {
     stop("samples not found.")
   }
+  if (length(clusters) != length(samples)) {
+    stop("clusters and samples must be equal in length. Provide the actual meta columns. Not just their names.")
+  }
 
   if (is.matrix(obj)) {
     mat <- obj
@@ -46,7 +48,11 @@ add_doublets <- function(obj,
 
   sodbl <- purrr::map2(purrr::set_names(names(mat)), clusters, function(x,y) {
 
-    cds <- scDblFinder::addDoublets(x = mat[[x]], clusters = as.character(y))
+    cds <- scDblFinder::addDoublets(x = SummarizedExperiment::SummarizedExperiment(assays = list(counts = mat[[x]])), clusters = as.character(y))
+    #cds <- scDblFinder::addDoublets(x = mat[[x]], clusters = as.character(y))
+    # if (is.nullcds@colData@listData$type) {
+    #   return(NULL)
+    # }
     cds@colData@listData$type <- ifelse(cds@colData@listData$type == "singlet", "single_transcriptome_as_is", "doublet_simul")
 
     counts <- SummarizedExperiment::assays(cds)[["counts"]]
@@ -127,13 +133,20 @@ add_doublets <- function(obj,
 #' @examples
 run_scdblfinder <- function(obj,
                             assay = "RNA",
-                            features = Seurat::VariableFeatures(obj),
-                            samples = obj@meta.data[["orig.ident"]],
-                            clusters = obj@meta.data[["seurat_clusters"]],
+                            features = scexpr::get_var_features(so),
+                            samples_col = "orig.ident",
+                            clusters_col = "seurat_clusters",
                             min_umi = 300,
+                            min_cells_per_group = 20,
                             dims = ncol(obj@reductions$pca@cell.embeddings),
                             add_doublets = F,
                             add_doublets_tell = F) {
+
+  if (any(!c(samples_col, clusters_col) %in% names(obj@meta.data))) {
+    stop("samples_col or clusters_col not found.")
+  }
+  samples <- obj@meta.data[[samples_col]]
+  clusters <- obj@meta.data[[clusters_col]]
 
   knownDoublets <- NULL
   if (add_doublets) {
@@ -144,6 +157,15 @@ run_scdblfinder <- function(obj,
     knownDoublets <- obj@meta.data$dbl_type == "doublet_simul"
     if (!add_doublets_tell) {
       knownDoublets <- NULL
+    }
+  }
+  if (!length(features)) {
+    message("no hvf found. try to rescue.")
+    Seurat::DefaultAssay(obj) <- "RNA"
+    obj <- Seurat::FindVariableFeatures(obj)
+    features <- Seurat::VariableFeatures(obj)
+    if (!length(features)) {
+      stop("no hvf.")
     }
   }
 
@@ -159,11 +181,20 @@ run_scdblfinder <- function(obj,
   highumi <- setdiff(Seurat::Cells(obj), names(lowumi))
   Seurat::DefaultAssay(obj) <- assay
 
+  nn <- obj@meta.data |>
+    dplyr::summarise(n = dplyr::n(), .by = c(clusters_col, samples_col)) |>
+    dplyr::filter(n < min_cells_per_group)
+  cells_keep <- obj@meta.data |>
+    dplyr::filter(!(!!rlang::sym(samples_col) %in% nn[[samples_col]]))
+
+  obj2 <- subset(obj, cells = rownames(cells_keep))
+  obj2 <- subset(obj2, cells = highumi)
+
   ## subset is defects
-  scf <- scDblFinder::scDblFinder(sce = get_layer(obj = subset(obj, cells = highumi),
+  scf <- scDblFinder::scDblFinder(sce = get_layer(obj = obj2,
                                                   assay = assay,
                                                   layer = "counts"),
-                                  samples = samples[-lowumi],
+                                  samples = obj2@meta.data[[samples_col]],
                                   nfeatures = features,
                                   dims = dims,
                                   knownDoublets = knownDoublets,

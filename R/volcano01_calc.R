@@ -23,7 +23,7 @@
 #' @param layer which data layer
 #' @param p_zero_squish scales::oob_squish(df$p_val_adj, range = c(min(df$p_val_adj)/10^p_zero_squish, 1))
 #' @param fc_thresh logfc.threshold in Seurat::FindMarkers
-#' @param feature_plot_args
+#' @param feature_plot_args arguments to feature_plot2
 #' @param mc.cores mc cores for parallel computing when method is MAST
 #' @param ... arguments to Seurat::FindMarkers
 #' @param add_n_repl_to_names  add number of (pseudo-) replicates to names
@@ -91,12 +91,12 @@ volcano01_calc <- function(SO,
                            mc.cores = 1,
                            ...) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
+  if (!requireNamespace("colrr", quietly = TRUE)) {
+    stop(
+      "Package 'colrr' is required. Install it with: pak::pak('Close-your-eyes/colrr')",
+      call. = FALSE
+    )
   }
-
-  default_warn <- getOption("warn")
-  options(warn = 1)
 
   if (missing(neg_cells) || missing(pos_cells)) {
     stop("pos_cells and neg_cells are required.")
@@ -132,11 +132,11 @@ volcano01_calc <- function(SO,
 
   colname <- "volcano_groups"
   SO <- lapply(SO, function(x) {
-    # addmetadata?
-    x@meta.data[,colname] <- ifelse(!rownames(x@meta.data) %in% c(pgc, ngc), "other",
-                                    ifelse(rownames(x@meta.data) %in% pgc,
-                                           pos_name[1],
-                                           neg_name[1]))
+    cells <- rownames(x@meta.data)
+    x@meta.data[[colname]] <- dplyr::case_when(
+      cells %in% pgc ~ pos_name[[1]],
+      cells %in% ngc ~ neg_name[[1]],
+      TRUE ~ "other")
     return(x)
   })
 
@@ -194,10 +194,9 @@ volcano01_calc <- function(SO,
 
   min_pct_features_removed <- setdiff(intersect_features, min_pct_features)
 
-  # all(Seurat::Cells(SO) == Seurat::Cells(SO[["RNA"]]))
-  # SeuratObject::DefaultAssay(SO) <- "RNA"
-  #SO <- SeuratObject::UpdateSeuratObject(SO)
-
+  if (length(min_pct_features) == 0) {
+    stop("No features passed the min_pct filter. Try lowering min_pct.", call. = FALSE)
+  }
   SO <- Seurat::DietSeurat(SO, assays = assay, features = min_pct_features, layers = c("counts", "data"))
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation

@@ -24,3 +24,8 @@ list()
 \description{
 Uses biomaRt. See biomaRt::listFilters() and biomaRt::listAttributes()
 }
+\examples{
+\dontrun{
+conv <- convert_gene_ident(x = scexpr:::get_gene_features(so))
+}
+}

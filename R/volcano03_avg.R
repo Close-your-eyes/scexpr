@@ -3,8 +3,8 @@
 #' Makes a data frame to use with volcano02_plot.
 #'
 #' @param volc01_df_list list of data frames from scexpr::volcano01_calc
-#' @param neg_name name of negative cells, can be missing, then
-#' inferred from volc01_df_list[[1]], added as attribute
+#' @param neg_name Name of the negative group. If `NULL`, the name is
+#'   inferred from the first data frame in `volc01_df_list`.
 #' @param pos_name see neg_name
 #' @param logfc_avg_fun function for averaging log fold changes
 #'

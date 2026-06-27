@@ -10,6 +10,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' conv <- convert_gene_ident(x = scexpr:::get_gene_features(so))
+#' }
 convert_gene_ident <- function(x,
                                input = c("hgnc_symbol",
                                          "external_synonym",
@@ -20,6 +23,7 @@ convert_gene_ident <- function(x,
                                           "external_synonym",
                                           "gene_biotype",
                                           "description")) {
+
   # make sure all input are in output
   output <- unique(c(output, input))
 

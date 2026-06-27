@@ -1,17 +1,48 @@
-#' Inspect reference feature expression in groups of feature coexpressers
+#' Inspect reference feature expression in feature coexpression groups
 #'
-#' @param obj seurat object
-#' @param features features, the groups of which are assessed for ref_feature
-#' @param ref_feature reference feature
-#' @param metric metric returned from scexpr::coexpression_metrics
+#' Calculates coexpression groups for all feature combinations of length two or
+#' greater, then summarizes and plots expression of a reference feature across
+#' those coexpression groups.
 #'
-#' @returns
-#' @export
+#' @param obj A Seurat object.
+#' @param features Character vector of features used to define coexpression
+#'   groups.
+#' @param ref_feature Reference feature whose expression is inspected across
+#'   coexpression groups.
+#' @param metric Name of the metric returned by `scexpr::coexpression_metrics()`
+#'   to use for grouping and plotting. Defaults to `"coexpr_sum"`.
+#'
+#' @return
+#' A named list with three elements:
+#' \describe{
+#'   \item{`df`}{Cell-level data containing coexpression metrics and reference
+#'   feature expression.}
+#'   \item{`df2`}{Summary table with coexpression frequencies and reference
+#'   feature expression frequencies per group.}
+#'   \item{`plot`}{A faceted `ggplot2` object showing reference feature
+#'   expression across coexpression metric groups.}
+#' }
+#'
+#' @details
+#' Feature combinations are generated with `brathering::combnn()` using all
+#' unique input features and a minimum combination length of two. For each
+#' combination, `scexpr::coexpression_metrics()` is called and the selected
+#' `metric` is extracted.
+#'
+#' The returned plot shows individual cells as jittered points. Text labels
+#' indicate the fraction of cells in each coexpression group and the fraction
+#' expressing `ref_feature`.
 #'
 #' @examples
-#'\dontrun{
-#' coexpression_stats(so, c("CD53", "CD70", "CD27"), "KLF2")
+#' \dontrun{
+#' coexpression_stats(
+#'   obj = so,
+#'   features = c("CD53", "CD70", "CD27"),
+#'   ref_feature = "KLF2"
+#' )
 #' }
+#'
+#' @export
 coexpression_stats <- function(obj,
                                features,
                                ref_feature,

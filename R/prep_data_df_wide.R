@@ -3,7 +3,7 @@
 #' From a wide data frame with any kind of expression values,
 #' prepare a list of data frames ready to pass to feature_plot_data.
 #'
-#' @param data
+#' @param data wide data frame
 #' @param feature columns that are features to plot as color scale
 #' @param reduction columns that are dimension reduction
 #' @param qmin lower quantile of feature values where to cut the color scale

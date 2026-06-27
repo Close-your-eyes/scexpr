@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_plot2.R
 \name{feature_plot2}
 \alias{feature_plot2}
-\title{Plot features of single cell transcriptomes on a dimension reduction map}
+\title{Plot one or more features on a single-cell dimension reduction map}
 \usage{
 feature_plot2(
   SO,
@@ -31,7 +31,7 @@ feature_plot2(
   col_steps = "..auto..",
   col_steps_nice = T,
   col_trans_log = F,
-  col_legend_c_args = list(barwidth = 0.5, barheight = 8, title = "..auto..", order = 1),
+  col_legend_c_args = list(barwidth = 0.5, barheight = 7, title = "..auto..", order = 1),
   col_legend_d_args = list(nrow = 12, override.aes = list(size = 4), title = "..auto..",
     order = 1),
   legendbreaks = "minmidmax",
@@ -108,195 +108,283 @@ feature_plot2(
 )
 }
 \arguments{
-\item{SO}{one Seurat object or a list of multiple ones}
+\item{SO}{A Seurat object or a list of Seurat objects.}
 
-\item{features}{vector of features to fetch (genes or column names in
-meta data)}
+\item{features}{Character vector of features to plot. Features may be gene
+names or metadata column names. If missing, the function attempts to use
+\code{Idents}, \code{seurat_clusters}, \code{orig.ident}, or the first shared metadata
+column.}
 
-\item{reduction}{reduction to fetch from reductions slot of SO}
+\item{reduction}{Name of the dimensionality reduction to use.}
 
-\item{dims}{dimensions of the selected reduction to extract from SO}
+\item{dims}{Numeric vector of length 2 specifying the dimensions to plot.}
 
-\item{assay}{which assay to get expression data from}
+\item{assay}{Assay used to fetch expression values.}
 
-\item{cells}{vector of cell names to select for regular plotting (=1),
-deselected ones are plotted with color col_ex_cells (=0) in feature_plot}
+\item{cells}{Optional vector of cell names to highlight. Non-selected cells
+are drawn as excluded cells.}
 
-\item{get_data_args}{further arguments to scexpr::get_data}
+\item{get_data_args}{Additional arguments passed to \code{scexpr::get_data()}.}
 
-\item{combine}{do combine plots for multiple features with patchwork}
+\item{combine}{Logical; combine plots for multiple features with
+\code{patchwork::wrap_plots()}.}
 
-\item{combine_guides}{passed to patchwork::wrap_plots, NULL or collect}
+\item{combine_guides}{Passed to \code{patchwork::wrap_plots(guides = )}.
+Usually \code{NULL} or \code{"collect"}.}
 
-\item{ncol_combine}{number of columns when combine}
+\item{ncol_combine}{Number of columns in the combined patchwork layout.}
 
-\item{nrow_combine}{number of rows when combine}
+\item{nrow_combine}{Number of rows in the combined patchwork layout.}
 
-\item{strip_select}{numeric: which facet strips to plot, NULL: plot all}
+\item{strip_select}{Numeric vector selecting which plot indices keep facet
+strip labels. Other plots have facet strips hidden.}
 
-\item{...}{several feature arguments to scexpr::get_data, for convenience,
-like feature_ex or split_feature}
+\item{...}{Convenience arguments forwarded to \code{scexpr::get_data()}, including
+\code{feature_ex}, \code{feature_cut}, \code{feature_cut_expr}, \code{label_feature},
+\code{contour_feature}, \code{split_feature}, and \code{shape_feature}.}
 
-\item{pt_size}{point size}
+\item{pt_size}{Base point size.}
 
-\item{pt_size_fct}{factor of size increase for expressers}
+\item{pt_size_fct}{Multiplicative size factor for expressing cells.}
 
-\item{col_expr}{color expressers}
+\item{col_expr}{Colour used for expressing cells.}
 
-\item{col_non_expr}{color non expressers}
+\item{col_non_expr}{Colour used for non-expressing cells. \code{"..auto.."} chooses
+a suitable colour based on the plot background.}
 
-\item{col_ex_cells}{color excluded cells}
+\item{col_ex_cells}{Colour used for excluded cells.}
 
-\item{col_split}{color for all cells across facets, requires
-plot_all_across_split = T and a split_feature in get_data or ...}
+\item{col_split}{Colour used for background cells across split facets when
+\code{plot_all_across_split = TRUE}.}
 
-\item{col_na}{color for NA values}
+\item{col_na}{Colour used for missing values.}
 
-\item{col_binary}{dichotomous coloring of expresser and non expresser}
+\item{col_binary}{Logical; show gene expression as binary expressing vs.
+non-expressing values.}
 
-\item{col_pal_c_args}{for continuous color: arguments to colrr::col_pal,
-name can be (i) name of a color palette invoking colrr::col_pal, (ii)
-a single color or (iii) a vector of colors}
+\item{col_pal_c_args}{Arguments for continuous colour palettes.}
 
-\item{col_pal_d_args}{for discrete color}
+\item{col_pal_d_args}{Arguments for discrete colour palettes. If
+\code{name = "..auto.."}, colours may be read from \code{SO@misc$metacolors}.}
 
-\item{col_steps}{NULL to have normal colorbar, auto for default colorsteps,
-a single number or a vector of explicit steps; may not work with any number
-when col_steps_nice is TRUE; colrr::get_scale_color_fun is used}
+\item{col_steps}{Colour step specification: \code{NULL}, \code{"..auto.."}, a number of
+bins, or explicit break values.}
 
-\item{col_steps_nice}{algorithmic determination of pretty steps,
-see ggplot2::scale_color_stepsn}
+\item{col_steps_nice}{Logical; use pretty step breaks.}
 
-\item{col_legend_c_args}{arguments to ggplot2::guide_colorsteps,
-ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
+\item{col_trans_log}{Logical; apply logarithmic colour transformation.}
 
-\item{col_legend_d_args}{arguments to ggplot2::guide_colorsteps,
-ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
+\item{col_legend_c_args}{Arguments passed to the continuous colour guide.}
 
-\item{legendbreaks}{a single number, a vector of explicit breaks, or "auto"
-for ggplot default or "minmidmax" for three breaks at minimum, middle and
-maximum of value range}
+\item{col_legend_d_args}{Arguments passed to the discrete colour guide.}
 
-\item{legendlabels}{labels for breaks, e.g. c("min", "mid", "max")}
+\item{legendbreaks}{Legend break specification.}
 
-\item{shape_legend_args}{arguments to ggplot2::guide_legend for shapes,
-requires a shape_feature in get_data or ...}
+\item{legendlabels}{Optional labels for legend breaks.}
 
-\item{shape_legend_hide}{do not show shape legend?}
+\item{shape_legend_args}{Arguments passed to \code{ggplot2::guide_legend()} for
+shape legends.}
 
-\item{feature_alias}{named vector of aliases for features, old = new; e.g.
-c("FAIM3" = "FCMR", "MS4A1" = "CD20")}
+\item{shape_legend_hide}{Logical; hide the shape legend.}
 
-\item{freq_plot}{do plot frequency of expressers? TRUE, FALSE or ..auto..
-for decision based on number of SOs}
+\item{feature_alias}{Named character vector mapping original feature names to
+display aliases.}
 
-\item{freq_pos}{where to plot, xy coordinates}
+\item{feature_ex}{Optional feature used to exclude cells.}
 
-\item{freq_size}{font size of frequency annotation}
+\item{feature_cut}{Optional feature used for expression/value cutoff-based
+filtering.}
 
-\item{name}{name of the plot, any string possible, understands glue
-syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-where freq is global expression frequency and feature_cut_ex is a collapsed
-string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-algorithmic decision based on freq_plot; freq is removed for meta features;
-feature_cut_ex is adjusted if either element is missing}
+\item{feature_cut_expr}{Cutoff value for \code{feature_cut}.}
 
-\item{anno}{name of the plot, any string possible, understands glue
-syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-where freq is global expression frequency and feature_cut_ex is a collapsed
-string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-algorithmic decision based on freq_plot; freq is removed for meta features;
-feature_cut_ex is adjusted if either element is missing}
+\item{freq_plot}{Logical or \code{"..auto.."}; draw expression frequency labels.}
 
-\item{name_anno_pos}{where to plot name_anno, NULL to omit plotting, '..auto..'
-for automatic decision between title, annotation or NULL; title and annotation
-simultaneously also possible}
+\item{freq_pos}{Position of frequency labels.}
 
-\item{name_anno_args}{arguments to ggplot2::annotate when name_anno_pos
-contains 'annotation'}
+\item{freq_size}{Font size of frequency labels.}
 
-\item{theme}{ggplot theme to use}
+\item{freq_col}{Colour of frequency labels.}
 
-\item{theme_args}{arguments to ggplot2::theme}
+\item{name}{Plot title template. Supports glue-style variables
+\code{{feature}}, \code{{freq}}, and \code{{feature_cut_ex}}.}
 
-\item{facet_scales}{passed as scales argument of facet_wrap, relevant when
-number of SO > 1 and/or feature_split is given}
+\item{anno}{Plot annotation template. Supports the same variables as \code{name}.}
 
-\item{facet_grid_row_var}{forces using facet_grid instead of facet_wrap,
-facet_grid_row_var is a string that appears as row label on facets}
+\item{name_anno_pos}{Where to draw name/annotation text: \code{"title"},
+\code{"annotation"}, both, \code{NULL}, or \code{"..auto.."}.}
 
-\item{nrow_inner}{row number for facets}
+\item{name_anno_args}{Arguments passed to annotation layers.}
 
-\item{ncol_inner}{col number for facets}
+\item{theme}{Base ggplot theme.}
 
-\item{axes_lim_set}{set axes limits like
-list(UMAP_1 = c(-10,10), UMAP_2 = c(-12,13))}
+\item{theme_args}{Additional arguments passed to \code{ggplot2::theme()}.}
 
-\item{axes_lim_expand}{extend axes limits, syntax like axes_lim_set}
+\item{facet_scales}{Facet scale behaviour.}
 
-\item{label_filter_cells}{when feature_label is provided; only consider
-cells which are not excluded for label position calculation}
+\item{facet_grid_row_var}{Optional variable used as row variable in
+\code{facet_grid()}.}
 
-\item{label_center_fun}{how to calculate label position}
+\item{nrow_inner}{Number of rows for inner facets.}
 
-\item{label_nudge}{named list of xy-values how to shift labels, names must
-be the values of feature_label}
+\item{ncol_inner}{Number of columns for inner facets.}
 
-\item{label_repel}{do repel labels to avoid overlap with ggrepel?}
+\item{axes_lim_set}{Named list of fixed axis limits.}
 
-\item{label_multi_try}{try to label split clusters with one label each?}
+\item{axes_lim_expand}{Named list of axis expansion values.}
 
-\item{label_args}{arguments to ggtext::geom_richtext}
+\item{label_filter_cells}{Restrict label position calculation to included
+cells.}
 
-\item{contour_filter_cells}{when feature_contour is provided; only consider
-cells which are not excluded for contour calculation}
+\item{label_center_fun}{Method for label centres: \code{"median"} or \code{"mean"}.}
 
-\item{contour_rm_outlier}{per value (group, cluster) in feature_contour: remove
-outlier points to avoid ugly contours? uses brathering::outlier}
+\item{label_nudge}{Named list of x/y nudges for labels.}
 
-\item{contour_rm_lowfreq_subcluster}{groups in feature_contour are checked for
-split clusters with diptest and mclust, do remove low frequency subclusters
-to avoid ugly contours?}
+\item{label_repel}{Logical; repel labels to avoid overlap.}
 
-\item{contour_col_pal_args}{discrete colors of contours, see col_pal_c_args}
+\item{label_multi_try}{Try to label split clusters separately.}
 
-\item{contour_args}{arguments to geom_density_2d}
+\item{label_multi_max}{Maximum number of labels per split cluster attempt.}
 
-\item{contour_label_nudge}{one xy value pair to nudge contour_expr_freq
-labels}
+\item{label_args}{Arguments passed to label geoms.}
 
-\item{contour_label_args}{arguments to ggtext::geom_richtext for
-contour_expr_freq}
+\item{contour_filter_cells}{Restrict contour calculation to included cells.}
 
-\item{contour_same_across_split}{have the same contours across feature_split
-facets}
+\item{contour_rm_outlier}{Remove outlier cells before drawing contours.}
 
-\item{contour_expr_freq}{do plot expression frequency per group/cluster of
-feature_contour}
+\item{contour_rm_lowfreq_subcluster}{Remove low-frequency subclusters before
+drawing contours.}
 
-\item{contour_fun}{function for contour drawing, either one of:
-ggplot2::geom_density2d, geomtextpath::geom_textpath,
-geomtextpath::geom_labelpath; geomtexpath functions require a
-contour_path_label}
+\item{contour_multi_try}{Try to draw contours for split clusters separately.}
 
-\item{contour_path_label}{if geomtextpath used as contour_fun,
-what label to draw, could be an attached meta feature that is unique to each
-group or expression frequency via: 'pct'}
+\item{contour_multi_max}{Maximum number of contour groups per split attempt.}
 
-\item{order_discr_explicit}{explicit plotting order for discrete meta features,
-can be an incomplete vector of feature values, use leading '^' to plot a
-group first and trailing '$' to plot last; e.g. c("^healthy", "disease$")}
+\item{contour_col_pal_args}{Colour palette arguments for contours.}
 
-\item{plot_all_across_split}{do plot all cells across feature_split in
-col_split?}
+\item{contour_args}{Arguments passed to the contour geom.}
 
-\item{title}{add a superordinate title}
+\item{contour_label_nudge}{Nudges for contour labels.}
 
-\item{axes_arrows}{plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)}
+\item{contour_label_args}{Arguments for contour labels.}
+
+\item{contour_same_across_split}{Use identical contours across split facets.}
+
+\item{contour_expr_freq}{Logical; label contour groups with expression
+frequency.}
+
+\item{contour_fun}{Contour drawing function.}
+
+\item{contour_path_label}{Label used when \code{contour_fun} is a text-path geom.}
+
+\item{order_discr_explicit}{Explicit drawing order for discrete metadata
+values. Use leading \code{^} to draw a group first and trailing \code{$} to draw it
+last, e.g. \code{c("^healthy", "disease$")}.}
+
+\item{plot_all_across_split}{Logical; draw all cells in each split facet
+using \code{col_split}.}
+
+\item{label_feature}{Optional metadata feature used for label placement.}
+
+\item{contour_feature}{Optional metadata feature used for contour groups.}
+
+\item{split_feature}{Optional metadata feature used to split plots into
+facets.}
+
+\item{shape_feature}{Optional metadata feature mapped to point shape.}
+
+\item{title}{Optional superordinate title. Added as a patchwork annotation
+for combined plots, otherwise as a ggplot title.}
+
+\item{axes_arrows}{Logical; draw coordinate axes as arrows.}
+
+\item{img_plot}{Logical; draw the spatial image underneath the points.
+Supported only for a single Seurat object.}
+
+\item{img_subset_fct}{Subsampling factor passed to \code{get_img()}.}
+
+\item{img_col_conv_fun}{Function used to convert image colours.}
+
+\item{cell_hull_plot}{Logical; draw cell hull polygons. Supported only for a
+single Seurat object.}
+
+\item{cell_hull_args}{Arguments passed to the hull polygon layer.}
+}
+\value{
+A \code{ggplot2} object, a list of \code{ggplot2} objects, or a \code{patchwork} object,
+depending on \code{features} and \code{combine}.
 }
 \description{
-This function wraps around scexpr::get_data, scexpr::feature_plot_data
-and optional combination of plots with patchwork.
+Creates feature plots from one Seurat object or a list of Seurat objects.
+This is a high-level wrapper around \code{scexpr::get_data()} and
+\code{scexpr::feature_plot_data()}. For multiple features, plots can optionally
+be combined with \code{patchwork}.
+}
+\details{
+\code{feature_plot2()} first retrieves plotting data with \code{scexpr::get_data()},
+then calls \code{scexpr::feature_plot_data()} for each requested feature. When
+more than one feature is supplied and \code{combine = TRUE}, the individual plots
+are combined using \code{patchwork::wrap_plots()}.
+
+If \code{features} is omitted, the function tries to choose a sensible metadata
+feature automatically, preferring active Seurat identities, then
+\code{seurat_clusters}, then \code{orig.ident}, and finally the first shared metadata
+column across all provided Seurat objects.
+}
+\section{Feature selection and filtering}{
+
+}
+
+\section{Point appearance}{
+
+}
+
+\section{Colour scales}{
+
+}
+
+\section{Legends}{
+
+}
+
+\section{Titles and annotations}{
+
+}
+
+\section{Themes and facets}{
+
+}
+
+\section{Axes}{
+
+}
+
+\section{Labels}{
+
+}
+
+\section{Contours}{
+
+}
+
+\section{Ordering and split plotting}{
+
+}
+
+\section{Spatial plotting}{
+
+}
+
+\examples{
+feature_plot2(
+  SO,
+  features = c("MS4A1", "CD3D"),
+  reduction = "umap",
+  assay = "RNA",
+  combine = TRUE,
+  ncol_combine = 2
+)
+
+}
+\seealso{
+\code{scexpr::get_data()}, \code{scexpr::feature_plot_data()},
+\code{patchwork::wrap_plots()}
 }

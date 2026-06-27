@@ -2,24 +2,55 @@
 % Please edit documentation in R/coexpression_stats.R
 \name{coexpression_stats}
 \alias{coexpression_stats}
-\title{Inspect reference feature expression in groups of feature coexpressers}
+\title{Inspect reference feature expression in feature coexpression groups}
 \usage{
 coexpression_stats(obj, features, ref_feature, metric = "coexpr_sum")
 }
 \arguments{
-\item{obj}{seurat object}
+\item{obj}{A Seurat object.}
 
-\item{features}{features, the groups of which are assessed for ref_feature}
+\item{features}{Character vector of features used to define coexpression
+groups.}
 
-\item{ref_feature}{reference feature}
+\item{ref_feature}{Reference feature whose expression is inspected across
+coexpression groups.}
 
-\item{metric}{metric returned from scexpr::coexpression_metrics}
+\item{metric}{Name of the metric returned by \code{scexpr::coexpression_metrics()}
+to use for grouping and plotting. Defaults to \code{"coexpr_sum"}.}
+}
+\value{
+A named list with three elements:
+\describe{
+\item{\code{df}}{Cell-level data containing coexpression metrics and reference
+feature expression.}
+\item{\code{df2}}{Summary table with coexpression frequencies and reference
+feature expression frequencies per group.}
+\item{\code{plot}}{A faceted \code{ggplot2} object showing reference feature
+expression across coexpression metric groups.}
+}
 }
 \description{
-Inspect reference feature expression in groups of feature coexpressers
+Calculates coexpression groups for all feature combinations of length two or
+greater, then summarizes and plots expression of a reference feature across
+those coexpression groups.
+}
+\details{
+Feature combinations are generated with \code{brathering::combnn()} using all
+unique input features and a minimum combination length of two. For each
+combination, \code{scexpr::coexpression_metrics()} is called and the selected
+\code{metric} is extracted.
+
+The returned plot shows individual cells as jittered points. Text labels
+indicate the fraction of cells in each coexpression group and the fraction
+expressing \code{ref_feature}.
 }
 \examples{
 \dontrun{
-coexpression_stats(so, c("CD53", "CD70", "CD27"), "KLF2")
+coexpression_stats(
+  obj = so,
+  features = c("CD53", "CD70", "CD27"),
+  ref_feature = "KLF2"
+)
 }
+
 }

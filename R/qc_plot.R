@@ -1,21 +1,53 @@
-#' Quickly plot common qc metrics
+#' Plot common quality-control metrics
 #'
-#' Plot qc metric, optional with a linear secondary axis.
-#' When SO1 only is provided: Only plot cells from one Seurat object.
-#' When SO1 and SO2 are provided:
-#' Plot additionally those cells that have been filtered from that object with more cells.
-#' Orig.
+#' Quickly visualizes selected quality-control metrics from one or two Seurat
+#' objects. Metrics are shown as jittered points with boxplots, grouped by a
+#' metadata column and faceted by QC metric.
 #'
-#' @param SO1 Seurat object 1
-#' @param SO2 Seurat object 2, optional
-#' @param qc_cols QC columns on y-axes
-#' @param sec_axis_lin plot a secondary axis with linear transformation of qc cols
-#' @param x_cat meta data column for x-axis
+#' If only `SO1` is provided, all cells from `SO1` are plotted. If both `SO1`
+#' and `SO2` are provided, the function orders the objects by cell number,
+#' plots cells from the smaller object in grey, and overlays cells present only
+#' in the larger object in red. This is useful for inspecting cells removed by
+#' filtering.
+#'
+#' @param SO1 A Seurat object.
+#' @param SO2 Optional second Seurat object, typically representing the object
+#'   before or after filtering.
+#' @param qc_cols Character vector of metadata columns containing QC metrics to
+#'   plot. Only columns present in the provided Seurat object(s) are used.
+#' @param x_cat Metadata column used as the x-axis grouping variable. Defaults
+#'   to `"orig.ident"`.
+#' @param sec_axis_lin Logical; add a secondary y-axis showing the inverse
+#'   log1p transformation via `expm1()`. Intended for log-transformed QC
+#'   metrics.
 #'
 #' @return
-#' @export
+#' A faceted `ggplot2` object showing QC metric distributions by `x_cat`.
+#'
+#' @details
+#' The function expects QC metrics to be stored in `SO1@meta.data`, and, when
+#' `SO2` is supplied, also in `SO2@meta.data`. Missing QC columns are silently
+#' ignored unless none of the requested columns are found.
+#'
+#' When `sec_axis_lin = TRUE`, the primary y-axis is assumed to be log1p-scaled,
+#' and the secondary axis displays values transformed back to the original
+#' linear scale using `expm1()`.
 #'
 #' @examples
+#' qc_plot_log(
+#'   SO1 = so_filtered,
+#'   SO2 = so_raw,
+#'   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log"),
+#'   x_cat = "orig.ident"
+#' )
+#'
+#' qc_plot_log(
+#'   SO1 = so,
+#'   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log"),
+#'   sec_axis_lin = FALSE
+#' )
+#'
+#' @export
 qc_plot_log <- function(SO1,
                         SO2 = NULL,
                         qc_cols = c(
@@ -91,24 +123,52 @@ qc_plot_log <- function(SO1,
   return(ppp)
 }
 
-#' Quickly plot common qc metrics
+#' Plot common quality-control metrics on a linear scale
 #'
-#' Plot qc metric, optional with a linear secondary axis.
-#' When SO1 only is provided: Only plot cells from one Seurat object.
-#' When SO1 and SO2 are provided:
-#' Plot additionally those cells that have been filtered from that object with more cells.
-#' Orig.
+#' Quickly visualizes selected quality-control metrics from one or two Seurat
+#' objects. Metrics are shown as jittered points with boxplots, grouped by a
+#' metadata column and faceted by QC metric.
 #'
-#' @param SO1 Seurat object 1
-#' @param SO2 Seurat object 2, optional
-#' @param qc_cols QC columns on y-axes
-#' @param sec_axis_lin plot a secondary axis with linear transformation of qc cols
-#' @param x_cat meta data column for x-axis
+#' If only `SO1` is provided, all cells from `SO1` are plotted. If both `SO1`
+#' and `SO2` are provided, the function orders the objects by cell number,
+#' plots cells from the smaller object in grey, and overlays cells present only
+#' in the larger object in red. This is useful for visualizing cells removed by
+#' filtering.
+#'
+#' @param SO1 A Seurat object.
+#' @param SO2 Optional second Seurat object, typically representing the object
+#'   before or after filtering.
+#' @param qc_cols Character vector of metadata columns containing QC metrics to
+#'   plot. Only columns present in the provided Seurat object(s) are used.
+#' @param x_cat Metadata column used as the x-axis grouping variable. Defaults
+#'   to `"orig.ident"`.
 #'
 #' @return
-#' @export
+#' A faceted `ggplot2` object showing QC metric distributions by `x_cat`.
+#'
+#' @details
+#' Unlike `qc_plot_log()`, this function assumes that QC metrics are already on
+#' their original linear scale and does not add a secondary axis.
+#'
+#' Missing QC columns are ignored unless none of the requested columns are found.
+#' When two Seurat objects are supplied, the object with fewer cells is treated
+#' as the retained/filtered object, and cells present only in the larger object
+#' are overlaid in red.
 #'
 #' @examples
+#' qc_plot_lin(
+#'   SO1 = so_filtered,
+#'   SO2 = so_raw,
+#'   qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt"),
+#'   x_cat = "orig.ident"
+#' )
+#'
+#' qc_plot_lin(
+#'   SO1 = so,
+#'   qc_cols = c("nCount_RNA", "nFeature_RNA", "dbl_score")
+#' )
+#'
+#' @export
 qc_plot_lin <- function(SO1,
                         SO2 = NULL,
                         qc_cols = c(
@@ -172,17 +232,52 @@ qc_plot_lin <- function(SO1,
 
 
 
-#' Title
+#' Generate QC plots for a Seurat object
 #'
-#' @param SO
-#' @param qc_cols
-#' @param geom2
-#' @param save_path
+#' Creates a set of quality-control plots from a Seurat object, including
+#' phenotype-level feature plots, clustering-level QC summaries, cluster
+#' composition plots, and metadata-level QC parameter plots. The function uses
+#' clustering information stored in `SO@misc$meta_clusterings` and
+#' `SO@misc$clusterings`.
 #'
-#' @returns
+#' @param SO A Seurat object. Must contain the requested QC columns in
+#'   `SO@meta.data`, and clustering metadata referenced by
+#'   `SO@misc$meta_clusterings` and/or `SO@misc$clusterings`.
+#' @param qc_cols Character vector of QC metadata columns to plot. Columns not
+#'   present in `SO@meta.data` are omitted with a message. Defaults to common
+#'   RNA QC metrics including counts, features, mitochondrial percentage,
+#'   doublet score, and soup-contamination estimates.
+#' @param geom2 Character string specifying the secondary geometry passed to
+#'   `make_stat_plot()`. Typically `"boxplot"` or another supported geometry.
+#' @param save_path Optional character string giving a directory in which to save
+#'   plots. If `NULL`, plots are returned but not saved.
+#' @param reduction Character string naming the dimensionality reduction to use
+#'   for phenotype-level feature plots. Defaults to `"tsne"`.
+#' @param save_as Character string specifying the output file format when
+#'   `save_path` is provided. Must be one of `"png"` or `"pdf"`.
+#'
+#' @returns A named list with three elements:
+#' \describe{
+#'   \item{`pheno`}{A phenotype-level QC feature plot.}
+#'   \item{`meta`}{A named list of clustering-level QC plots.}
+#'   \item{`meta2`}{A metadata-level QC parameter plot grouped by `orig.ident`.}
+#' }
+#'
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' qc_plots <- qc_plot2(SO)
+#'
+#' qc_plots <- qc_plot2(
+#'   SO,
+#'   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log"),
+#'   geom2 = "boxplot",
+#'   reduction = "umap",
+#'   save_path = "qc_plots",
+#'   save_as = "png"
+#' )
+#' }
 qc_plot2 <- function(SO,
                      qc_cols = c(
                        "nCount_RNA_log",

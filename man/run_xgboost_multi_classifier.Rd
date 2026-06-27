@@ -40,6 +40,8 @@ see all models: https://topepo.github.io/caret/available-models.html}
 
 \item{train_search}{search arg of caret::trainControl}
 
+\item{train_repeat}{to repeats of caret::trainControl}
+
 \item{tuneGrid}{tuneGrid arg of caret::train; set NULL and search=random to
 have 30 combinations automatically picked; when search is random it is
 the permitted range per parameter; when search is grid it gives all parameter

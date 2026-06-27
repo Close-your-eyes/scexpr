@@ -27,7 +27,7 @@
 #' @param contour_feature feature for plotting contours
 #' @param split_feature feature for creating facets
 #' @param shape_feature feature to shape plotted points by
-#' @param trajectory_slot
+#' @param trajectory_slot not used currently
 #' @param downsample random downsample cells which will completely remove them
 #' from returned data frame and hence influence statistics and plotting
 #' @param feature_ex filter cells by an exclusion feature, cells with UMI>0
@@ -41,6 +41,10 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' datadf <- get_data(so, c("CD3E", "orig.ident"), try_df = T)
+#' datalst <- get_data(so, c("CD3E", "orig.ident"), try_df = F)
+#' }
 get_data <- function(SO,
                      feature,
                      reduction = "umap",

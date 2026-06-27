@@ -2,7 +2,7 @@
 % Please edit documentation in R/qc_plot.R
 \name{qc_plot2}
 \alias{qc_plot2}
-\title{Title}
+\title{Generate QC plots for a Seurat object}
 \usage{
 qc_plot2(
   SO,
@@ -14,6 +14,54 @@ qc_plot2(
   save_as = c("png", "pdf")
 )
 }
+\arguments{
+\item{SO}{A Seurat object. Must contain the requested QC columns in
+\code{SO@meta.data}, and clustering metadata referenced by
+\code{SO@misc$meta_clusterings} and/or \code{SO@misc$clusterings}.}
+
+\item{qc_cols}{Character vector of QC metadata columns to plot. Columns not
+present in \code{SO@meta.data} are omitted with a message. Defaults to common
+RNA QC metrics including counts, features, mitochondrial percentage,
+doublet score, and soup-contamination estimates.}
+
+\item{geom2}{Character string specifying the secondary geometry passed to
+\code{make_stat_plot()}. Typically \code{"boxplot"} or another supported geometry.}
+
+\item{save_path}{Optional character string giving a directory in which to save
+plots. If \code{NULL}, plots are returned but not saved.}
+
+\item{reduction}{Character string naming the dimensionality reduction to use
+for phenotype-level feature plots. Defaults to \code{"tsne"}.}
+
+\item{save_as}{Character string specifying the output file format when
+\code{save_path} is provided. Must be one of \code{"png"} or \code{"pdf"}.}
+}
+\value{
+A named list with three elements:
+\describe{
+\item{\code{pheno}}{A phenotype-level QC feature plot.}
+\item{\code{meta}}{A named list of clustering-level QC plots.}
+\item{\code{meta2}}{A metadata-level QC parameter plot grouped by \code{orig.ident}.}
+}
+}
 \description{
-Title
+Creates a set of quality-control plots from a Seurat object, including
+phenotype-level feature plots, clustering-level QC summaries, cluster
+composition plots, and metadata-level QC parameter plots. The function uses
+clustering information stored in \code{SO@misc$meta_clusterings} and
+\code{SO@misc$clusterings}.
+}
+\examples{
+\dontrun{
+qc_plots <- qc_plot2(SO)
+
+qc_plots <- qc_plot2(
+  SO,
+  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log"),
+  geom2 = "boxplot",
+  reduction = "umap",
+  save_path = "qc_plots",
+  save_as = "png"
+)
+}
 }

@@ -1,9 +1,10 @@
 #' Get cell cycle markers from Seurat and Whitfield and scran
 #'
-#' @returns
+#' @returns list of different cell cycle associated gene sets
 #' @export
 #'
 #' @examples
+#' ccgenelsz <- get_cell_cycle_genesets()
 get_cell_cycle_genesets <- function() {
 
   # seur <- c(Seurat::cc.genes, Seurat::cc.genes.updated.2019)

@@ -25,6 +25,8 @@ prep_data_df_wide(
 )
 }
 \arguments{
+\item{data}{wide data frame}
+
 \item{feature}{columns that are features to plot as color scale}
 
 \item{reduction}{columns that are dimension reduction}

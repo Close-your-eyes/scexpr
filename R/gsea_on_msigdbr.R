@@ -1,20 +1,90 @@
-#' Convenient wrapper around fgsea function
+#' Run gene set enrichment analysis with fgsea and optional MSigDB gene sets
 #'
-#' @param gene_ranks this becomes stats in fgsea_fun
-#' @param gene_sets this becomes pathways in fgsea_fun
-#' @param use_msigdbr use gene sets from msigdb to test
-#' @param msigdbr_args arguments to msigdbr::msigdbr
-#' @param fgsea_fun which function to use for gsea
-#' @param fgsea_args arguments to fgsea_fun
-#' @param return_gene_sets set to FALSE in order to save memory when the same gene sets are used multiple times
-#' @param return_gene_sets_subset return the subset of each gene set that is actually found in gene_ranks
-#' @param ... arguments to .plotEnrichment
+#' Convenient wrapper around an `fgsea` function, with optional retrieval of
+#' gene sets from MSigDB via `msigdbr`. The input `gene_ranks` is passed as
+#' `stats`, and `gene_sets` is passed as `pathways` to `fgsea_fun`.
 #'
-#' @return
+#' @param gene_ranks Named numeric vector of gene-level ranking statistics.
+#' Names must be gene identifiers matching the identifiers in `gene_sets`.
+#'
+#' @param gene_sets Named list of gene sets, where each element is a character
+#' vector of gene identifiers. Used as `pathways` in `fgsea_fun`.
+#'
+#' @param return_gene_sets Logical. If `TRUE`, return the full gene set list in
+#' the output. Set to `FALSE` to reduce memory use when repeatedly using the
+#' same gene sets.
+#'
+#' @param return_gene_sets_subset Logical. If `TRUE`, return each gene set
+#' restricted to genes present in `gene_ranks`.
+#'
+#' @param use_msigdbr Logical. If `TRUE`, retrieve gene sets from MSigDB using
+#' `msigdbr::msigdbr()` and combine them with any manually supplied `gene_sets`.
+#'
+#' @param msigdbr_args Named list of arguments passed to
+#' `msigdbr::msigdbr()`. By default, human Hallmark and C1--C8 collections are
+#' used.
+#'
+#' @param fgsea_fun Function used to run GSEA. Defaults to
+#' `fgsea::fgseaMultilevel`.
+#'
+#' @param fgsea_args Named list of additional arguments passed to `fgsea_fun`.
+#' If `pathways` or `stats` are not supplied, they are filled from `gene_sets`
+#' and `gene_ranks`, respectively.
+#'
+#' @param ... Currently unused; reserved for future extensions.
+#'
+#' @return A named list with:
+#' \describe{
+#'   \item{data}{A data frame of fgsea results, optionally joined with MSigDB
+#'   collection metadata. Additional columns include sorted leading-edge genes,
+#'   leading-edge size, relative leading-edge size, and leading-edge rank.}
+#'   \item{gene_sets}{The gene sets used for enrichment, or `NULL` when
+#'   `return_gene_sets = FALSE`.}
+#'   \item{gene_sets.subset}{Gene sets restricted to genes found in
+#'   `gene_ranks`, or `NULL` when `return_gene_sets_subset = FALSE`.}
+#'   \item{gene_ranks}{The input ranking vector.}
+#' }
+#'
+#' @details
+#' `gene_ranks` should usually be sorted in decreasing order before running
+#' GSEA, although `fgsea` can operate on named numeric vectors directly.
+#'
+#' When `use_msigdbr = TRUE`, gene sets are retrieved using `.get.split.msigdbr()`
+#' and MSigDB metadata such as collection, subcollection, description, and exact
+#' source are merged into the result table.
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
+#' ## Compute signal-to-noise gene ranks for one cluster
+#' s2n <- scexpr::gsea_s2n_groupwise(
+#'   obj = so,
+#'   group = "integrated_snn_res.0.7"
+#' )
+#'
+#' gene_ranks <- sort(s2n[, "20"], decreasing = TRUE)
+#'
+#' ## Use MSigDB gene sets through msigdbr
+#' gsea_res <- gsea_on_msigdbr(
+#'   gene_ranks = gene_ranks,
+#'   use_msigdbr = TRUE
+#' )
+#'
+#' head(gsea_res$data)
+#'
+#' ## Reuse gene sets across many calls
+#' gene_sets <- scexpr:::.get.split.msigdbr()$sets
+#'
+#' gsea_res <- gsea_on_msigdbr(
+#'   gene_ranks = gene_ranks,
+#'   gene_sets = gene_sets,
+#'   use_msigdbr = FALSE,
+#'   return_gene_sets = FALSE
+#' )
+#'
+#' ## Available MSigDB collections
+#' msigdbr::msigdbr_collections()
 #' # H: hallmark gene sets
 #' # C1: positional gene sets
 #' # C2: curated gene sets
@@ -24,12 +94,6 @@
 #' # C6: oncogenic signature gene sets
 #' # C7: immunologic signature gene sets
 #' # C8: cell type signature gene sets
-#' s2ntab <- scexpr::gsea_s2n_groupwise(obj = so, group = "integrated_snn_res.0.7")
-#' msiggsea <- gsea_on_msigdbr(gene_ranks = s2ntab[,"20"], use_msigdbr = T)
-#' # get gene sets from msigdbr, split to a named list
-#' gene_sets <- scexpr:::.get.split.msigdbr()
-#' msigdbr::msigdbr_collections()
-#' # provide gene_sets manually and leave use_msigdbr = F in case gsea_on_msigdbr is called many times with the same gene_sets
 #' }
 gsea_on_msigdbr <- function(gene_ranks,
                             gene_sets = NULL,

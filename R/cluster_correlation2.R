@@ -20,10 +20,13 @@
 #' @param min_cells min cell number in both groups to calc correlation
 #' @param avg_expression_args args to scexpr::avg_expression
 #'
-#' @returns
+#' @returns list of data frames and plot
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' clustcorr <- cluster_correlation2(so, meta_cols = "SCT_harmony_snn_res.0.1")
+#' }
 cluster_correlation2 <- function(objs,
                                  meta_cols,
                                  split = NULL,

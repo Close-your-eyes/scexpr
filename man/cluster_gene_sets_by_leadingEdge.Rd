@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster_gene_sets_by_leadingEdge.R
 \name{cluster_gene_sets_by_leadingEdge}
 \alias{cluster_gene_sets_by_leadingEdge}
-\title{Title}
+\title{Cluster gene sets by leading-edge gene overlap}
 \usage{
 cluster_gene_sets_by_leadingEdge(
   gsea_data_df,
@@ -12,6 +12,58 @@ cluster_gene_sets_by_leadingEdge(
   seed = 42
 )
 }
+\arguments{
+\item{gsea_data_df}{Data frame containing GSEA results. Must include a
+\code{pathway} column and a list-column named \code{leadingEdge}, where each element
+is a character vector of leading-edge genes.}
+
+\item{umap_args}{Named list of additional arguments passed to \code{uwot::umap()}.}
+
+\item{FindNeighbors_args}{Named list of additional arguments passed to
+\code{Seurat::FindNeighbors()}.}
+
+\item{FindClusters_args}{Named list of additional arguments passed to
+\code{Seurat::FindClusters()}. Defaults to \code{list(resolution = 0.6)}.}
+
+\item{seed}{Random seed used before UMAP, neighbor finding and clustering.}
+}
+\value{
+A named list with three elements:
+\describe{
+\item{\code{data}}{Input \code{gsea_data_df} joined with UMAP coordinates and cluster
+assignments for each pathway.}
+\item{\code{LE_elements}}{Binary matrix indicating whether each leading-edge
+gene is present in each pathway. Rows are pathways and columns are genes.}
+\item{\code{gene_freq_by_cluster}}{Data frame with the frequency of each
+leading-edge gene within each pathway cluster.}
+}
+}
 \description{
-Title
+Clusters GSEA pathways based on the genes present in their leading-edge
+subsets. A binary pathway-by-gene matrix is created from the \code{leadingEdge}
+column, then embedded with UMAP and clustered with Seurat's neighbor and
+clustering functions.
+}
+\details{
+The function first collects all unique leading-edge genes and converts each
+pathway's leading-edge set into a binary vector. Rows correspond to pathways
+and columns correspond to genes.
+
+Pathways are embedded in two dimensions with \code{uwot::umap()} and clustered
+using \code{Seurat::FindNeighbors()} followed by \code{Seurat::FindClusters()}.
+
+The \code{gene_freq_by_cluster} output can be used to identify genes that are
+recurrently represented among pathways assigned to the same cluster.
+}
+\examples{
+\dontrun{
+clustered <- cluster_gene_sets_by_leadingEdge(gsea_data_df)
+
+ggplot2::ggplot(
+  clustered$data,
+  ggplot2::aes(UMAP_1, UMAP_2, color = cluster)
+) +
+  ggplot2::geom_point()
+}
+
 }

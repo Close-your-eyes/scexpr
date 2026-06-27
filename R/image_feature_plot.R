@@ -28,8 +28,8 @@
 #' @param col_pal_d_args List. Arguments for discrete color palette generation
 #'   using \code{colrr::make_col_pal()}. Must include `name`.
 #' @param hull_df provide data frame of cell hulls directly
-#' @param col_binary
-#' @param expr_only
+#' @param col_binary binary color scale of expressers vs non-expressers
+#' @param expr_only plot expressers only
 #'
 #' @details
 #' The function supports three main visualization modes:

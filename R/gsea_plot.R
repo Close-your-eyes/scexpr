@@ -1,37 +1,118 @@
-#' Plot results from scexpr::gsea_on_msigdbr
+#' Plot GSEA enrichment curves from `gsea_on_msigdbr()`
 #'
-#' @param data list as returned from gsea_on_msigdbr; filter rows of data$data
-#' to select gene sets for plotting
-#' @param padj_min filter data$data by this p-value? set NULL for no filtering
-#' @param ticks_linewidth width of gene ticks
-#' @param color_ES_line color of the ES line along the gene ranks
-#' @param color_ES_lims color of vertical lines which indicate min and max
-#' enrichment score
-#' @param color_leadingEdge color of vertical line at the max ES
-#' @param label_genes plot gene names next to their ticks, try leadingEdge or
-#' a vector gene names to plot
-#' @param theme ggplot theme
-#' @param plot_leadingEdge_rank plot a vertical line at the rank of max ES
-#' @param plot_leadingEdge_size plot the size (n genes) of the leading edge
-#' @param annotation_pos vector of x and y value where to plot gsea stats;
-#' or auto for automatic positioning
-#' @param annotation_size size of annotation (geom_text size)
-#' @param annotation_with_name
-#' @param ticks_height length or height of gene ticks
-#' @param rect_height height of colored rectangles on top of gene ticks
-#' @param rect_alpha alpha level (transparency) of colored rectangles on top of gene ticks
-#' @param zscore_lims breaks at which to cut the color scale (which is zscore),
-#' if very few ranks fill a zscore range it is pointless to plot such very small
-#' rectangle
-#' @param return_metric_plot
-#' @param plot_subtitle
-#' @param annotation
-#' @param plot_ranking_color
+#' Creates enrichment plots for one or more pathways from the output of
+#' `gsea_on_msigdbr()`. Each plot shows the running enrichment score, gene-set
+#' hit positions along the ranked gene list, optional ranking-metric colours,
+#' and optional leading-edge annotations.
 #'
-#' @return
+#' @param data A list returned by `gsea_on_msigdbr()`. To select pathways for
+#' plotting, filter `data$data` before passing the object to this function.
+#'
+#' @param padj_min Numeric scalar. Keep only pathways with adjusted p-value
+#' less than or equal to this value. Use `NULL` to disable filtering.
+#'
+#' @param return_metric_plot Logical. If `TRUE`, return both the enrichment
+#' plot and the ranking-metric bar plot for each pathway.
+#'
+#' @param ticks_linewidth Line width of gene-set hit ticks.
+#'
+#' @param ticks_height Relative height of gene-set hit ticks.
+#'
+#' @param rect_height Relative height of the ranking-metric colour rectangles.
+#'
+#' @param rect_alpha Alpha transparency of the ranking-metric colour rectangles.
+#'
+#' @param color_ES_line Colour of the running enrichment score line.
+#'
+#' @param color_ES_lims Colour of the horizontal dashed lines marking the
+#' positive and negative enrichment score extrema.
+#'
+#' @param color_leadingEdge Colour of the vertical dashed line marking the
+#' leading-edge rank.
+#'
+#' @param label_genes Genes to label. Use `NULL` to omit labels,
+#' `"leadingEdge"` to label leading-edge genes, or a character vector of gene
+#' names to label selected genes.
+#'
+#' @param theme ggplot2 theme applied to the plots.
+#'
+#' @param plot_leadingEdge_rank Logical. If `TRUE`, draw a vertical dashed line
+#' at the leading-edge rank.
+#'
+#' @param plot_leadingEdge_size Logical. If `TRUE`, annotate the number of genes
+#' in the leading edge.
+#'
+#' @param plot_subtitle Logical. If `TRUE`, add p-value, ES, and NES as the
+#' subtitle.
+#'
+#' @param annotation_pos Numeric vector of length two giving the x and y
+#' position for the rich-text annotation, or `c("auto", NA)` for automatic
+#' placement. If `NULL`, no annotation is drawn.
+#'
+#' @param annotation_size Text size for the rich-text annotation.
+#'
+#' @param zscore_lims Numeric vector of length two defining lower and upper
+#' limits used to clamp ranking-metric z-scores for the colour rectangles.
+#'
+#' @param annotation_with_name Logical. If `TRUE`, include the pathway name in
+#' the rich-text annotation.
+#'
+#' @param annotation Glue template used for the rich-text annotation when
+#' `annotation_with_name = FALSE`. Available variables are `pval`, `es`, and
+#' `nes`.
+#'
+#' @param plot_ranking_color Logical. If `TRUE`, draw coloured rectangles below
+#' the enrichment curve to show the ranking metric z-score along the gene ranks.
+#'
+#' @return A named list of plots, one entry per pathway. If
+#' `return_metric_plot = FALSE`, each entry is a ggplot enrichment plot. If
+#' `return_metric_plot = TRUE`, each entry is a list with elements `plot` and
+#' `metric_plot`.
+#'
+#' @details
+#' The function expects the input list to contain at least `data`, `gene_sets`,
+#' and `gene_ranks`, as returned by `gsea_on_msigdbr()`. Pathways are selected
+#' from `data$data`, optionally filtered by `padj_min`.
+#'
+#' Large result sets can create many plots. When more than 100 pathways pass the
+#' filter, the function prompts interactively before plotting.
+#'
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' s2n <- scexpr::gsea_s2n_groupwise(
+#'   obj = so,
+#'   group = "integrated_snn_res.0.7"
+#' )
+#'
+#' gene_ranks <- sort(s2n[, "20"], decreasing = TRUE)
+#'
+#' gsea_res <- scexpr::gsea_on_msigdbr(
+#'   gene_ranks = gene_ranks,
+#'   use_msigdbr = TRUE
+#' )
+#'
+#' ## Plot significant pathways
+#' plots <- gsea_plot(gsea_res, padj_min = 0.01)
+#'
+#' plots[[1]]
+#'
+#' ## Plot selected pathways only
+#' gsea_res$data <- dplyr::filter(
+#'   gsea_res$data,
+#'   pathway %in% c("HALLMARK_INTERFERON_GAMMA_RESPONSE")
+#' )
+#'
+#' plots <- gsea_plot(
+#'   gsea_res,
+#'   padj_min = NULL,
+#'   label_genes = "leadingEdge",
+#'   annotation_pos = c("auto", NA)
+#' )
+#'
+#' plots[[1]]
+#' }
 gsea_plot <- function(data,
                       padj_min = 0.01,
                       return_metric_plot = F,

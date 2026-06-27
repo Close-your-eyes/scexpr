@@ -7,10 +7,11 @@
 run_scdblfinder(
   obj,
   assay = "RNA",
-  features = Seurat::VariableFeatures(obj),
-  samples = obj@meta.data[["orig.ident"]],
-  clusters = obj@meta.data[["seurat_clusters"]],
+  features = scexpr::get_var_features(so),
+  samples_col = "orig.ident",
+  clusters_col = "seurat_clusters",
   min_umi = 300,
+  min_cells_per_group = 20,
   dims = ncol(obj@reductions$pca@cell.embeddings),
   add_doublets = F,
   add_doublets_tell = F
@@ -23,11 +24,6 @@ run_scdblfinder(
 
 \item{features}{gene features to use}
 
-\item{samples}{samples to treat separately, vector of idents}
-
-\item{clusters}{cluster dents to help the algorithm and optionally to
-add_doublets}
-
 \item{min_umi}{minimum total UMI sum across features per cell; cells below
 are not considered for doublet inference}
 
@@ -36,6 +32,11 @@ are not considered for doublet inference}
 \item{add_doublets}{add artificial doublets}
 
 \item{add_doublets_tell}{tell scDblFinder::scDblFinder about artificial doublets}
+
+\item{samples}{samples to treat separately, vector of idents}
+
+\item{clusters}{cluster dents to help the algorithm and optionally to
+add_doublets}
 }
 \value{
 seurat

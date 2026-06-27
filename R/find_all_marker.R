@@ -17,6 +17,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' marker <- scexpr::find_all_marker(so, meta_col = "orig.ident")
+#' }
 find_all_marker <- function(obj,
                             meta_col = NULL,
                             assay = "RNA",

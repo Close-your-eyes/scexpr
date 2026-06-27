@@ -84,6 +84,14 @@ e.g. when label_only_largest = T}
 
 \item{color}{color of bars}
 }
+\value{
+list of plot and data
+}
 \description{
 Plot composition of one category by another
+}
+\examples{
+\dontrun{
+combarlst <- scexpr::composition_barplot(SO, x_cat = "meta_res.0.8_PC2", fill_cat = "orig.ident")
+}
 }

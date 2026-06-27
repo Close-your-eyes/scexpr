@@ -1,102 +1,173 @@
-#' Plot a heatmap of average gene transcription of transcriptomes by
-#' different groups (clusters)
+#' Plot a pseudobulk expression heatmap across groups
 #'
-#' @param SO Seurat object
-#' @param meta_col which column from meta.data of SO to use as x-axis;
-#' if NULL current Idents(SO) are used
-#' @param levels_calc which levels in meta_col to include in calculation;
-#' all levels if NULL; the order provided defines order on x-axis; thisn level
-#' selection will affect scaling calculations
-#' @param levels_plot which levels in meta_col to include in platting;
-#' if NULL this equals to levels_calc; must be subset of levels_calc;
-#' the order provided defines order on x-axis; this will not affect scaling
-#' calculation but only select levels for plotting;
-#' ordering will not work perfectly when more than 1 SO is provided and factor levels
-#' in meta_cols are not unique
-#' @param assay which assay to obtain expression values from
-#' @param features choose which features to plot; if NULL features_topn becomes
-#' relevant
-#' @param features_topn if no features are selected, this will select how many
-#' features to plot per level in meta_col; selection is done based on the metric
-#' selected in topn_metric; respective features with greatest difference between
-#' meta_col levels are selected (best DE features so to say);
-#' if NULL and features is NULL, all features are plotted
-#' @param topn_metric which differential expression metric to apply for feature
-#' selection; only relevant if features_topn is not NULL
-#' @param min_pct for marker feature selection per only: min percent of expressing
-#' cells for a gene to become marker gene for a group
-#' @param max_padj for marker feature selection per only: max adjusted
-#' p-value for a gene to become marker gene
-#' @param dotplot plot dots instead of tiles with percent of expressing cells
-#' as dot size
-#' @param fill color palette vector for fill of tiles or dots. when auto,
-#' RColorBrewer::RdBu is used
-#' @param color color of stroke (border) around tiles or dots; "NA" means no
-#' stroke is plotted; NA has
-#' to be put in quotation mark ("NA"), such that geom_point accepts it.
-#' other choices may be black, white or any other color code; when "auto",
-#' grey70 is used by default when is.null(dotsizes) and a the number of
-#' features is below 100.
-#' @param scale how to scale values: not, zscore or from -1 to 1
-#' @param features_topn only plot the top n features (ordered by value) per
-#' group
-#' @param color_linewidth linewidth of borders (stroke) around tiles or dots
-#' @param legendbreaks a single number, a vector of explicit breaks, or "auto"
-#' for ggplot default or "minmidmax" for three breaks at minimum, middle and
-#' maximum of value range
-#' @param legendlabels labels for breaks, e.g. c("min", "mid", "max")
-#' @param colorsteps NULL to have normal colorbar, auto for default colorsteps,
-#' a single number or a vector of explicit steps; may not work with any number
-#' when colorsteps_nice is TRUE
-#' @param colorsteps_nice heuristic for pretty steps
-#' @param axes_flip do flip them?
-#' @param group_seplines plot lines that separate features belonging to
-#' different groups
-#' @param seplines_args arguments to geom_hline for seplines
-#' @param legend_fill_args arguments to ggplot2::guide_colorsteps or
-#' ggplot2::guide_colorbar, depend upon the color scale
-#' @param legend_size_args arguments to ggplot2::guide_legend to modify the
-#' size legend; e.g. use override.aes = list(size = c(1,3,5)) to adjust dot size
-#' in legend in contrast to dotsize_range, one number for each dot in legend
-#' needed
-#' @param featurelabels subset of feature labels to plot; NULL to plot all,
-#' "" to plot none; can be a named vector with names being aliases to use for
-#' plotting e.g. c("CD20" = "MS4A1", "CD3", "KLRG1") to only alter MS4A1;
-#' auto to omit labels by default when more than 100 features are there
-#' @param featurelabels_repel do repel feature axis labels?
-#' @param featuresitalic shorthand to plot feature labels in italic
-#' @param theme_args arguments to ggplot2::theme
-#' @param repel_args fine tuning for featurelabel repelling
-#' @param theme ggplot2 theme
-#' @param dotsize_range range for dot size
-#' @param topn_ties break ties for features_topn? if TRUE, more then
-#' features_topn may be plotted
-#' @param feature_order if and how to order features?
-#' @param group_order if and how to order groups?
-#' @param sec_axis plot a secondary feature axis with full gene names
-#' @param convert_gene_identifier_args arguments to
-#' scexpr::convert_gene_identifier
-#' @param featuregroup_style how to show feature groups, by colored axis text and/or separate facets
-#' @param featuregroup_col_name color legend name
-#' @param featuregroup_col_pal color palette name passed to colrr::col_pal
-#' @param min_pct_force apply min_pct even when features are given
-#' @param pvals
-#' @param pval_features
-#' @param pval_max
-#' @param pval_symnum_args
-#' @param pval_filter
-#' @param pval_logfc
-#' @param pval_text_args
+#' Generates a heatmap (or dot plot) of average gene expression across groups
+#' (e.g. clusters or cell types) from one or more Seurat objects. Expression
+#' values are calculated on pseudobulked groups, optionally scaled, and can be
+#' filtered to display marker genes or user-defined features.
+#'
+#' @param SO A Seurat object or a list of Seurat objects.
+#'
+#' @param meta_col Character vector specifying the metadata column(s) used to
+#' define groups. If `NULL`, the current `Idents(SO)` are used.
+#'
+#' @param levels_calc Character vector (or list of vectors when multiple Seurat
+#' objects are supplied) defining which group levels are included in expression
+#' calculations. If `NULL`, all levels are used. The order determines the group
+#' order during calculations and clustering.
+#'
+#' @param levels_plot Character vector (or list of vectors) defining which
+#' groups are displayed. Must be a subset of `levels_calc`. This affects only
+#' plotting and ordering, not expression calculations.
+#'
+#' @param assay Assay from which expression values are obtained.
+#'
+#' @param features Character vector of features (genes) to plot. Alternatively,
+#' a named list can be supplied to define feature groups. If `NULL`,
+#' `features_topn` determines which genes are selected.
+#'
+#' @param features_topn Integer specifying the number of top marker genes to
+#' display per group when `features` is `NULL`. If both `features` and
+#' `features_topn` are `NULL`, all detected features are plotted.
+#'
+#' @param topn_metric Ranking metric used for marker selection. One or more of
+#' `"padj"`, `"auc"`, or `"logFC"` may be supplied.
+#'
+#' @param min_pct Minimum percentage of expressing cells required for a gene to
+#' be considered during marker selection.
+#'
+#' @param max_padj Maximum adjusted p-value for a gene to be considered a
+#' marker during feature selection.
+#'
+#' @param min_pct_force Logical. If `TRUE`, genes below `min_pct` are removed
+#' even when features are provided manually.
+#'
+#' @param featuregroup_style How feature groups should be displayed. Can include
+#' `"facet"` and/or `"color"`.
+#'
+#' @param featuregroup_col_name Legend title for feature group colours.
+#'
+#' @param featuregroup_col_pal Colour palette passed to
+#' `colrr::col_pal()`.
+#'
+#' @param feature_order Method used to order features:
+#' * `"custom"`: preserve supplied order,
+#' * `"hclust"`: hierarchical clustering,
+#' * `"none"`: no explicit ordering.
+#'
+#' @param group_order Method used to order groups:
+#' * `"custom"`: preserve supplied order,
+#' * `"hclust"`: hierarchical clustering,
+#' * `"none"`: no explicit ordering.
+#'
+#' @param topn_ties Logical; if `TRUE`, tied genes are retained, potentially
+#' displaying more than `features_topn` genes per group.
+#'
+#' @param dotplot Logical. If `TRUE`, plot a dot plot where dot size indicates
+#' the percentage of expressing cells instead of a heatmap.
+#'
+#' @param dotsize_range Numeric vector of length two defining the minimum and
+#' maximum dot sizes.
+#'
+#' @param fill Colour palette used for expression values. `"auto"` selects a
+#' default diverging palette.
+#'
+#' @param color Border colour for heatmap tiles or dots. `"NA"` disables
+#' borders. `"auto"` chooses a suitable default.
+#'
+#' @param scale Expression scaling method:
+#' * `"zscore"`: gene-wise z-score,
+#' * `"1"`: scale each gene to [-1, 1],
+#' * `"none"`: no scaling.
+#'
+#' @param featurelabels Feature labels to display. `NULL` plots all labels,
+#' `""` plots none, `"auto"` suppresses labels for large heatmaps. A named
+#' vector may be used to provide aliases.
+#'
+#' @param featurelabels_repel Logical; repel overlapping feature labels.
+#'
+#' @param featuresitalic Logical; display feature labels in italic font.
+#'
+#' @param color_linewidth Line width of tile or dot borders.
+#'
+#' @param legendbreaks Legend break positions. May be `"auto"`,
+#' `"minmidmax"`, a numeric vector, or a single number.
+#'
+#' @param legendlabels Labels corresponding to `legendbreaks`.
+#'
+#' @param colorsteps Controls discretization of the colour scale. Can be
+#' `NULL`, `"auto"`, a numeric vector, or a single integer.
+#'
+#' @param colorsteps_nice Logical; use aesthetically pleasing colour breaks.
+#'
+#' @param axes_flip Logical; transpose the heatmap axes.
+#'
+#' @param group_seplines Logical; draw separator lines between feature groups.
+#'
+#' @param seplines_args Named list of additional arguments passed to
+#' `geom_hline()`.
+#'
+#' @param legend_fill_args Named list of arguments forwarded to
+#' `guide_colorbar()` or `guide_colorsteps()`.
+#'
+#' @param legend_size_args Named list of arguments forwarded to
+#' `guide_legend()` for the dot-size legend.
+#'
+#' @param theme ggplot2 theme applied to the plot.
+#'
+#' @param theme_args Named list of additional arguments passed to
+#' `ggplot2::theme()`.
+#'
+#' @param repel_args Named list of arguments controlling feature label
+#' repulsion.
+#'
+#' @param sec_axis Logical; if `TRUE`, add a secondary y-axis showing gene
+#' names converted with `scexpr::convert_gene_identifier()`.
+#'
+#' @param convert_gene_identifier_args Named list of arguments passed to
+#' `scexpr::convert_gene_identifier()`.
+#'
+#' @param pvals Optional data frame containing p-values for annotation.
+#'
+#' @param pval_features Features for which p-value annotations should be shown.
+#'
+#' @param pval_max Maximum p-value displayed.
+#'
+#' @param pval_symnum_args Arguments passed to `symnum()` for significance
+#' symbol generation.
+#'
+#' @param pval_filter Strategy for filtering p-value annotations.
+#'
+#' @param pval_logfc Name of the log-fold change column in `pvals`.
+#'
+#' @param pval_text_args Named list of arguments passed to the text annotation
+#' layer.
+#'
+#' @return A named list containing:
+#' \describe{
+#'   \item{plot}{The ggplot object.}
+#'   \item{data}{Processed plotting data after filtering and scaling.}
+#'   \item{complete_data}{Complete marker statistics prior to filtering.}
+#' }
 #'
 #' @importFrom zeallot %<-%
 #'
-#' @return
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#'   htmp[["plot"]] +
-#'     scale_size_continuous(breaks = c(1,5,10,15,20,30,50,70), range = c(1,10))
+#' hm <- heatmap_pseudobulk2(
+#'   SO,
+#'   meta_col = "celltype",
+#'   features_topn = 10
+#' )
+#'
+#' hm$plot
+#'
+#' hm$plot +
+#'   scale_size_continuous(
+#'     breaks = c(1, 5, 10, 20, 50),
+#'     range = c(1, 10)
+#'   )
 #' }
 heatmap_pseudobulk2 <- function(SO,
                                 meta_col = NULL,

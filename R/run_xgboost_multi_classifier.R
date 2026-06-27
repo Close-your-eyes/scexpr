@@ -50,7 +50,7 @@
 #' CLEAR YET
 #' @param seed random seed for reproducibility
 #' @param ... more args to caret::train
-#' @param train_repeat
+#' @param train_repeat to repeats of caret::trainControl
 #'
 #' @returns list with train obj from caret and accessory info
 #' @export

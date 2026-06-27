@@ -2,16 +2,59 @@
 % Please edit documentation in R/qc_params_meta_cols.R
 \name{qc_params_meta_cols}
 \alias{qc_params_meta_cols}
-\title{Title}
+\title{Plot QC Parameters by Metadata Columns}
 \usage{
 qc_params_meta_cols(
   SO,
-  cells = NULL,
-  meta_cols,
+  meta_cols = "orig.idents",
   qc_cols = c("nFeature_RNA", "nCount_RNA", "pct_mt"),
-  theme = ggplot2::theme_bw()
+  cells = NULL,
+  theme = colrr::theme_material(style = "prismy", white = T),
+  color_by = NULL,
+  log = F,
+  boxplot = T,
+  width = 0.2,
+  size = 0.4,
+  col_pal = "custom"
 )
 }
+\arguments{
+\item{SO}{A Seurat object.}
+
+\item{meta_cols}{Character vector of non-numeric metadata columns used for grouping on the x-axis.}
+
+\item{qc_cols}{Character vector of numeric QC metadata columns to plot.}
+
+\item{cells}{Optional cells to include. If \code{NULL}, all cells are used.}
+
+\item{theme}{A ggplot2 theme object.}
+
+\item{color_by}{Optional non-numeric metadata column used to color points.}
+
+\item{log}{Logical. If \code{TRUE}, applies a log10 scale to the y-axis.}
+
+\item{boxplot}{Logical. If \code{TRUE}, overlays boxplots on the jittered points.}
+
+\item{width}{Numeric jitter width passed to \code{ggplot2::geom_jitter()}.}
+
+\item{size}{Numeric point size passed to \code{ggplot2::geom_jitter()}.}
+
+\item{col_pal}{Color palette passed to \code{colrr::make_col_pal()} and used for \code{scale_color_manual()}.}
+}
+\value{
+A \code{ggplot} object showing QC parameter distributions faceted by QC
+parameter and metadata column.
+}
 \description{
-Title
+Generates jitter and optional boxplots of quality-control metadata columns
+grouped by one or more categorical metadata columns from a Seurat object.
+}
+\examples{
+\dontrun{
+qc_params_meta_cols(
+  SO,
+  meta_cols = "orig.idents",
+  qc_cols = c("nFeature_RNA", "nCount_RNA", "pct_mt")
+)
+}
 }

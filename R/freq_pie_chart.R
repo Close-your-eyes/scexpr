@@ -48,6 +48,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' plot <- freq_pie_chart(so, "celltype")
+#' }
 freq_pie_chart <- function(SO,
                            meta_col,
                            order = NULL,

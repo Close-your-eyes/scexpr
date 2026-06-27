@@ -5,7 +5,6 @@
 #' @param assay which assay
 #' @param group groups on x-axis
 #' @param split another group as color scale
-#' @param return_df
 #'
 #' @returns ggplot
 #' @export
@@ -64,10 +63,6 @@ lineplot_avg_expr <- function(obj,
   fct_lvl <- unique(fct_lvl)
   avgexpr[[split]] <- factor(avgexpr[[split]], levels = fct_lvl)
 
-  if (return_df) {
-    return(avgexpr)
-  }
-
   p <- ggplot2::ggplot(avgexpr, ggplot2::aes(x = group, y = expr)) +
     ggplot2::geom_line(mapping = line_mapping) +
     ggplot2::geom_point(mapping = point_mapping, size = 2) +
@@ -81,5 +76,5 @@ lineplot_avg_expr <- function(obj,
     ggplot2::facet_wrap(ggplot2::vars(feature), scales = "free_y", axes = "all",
                         axis.labels = "margins")
 
-  return(p)
+  return(list(data = avgexpr, plot = p))
 }

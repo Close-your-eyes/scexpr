@@ -2,7 +2,7 @@
 % Please edit documentation in R/convert_gene_identifier.R
 \name{convert_gene_identifier}
 \alias{convert_gene_identifier}
-\title{Title}
+\title{Convert gene identifiers}
 \usage{
 convert_gene_identifier(
   idents,
@@ -13,17 +13,66 @@ convert_gene_identifier(
 )
 }
 \arguments{
-\item{ident_in}{type of identifier provided in idents}
+\item{idents}{Character vector of gene identifiers to convert.}
 
-\item{ident_out}{type(s) of identifier(s) to return}
+\item{ident_in}{Input identifier type. Must be one of
+\code{AnnotationDbi::keytypes()} for the selected organism database. Defaults
+to \code{"SYMBOL"}.}
+
+\item{ident_out}{Character vector of output identifier types. Must be one or
+more valid key types for the selected organism database. Defaults to
+\code{c("ENTREZID", "ALIAS", "GENENAME")}.}
+
+\item{species}{Species annotation database to use. Either \code{"Hs"} for human
+or \code{"Mm"} for mouse. If omitted and \code{ident_in} is \code{"SYMBOL"} or \code{"ALIAS"},
+the function tries to infer species from gene-name capitalisation.}
+
+\item{return}{Return format. Either \code{"data.frame"} or \code{"vector"}. Vector
+output is only used when a single \code{ident_out} is requested.}
+}
+\value{
+If \code{return = "data.frame"}, a data frame containing the input identifier
+column and the requested output identifier columns. If \code{return = "vector"},
+a vector containing the requested converted identifier.
 }
 \description{
-Convert gene identifiers from ident_in to ident_out with AnnotationDbi while taking care of known duplicates and providing aliases.
-For human org.Hs.eg.db is used, for mouse org.Mm.eg.db.
+Convert gene identifiers between supported identifier types using
+\code{AnnotationDbi} organism annotation databases. Human genes are mapped with
+\code{org.Hs.eg.db}; mouse genes are mapped with \code{org.Mm.eg.db}.
 }
 \details{
-keytypes(org.Hs.eg.db) or colums(org.Hs.eg.db) are: ACCNUM ALIAS ENSEMBL
-ENSEMBLPROT ENSEMBLTRANS ENTREZID ENZYME EVIDENCE EVIDENCEALL
-GENENAME GENETYPE GO GOALL IPI MAP OMIM ONTOLOGY ONTOLOGYALL
-PATH PFAM PMID PROSITE REFSEQ SYMBOL UCSCKG UNIPROT
+The function also handles a small set of known duplicate mappings and, when
+possible, uses \code{limma::alias2SymbolTable()} to resolve aliases before filling
+missing output identifiers.
+
+Valid identifier types depend on the selected annotation database and can be
+inspected with \code{AnnotationDbi::keytypes(org.Hs.eg.db::org.Hs.eg.db)} or
+\code{AnnotationDbi::keytypes(org.Mm.eg.db::org.Mm.eg.db)}.
+
+Common key types include \code{"SYMBOL"}, \code{"ALIAS"}, \code{"ENSEMBL"}, \code{"ENTREZID"},
+\code{"GENENAME"}, \code{"REFSEQ"} and \code{"UNIPROT"}.
+
+For human symbols, mitochondrial identifiers beginning with \code{"MT-"} are
+normalised to \code{"MT"}. For mouse symbols, identifiers beginning with \code{"mt-"}
+are normalised to \code{"mt"}.
+
+When duplicate mappings are returned by \code{AnnotationDbi::select()}, the first
+distinct mapping is retained after reporting the affected identifiers.
+}
+\examples{
+convert_gene_identifier(
+  idents = c("MS4A1", "CD3D", "LYZ"),
+  ident_in = "SYMBOL",
+  ident_out = c("ENTREZID", "GENENAME"),
+  species = "Hs"
+)
+
+convert_gene_identifier(
+  idents = c("Ms4a1", "Cd3d", "Lyz2"),
+  ident_in = "SYMBOL",
+  ident_out = "ENTREZID",
+  species = "Mm",
+  return = "vector"
+)
+
 }

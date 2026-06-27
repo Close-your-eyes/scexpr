@@ -2,22 +2,67 @@
 % Please edit documentation in R/gsea_s2n_groupwise.R
 \name{gsea_s2n_groupwise}
 \alias{gsea_s2n_groupwise}
-\title{Compute S2N per gene for each group (cluster) (one-vs-rest)}
+\title{Computes the signal-to-noise (S2N) statistic for every gene in a one-vs-rest
+comparison for each group (e.g. cluster or cell type). For a given group
+\eqn{k}, the score is calculated as}
 \usage{
 gsea_s2n_groupwise(obj, group, eps = 0.000001, get_layer_args = list())
 }
 \arguments{
-\item{obj}{Seurat object or gene x cell matrix}
+\item{obj}{A Seurat object or a gene-by-cell expression matrix (dense or
+sparse \code{Matrix}).}
 
-\item{group}{grouping column in obj meta.data or vector of length ncol(obj)}
+\item{group}{Group assignments. Either:
+\itemize{
+\item a character scalar specifying a column in \code{obj@meta.data} (when
+\code{obj} is a Seurat object), or
+\item a vector of length \code{ncol(obj)} giving the group assignment for each
+cell.
+}}
 
-\item{eps}{epsilon to avoid division by 0 in S2N formula}
+\item{eps}{Small positive constant added to the denominator to prevent
+division by zero.}
 
-\item{get_layer_args}{arguments to scexpr::get_layer}
+\item{get_layer_args}{Named list of additional arguments passed to
+\code{scexpr::get_layer()} when extracting the expression matrix from a Seurat
+object.}
 }
 \value{
-matrix
+A numeric matrix with one row per gene and one column per group.
+Matrix entries contain the S2N statistic for each gene in each one-vs-rest
+comparison.
 }
 \description{
-S2N(g, k) = (mean_k - mean_rest) / (sd_k + sd_rest + eps)
+\deqn{
+S2N(g, k) = \frac{\mu_k - \mu_{rest}}{\sigma_k + \sigma_{rest} + \epsilon}
+}
+}
+\details{
+where \eqn{\mu} and \eqn{\sigma} denote the mean and standard deviation of
+gene expression within the target group and all remaining cells,
+respectively. Positive scores indicate genes enriched in the target group,
+whereas negative scores indicate higher expression outside the group.
+
+Standard deviations are computed independently within each group and its
+complement using a row-wise second-moment estimator that supports both dense
+and sparse matrices efficiently.
+}
+\examples{
+\dontrun{
+## From a Seurat object
+s2n <- gsea_s2n_groupwise(
+  obj = pbmc,
+  group = "celltype"
+)
+
+## From an expression matrix
+expr <- scexpr::get_layer(pbmc)
+s2n <- gsea_s2n_groupwise(
+  obj = expr,
+  group = pbmc$celltype
+)
+
+## Top marker genes for one group
+head(sort(s2n[, "B cells"], decreasing = TRUE))
+}
 }

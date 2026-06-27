@@ -69,6 +69,8 @@ PCs_to_meta_clustering = 3 PCs 1-3 are used, when PCs_to_meta_clustering = 1 onl
 have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
 filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.}
 
+\item{SoupX_autoEstCont_args}{args to autoEstCont}
+
 \item{cells}{vector of cell names to include, consider the trailing '-1' in cell names}
 
 \item{invert_cells}{invert cell selection, if TRUE cell names provides in 'cells' are excluded}
@@ -87,6 +89,10 @@ is simply done by addition; aggregation is done before feature removal (if featu
 \item{batch_corr}{which batch correction to apply for integration of different samples}
 
 \item{reduction}{which reduction(s) to calculate}
+
+\item{diet_seurat}{run diet seurat?}
+
+\item{sample_prefix_to_cell_id}{add sample prefix to cell names? i.e. sample folder names}
 
 \item{early_exit}{only read count matrices without much processing (no dim red etc)}
 
@@ -127,4 +133,11 @@ the common Seurat object though, the merged and harmonized PCA space of which is
 }
 \details{
 Checkout https://www.10xgenomics.com/analysis-guides/introduction-to-ambient-rna-correction.
+}
+\examples{
+\dontrun{
+# root folder with filtered/raw feature matrices
+samples <- list.dirs(datadir, recursive = F)
+out <- SO_prep01(samples)
+}
 }

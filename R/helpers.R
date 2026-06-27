@@ -253,7 +253,7 @@ check.and.get.cells <- function(SO,
 }
 
 
-check.aliases <- function(feature, feature.aliases, data) {
+check_aliases <- function(feature, feature.aliases, data) {
   if (!is.null(feature.aliases) && feature %in% names(feature.aliases)) {
     new_name <- as.character(feature.aliases[which(names(feature.aliases) == feature)])
     message(feature, " changed to ", new_name)
@@ -263,8 +263,10 @@ check.aliases <- function(feature, feature.aliases, data) {
   return(data)
 }
 
-get.freqs2 <- function(data) {
-  library(zeallot)
+
+#' @param data data.frame
+#' @importFrom zeallot %<-%
+get_freqs <- function(data) {
 
   freq.expr.by.split.SO <- dplyr::group_by(data, split_feature, SO.split)
   freq.expr.by.split <- dplyr::group_by(data, split_feature)
@@ -301,76 +303,6 @@ get.freqs2 <- function(data) {
 
 
 }
-
-get.freqs <- function(data,
-                      cells,
-                      reduction,
-                      dims,
-                      split_by,
-                      SO.split) {
-
-
-
-
-
-
-  freqs <- do.call(rbind, lapply(split(unique(data[,c("split_by", "SO.split")]), seq(nrow(unique(data[,c("split_by", "SO.split")])))), function(r) {
-
-    b <- r[,"split_by"]
-    c <- r[,"SO.split"]
-
-    ref.rows <- Reduce(intersect, list(which(data[["id"]] %in% names(cells[which(cells == 1)])), which(data$split_by == b), which(data$SO.split == c)))
-    freq.expr.by.split_by.SO <- sum(data[ref.rows,1] > 0) / length(data[ref.rows,1])*100
-
-    ref.rows <- Reduce(intersect, list(which(data[["id"]] %in% names(cells[which(cells == 1)])), which(data$split_by == b)))
-    freq.expr.by.split <- sum(data[ref.rows,1] > 0) / length(data[ref.rows,1])*100
-
-    ref.rows <- Reduce(intersect, list(which(data[["id"]] %in% names(cells[which(cells == 1)])), which(data$SO.split == c)))
-    freq.expr.by.SO <- sum(data[ref.rows,1] > 0) / length(data[ref.rows,1])*100
-
-    ref.rows <- which(data[["id"]] %in% names(cells[which(cells == 1)]))
-    freq.expr <- sum(data[ref.rows,1] > 0) / length(data[ref.rows,1])*100
-
-    freqs <- c(freq.expr.by.split_by.SO, freq.expr.by.split, freq.expr.by.SO, freq.expr)
-
-    freqs <- unlist(lapply(freqs, function(d) {
-      if (is.na(d)) {
-        d <- paste0(0, " %")
-      } else {
-        if (d < 1 & d > 0) {
-          d <- "< 1 %"
-        } else if (d > 1 & d < 99) {
-          d <- paste0(round(d, 0), " %")
-        } else if (d > 99 & d < 100) {
-          d <- "> 99 %"
-        } else {
-          d <- paste0(d, " %")
-        }
-      }
-    }))
-
-    # get ranges of x and y axis to place annotation in individual facets
-    ref.rows <- which(data$SO.split == c)
-    xrng <- range(data[ref.rows,paste0(reduction, "_", dims[1])])
-    yrng <- range(data[ref.rows,paste0(reduction, "_", dims[2])])
-
-    return(data.frame(
-      split_by = b,
-      SO.split = c,
-      freq.expr.by.split_by.SO = freqs[1],
-      freq.expr.by.split = freqs[2],
-      freq.expr.by.SO = freqs[3],
-      freq.expr = freqs[4],
-      xmin = xrng[1],
-      xmax = xrng[2],
-      ymin = yrng[1],
-      ymax = yrng[2]
-    ))
-  }))
-
-  return(freqs)
-}
-
 
 get_title <- function(feature_ex = NULL,
                       feature_cut = NULL,
@@ -481,7 +413,6 @@ get_title <- function(feature_ex = NULL,
   return(freq_df)
 }
 
-
 get_legend_text <- function(data,
                             type = c("gene", "meta")) {
   if (!requireNamespace("brathering", quietly = T)) {
@@ -490,7 +421,11 @@ get_legend_text <- function(data,
 
   type <- rlang::arg_match(type)
   if (is.numeric(data[["feature"]])) {
-    if (all(data[which(data[["cells"]] == 1),"feature"] == 0)) {
+    temp <- dplyr::filter(data, cells == 1 & !is.na(feature))
+    if (nrow(temp) == 0) {
+      return(NULL)
+    }
+    if (all(temp[["feature"]] == 0)) {
       scale.max <- 0
       scale.min <- 0
       scale.mid <- 0
@@ -502,15 +437,12 @@ get_legend_text <- function(data,
       } else {
         scale.min <- min(data[Reduce(intersect, list(which(data[["cells"]] == 1), which(is.finite(data[["feature"]])))), "feature"], na.rm = T) # != 0 for module scores
       }
-
       scale.mid <- scale.min + ((scale.max - scale.min) / 2)
-
-
       decimals <- brathering::decimals_adaptive(data[intersect(which(data[["cells"]] == 1), which(is.finite(data[["feature"]]))), "feature"])
-
       scale.max <- as.numeric(format(brathering::floor2(scale.max, decimals), nsmall = decimals))
       scale.min <- as.numeric(format(brathering::ceiling2(scale.min, decimals), nsmall = decimals))
       scale.mid <- as.numeric(format(round(scale.mid, decimals), nsmall = decimals))
+
     }
     return(list(scale.min, scale.mid, scale.max))
   }
@@ -547,23 +479,10 @@ get_col_pal <- function(data,
   return(col.pal)
 }
 
-
 add_color_scale <- function(plot,
                             col.pal,
                             col_legend_c_args = list(title = "..auto.."),
                             col_legend_d_args = list(title = "..auto.."),
-                            # col_legend_c_args = list(
-                            #   barwidth = 0.5,
-                            #   barheight = 8,
-                            #   title = "..auto..",
-                            #   order = 1
-                            # ),
-                            # col_legend_d_args = list(
-                            #   nrow = 10,
-                            #   override.aes = list(size = 4),
-                            #   title = "..auto..",
-                            #   order = 1
-                            # ),
                             col_steps = "..auto..",
                             legendbreaks = "..auto..",
                             legendlabels = "..auto..",
@@ -668,8 +587,6 @@ add_color_scale <- function(plot,
   }
 
   plot <- plot + ggplot2::guides(color = Gmisc::fastDoCall(guide_fun, args = col_legend_args))
-
-
   return(plot)
 }
 

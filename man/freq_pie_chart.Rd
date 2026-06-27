@@ -105,3 +105,8 @@ This function automatically installs the required packages
 Internally, it extracts the selected metadata column and forwards all
 arguments to \code{brathering::piechart()}.
 }
+\examples{
+\dontrun{
+plot <- freq_pie_chart(so, "celltype")
+}
+}

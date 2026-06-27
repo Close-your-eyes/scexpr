@@ -2,7 +2,7 @@
 % Please edit documentation in R/gsea_plot.R
 \name{gsea_plot}
 \alias{gsea_plot}
-\title{Plot results from scexpr::gsea_on_msigdbr}
+\title{Plot GSEA enrichment curves from \code{gsea_on_msigdbr()}}
 \usage{
 gsea_plot(
   data,
@@ -29,44 +29,117 @@ gsea_plot(
 )
 }
 \arguments{
-\item{data}{list as returned from gsea_on_msigdbr; filter rows of data$data
-to select gene sets for plotting}
+\item{data}{A list returned by \code{gsea_on_msigdbr()}. To select pathways for
+plotting, filter \code{data$data} before passing the object to this function.}
 
-\item{padj_min}{filter data$data by this p-value? set NULL for no filtering}
+\item{padj_min}{Numeric scalar. Keep only pathways with adjusted p-value
+less than or equal to this value. Use \code{NULL} to disable filtering.}
 
-\item{ticks_linewidth}{width of gene ticks}
+\item{return_metric_plot}{Logical. If \code{TRUE}, return both the enrichment
+plot and the ranking-metric bar plot for each pathway.}
 
-\item{ticks_height}{length or height of gene ticks}
+\item{ticks_linewidth}{Line width of gene-set hit ticks.}
 
-\item{rect_height}{height of colored rectangles on top of gene ticks}
+\item{ticks_height}{Relative height of gene-set hit ticks.}
 
-\item{rect_alpha}{alpha level (transparency) of colored rectangles on top of gene ticks}
+\item{rect_height}{Relative height of the ranking-metric colour rectangles.}
 
-\item{color_ES_line}{color of the ES line along the gene ranks}
+\item{rect_alpha}{Alpha transparency of the ranking-metric colour rectangles.}
 
-\item{color_ES_lims}{color of vertical lines which indicate min and max
-enrichment score}
+\item{color_ES_line}{Colour of the running enrichment score line.}
 
-\item{color_leadingEdge}{color of vertical line at the max ES}
+\item{color_ES_lims}{Colour of the horizontal dashed lines marking the
+positive and negative enrichment score extrema.}
 
-\item{label_genes}{plot gene names next to their ticks, try leadingEdge or
-a vector gene names to plot}
+\item{color_leadingEdge}{Colour of the vertical dashed line marking the
+leading-edge rank.}
 
-\item{theme}{ggplot theme}
+\item{label_genes}{Genes to label. Use \code{NULL} to omit labels,
+\code{"leadingEdge"} to label leading-edge genes, or a character vector of gene
+names to label selected genes.}
 
-\item{plot_leadingEdge_rank}{plot a vertical line at the rank of max ES}
+\item{theme}{ggplot2 theme applied to the plots.}
 
-\item{plot_leadingEdge_size}{plot the size (n genes) of the leading edge}
+\item{plot_leadingEdge_rank}{Logical. If \code{TRUE}, draw a vertical dashed line
+at the leading-edge rank.}
 
-\item{annotation_pos}{vector of x and y value where to plot gsea stats;
-or auto for automatic positioning}
+\item{plot_leadingEdge_size}{Logical. If \code{TRUE}, annotate the number of genes
+in the leading edge.}
 
-\item{annotation_size}{size of annotation (geom_text size)}
+\item{plot_subtitle}{Logical. If \code{TRUE}, add p-value, ES, and NES as the
+subtitle.}
 
-\item{zscore_lims}{breaks at which to cut the color scale (which is zscore),
-if very few ranks fill a zscore range it is pointless to plot such very small
-rectangle}
+\item{annotation_pos}{Numeric vector of length two giving the x and y
+position for the rich-text annotation, or \code{c("auto", NA)} for automatic
+placement. If \code{NULL}, no annotation is drawn.}
+
+\item{annotation_size}{Text size for the rich-text annotation.}
+
+\item{zscore_lims}{Numeric vector of length two defining lower and upper
+limits used to clamp ranking-metric z-scores for the colour rectangles.}
+
+\item{annotation_with_name}{Logical. If \code{TRUE}, include the pathway name in
+the rich-text annotation.}
+
+\item{annotation}{Glue template used for the rich-text annotation when
+\code{annotation_with_name = FALSE}. Available variables are \code{pval}, \code{es}, and
+\code{nes}.}
+
+\item{plot_ranking_color}{Logical. If \code{TRUE}, draw coloured rectangles below
+the enrichment curve to show the ranking metric z-score along the gene ranks.}
+}
+\value{
+A named list of plots, one entry per pathway. If
+\code{return_metric_plot = FALSE}, each entry is a ggplot enrichment plot. If
+\code{return_metric_plot = TRUE}, each entry is a list with elements \code{plot} and
+\code{metric_plot}.
 }
 \description{
-Plot results from scexpr::gsea_on_msigdbr
+Creates enrichment plots for one or more pathways from the output of
+\code{gsea_on_msigdbr()}. Each plot shows the running enrichment score, gene-set
+hit positions along the ranked gene list, optional ranking-metric colours,
+and optional leading-edge annotations.
+}
+\details{
+The function expects the input list to contain at least \code{data}, \code{gene_sets},
+and \code{gene_ranks}, as returned by \code{gsea_on_msigdbr()}. Pathways are selected
+from \code{data$data}, optionally filtered by \code{padj_min}.
+
+Large result sets can create many plots. When more than 100 pathways pass the
+filter, the function prompts interactively before plotting.
+}
+\examples{
+\dontrun{
+s2n <- scexpr::gsea_s2n_groupwise(
+  obj = so,
+  group = "integrated_snn_res.0.7"
+)
+
+gene_ranks <- sort(s2n[, "20"], decreasing = TRUE)
+
+gsea_res <- scexpr::gsea_on_msigdbr(
+  gene_ranks = gene_ranks,
+  use_msigdbr = TRUE
+)
+
+## Plot significant pathways
+plots <- gsea_plot(gsea_res, padj_min = 0.01)
+
+plots[[1]]
+
+## Plot selected pathways only
+gsea_res$data <- dplyr::filter(
+  gsea_res$data,
+  pathway \%in\% c("HALLMARK_INTERFERON_GAMMA_RESPONSE")
+)
+
+plots <- gsea_plot(
+  gsea_res,
+  padj_min = NULL,
+  label_genes = "leadingEdge",
+  annotation_pos = c("auto", NA)
+)
+
+plots[[1]]
+}
 }

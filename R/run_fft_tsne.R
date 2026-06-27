@@ -12,7 +12,7 @@
 #' On Windows, buy a Mac.
 #'
 #' @param SO numeric matrix with observations as rows
-#' @param reduction which reduction from SO@reductions to use
+#' @param reduction which reduction from SO reduction slot to use
 #' @param dims_in which dims from reduction; if NULL all are used;
 #' provide as numeric vector, e.g. 1:12
 #' @param reduction.name name of reduction to be created
@@ -63,16 +63,16 @@
 #' @param nterms If using FIt-SNE, this is the number of
 #'   interpolation points per sub-interval
 #' @param intervals_per_integer See min_num_intervals
-#' @param min_num_intervals Let maxloc = ceil(max(max(X)))
-#' and minloc = floor(min(min(X))). i.e. the points are in
-#' a [minloc]^no_dims by [maxloc]^no_dims interval/square.
-#' The number of intervals in each dimension is either
-#' min_num_intervals or ceil((maxloc -
-#' minloc)/intervals_per_integer), whichever is
-#' larger. min_num_intervals must be an integer >0,
-#' and intervals_per_integer must be >0. Default:
-#' min_num_intervals=50, intervals_per_integer =
-#' 1
+#' @param min_num_intervals Minimum number of intervals per dimension.
+#'   Let `maxloc = ceiling(max(X))` and `minloc = floor(min(X))`, so that
+#'   the data lie within the hyperrectangle `[minloc, maxloc]^no_dims`.
+#'   The number of intervals in each dimension is
+#'   `max(min_num_intervals, ceiling((maxloc - minloc) /
+#'   intervals_per_integer))`.
+#'   `min_num_intervals` must be a positive integer, and
+#'   `intervals_per_integer` must be positive.
+#'   Defaults are `min_num_intervals = 50` and
+#'   `intervals_per_integer = 1`.
 #' @param K Number of nearest neighbors to get when using fixed sigma
 #' @param sigma Fixed sigma value to use when perplexity==-1
 #' @param initialization 'pca', 'random', or N x no_dims array to initialize the solution.
@@ -98,6 +98,11 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' so <- run_fft_tsne(obj = so,
+#' reduction = "harmony",
+#' reduction.name = paste0("tsne_", "harmony"))
+#' }
 run_fft_tsne <- function(
     SO,
     reduction = "pca",

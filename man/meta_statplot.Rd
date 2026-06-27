@@ -2,10 +2,38 @@
 % Please edit documentation in R/meta_statplot.R
 \name{meta_statplot}
 \alias{meta_statplot}
-\title{Title}
+\title{Plot average feature expression across metadata groups}
 \usage{
 meta_statplot(obj, group1, group2, features)
 }
+\arguments{
+\item{obj}{A Seurat object containing expression data and metadata.}
+
+\item{group1}{Character string giving the metadata column used to calculate
+average expression with \code{scexpr::avg_expression()}.}
+
+\item{group2}{Character string giving the metadata column used on the x-axis
+for statistical comparison.}
+
+\item{features}{Character vector of feature names, typically genes, to average
+and plot.}
+}
+\value{
+A \code{ggplot} object showing average expression values by \code{group2},
+faceted by feature.
+}
 \description{
-Title
+Computes average expression for selected features grouped by one metadata
+column, joins those averages to a second metadata grouping column, and creates
+faceted statistical plots for each feature.
+}
+\examples{
+\dontrun{
+meta_statplot(
+  obj = SO,
+  group1 = "seurat_clusters",
+  group2 = "orig.ident",
+  features = c("CD3D", "MS4A1", "LYZ")
+)
+}
 }

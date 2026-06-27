@@ -18,3 +18,8 @@ patchwork of ggplots
 Plots mean-variance plots with different cutoffs. Variable features need
 to be calculated in obj before calling this function.
 }
+\examples{
+\dontrun{
+plot <- varfeat_plot(so)
+}
+}

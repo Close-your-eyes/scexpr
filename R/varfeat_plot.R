@@ -10,6 +10,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' plot <- varfeat_plot(so)
+#' }
 varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
 
   hvfdat <- SeuratObject::HVFInfo(obj)

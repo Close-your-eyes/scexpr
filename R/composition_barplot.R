@@ -29,11 +29,14 @@
 #' @param label_only_largest label only the largest bar segment per x_cat,
 #' e.g if there are two groups only per x_cat
 #'
-#' @return
+#' @return list of plot and data
 #' @export
 #'
 #'
 #' @examples
+#' \dontrun{
+#' combarlst <- scexpr::composition_barplot(SO, x_cat = "meta_res.0.8_PC2", fill_cat = "orig.ident")
+#' }
 composition_barplot <- function(SO,
                                 x_cat, #x_var
                                 fill_cat, #fill_var

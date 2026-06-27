@@ -1,22 +1,45 @@
-#' Run linear discriminant analysis (LDA) for optimal separation of groups
+#' Run linear discriminant analysis on a Seurat object
 #'
-#' Alternative to PCA. E.g. run clustering first, then LDA, then tsne or umap on
-#' LDA. Or separate celltypes as labelled by SingleR in optimal way.
-#' What does Seurat::RunLDA do ?
+#' Performs linear discriminant analysis (LDA) to find axes that optimally
+#' separate predefined groups of cells. This can be useful as a supervised
+#' alternative to PCA, for example after clustering cells or assigning labels
+#' with tools such as SingleR. The resulting LDA coordinates are stored as a
+#' Seurat dimensional reduction, and the fitted LDA model is stored in
+#' `obj@misc`.
 #'
-#' @param obj seurat object
-#' @param groups column with grouping in obj@meta.data
-#' @param assay which assay to pull data from
-#' @param layer which layer
-#' @param overwrite overwrite existing dim red with sme name?
-#' @param features which genes; less of them inreases calculation speed
-#' @param reduction.name name of reduction to be created
-#' @param reduction.key key of reduction to be created, needs trailing underscore
+#' @param obj A Seurat object.
+#' @param groups Character scalar. Name of the column in `obj@meta.data`
+#'   containing group labels used for LDA.
+#' @param assay Character scalar. Assay from which expression data should be
+#'   extracted. Default is `"RNA"`.
+#' @param layer Character scalar. Layer to use from the selected assay.
+#'   Default is `"data"`.
+#' @param overwrite Logical. Whether to overwrite an existing dimensional
+#'   reduction with the same `reduction.name`. Default is `FALSE`.
+#' @param features Character vector of features to use for LDA. Fewer features
+#'   can substantially reduce runtime. Defaults to
+#'   `Seurat::VariableFeatures(obj)`.
+#' @param reduction.name Character scalar. Name of the dimensional reduction to
+#'   create. Default is `"LDA"`.
+#' @param reduction.key Character scalar. Key prefix for the dimensional
+#'   reduction. A trailing underscore is added automatically if missing.
 #'
-#' @returns
+#' @return A Seurat object with an added dimensional reduction named
+#'   `reduction.name`. The fitted `MASS::lda` model is stored in
+#'   `obj@misc[[reduction.name]]`.
+#'
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' obj <- run_lda(
+#'   obj,
+#'   groups = "seurat_clusters",
+#'   assay = "RNA",
+#'   layer = "data",
+#'   reduction.name = "LDA"
+#' )
+#' }
 run_lda <- function(obj,
                     groups,
                     assay = "RNA",

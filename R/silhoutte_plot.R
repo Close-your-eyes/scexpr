@@ -1,18 +1,30 @@
-#' Make silhouette plot for clustering
+#' Make a silhouette plot for clustering
 #'
-#' From Seurat object. Data frame added to misc slot.
+#' Computes silhouette widths for clusters in a Seurat object using cell embeddings
+#' from a specified dimensionality reduction, and returns both the silhouette data
+#' frame and a ggplot object.
 #'
-#' @param obj seurat object
-#' @param clustering column in meta.data
-#' @param reduction reduction name
-#' @param theme ggplot theme
-#' @param col_pal color and fill palette
+#' @param obj A Seurat object.
+#' @param clustering Character string. Column name in `obj@meta.data` containing
+#'   cluster assignments.
+#' @param reduction Character string. Name of the dimensionality reduction to use.
+#'   Default is `"pca"`.
+#' @param theme A ggplot2 theme. Default is `colrr::theme_material(white = TRUE)`.
+#' @param col_pal Named or unnamed vector of colors used for cluster outlines and fills.
 #'
-#' @returns ggplot and data frame to misc slot
+#' @return A list with two elements:
+#' \describe{
+#'   \item{data}{A data frame containing silhouette widths and cluster assignments.}
+#'   \item{plot}{A ggplot2 silhouette plot.}
+#' }
+#'
 #' @export
 #'
 #' @examples
-silhoutte_plot <- function(obj,
+#' \dontrun{
+#' silhouette_plot(so, clustering = "celltype")
+#' }
+silhouette_plot <- function(obj,
                            clustering,
                            reduction = "pca",
                            theme = colrr::theme_material(white = T),
@@ -26,9 +38,9 @@ silhoutte_plot <- function(obj,
     dplyr::mutate(row = dplyr::row_number()) |>
     dplyr::mutate(cluster = as.character(cluster))
   rownames(sil_df) <- rownames(obj@meta.data)
-  obj@misc[[paste0(clustering, "_silhoutte")]] <- sil_df
+  #obj@misc[[paste0(clustering, "_silhoutte")]] <- sil_df
 
-  ggplot2::ggplot(sil_df, ggplot2::aes(x = row, y = sil_width)) +
+  plot <- ggplot2::ggplot(sil_df, ggplot2::aes(x = row, y = sil_width)) +
     ggplot2::geom_col(ggplot2::aes(color = cluster, fill = cluster)) +
     ggplot2::geom_hline(yintercept = mean(sil_df$sil_width), linetype = "dashed") +
     theme +
@@ -39,4 +51,5 @@ silhoutte_plot <- function(obj,
           axis.ticks.x = ggplot2::element_blank()) +
     ggplot2::labs(y = "silhouette width", color = clustering, fill = clustering)
 
+  return(list(data = sil_df, plot = plot))
 }

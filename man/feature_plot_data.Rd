@@ -2,7 +2,7 @@
 % Please edit documentation in R/feature_plot_data.R
 \name{feature_plot_data}
 \alias{feature_plot_data}
-\title{Feature plot based on a data frame}
+\title{Create a feature plot from a \code{get_data()} data frame}
 \usage{
 feature_plot_data(
   data,
@@ -87,163 +87,241 @@ feature_plot_data(
 )
 }
 \arguments{
-\item{data}{data frame from scexpr::get_data}
+\item{data}{A data frame returned by \code{scexpr::get_data()}.}
 
-\item{pt_size}{point size}
+\item{pt_size}{Base point size.}
 
-\item{pt_size_fct}{factor of size increase for expressers}
+\item{pt_size_fct}{Multiplicative factor applied to expressing cells.}
 
-\item{col_expr}{color expressers}
+\item{col_expr}{Colour used for expressing cells.}
 
-\item{col_non_expr}{color non expressers}
+\item{col_non_expr}{Colour used for non-expressing cells. \code{"..auto.."} chooses
+an appropriate colour based on the plot background.}
 
-\item{col_ex_cells}{color excluded cells}
+\item{col_ex_cells}{Colour of excluded cells (\code{cells == 0}).}
 
-\item{col_split}{color for all cells across facets, requires
-plot_all_across_split = T and a split_feature in get_data or ...}
+\item{col_split}{Background colour used when
+\code{plot_all_across_split = TRUE}.}
 
-\item{col_na}{color for NA values}
+\item{col_na}{Colour used for missing values.}
 
-\item{col_binary}{dichotomous coloring of expresser and non expresser}
+\item{col_binary}{Logical; if \code{TRUE}, gene expression is shown as binary
+(expressing vs. non-expressing) instead of continuous.}
 
-\item{col_pal_c_args}{for continuous color: arguments to colrr::col_pal,
-name can be (i) name of a color palette invoking colrr::col_pal, (ii)
-a single color or (iii) a vector of colors}
+\item{col_pal_c_args}{Arguments passed to the continuous palette generator.
+The palette can be specified by name, a single colour, or a vector of
+colours.}
 
-\item{col_pal_d_args}{for discrete color}
+\item{col_pal_d_args}{Arguments for discrete colour palettes.}
 
-\item{col_steps}{NULL to have normal colorbar, auto for default colorsteps,
-a single number or a vector of explicit steps; may not work with any number
-when col_steps_nice is TRUE; colrr::get_scale_color_fun is used}
+\item{col_steps}{Colour break specification. Can be \code{NULL},
+\code{"..auto.."}, a number of bins, or explicit break values.}
 
-\item{col_steps_nice}{algorithmic determination of pretty steps,
-see ggplot2::scale_color_stepsn}
+\item{col_steps_nice}{Logical; use ggplot2's "pretty" break algorithm.}
 
-\item{col_legend_c_args}{arguments to ggplot2::guide_colorsteps,
-ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
+\item{col_trans_log}{Logical; apply logarithmic colour transformation.}
 
-\item{col_legend_d_args}{arguments to ggplot2::guide_colorsteps,
-ggplot2::guide_colorbar or ggplot2::guide_legend for binned or continuous
-continuous or discrete legend; e.g. add title.theme = ggtext::element_markdown()}
+\item{col_legend_c_args}{Arguments passed to the continuous colour guide.}
 
-\item{legendbreaks}{a single number, a vector of explicit breaks, or "auto"
-for ggplot default or "minmidmax" for three breaks at minimum, middle and
-maximum of value range}
+\item{col_legend_d_args}{Arguments passed to the discrete colour guide.}
 
-\item{legendlabels}{labels for breaks, e.g. c("min", "mid", "max")}
+\item{legendbreaks}{Legend break specification.}
 
-\item{shape_legend_args}{arguments to ggplot2::guide_legend for shapes,
-requires a shape_feature in get_data or ...}
+\item{legendlabels}{Labels corresponding to \code{legendbreaks}.}
 
-\item{shape_legend_hide}{do not show shape legend?}
+\item{shape_legend_args}{Arguments passed to
+\code{ggplot2::guide_legend()} for point shapes.}
 
-\item{feature_alias}{named vector of aliases for features, old = new; e.g.
-c("FAIM3" = "FCMR", "MS4A1" = "CD20")}
+\item{shape_legend_hide}{Logical; hide the shape legend.}
 
-\item{freq_plot}{do plot frequency of expressers? TRUE, FALSE or ..auto..
-for decision based on number of SOs}
+\item{feature_alias}{Named character vector mapping original feature names
+to display names.}
 
-\item{freq_pos}{where to plot, xy coordinates}
+\item{freq_plot}{Logical or \code{"..auto.."}. Display expression frequency
+annotations.}
 
-\item{freq_size}{font size of frequency annotation}
+\item{freq_pos}{Position of frequency annotations.}
 
-\item{name}{name of the plot, any string possible, understands glue
-syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-where freq is global expression frequency and feature_cut_ex is a collapsed
-string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-algorithmic decision based on freq_plot; freq is removed for meta features;
-feature_cut_ex is adjusted if either element is missing}
+\item{freq_size}{Font size of frequency annotations.}
 
-\item{anno}{name of the plot, any string possible, understands glue
-syntax with three possible variables like '{feature} ({freq}) in {feature_cut_ex}',
-where freq is global expression frequency and feature_cut_ex is a collapsed
-string of feature_cut, feature_cut_expr, and feature_ex; '..auto..' for
-algorithmic decision based on freq_plot; freq is removed for meta features;
-feature_cut_ex is adjusted if either element is missing}
+\item{freq_col}{Colour of frequency annotations.}
 
-\item{name_anno_pos}{where to plot name_anno, NULL to omit plotting, '..auto..'
-for automatic decision between title, annotation or NULL; title and annotation
-simultaneously also possible}
+\item{name}{Plot title template. Supports glue syntax using
+\code{{feature}}, \code{{freq}} and \code{{feature_cut_ex}}.}
 
-\item{name_anno_args}{arguments to ggplot2::annotate when name_anno_pos
-contains 'annotation'}
+\item{anno}{Annotation template. Supports the same glue variables as \code{name}.}
 
-\item{theme}{ggplot theme to use}
+\item{name_anno_pos}{Where to display the title/annotation:
+\code{"title"}, \code{"annotation"}, both, \code{NULL}, or \code{"..auto.."}.}
 
-\item{theme_args}{arguments to ggplot2::theme}
+\item{name_anno_args}{Arguments passed to \code{ggplot2::annotate()}
+or \code{ggtext::geom_richtext()}.}
 
-\item{facet_scales}{passed as scales argument of facet_wrap, relevant when
-number of SO > 1 and/or feature_split is given}
+\item{theme}{Base ggplot theme.}
 
-\item{facet_grid_row_var}{forces using facet_grid instead of facet_wrap,
-facet_grid_row_var is a string that appears as row label on facets}
+\item{theme_args}{Additional arguments passed to \code{ggplot2::theme()}.}
 
-\item{nrow_inner}{row number for facets}
+\item{facet_scales}{Scale behaviour for facets.}
 
-\item{ncol_inner}{col number for facets}
+\item{facet_grid_row_var}{Optional variable used as facet grid rows.}
 
-\item{axes_lim_set}{set axes limits like
-list(UMAP_1 = c(-10,10), UMAP_2 = c(-12,13))}
+\item{nrow_inner}{Number of facet rows.}
 
-\item{axes_lim_expand}{extend axes limits, syntax like axes_lim_set}
+\item{ncol_inner}{Number of facet columns.}
 
-\item{label_filter_cells}{when feature_label is provided; only consider
-cells which are not excluded for label position calculation}
+\item{axes_lim_set}{Named list of fixed axis limits.}
 
-\item{label_center_fun}{how to calculate label position}
+\item{axes_lim_expand}{Named list of axis expansion values.}
 
-\item{label_nudge}{named list of xy-values how to shift labels, names must
-be the values of feature_label}
+\item{label_filter_cells}{Restrict label placement to included cells.}
 
-\item{label_repel}{do repel labels to avoid overlap with ggrepel?}
+\item{label_center_fun}{Method used to calculate label centres.}
 
-\item{label_multi_try}{try to label split clusters with one label each?}
+\item{label_nudge}{Named list of x/y offsets for labels.}
 
-\item{label_args}{arguments to ggtext::geom_richtext}
+\item{label_repel}{Logical; repel overlapping labels using ggrepel.}
 
-\item{contour_filter_cells}{when feature_contour is provided; only consider
-cells which are not excluded for contour calculation}
+\item{label_multi_try}{Attempt to label split clusters separately.}
 
-\item{contour_rm_outlier}{per value (group, cluster) in feature_contour: remove
-outlier points to avoid ugly contours? uses brathering::outlier}
+\item{label_multi_max}{Maximum number of labels produced by
+\code{label_multi_try}.}
 
-\item{contour_rm_lowfreq_subcluster}{groups in feature_contour are checked for
-split clusters with diptest and mclust, do remove low frequency subclusters
-to avoid ugly contours?}
+\item{label_args}{Arguments passed to \code{ggtext::geom_richtext()}.}
 
-\item{contour_col_pal_args}{discrete colors of contours, see col_pal_c_args}
+\item{contour_filter_cells}{Restrict contour computation to included cells.}
 
-\item{contour_args}{arguments to geom_density_2d}
+\item{contour_rm_outlier}{Remove outlier cells before contour estimation.}
 
-\item{contour_label_nudge}{one xy value pair to nudge contour_expr_freq
-labels}
+\item{contour_rm_lowfreq_subcluster}{Remove small subclusters detected
+within contour groups.}
 
-\item{contour_label_args}{arguments to ggtext::geom_richtext for
-contour_expr_freq}
+\item{contour_multi_try}{Attempt separate contours for split clusters.}
 
-\item{contour_same_across_split}{have the same contours across feature_split
-facets}
+\item{contour_multi_max}{Maximum number of contour labels.}
 
-\item{contour_expr_freq}{do plot expression frequency per group/cluster of
-feature_contour}
+\item{contour_col_pal_args}{Colour palette for contour groups.}
 
-\item{contour_ggnewscale}{use ggnewscale for colored contours}
+\item{contour_args}{Arguments passed to the contour geom.}
 
-\item{contour_fun}{function for contour drawing, either one of:
-ggplot2::geom_density2d, geomtextpath::geom_textpath,
-geomtextpath::geom_labelpath; geomtexpath functions require a
-contour_path_label}
+\item{contour_label_nudge}{Position adjustment for contour labels.}
 
-\item{contour_path_label}{if geomtextpath used as contour_fun,
-what label to draw, could be an attached meta feature that is unique to each
-group or expression frequency via: 'pct'}
+\item{contour_label_args}{Arguments for contour labels.}
 
-\item{plot_all_across_split}{do plot all cells across feature_split in
-col_split?}
+\item{contour_same_across_split}{Use identical contours across split facets.}
 
-\item{axes_arrows}{plot axes as arrows? adjust margins: plot.margin = margin(b=7,l=7)}
+\item{contour_expr_freq}{Display expression frequency on contours.}
+
+\item{contour_ggnewscale}{Use \code{ggnewscale} for independent contour colours.}
+
+\item{contour_fun}{Contour drawing function.}
+
+\item{contour_path_label}{Label used by text-path contour functions.}
+
+\item{order_discr_explicit}{Explicit plotting order for discrete values.}
+
+\item{plot_all_across_split}{Logical; draw all cells in the background of
+split panels.}
+
+\item{axes_arrows}{Logical; draw coordinate axes as arrows.}
+
+\item{img_df}{Optional raster image data frame.}
+
+\item{hull_df}{Optional polygon data frame.}
+
+\item{cell_hull_args}{Arguments passed to \code{geom_polygon()} when plotting
+hulls.}
+}
+\value{
+A \code{ggplot2} object that can be further modified using standard ggplot2
+layers and themes.
 }
 \description{
-Feature plot based on a data frame
+Draws a two-dimensional embedding (e.g. UMAP or t-SNE) colored by either
+gene expression or metadata values. The function supports continuous and
+discrete colour scales, faceting, expression frequency annotations,
+contour overlays, cluster labels, spatial images, and extensive control
+over plot appearance.
+}
+\details{
+The input must be the data frame returned by \code{scexpr::get_data()}, which
+contains both plotting coordinates and the metadata stored as attributes.
+
+The behaviour depends on the feature type stored in the \code{data} attributes.
+Gene features are displayed using continuous expression values (or binary
+expression if \code{col_binary = TRUE}), whereas metadata features are plotted
+using discrete or continuous colour scales as appropriate.
+
+Additional functionality such as labels, contours, split plotting,
+annotations and spatial overlays is automatically enabled when the required
+attributes are present in the input generated by \code{scexpr::get_data()}.
+}
+\section{Point appearance}{
+
+}
+
+\section{Colour scales}{
+
+}
+
+\section{Legends}{
+
+}
+
+\section{Feature labels}{
+
+}
+
+\section{Plot titles and annotations}{
+
+}
+
+\section{Themes}{
+
+}
+
+\section{Faceting}{
+
+}
+
+\section{Axes}{
+
+}
+
+\section{Labels}{
+
+}
+
+\section{Contours}{
+
+}
+
+\section{Split plotting}{
+
+}
+
+\section{Ordering}{
+
+}
+
+\section{Spatial plotting}{
+
+}
+
+\examples{
+data <- scexpr::get_data(
+  object,
+  feature = "MS4A1"
+)
+
+p <- feature_plot_data(
+  data,
+  pt_size = 0.4,
+  freq_plot = TRUE
+)
+
+p
+
+}
+\seealso{
+\code{scexpr::get_data()}
 }

@@ -36,7 +36,7 @@
 #' @param axis_expansion_y_mult Numeric vector of length 2 controlling y-axis expansion.
 #' @param geom3 geom only plotted on expressing cells (feature>0). when ..auto..
 #' a boxplot is plotted only on those groups where median across all cells is zero.
-#' @param expr_freq_y_equal_max
+#' @param expr_freq_y_equal_max equal max y across all features to plot expr freq annotation?
 #' @param theme_args args to theme
 #' @param geom3_args args to geom3
 #' @param add_pwc add default ggpubr::geom_pwc?

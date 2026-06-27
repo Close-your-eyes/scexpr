@@ -2,7 +2,7 @@
 % Please edit documentation in R/run_lda.R
 \name{run_lda}
 \alias{run_lda}
-\title{Run linear discriminant analysis (LDA) for optimal separation of groups}
+\title{Run linear discriminant analysis on a Seurat object}
 \usage{
 run_lda(
   obj,
@@ -16,24 +16,51 @@ run_lda(
 )
 }
 \arguments{
-\item{obj}{seurat object}
+\item{obj}{A Seurat object.}
 
-\item{groups}{column with grouping in obj@meta.data}
+\item{groups}{Character scalar. Name of the column in \code{obj@meta.data}
+containing group labels used for LDA.}
 
-\item{assay}{which assay to pull data from}
+\item{assay}{Character scalar. Assay from which expression data should be
+extracted. Default is \code{"RNA"}.}
 
-\item{layer}{which layer}
+\item{layer}{Character scalar. Layer to use from the selected assay.
+Default is \code{"data"}.}
 
-\item{overwrite}{overwrite existing dim red with sme name?}
+\item{overwrite}{Logical. Whether to overwrite an existing dimensional
+reduction with the same \code{reduction.name}. Default is \code{FALSE}.}
 
-\item{features}{which genes; less of them inreases calculation speed}
+\item{features}{Character vector of features to use for LDA. Fewer features
+can substantially reduce runtime. Defaults to
+\code{Seurat::VariableFeatures(obj)}.}
 
-\item{reduction.name}{name of reduction to be created}
+\item{reduction.name}{Character scalar. Name of the dimensional reduction to
+create. Default is \code{"LDA"}.}
 
-\item{reduction.key}{key of reduction to be created, needs trailing underscore}
+\item{reduction.key}{Character scalar. Key prefix for the dimensional
+reduction. A trailing underscore is added automatically if missing.}
+}
+\value{
+A Seurat object with an added dimensional reduction named
+\code{reduction.name}. The fitted \code{MASS::lda} model is stored in
+\code{obj@misc[[reduction.name]]}.
 }
 \description{
-Alternative to PCA. E.g. run clustering first, then LDA, then tsne or umap on
-LDA. Or separate celltypes as labelled by SingleR in optimal way.
-What does Seurat::RunLDA do ?
+Performs linear discriminant analysis (LDA) to find axes that optimally
+separate predefined groups of cells. This can be useful as a supervised
+alternative to PCA, for example after clustering cells or assigning labels
+with tools such as SingleR. The resulting LDA coordinates are stored as a
+Seurat dimensional reduction, and the fitted LDA model is stored in
+\code{obj@misc}.
+}
+\examples{
+\dontrun{
+obj <- run_lda(
+  obj,
+  groups = "seurat_clusters",
+  assay = "RNA",
+  layer = "data",
+  reduction.name = "LDA"
+)
+}
 }
