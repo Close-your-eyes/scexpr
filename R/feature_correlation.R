@@ -23,7 +23,6 @@
 #' @return a default plot (ggplot2 object) and the underlying data frame with correlation values
 #' @export
 #'
-#' @importFrom magrittr %>%
 #'
 #' @examples
 #' \dontrun{
@@ -94,8 +93,8 @@ feature_correlation <- function(SO,
   ## do all the checking
   if (!is.null(split.by)) {
     groups <-
-      SO@meta.data[ ,split.by, drop=F] %>%
-      tibble::rownames_to_column("ID") %>%
+      SO@meta.data[ ,split.by, drop=F] |>
+      tibble::rownames_to_column("ID") |>
       dplyr::filter(ID %in% cells)
     groups <- split(groups$ID, groups[,split.by,drop=F])
   } else {
@@ -139,14 +138,8 @@ feature_correlation <- function(SO,
     corr_df <- dplyr::mutate(corr_df, feature = as.character(feature), ref_feature = as.character(ref_feature))
     corr_df_plot <- dplyr::filter(corr_df, feature != ref_feature)
 
-    corr_df_plot <- rbind(corr_df_plot %>%
-                            dplyr::group_by(feature) %>%
-                            dplyr::slice_min(n = topn[1], order_by = r) %>%
-                            dplyr::ungroup(),
-                          corr_df_plot %>%
-                            dplyr::group_by(feature) %>%
-                            dplyr::slice_max(n = topn[2], order_by = r) %>%
-                            dplyr::ungroup())
+    corr_df_plot <- rbind(dplyr::slice_min(corr_df_plot, n = topn[1], order_by = r, by = feature),
+                          dplyr::slice_max(corr_df_plot, n = topn[2], order_by = r, by = feature))
     corr_df_plot <- dplyr::mutate(corr_df_plot, correlation_sign = factor(ifelse(r > 0, "+", "-"), levels = c("+", "-")))
     corr_df_plot[,"group"] <- x
     corr_df_plot[,"feature_group"] <- paste0(corr_df_plot[,"feature", drop = T], "_", x)

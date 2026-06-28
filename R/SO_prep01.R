@@ -436,6 +436,7 @@ install_pkgs <- function(SoupX, scDblFinder, decontX) {
   }
 }
 
+
 resolution_checks <- function(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering) {
   if (!is.numeric(resolution_meta)) {
     stop("resolution_meta has to be numeric.")

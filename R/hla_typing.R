@@ -133,9 +133,8 @@ hla_typing <- function(hla_ref,
     dplyr::filter(stats::complete.cases(.)) %>%
     dplyr::pull(!!rlang::sym(hla_allele_colName))
 
-  hla_ref <-
-    hla_ref %>%
-    dplyr::mutate(complete_seq = allele %in% complete_alleles) %>%
+  hla_ref <- hla_ref |>
+    dplyr::mutate(complete_seq = allele %in% complete_alleles) |>
     dplyr::distinct(!!rlang::sym(hla_seq_colName), .keep_all = TRUE)
 
   'dplyr::group_by(allele_coding) %>%
@@ -185,13 +184,10 @@ hla_typing <- function(hla_ref,
 
   top_alleles <- colnames(first_round_results[["top_sin_res_mat"]])
 
-  hla_ref_top <-
-    hla_ref %>%
-    dplyr::filter(!!rlang::sym(hla_allele_colName) %in% unique(top_alleles))
+  hla_ref_top <- dplyr::filter(hla_ref, !!rlang::sym(hla_allele_colName) %in% unique(top_alleles))
 
-  hla_ref_top_complete <-
-    hla_ref %>%
-    dplyr::filter(!!rlang::sym(p_group_colName) %in% unique(hla_ref_top[[p_group_colName]])) %>%
+  hla_ref_top_complete <- hla_ref |>
+    dplyr::filter(!!rlang::sym(p_group_colName) %in% unique(hla_ref_top[[p_group_colName]])) |>
     dplyr::filter(complete_seq)
 
   second_round_results <- NULL
@@ -283,9 +279,9 @@ run_read_matching_and_report_results <- function(hla_ref,
   # as.matrix here as this will speed up iteration over col.combs below!
   top_single_res <- as.matrix(single_res[which(reads_w_min_one_match), which(expl_reads_per_allele >= max(expl_reads_per_allele)/allele_diff)])
   top_sin_res_df <-
-    data.frame(expl_reads = Matrix::colSums(top_single_res)) %>%
-    tibble::rownames_to_column(hla_allele_colName) %>%
-    dplyr::left_join(hla_ref, by = hla_allele_colName) %>%
+    data.frame(expl_reads = Matrix::colSums(top_single_res)) |>
+    tibble::rownames_to_column(hla_allele_colName) |>
+    dplyr::left_join(hla_ref, by = hla_allele_colName) |>
     dplyr::mutate(rank = dplyr::row_number(-expl_reads))
 
   #col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)

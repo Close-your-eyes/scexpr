@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Ways to analyze scRNAseq data sets.
-Version: 0.1.3
+Version: 0.1.4
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -22,11 +22,7 @@ Imports:
     magrittr,
     Seurat,
     SeuratObject,
-    RColorBrewer,
-    MetBrewer,
     grDevices,
-    viridis,
-    viridisLite,
     scales,
     rlang,
     Matrix,
@@ -43,10 +39,11 @@ Imports:
     BiocManager,
     reshape2,
     uwot,
-    ggpointdensity
+    ggpointdensity,
+    patchwork,
+    RANN
 Suggests: 
     presto,
-    patchwork,
     scuttle,
     celda,
     psych,
@@ -59,7 +56,6 @@ Suggests:
     Rsamtools,
     org.Hs.eg.db,
     org.Mm.eg.db,
-    EmbedSOM,
     SingleR,
     scattermore,
     ggforce,

@@ -258,7 +258,7 @@ make_gsea_plot <- function(data,
         alpha = rect_alpha,
         show.legend = T
       ) +
-      ggplot2::scale_fill_stepsn(colors = rev(RColorBrewer::brewer.pal(11,"RdBu")),
+      ggplot2::scale_fill_stepsn(colors = colrr::col_pal("RdBu", direction = -1),
                                  breaks = data_colorbar$zscore,
                                  limits = c(color_scale_limits[1],color_scale_limits[2]),
                                  # center color scale at 0 by ensuring equal number of values around 0
