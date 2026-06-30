@@ -44,3 +44,8 @@ seurat
 \description{
 Run scDblFinder with accessory code lines
 }
+\examples{
+\dontrun{
+so <- run_scdblfinder(so)
+}
+}

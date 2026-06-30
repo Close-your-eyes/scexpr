@@ -2,7 +2,7 @@
 % Please edit documentation in R/qc_plot.R
 \name{qc_plot_log}
 \alias{qc_plot_log}
-\title{Quickly plot common qc metrics}
+\title{Plot common quality-control metrics}
 \usage{
 qc_plot_log(
   SO1,
@@ -13,20 +13,56 @@ qc_plot_log(
 )
 }
 \arguments{
-\item{SO1}{Seurat object 1}
+\item{SO1}{A Seurat object.}
 
-\item{SO2}{Seurat object 2, optional}
+\item{SO2}{Optional second Seurat object, typically representing the object
+before or after filtering.}
 
-\item{qc_cols}{QC columns on y-axes}
+\item{qc_cols}{Character vector of metadata columns containing QC metrics to
+plot. Only columns present in the provided Seurat object(s) are used.}
 
-\item{x_cat}{meta data column for x-axis}
+\item{x_cat}{Metadata column used as the x-axis grouping variable. Defaults
+to \code{"orig.ident"}.}
 
-\item{sec_axis_lin}{plot a secondary axis with linear transformation of qc cols}
+\item{sec_axis_lin}{Logical; add a secondary y-axis showing the inverse
+log1p transformation via \code{expm1()}. Intended for log-transformed QC
+metrics.}
+}
+\value{
+A faceted \code{ggplot2} object showing QC metric distributions by \code{x_cat}.
 }
 \description{
-Plot qc metric, optional with a linear secondary axis.
-When SO1 only is provided: Only plot cells from one Seurat object.
-When SO1 and SO2 are provided:
-Plot additionally those cells that have been filtered from that object with more cells.
-Orig.
+Quickly visualizes selected quality-control metrics from one or two Seurat
+objects. Metrics are shown as jittered points with boxplots, grouped by a
+metadata column and faceted by QC metric.
+}
+\details{
+If only \code{SO1} is provided, all cells from \code{SO1} are plotted. If both \code{SO1}
+and \code{SO2} are provided, the function orders the objects by cell number,
+plots cells from the smaller object in grey, and overlays cells present only
+in the larger object in red. This is useful for inspecting cells removed by
+filtering.
+
+The function expects QC metrics to be stored in \code{SO1@meta.data}, and, when
+\code{SO2} is supplied, also in \code{SO2@meta.data}. Missing QC columns are silently
+ignored unless none of the requested columns are found.
+
+When \code{sec_axis_lin = TRUE}, the primary y-axis is assumed to be log1p-scaled,
+and the secondary axis displays values transformed back to the original
+linear scale using \code{expm1()}.
+}
+\examples{
+qc_plot_log(
+  SO1 = so_filtered,
+  SO2 = so_raw,
+  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log"),
+  x_cat = "orig.ident"
+)
+
+qc_plot_log(
+  SO1 = so,
+  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log"),
+  sec_axis_lin = FALSE
+)
+
 }

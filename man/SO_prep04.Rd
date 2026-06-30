@@ -59,7 +59,7 @@ rather vars.to.regress may be used in combination with batch_corr to regress per
 
 \item{var_feature_filter}{character vector of features which are to exclude from variable features;
 this will affect downstream PCA, dimension reduction and clustering;
-e.g.: var_feature_filter = grep("^TR\link{ABGD}V", rownames(SOqc_split[\link{1}]), value = T) to
+e.g.: var_feature_filter = \code{grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T)} to
 exclude T cell receptor gene segments}
 
 \item{verbose}{print messages and progress bars from functions}

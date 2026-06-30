@@ -27,6 +27,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' avgexpr <- avg_expression(so, "celltype")
+#' }
 avg_expression <- function(obj,
                            group = NULL,
                            assay = "RNA",

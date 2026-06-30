@@ -15,13 +15,16 @@ cds_dimred_to_seurat(
 \arguments{
 \item{cds}{a cell data set}
 
-\item{SO}{an Seurat object}
+\item{SO}{a Seurat object}
 
 \item{reductions}{which reductions to copy; must be one or multiple of names(SingleCellExperiment::reducedDims(cds))}
 
 \item{suffix}{which suffix to add to the reduction names in the Seurat object}
 
 \item{assay}{which assay the dimension reduction were originally based on; must be one of names(SO@assays)}
+}
+\value{
+seurat object
 }
 \description{
 cds may have been created by monocle3.

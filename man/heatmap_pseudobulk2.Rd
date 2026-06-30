@@ -135,7 +135,7 @@ borders. \code{"auto"} chooses a suitable default.}
 \item{scale}{Expression scaling method:
 \itemize{
 \item \code{"zscore"}: gene-wise z-score,
-\item \code{"1"}: scale each gene to \link{-1, 1},
+\item \code{"1"}: scale each gene to \verb{[-1, 1]},
 \item \code{"none"}: no scaling.
 }}
 

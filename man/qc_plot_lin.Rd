@@ -2,7 +2,7 @@
 % Please edit documentation in R/qc_plot.R
 \name{qc_plot_lin}
 \alias{qc_plot_lin}
-\title{Quickly plot common qc metrics}
+\title{Plot common quality-control metrics on a linear scale}
 \usage{
 qc_plot_lin(
   SO1,
@@ -12,20 +12,51 @@ qc_plot_lin(
 )
 }
 \arguments{
-\item{SO1}{Seurat object 1}
+\item{SO1}{A Seurat object.}
 
-\item{SO2}{Seurat object 2, optional}
+\item{SO2}{Optional second Seurat object, typically representing the object
+before or after filtering.}
 
-\item{qc_cols}{QC columns on y-axes}
+\item{qc_cols}{Character vector of metadata columns containing QC metrics to
+plot. Only columns present in the provided Seurat object(s) are used.}
 
-\item{x_cat}{meta data column for x-axis}
-
-\item{sec_axis_lin}{plot a secondary axis with linear transformation of qc cols}
+\item{x_cat}{Metadata column used as the x-axis grouping variable. Defaults
+to \code{"orig.ident"}.}
+}
+\value{
+A faceted \code{ggplot2} object showing QC metric distributions by \code{x_cat}.
 }
 \description{
-Plot qc metric, optional with a linear secondary axis.
-When SO1 only is provided: Only plot cells from one Seurat object.
-When SO1 and SO2 are provided:
-Plot additionally those cells that have been filtered from that object with more cells.
-Orig.
+Quickly visualizes selected quality-control metrics from one or two Seurat
+objects. Metrics are shown as jittered points with boxplots, grouped by a
+metadata column and faceted by QC metric.
+}
+\details{
+If only \code{SO1} is provided, all cells from \code{SO1} are plotted. If both \code{SO1}
+and \code{SO2} are provided, the function orders the objects by cell number,
+plots cells from the smaller object in grey, and overlays cells present only
+in the larger object in red. This is useful for visualizing cells removed by
+filtering.
+
+Unlike \code{qc_plot_log()}, this function assumes that QC metrics are already on
+their original linear scale and does not add a secondary axis.
+
+Missing QC columns are ignored unless none of the requested columns are found.
+When two Seurat objects are supplied, the object with fewer cells is treated
+as the retained/filtered object, and cells present only in the larger object
+are overlaid in red.
+}
+\examples{
+qc_plot_lin(
+  SO1 = so_filtered,
+  SO2 = so_raw,
+  qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt"),
+  x_cat = "orig.ident"
+)
+
+qc_plot_lin(
+  SO1 = so,
+  qc_cols = c("nCount_RNA", "nFeature_RNA", "dbl_score")
+)
+
 }

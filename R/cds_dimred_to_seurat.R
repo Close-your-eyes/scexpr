@@ -3,12 +3,12 @@
 #' cds may have been created by monocle3.
 #'
 #' @param cds a cell data set
-#' @param SO an Seurat object
+#' @param SO a Seurat object
 #' @param reductions which reductions to copy; must be one or multiple of names(SingleCellExperiment::reducedDims(cds))
 #' @param suffix which suffix to add to the reduction names in the Seurat object
 #' @param assay which assay the dimension reduction were originally based on; must be one of names(SO@assays)
 #'
-#' @return
+#' @return seurat object
 #' @export
 #'
 #' @examples

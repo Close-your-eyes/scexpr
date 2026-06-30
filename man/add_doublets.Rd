@@ -28,5 +28,6 @@ obj is spit by that and doublets added separately; can be one sample only}
 seurat
 }
 \description{
+Used within run_scdblfinder function.
 Using scDblFinder::addDoublets with accessory lines of code.
 }

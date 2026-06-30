@@ -33,3 +33,8 @@ If \code{colors} is a named vector and all names match the meta_col levels,
 it is used directly. Otherwise, colors are assigned sequentially to the
 sorted unique values of the grouping variable.
 }
+\examples{
+\dontrun{
+so <- add_group_color_to_misc(so, "celltype")
+}
+}

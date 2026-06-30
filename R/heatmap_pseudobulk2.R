@@ -76,7 +76,7 @@
 #'
 #' @param scale Expression scaling method:
 #' * `"zscore"`: gene-wise z-score,
-#' * `"1"`: scale each gene to [-1, 1],
+#' * `"1"`: scale each gene to `[-1, 1]`,
 #' * `"none"`: no scaling.
 #'
 #' @param featurelabels Feature labels to display. `NULL` plots all labels,

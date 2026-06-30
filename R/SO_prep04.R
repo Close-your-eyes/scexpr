@@ -19,7 +19,7 @@
 #' @param seeed random seed
 #' @param var_feature_filter character vector of features which are to exclude from variable features;
 #' this will affect downstream PCA, dimension reduction and clustering;
-#' e.g.: var_feature_filter = grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T) to
+#' e.g.: var_feature_filter = `grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T)` to
 #' exclude T cell receptor gene segments
 #' @param verbose print messages and progress bars from functions
 #' @param FindVariableFeatures_args arguments to Seurat::FindVariableFeatures

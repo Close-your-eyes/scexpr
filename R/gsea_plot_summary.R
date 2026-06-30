@@ -14,7 +14,7 @@
 #' @param theme ggplot theme
 #' @param col_pal color palette for continuous fill
 #' @param title plot title
-#' @param plot_order
+#' @param plot_order plot dots in order of which parameter? avoid burying.
 #'
 #' @returns ggplot
 #' @export

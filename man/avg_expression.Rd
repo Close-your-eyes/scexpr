@@ -56,3 +56,8 @@ layer = "counts" and fun = Matrix::rowSums.
 This function does not change levels of group as Seurats functions do.
 What a pain!
 }
+\examples{
+\dontrun{
+avgexpr <- avg_expression(so, "celltype")
+}
+}

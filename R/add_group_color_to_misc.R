@@ -20,6 +20,9 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' so <- add_group_color_to_misc(so, "celltype")
+#' }
 add_group_color_to_misc <- function(obj,
                                     meta_col = "orig.ident",
                                     colors = colrr::col_pal("custom", return = "c")) {

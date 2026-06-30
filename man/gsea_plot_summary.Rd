@@ -50,6 +50,8 @@ gsea_plot_summary(
 \item{col_pal}{color palette for continuous fill}
 
 \item{title}{plot title}
+
+\item{plot_order}{plot dots in order of which parameter? avoid burying.}
 }
 \value{
 ggplot

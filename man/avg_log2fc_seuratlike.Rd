@@ -2,10 +2,30 @@
 % Please edit documentation in R/avg_log2fc_seuratlike.R
 \name{avg_log2fc_seuratlike}
 \alias{avg_log2fc_seuratlike}
-\title{Title}
+\title{Compute Seurat-like Average Log2 Fold Change}
 \usage{
 avg_log2fc_seuratlike(mat1, mat2)
 }
+\arguments{
+\item{mat1}{A numeric matrix of log1p-transformed gene expression values for
+the first group of cells, with genes in rows and cells in columns.}
+
+\item{mat2}{A numeric matrix of log1p-transformed gene expression values for
+the second group of cells, with genes in rows and cells in columns.}
+}
+\value{
+A numeric vector containing the average log2 fold change for each
+gene (\code{mat1 - mat2}).
+}
 \description{
-Title
+Computes the difference in average log-transformed expression between two
+groups of cells using the same mean expression calculation employed by
+Seurat's differential expression workflow. Expression values are assumed to
+be log1p-transformed, are converted back to linear space, averaged with a
+pseudocount, and transformed back to log2 space.
+}
+\examples{
+\dontrun{
+avg_log2fc <- avg_log2fc_seuratlike(group1_matrix, group2_matrix)
+}
 }

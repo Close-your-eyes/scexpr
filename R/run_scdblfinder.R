@@ -1,5 +1,6 @@
 #' Add artificial doublets to Seurat object
 #'
+#' Used within run_scdblfinder function.
 #' Using scDblFinder::addDoublets with accessory lines of code.
 #'
 #' @param obj seurat object
@@ -131,6 +132,9 @@ add_doublets <- function(obj,
 #' @export
 #'
 #' @examples
+#' \dontrun{
+#' so <- run_scdblfinder(so)
+#' }
 run_scdblfinder <- function(obj,
                             assay = "RNA",
                             features = scexpr::get_var_features(so),
