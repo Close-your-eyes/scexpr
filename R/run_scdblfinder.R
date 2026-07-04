@@ -119,8 +119,8 @@ add_doublets <- function(obj,
 #' @param obj seurat object
 #' @param assay which assay
 #' @param features gene features to use
-#' @param samples samples to treat separately, vector of idents
-#' @param clusters cluster dents to help the algorithm and optionally to
+#' @param samples_col samples to treat separately, vector of idents
+#' @param clusters_col cluster dents to help the algorithm and optionally to
 #' add_doublets
 #' @param min_umi minimum total UMI sum across features per cell; cells below
 #' are not considered for doublet inference

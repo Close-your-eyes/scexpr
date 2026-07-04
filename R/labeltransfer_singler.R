@@ -31,9 +31,10 @@
 #' when test_obj is Seurat: meta.data column, when matrix: vector of cluster
 #' idents of length ncol(test_obj)
 #' @param name_prefix prefix to all returned columns
-#' @param singler_args arguments to SingleR::SingleR
 #' @param get_layer_args arguments to scexpr::get_layer (applies when test_obj
 #' or ref_obj is Seurat)
+#' @param trainsingler_args args to SingleR::trainSingleR
+#' @param classifysingler_args args to SingleR::classifySingleR
 #'
 #' @returns list of data frame, matrix, named vector, score plot of SingleR
 #' results
@@ -188,7 +189,8 @@ labeltransfer_singler <- function(test_obj,
                                 test_clusters = test_clusters)
 
   plots <- plot_results(score_df = score_df,
-                        test_clusters = test_clusters)
+                        test_clusters = test_clusters,
+                        ref_labels_name = ref_labels_name)
 
 
   return <- build_return_vars(score_df = score_df,
@@ -322,14 +324,13 @@ prep_score_df <- function(labels,
                   is_pruned_label = ifelse(is.na(is_pruned_label), F, is_pruned_label))
 
   if (is.null(test_clusters)) {
-    score_df <-
-      score_df |>
+    score_df <- score_df |>
       dplyr::left_join(
         score_df |>
           dplyr::filter(is_label) |>
-          dplyr::select(!!rlang::sym(test_clusters_name), !!rlang::sym(ref_labels_name)) |>
+          dplyr::select(!!rlang::sym(rownames_to), !!rlang::sym(ref_labels_name)) |>
           dplyr::rename(!!paste0(ref_labels_name, "_assigned_label") := !!rlang::sym(ref_labels_name)),
-        by = dplyr::join_by(!!rlang::sym(test_clusters_name)))
+        by = dplyr::join_by(!!rlang::sym(rownames_to)))
   }
 
   if (any(score_df$is_max_score != score_df$is_label)) {
@@ -350,7 +351,8 @@ prep_score_df <- function(labels,
 }
 
 plot_results <- function(score_df,
-                         test_clusters) {
+                         test_clusters,
+                         ref_labels_name) {
   scores_plot_pseudobulk <- NULL
   if (!is.null(test_clusters)) {
     ## df for text labels on scores_plot

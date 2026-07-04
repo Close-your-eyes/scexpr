@@ -418,7 +418,7 @@ run_xgboost_multi_classifier <- function(df,
   # disable:
   # registerDoSEQ()
 
-  if (compareVersion(as.character(packageVersion("xgboost")), "1.8") == 1) {
+  if (utils::compareVersion(as.character(packageVersion("xgboost")), "1.8") == 1) {
     message("https://stackoverflow.com/questions/79849114/new-version-of-xgboost-package-is-not-working-under-caret-environment")
     stop("install old version of xgboost 1.7.11.1 like so: install.packages('xgboost', repos = 'https://p3m.dev/cran/2025-12-01')")
   }
@@ -491,7 +491,7 @@ run_xgboost_multi_classifier <- function(df,
   #requireNamespaceQuietStop <- caret:::requireNamespaceQuietStop
   set.seed(seed)
   trainobj <- caret::train(
-    as.formula(paste(names(df)[1], "~ .")),
+    stats::as.formula(paste(names(df)[1], "~ .")),
     data = train_data,
     preProcess = preprocess,
     method = method_model,

@@ -366,11 +366,11 @@ qc_plot2 <- function(SO,
   qc_p3 <- qc_params_meta_cols(SO, meta_cols = "orig.ident", qc_cols = gsub("_log", "", qc_cols))
 
   message("save plots with: (replace out and, im_path)")
-  show_command(ggplot2::ggsave(filename = "pheno_qc.png", plot = out[["pheno"]], device = png, path = im_path, width = 10, height = 7))
+  show_command(ggplot2::ggsave(filename = "pheno_qc.png", plot = out[["pheno"]], device = grDevices::png, path = im_path, width = 10, height = 7))
   show_command(for (i in names(out[["meta"]])) {
-    ggplot2::ggsave(filename = paste0(i, "_qc.png"), plot = out[["meta"]][[i]], device = png, path = im_path, width = 12, height = 9)
+    ggplot2::ggsave(filename = paste0(i, "_qc.png"), plot = out[["meta"]][[i]], device = grDevices::png, path = im_path, width = 12, height = 9)
   })
-  show_command(ggplot2::ggsave(filename = "meta2_qc.png", plot = out[["meta2"]], device = png, path = im_path, width = 5, height = 8))
+  show_command(ggplot2::ggsave(filename = "meta2_qc.png", plot = out[["meta2"]], device = grDevices::png, path = im_path, width = 5, height = 8))
 
   if (!is.null(save_path)) {
     ggplot2::ggsave(

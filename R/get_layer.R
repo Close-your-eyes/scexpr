@@ -108,9 +108,9 @@ get_layer <- function(obj,
 }
 
 get_layer_v4 <- function(obj, assay, layer) {
-  layer <- rlang::arg_match(layer, setdiff(slotNames(obj@assays[[assay]]),
+  layer <- rlang::arg_match(layer, setdiff(methods::slotNames(obj@assays[[assay]]),
                                            c("assay.orig", "var.featuress", "meta.featuress", "misc", "key")))
-  x <- slot(obj@assays[[assay]], layer)
+  x <- methods::slot(obj@assays[[assay]], layer)
   return(x)
 }
 

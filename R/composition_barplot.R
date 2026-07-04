@@ -3,7 +3,6 @@
 #' @param SO Seurat object or data frame, meta.data of SO is used
 #' @param x_cat column to use as x axis
 #' @param fill_cat column to use fill category for bar segments
-#' @param color color of bars
 #' @param plot_rel_labels plot relative labels of bar segment sizes
 #' @param min_label_freq minimum frequency per x_cat to plot labels
 #' @param label_rel_pct plot relative label as percent (TRUE) or as fraction (FALSE);
@@ -28,6 +27,10 @@
 #' @param label_position overwrite calculated label positions, which by default are centered in bar segments
 #' @param label_only_largest label only the largest bar segment per x_cat,
 #' e.g if there are two groups only per x_cat
+#' @param geom_col_args args to geom_col
+#' @param label_rel_rm_zero remove leading zero from relative label?
+#' @param bw_cutoff cutoff value for label to switch between black and white
+#' depend upon background
 #'
 #' @return list of plot and data
 #' @export

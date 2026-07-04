@@ -17,8 +17,7 @@ lineplot_avg_expr <- function(obj,
                               features,
                               assay = "RNA",
                               group = "orig.ident",
-                              split = NULL,
-                              return_df = F) {
+                              split = NULL) {
 
   obj <- scexpr:::check.SO(SO = obj,
                            assay = assay,

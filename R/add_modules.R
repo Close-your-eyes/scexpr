@@ -112,7 +112,7 @@ add_modules <- function(obj,
         name = "_xxUCellxx",
         ...)@meta.data |>
         dplyr::select(dplyr::ends_with("_xxUCellxx"))
-      sds <- apply(res, 2, sd)
+      sds <- apply(res, 2, stats::sd)
       return(names(res[,which(sds>min_sd)]))
     })
     modules <- modules[gsub("_xxUCellxx", "", purrr::list_c(modules2))]
@@ -130,7 +130,7 @@ add_modules <- function(obj,
       name = "_UCell",
       ...)@meta.data |>
       dplyr::select(dplyr::ends_with("_UCell"))
-    sds <- apply(res, 2, sd)
+    sds <- apply(res, 2, stats::sd)
     return(res[,which(sds>min_sd)])
   })
 

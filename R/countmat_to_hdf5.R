@@ -8,6 +8,8 @@
 #' @param sub_dir sub directory in out_dir or in folders of colsplit
 #' @param types format(s) to save
 #' @param ... arguments to DropletUtils::write10xCounts
+#' @param min_split_cols min number of cells (cols) required to write
+#' sample to disk
 #'
 #' @return nothing in R but files on disk
 #' @export

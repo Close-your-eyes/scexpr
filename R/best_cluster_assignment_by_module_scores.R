@@ -201,7 +201,7 @@ best_cluster_assignment_by_module_scores0 <- function(df,
 
   mean_scores <- dplyr::summarise(
     df,
-    mean_score = median(!!rlang::sym(score), na.rm = TRUE),
+    mean_score = stats::median(!!rlang::sym(score), na.rm = TRUE),
     .by = c(!!rlang::sym(cluster), !!rlang::sym(module))
   )
 
@@ -258,7 +258,7 @@ best_cluster_assignment_by_module_scores <- function(df,
 
   mean_scores <- dplyr::summarise(
     df,
-    mean_score = median(!!rlang::sym(score), na.rm = TRUE),
+    mean_score = stats::median(!!rlang::sym(score), na.rm = TRUE),
     .by = c(!!rlang::sym(cluster), !!rlang::sym(module))
   )
 

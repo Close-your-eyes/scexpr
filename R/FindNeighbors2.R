@@ -1,36 +1,59 @@
-#' @param query Matrix of data to query against object. If missing, defaults to
-#' object.
-#' @param distance.matrix Boolean value of whether the provided matrix is a
-#' distance matrix; note, for objects of class \code{dist}, this parameter will
-#' be set automatically
-#' @param k.param Defines k for the k-nearest neighbor algorithm
-#' @param return.neighbor Return result as \code{\link[SeuratObject]{Neighbor}} object. Not
-#' used with distance matrix input.
-#' @param compute.SNN also compute the shared nearest neighbor graph
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when
-#' computing the neighborhood overlap for the SNN construction. Any edges with
-#' values less than or equal to this will be set to 0 and removed from the SNN
-#' graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 ---
-#' prune everything).
-#' @param nn.method Method for nearest neighbor finding. Options include: rann,
-#' annoy
-#' @param annoy.metric Distance metric for annoy. Options include: euclidean,
-#' cosine, manhattan, and hamming
-#' @param n.trees More trees gives higher precision when using annoy approximate
-#' nearest neighbor search
-#' @param nn.eps Error bound when performing nearest neighbor search using RANN;
-#' default of 0.0 implies exact nearest neighbor search
-#' @param verbose Whether or not to print output to the console
-#' @param l2.norm Take L2Norm of the data
-#' @param cache.index Include cached index in returned Neighbor object
-#' (only relevant if return.neighbor = TRUE)
-#' @param index Precomputed index. Useful if querying new data against existing
-#' index to avoid recomputing.
+#' Find nearest-neighbor and shared-nearest-neighbor graphs
 #'
-#' @importFrom RANN nn2
-#' @importFrom methods as
+#' Computes a k-nearest-neighbor (KNN) graph, and optionally a
+#' shared-nearest-neighbor (SNN) graph, from an input matrix or distance matrix.
+#' This is a modified neighbor-finding helper based on Seurat internals.
+#' It always returns the ranked nearest neighbor graph.
+#'
+#' @param object A matrix-like object with cells in rows and features in columns,
+#'   or a precomputed distance matrix if `distance.matrix = TRUE`. Row names are
+#'   required and are used as cell names.
+#' @param query Optional query matrix. If `NULL`, `object` is used as the query.
+#' @param distance.matrix Logical. Whether `object` is a precomputed distance
+#'   matrix. Default is `FALSE`.
+#' @param k.param Integer. Number of nearest neighbors to compute. Default is `20`.
+#' @param return.neighbor Logical. Whether to return the nearest-neighbor object
+#'   directly instead of graph objects. Default is `FALSE`.
+#' @param compute.SNN Logical. Whether to compute the SNN graph. Defaults to
+#'   `!return.neighbor`.
+#' @param prune.SNN Numeric. SNN pruning threshold. Edges with values less than
+#'   or equal to this threshold are removed. Default is `1/15`.
+#' @param nn.method Character. Nearest-neighbor search method. Default is
+#'   `"annoy"`.
+#' @param n.trees Integer. Number of trees to use when `nn.method = "annoy"`.
+#'   Default is `50`.
+#' @param annoy.metric Character. Distance metric used by Annoy. Default is
+#'   `"euclidean"`.
+#' @param nn.eps Numeric. Error bound for nearest-neighbor search. Default is `0`.
+#' @param verbose Logical. Whether to print progress messages. Default is `TRUE`.
+#' @param l2.norm Logical. Whether to L2-normalize `object` and `query` before
+#'   neighbor search. Default is `FALSE`.
+#' @param cache.index Logical. Whether to cache the Annoy index. Default is
+#'   `FALSE`.
+#' @param index Optional precomputed nearest-neighbor index.
+#' @param ... Additional arguments. Currently checked by `Seurat:::CheckDots`.
+#'
+#' @returns A list with two elements:
+#' \describe{
+#'   \item{graphs}{A list containing the KNN graph as `nn` and, if requested,
+#'   the SNN graph as `snn`.}
+#'   \item{nn.ranked}{The nearest-neighbor object returned by Seurat's internal
+#'   neighbor search helper.}
+#' }
+#'
+#' If `return.neighbor = TRUE`, the nearest-neighbor object is returned directly
+#' and graph construction is skipped.
 #'
 #' @export
+#'
+#' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(1000), nrow = 100)
+#' rownames(mat) <- paste0("cell_", seq_len(nrow(mat)))
+#'
+#' neighbors <- FindNeighbors2(mat, k.param = 20)
+#' names(neighbors$graphs)
+#' }
 FindNeighbors2 <- function(
     object,
     query = NULL,

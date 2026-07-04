@@ -215,7 +215,7 @@ labeltransfer_singler2 <- function(test_obj,
   } else {
 
     score_df_pseudobulk <- score_df |>
-      dplyr::summarise(score = median(score), .by = c(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")), !!rlang::sym(ref_labels_name)))
+      dplyr::summarise(score = stats::median(score), .by = c(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")), !!rlang::sym(ref_labels_name)))
     score_df_textlabels <-
       score_df_pseudobulk |>
       dplyr::filter(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")) == !!rlang::sym(ref_labels_name)) |>

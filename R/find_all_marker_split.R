@@ -10,7 +10,6 @@
 #' @param levels Character vector. Subset of identity levels to include or exclude.
 #' @param levels_invert Logical. If \code{FALSE} (default), only the specified
 #'   \code{levels} are kept. If \code{TRUE}, the specified \code{levels} are excluded.
-#' @param ... Deprecated. Additional arguments (not used).
 #' @param find_all_marker_args List. Additional arguments passed to
 #'   \code{find_all_marker}. Defaults to \code{list(meta_col = NULL)}.
 #'

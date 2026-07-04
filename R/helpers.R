@@ -167,7 +167,7 @@ check.and.get.cells <- function(SO,
   if (any(duplicated(unlist(all.cells)))) {
     message("Duplicated cell names found across SO.")
     # Get all pairwise combinations of indices
-    combs <- combn(seq_along(all.cells), 2, simplify = F)
+    combs <- utils::combn(seq_along(all.cells), 2, simplify = F)
     # Check for intersection
     intersections <- lapply(combs, function(pair) {
       common <- intersect(all.cells[[pair[1]]], all.cells[[pair[2]]])
@@ -1067,7 +1067,7 @@ add_contour <- function(plot,
 
           dimcol1_avg <- purrr::map_dbl(datasub_split, ~label_center_fun(.x[[dimcol1]]))
           dimcol2_avg <- purrr::map_dbl(datasub_split, ~label_center_fun(.x[[dimcol2]]))
-          clusters <- stack(collapse_close_points(
+          clusters <- utils::stack(collapse_close_points(
             x = dimcol1_avg,
             y = dimcol2_avg,
             threshold = mean(0.2*unlist(plotranges)),

@@ -42,6 +42,7 @@
 #' distinct mapping is retained after reporting the affected identifiers.
 #'
 #' @examples
+#' \dontrun{
 #' convert_gene_identifier(
 #'   idents = c("MS4A1", "CD3D", "LYZ"),
 #'   ident_in = "SYMBOL",
@@ -56,7 +57,7 @@
 #'   species = "Mm",
 #'   return = "vector"
 #' )
-#'
+#'}
 #' @export
 convert_gene_identifier <- function (idents,
                                      ident_in = "SYMBOL",

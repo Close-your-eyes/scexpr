@@ -5,8 +5,10 @@
 #' @param mc.cores multiple threads?
 #' @param ... arguments to Seurat::FindMarkers
 #' @param split column in obj to split by before marker calculation
+#' @param method use scexpr::find_all_marker or Seurat::FindMarkers
+#' @param redundant return redundant results?
 #'
-#' @returns
+#' @returns data.frame
 #' @export
 #'
 #' @examples
@@ -70,7 +72,7 @@ find_markers_pairwise <- function(obj,
             tibble::rownames_to_column("feature")
           ## must be made redundant if required
           if (redundant) {
-            tt <- dplyr::bind_rows(temp, flip_marker_df(temp))
+            dplyr::bind_rows(temp, flip_marker_df(temp))
           } else {
             temp
           }

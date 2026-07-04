@@ -1,5 +1,5 @@
 Package: scexpr
-Title: Ways to analyze scRNAseq data sets.
+Title: Ways to analyze scRNAseq data sets
 Version: 0.1.4
 Authors@R: 
     person(given = "Christopher Mark",

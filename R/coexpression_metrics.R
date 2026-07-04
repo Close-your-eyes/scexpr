@@ -14,6 +14,8 @@
 #' @param assay assay in obj
 #' @param layer layer in assay
 #' @param nameprefix prefix to metrics
+#' @param group Optional metadata column name in `obj@meta.data` used to summarize
+#'   coexpression metrics by group. If `NULL`, grouped summaries are not returned.
 #'
 #' @returns data frame
 #' @export
@@ -49,6 +51,7 @@ coexpression_metrics <- function(obj,
   coexpr_rel <- coexpr_sum/length(features)
   coexpr_abs <- Matrix::colSums(lay)
   coexpr_scale <- Matrix::rowSums(brathering::scale2(as.matrix(lay), 0, 3, margin = 1))
+  # coexpr_scale <- Matrix::colSums(brathering::scale2(as.matrix(lay), 0, 3, margin = 1))
   coexpr_scale2 <- log2(coexpr_scale+1)
 
   df <- data.frame(
@@ -63,7 +66,7 @@ coexpression_metrics <- function(obj,
   names(df) <- paste0(nameprefix, "_", c("sum", "rel", "abs", "norm", "lognorm"))
 
   if (!is.null(group)) {
-    group <- purrr::map_dfr(split(df, so@meta.data[[group]]), ~Matrix::colMeans(.x), .id = group)
+    group <- purrr::map_dfr(split(df, obj@meta.data[[group]]), ~Matrix::colMeans(.x), .id = group)
   }
 
   # df <- df |>

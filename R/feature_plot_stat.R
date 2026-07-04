@@ -213,7 +213,7 @@ feature_plot_stat <- function(SO,
 
   if (geom3 != "none") {
     if (geom3 == "..auto..") {
-      datasummary <- dplyr::summarise(data, median = median(feature), .by = c(!!rlang::sym(meta_col), feature_split))
+      datasummary <- dplyr::summarise(data, median = stats::median(feature), .by = c(!!rlang::sym(meta_col), feature_split))
       median0 <- datasummary |> dplyr::filter(median == 0)
       datageom3 <- data |>
         dplyr::filter(feature > 0) |>

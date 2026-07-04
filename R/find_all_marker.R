@@ -12,6 +12,7 @@
 #' @param features features selection to increase speed further
 #' @param layer which layer to pull expression matrix from
 #' @param mc.cores multicores for calc_avglog2fc
+#' @param na_rm remove NA?
 #'
 #' @returns data frame with DEG
 #' @export

@@ -109,7 +109,7 @@ find_marker_in_expr_dich <- function(obj,
     m2 <- mean(z2)
 
     df <- data.frame(
-      pval = wilcox.test(z1, z2, exact = FALSE)$p.value,
+      # pval = stats::wilcox.test(z1, z2, exact = FALSE)$p.value,
       mean_diff = m1 - m2,
       log2fc = log2(m1) - log2(m2),
       pct.1 = length(z1)/length(v1),

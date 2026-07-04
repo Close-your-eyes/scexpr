@@ -178,8 +178,8 @@ cluster_correlation2 <- function(objs,
       method = method)
 
     corr_mat <- corrobj[["r"]]
-    apply(avg_expr[[1]][[1]], 2, sd)
-    apply(avg_expr[[2]][[1]], 2, sd)
+    apply(avg_expr[[1]][[1]], 2, stats::sd)
+    apply(avg_expr[[2]][[1]], 2, stats::sd)
     any(is.infinite(avg_expr[[2]][[1]][,1]))
     tt <- avg_expr[["klocke"]][[1]]
   }

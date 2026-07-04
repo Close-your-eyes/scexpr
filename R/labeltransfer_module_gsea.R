@@ -183,7 +183,7 @@ resdf2 <- resdf |>
 
   # gsea plot with order from module plot
   ### fails if ucell suffix is used?!
-  suppressMessages(capture.output(scores_plot3 <- scores_plot2 +
+  suppressMessages(utils::capture.output(scores_plot3 <- scores_plot2 +
                                     ggplot2::scale_x_discrete(limits = xyorder$x) +
                                     ggplot2::scale_y_discrete(limits = xyorder$y)))
   scores_plot3 <- patchwork::wrap_plots(scores_plot, scores_plot3)

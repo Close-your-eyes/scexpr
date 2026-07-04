@@ -142,7 +142,7 @@ gsea_plot <- function(data,
   }
 
   if (nrow(results) > 100) {
-    choi <- menu(c("yes", "no"), title = paste0(nrow(results), " gene sets to plot?"))
+    choi <- utils::menu(c("yes", "no"), title = paste0(nrow(results), " gene sets to plot?"))
     if (choi == 2) {
       return(NULL)
     }
