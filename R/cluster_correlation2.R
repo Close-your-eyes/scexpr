@@ -1,31 +1,69 @@
-#' Check relationship (correlation) of clusters from one or two Seurat objects
+#' Correlate average expression profiles between Seurat clusters or groups
 #'
-#' Check https://github.com/skinnider/dismay and https://github.com/tpq/propr
-#' propr could not be made for 2 matrices yet.
+#' Computes correlations between groups of cells defined by metadata columns in
+#' one Seurat object or between two Seurat objects. For each group, average
+#' expression is calculated first, then correlations are computed between group
+#' average-expression profiles. Optionally, correlations can be computed within
+#' shared levels of a splitting variable and then combined across split levels.
 #'
-#' @param objs one Seurat or a named list of 2 Seurats
-#' @param meta_cols one or two columns from meta.data
-#' @param split split correlation estimation by another variable like
-#' donor: column from meta data; must exist in both objs with shared levels
-#' when objs is a list of two
-#' @param features which features (genes) to use for correlation: all intersecting,
-#' intersecting pca features, or a custom vector
-#' @param assay assay to pull expression matrix from
-#' @param layer layer to pull expression matrix from
-#' @param method correlation metric: from psych pkg: pearson, spearman, kendall;
-#' from dismay
-#' @param heatmap_long_df_args arguments to fcexpr::heatmap_long_df for plotting
-#' results
-#' @param heatmap_ordering_args arguments to fcexpr::heatmap_ordering
-#' @param min_cells min cell number in both groups to calc correlation
-#' @param avg_expression_args args to scexpr::avg_expression
+#' @param objs A Seurat object, or a named list of exactly two Seurat objects.
+#'   If a single Seurat object is supplied, it is compared against itself.
+#' @param meta_cols Character vector of length one or two. Metadata column(s)
+#'   used to define the groups/clusters to compare. If length one, the same
+#'   column is used for both objects.
+#' @param split Optional character scalar. Metadata column used to compute
+#'   correlations separately within each shared split level, such as donor,
+#'   batch, sample, or condition. The column must exist in both objects and must
+#'   have at least one shared level.
+#' @param features Character scalar or character vector. If `"pca"`, uses the
+#'   intersecting features from the PCA loadings of both objects. If `"all"`,
+#'   uses all intersecting features between the two objects. If a character
+#'   vector of feature names is supplied, those features are used directly.
+#' @param assay Character scalar. Assay from which expression values are read.
+#'   The assay must exist in both Seurat objects.
+#' @param layer Character scalar. Assay layer used for expression values,
+#'   usually `"data"`, `"counts"`, or `"scale.data"`.
+#' @param method Character scalar. Correlation method. One of `"spearman"`,
+#'   `"pearson"`, `"kendall"`, or `"kendall_zi"`. The first three are passed to
+#'   `psych::corr.test()`. `"kendall_zi"` uses
+#'   `brathering::kendall_zi_cross()`. kendall_zi not tested well and only
+#'   used when split is provided.
+#' @param heatmap_long_df_args Named list of arguments passed to
+#'   `fcexpr::heatmap_long_df()` when generating the heatmap.
+#' @param heatmap_ordering_args Named list of arguments passed to
+#'   `fcexpr::heatmap_ordering()` before plotting.
+#' @param min_cells Integer. Minimum number of cells required in both compared
+#'   groups. Correlations involving groups with fewer cells are set to `NA` in
+#'   the plotting data.
+#' @param avg_expression_args Named list of additional arguments passed to
+#'   `scexpr::avg_expression()`.
 #'
-#' @returns list of data frames and plot
+#' @return A named list containing:
+#' \describe{
+#'   \item{corrobj}{Raw correlation object or list of correlation objects.}
+#'   \item{plot}{Heatmap plot object.}
+#'   \item{corr_df_plot}{Long-format correlation data used for plotting.}
+#'   \item{corr_df}{Long-format correlation data before plotting filters.}
+#'   \item{corr_df_split}{Only when `split` is supplied; split-level correlation data.}
+#' }
+#'
 #' @export
 #'
 #' @examples
 #' \dontrun{
-#' clustcorr <- cluster_correlation2(so, meta_cols = "SCT_harmony_snn_res.0.1")
+#' clustcorr <- cluster_correlation2(
+#'   objs = so,
+#'   meta_cols = "SCT_harmony_snn_res.0.1",
+#'   method = "spearman"
+#' )
+#'
+#' clustcorr2 <- cluster_correlation2(
+#'   objs = list(reference = so1, query = so2),
+#'   meta_cols = c("cluster", "celltype"),
+#'   split = "donor",
+#'   features = "pca",
+#'   min_cells = 10
+#' )
 #' }
 cluster_correlation2 <- function(objs,
                                  meta_cols,
@@ -39,8 +77,7 @@ cluster_correlation2 <- function(objs,
                                    values_zscored = F,
                                    colorsteps = 10,
                                    lower_tri = F,
-                                   theme_args = list(panel.grid = ggplot2::element_blank(),
-                                                     axis.text.x = ggplot2::element_text(angle = 35, hjust = 1))),
+                                   theme_args = list()),
                                  heatmap_ordering_args = list(
                                    feature_order = "hclust",
                                    group_order = "hclust"),
@@ -72,7 +109,8 @@ cluster_correlation2 <- function(objs,
     pak::pak("Close-your-eyes/brathering")
   }
 
-  if (is.null(names(objs))) {
+
+  if (is.list(objs) && is.null(names(objs))) {
     nme <- as.character(deparse(substitute(objs)))
     names(objs) <- strsplit(gsub("list\\(|\\)", "", nme), ", ")[[1]]
   }
@@ -88,8 +126,8 @@ cluster_correlation2 <- function(objs,
       meta_cols = meta_cols,
       split = split,
       assay = assay,
-      features = features[1],
-      method = method[1])
+      features = features,
+      method = method)
 
   avg_expr <- purrr::map2(
     objs,
@@ -124,9 +162,7 @@ cluster_correlation2 <- function(objs,
                             ~psych::corr.test(x = avg_expr[[1]][[.x]],
                                               y = avg_expr[[2]][[.x]],
                                               method = method))
-    }
-
-    if (method == "kendall_zi") {
+    } else if (method == "kendall_zi") {
       corrobj <- list()
       corrobj[["r"]] <- purrr::map(split_intersect,
                                    ~brathering::kendall_zi_cross(x = avg_expr[[1]][[.x]],
@@ -172,16 +208,14 @@ cluster_correlation2 <- function(objs,
 
   } else {
     # no split
+    if (method == "kendall_zi") {
+      stop("kendall_zi not implemented in non-split.")
+    }
     corrobj <- psych::corr.test(
       x = avg_expr[[1]][[1]],
       y = avg_expr[[2]][[1]],
       method = method)
-
     corr_mat <- corrobj[["r"]]
-    apply(avg_expr[[1]][[1]], 2, stats::sd)
-    apply(avg_expr[[2]][[1]], 2, stats::sd)
-    any(is.infinite(avg_expr[[2]][[1]][,1]))
-    tt <- avg_expr[["klocke"]][[1]]
   }
 
   # cell count w/o split
@@ -192,6 +226,22 @@ cluster_correlation2 <- function(objs,
                                          c(names(objs)[x])),
                 colname = paste0("n_cells_", names(objs)[x]))
   })
+
+  dendroplot <- NULL
+  if (isSymmetric(corr_mat)) {
+    dist_mat <- stats::as.dist(1 - corr_mat)
+    hcdata <- ggdendro::dendro_data(stats::hclust(dist_mat), type = "rectangle")
+    dendroplot <- ggplot2::ggplot() +
+      ggplot2::geom_segment(data = ggdendro::segment(hcdata),
+                            ggplot2::aes(x = x, y = y, xend = xend, yend = yend)) +
+      ggplot2::geom_text(data = ggdendro::label(hcdata),
+                         ggplot2::aes(x = x, y = y, label = label, hjust = 0),
+                         size = 3) +
+      ggplot2::coord_flip() +
+      ggplot2::scale_y_reverse(expand = c(0.2, 0)) +
+      ggplot2::theme_void()
+  }
+
 
   rdf <- brathering::mat_to_df_long(corr_mat,
                                     rownames_to = names(objs)[1],
@@ -208,30 +258,13 @@ cluster_correlation2 <- function(objs,
                                          features = names(rdf)[2],
                                          values = method),
                                     heatmap_ordering_args))
-
-  # if (lower_tri) {
-  #   # if (ncol(corr_mat) != nrow(corr_mat)) {
-  #   #   message("Correlation matrix is not quadratic. Returning the lower triangle may not yield intended results.")
-  #   # }
-  #   rdfmat <- brathering::df_long_to_mat(rdf, to_rows = names(objs)[1], to_cols = names(objs)[2], values = method)
-  #   rdfmat[which(!lower.tri(rdfmat))] <- NA
-  #   rdf <- brathering::mat_to_df_long(rdfmat,
-  #                                     rownames_to = names(objs)[1],
-  #                                     colnames_to = names(objs)[2],
-  #                                     values_to = method) |>
-  #     dplyr::left_join(cells[[1]], by = names(objs)[1]) |>
-  #     dplyr::left_join(cells[[2]], by = names(objs)[2])
-  #   #dplyr::mutate(!!rlang::sym(names(objs)[1]) := factor(!!rlang::sym(names(objs)[1]), levels = levels(rdf[[names(objs)[1]]]))) |>
-  #   #dplyr::mutate(!!rlang::sym(names(objs)[2]) := factor(!!rlang::sym(names(objs)[2]), levels = levels(rdf[[names(objs)[2]]])))
-  # }
-
   # set corr value to NA when min_cells is not met by both groups
   # option for min_cells in both vs. in at least one
   rdf_plot <- rdf |>
     dplyr::mutate(!!rlang::sym(method) := ifelse(!!rlang::sym(ncellcol[1]) < min_cells, NA, !!rlang::sym(method))) |>
     dplyr::mutate(!!rlang::sym(method) := ifelse(!!rlang::sym(ncellcol[2]) < min_cells, NA, !!rlang::sym(method)))
 
-  plot <- Gmisc::fastDoCall(what = heatmap_long_df, #fcexpr::
+  plot <- Gmisc::fastDoCall(what = fcexpr::heatmap_long_df, #fcexpr::
                             args = c(list(df = rdf_plot,
                                           groups = names(rdf)[1],
                                           features = names(rdf)[2],
@@ -240,7 +273,14 @@ cluster_correlation2 <- function(objs,
                                                                        group_order = "none")),
                                      heatmap_long_df_args))
 
-  ret <- list(corrobj = corrobj, plot = plot, corr_df_plot = rdf_plot, corr_df = rdf)
+  ret <- list(
+    corrobj = corrobj,
+    plot = plot,
+    corr_df_plot = rdf_plot,
+    corr_df = rdf,
+    dendroplot = dendroplot
+  )
+
   if (!is.null(split)) {
     ret <- c(list(corr_df_split = corr_df), ret)
   }
@@ -257,25 +297,16 @@ checks <- function(objs,
   if (methods::is(objs, "Seurat")) {
     objs <- list(objs, objs)
   }
-  objs <- scexpr:::check.SO(objs, assay = assay)
+  objs <- scexpr:::check.SO(objs, assay = assay, length = 2)
+  assay <- rlang::arg_match(assay, names(objs[[1]]@assays))
+  method <- rlang::arg_match(method, c("pearson","spearman", "kendall", "kendall_zi"))
+
   if (length(meta_cols) == 1) {
     meta_cols <- c(meta_cols, meta_cols)
   }
   if (!meta_cols[1] %in% names(objs[[1]]@meta.data) || !meta_cols[2] %in% names(objs[[2]]@meta.data)) {
     stop("One of meta_cols not found in respective objs.")
   }
-
-  if (!is.list(objs)) {
-    stop("objs must be list of seurat objects.")
-  }
-  if (length(objs) != 2) {
-    stop("objs must be of length two.")
-  }
-
-  # if (!is.null(split) && method != "pearson") {
-  #   message("Averaging correlation values may only be valid for pearson. See https://stats.stackexchange.com/questions/8019/averaging-correlation-values?noredirect=1&lq=1 .")
-  # }
-
 
   split_intersect <- NULL
   if (!is.null(split)) {
@@ -292,26 +323,35 @@ checks <- function(objs,
     split_intersect <- as.character(split_intersect)
     names(split_intersect) <- split_intersect
   }
-  assay <- match.arg(assay, names(objs[[1]]@assays))
-  method = match.arg(method, c("pearson","spearman", "kendall", "kendall_zi"))
 
-  if (length(features) %in% c(1,2) && length(intersect(features, c("all", "pca"))) == 2) {
-    #features <- match.arg(features, choices = c("all", "pca"))
-    features <- features[1]
+  if (length(intersect(features, c("all", "pca"))) == 2) { # length(features) %in% c(1,2) &&
+    features <- rlang::arg_match(features, c("all", "pca"))
   }
 
   if (length(features) == 1 && features == "all") {
-    features <- Reduce(intersect, purrr::map(objs, rownames))
+    features <- Reduce(intersect, purrr::map(objs, scexpr:::get_gene_features))
   } else if (length(features) == 1 && features == "pca") {
     features2 <- names(scexpr:::check.reduction(objs, reduction = "pca"))
+    if (length(features2)>1) {
+      message("more than 1 pca found: ", paste(features2, collapse = ","), ". using first.")
+      features2 <- features2[1]
+    }
     if (features != features2) {
       message("using pca: ", features2)
       features <- features2
     }
     features <- Reduce(intersect,  purrr::map(objs, ~rownames(.x@reductions[[features]]@feature.loadings)))
   } else {
-    # features <- check.features(objs, features, meta.data = F)
+    # feature vector provided
+    features <- intersect(Reduce(intersect, purrr::map(objs, scexpr:::get_gene_features)), features)
   }
+
+  if (!length(features)) {
+    stop("no features left.")
+  } else {
+    message("using ", length(features), " features.")
+  }
+
   return(list(objs, meta_cols, split, assay, features, split_intersect, method))
 }
 

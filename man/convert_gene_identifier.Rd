@@ -60,6 +60,7 @@ When duplicate mappings are returned by \code{AnnotationDbi::select()}, the firs
 distinct mapping is retained after reporting the affected identifiers.
 }
 \examples{
+\dontrun{
 convert_gene_identifier(
   idents = c("MS4A1", "CD3D", "LYZ"),
   ident_in = "SYMBOL",
@@ -74,5 +75,5 @@ convert_gene_identifier(
   species = "Mm",
   return = "vector"
 )
-
+}
 }

@@ -6,18 +6,18 @@
 \usage{
 SO_prep04(
   SO,
-  assay = "RNA",
   reductions = c("umap"),
   nhvf = 800,
   npcs = 20,
-  normalization = c("SCT", "LogNormalize"),
+  normalization = c("SCT", "RNA", "LogNormalize"),
   batch_corr = c("harmony", "none"),
   vars.to.regress = NULL,
-  seeed = 42,
-  var_feature_filter = NULL,
-  verbose = F,
+  seed = 42,
+  var_feature_set = NULL,
+  verbose = T,
   FindVariableFeatures_args = list(),
-  SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = F),
+  SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = T,
+    residual_type = "pearson"),
   RunPCA_args = list(),
   RunUMAP_args = list(),
   RunTSNE_args = list(theta = 0.01),
@@ -29,13 +29,12 @@ SO_prep04(
     length.out = 11),
   interactive_pc_selection = F,
   recalculate = F,
+  use_nn_for_umap = F,
   ...
 )
 }
 \arguments{
 \item{SO}{seurat object}
-
-\item{assay}{which assay to process}
 
 \item{reductions}{which reduction to calculate, tsne and/or umap}
 
@@ -55,12 +54,9 @@ used to regress out a variable in meta.data which may be sample-specific; other 
 it may not be meaningful to regress a sample-specific variable and perform batch_corr;
 rather vars.to.regress may be used in combination with batch_corr to regress percent_mito or so}
 
-\item{seeed}{random seed}
+\item{seed}{random seed}
 
-\item{var_feature_filter}{character vector of features which are to exclude from variable features;
-this will affect downstream PCA, dimension reduction and clustering;
-e.g.: var_feature_filter = \code{grep("^TR[ABGD]V", rownames(SOqc_split[[1]]), value = T)} to
-exclude T cell receptor gene segments}
+\item{var_feature_set}{set hvf manually}
 
 \item{verbose}{print messages and progress bars from functions}
 
@@ -86,6 +82,11 @@ exclude T cell receptor gene segments}
 
 \item{interactive_pc_selection}{do conduct interactive PC selection?}
 
+\item{recalculate}{force recalculation of SCT assay even when nhvf match.
+do so, when setting var_feature_set or vars.to.regress}
+
+\item{use_nn_for_umap}{re-use nearest neighbor graph from cluster calc for umap?}
+
 \item{...}{not used}
 }
 \value{
@@ -93,4 +94,37 @@ seurat object
 }
 \description{
 normalize, hvf, pca, batch corr, dim red, clustering
+}
+\examples{
+\dontrun{
+# scan combinations of nhvf and npcs for nice umap and clustering results
+for (i in seq(500, 4000, 500)) {
+  print(i)
+  for (j in seq(10,50,10)) {
+    print(j)
+    so <- scexpr::SO_prep04(so,
+                            reductions = "umap",
+                            nhvf = i,
+                            npcs = j,
+                            SCtransform_args = list(
+                              vst.flavor = "v2",
+                              method = "glmGamPoi",
+                              conserve.memory = F),
+                            vars.to.regress = "pct_mt")
+  }
+}
+# find a clusterings tha has as few splits as possible compared to the other
+clustres <- purrr::map(purrr::set_names(so@misc$clusterings), function(x) {
+  brathering::compare_labels(so@meta.data[[x]], so@meta.data$renalcellgroup)
+})
+# find best matching clusterings with simpson concentration index for each row
+rsimp <- purrr::map(clustres, ~rowSums(.x[["x_props"]][["mat"]]^2))
+df <- data.frame(value = unlist(rsimp, use.names = F), name = rep(names(rsimp), lengths(rsimp)))
+
+ggplot(df, aes(x = reorder(name, value), y = value)) +
+  geom_boxplot() +
+  geom_point()
+
+dfsumm <- dplyr::summarise(df, meanval = median(value), minval = min(value), .by = name)
+#' }
 }

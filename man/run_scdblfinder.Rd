@@ -24,6 +24,11 @@ run_scdblfinder(
 
 \item{features}{gene features to use}
 
+\item{samples_col}{samples to treat separately, vector of idents}
+
+\item{clusters_col}{cluster dents to help the algorithm and optionally to
+add_doublets}
+
 \item{min_umi}{minimum total UMI sum across features per cell; cells below
 are not considered for doublet inference}
 
@@ -32,11 +37,6 @@ are not considered for doublet inference}
 \item{add_doublets}{add artificial doublets}
 
 \item{add_doublets_tell}{tell scDblFinder::scDblFinder about artificial doublets}
-
-\item{samples}{samples to treat separately, vector of idents}
-
-\item{clusters}{cluster dents to help the algorithm and optionally to
-add_doublets}
 }
 \value{
 seurat

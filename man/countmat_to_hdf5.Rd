@@ -26,6 +26,9 @@ countmat_to_hdf5(
 
 \item{types}{format(s) to save}
 
+\item{min_split_cols}{min number of cells (cols) required to write
+sample to disk}
+
 \item{...}{arguments to DropletUtils::write10xCounts}
 }
 \value{

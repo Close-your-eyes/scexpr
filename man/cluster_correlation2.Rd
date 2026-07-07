@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster_correlation2.R
 \name{cluster_correlation2}
 \alias{cluster_correlation2}
-\title{Check relationship (correlation) of clusters from one or two Seurat objects}
+\title{Correlate average expression profiles between Seurat clusters or groups}
 \usage{
 cluster_correlation2(
   objs,
@@ -13,51 +13,86 @@ cluster_correlation2(
   layer = "data",
   method = c("spearman", "pearson", "kendall", "kendall_zi"),
   heatmap_long_df_args = list(fill = colrr::col_pal("spectral", direction = -1),
-    values_zscored = F, colorsteps = 10, lower_tri = F, theme_args = list(panel.grid =
-    ggplot2::element_blank(), axis.text.x = ggplot2::element_text(angle = 35, hjust =
-    1))),
+    values_zscored = F, colorsteps = 10, lower_tri = F, theme_args = list()),
   heatmap_ordering_args = list(feature_order = "hclust", group_order = "hclust"),
   min_cells = 1,
   avg_expression_args = list(fun = Matrix::rowMeans, fun2 = base::identity)
 )
 }
 \arguments{
-\item{objs}{one Seurat or a named list of 2 Seurats}
+\item{objs}{A Seurat object, or a named list of exactly two Seurat objects.
+If a single Seurat object is supplied, it is compared against itself.}
 
-\item{meta_cols}{one or two columns from meta.data}
+\item{meta_cols}{Character vector of length one or two. Metadata column(s)
+used to define the groups/clusters to compare. If length one, the same
+column is used for both objects.}
 
-\item{split}{split correlation estimation by another variable like
-donor: column from meta data; must exist in both objs with shared levels
-when objs is a list of two}
+\item{split}{Optional character scalar. Metadata column used to compute
+correlations separately within each shared split level, such as donor,
+batch, sample, or condition. The column must exist in both objects and must
+have at least one shared level.}
 
-\item{features}{which features (genes) to use for correlation: all intersecting,
-intersecting pca features, or a custom vector}
+\item{features}{Character scalar or character vector. If \code{"pca"}, uses the
+intersecting features from the PCA loadings of both objects. If \code{"all"},
+uses all intersecting features between the two objects. If a character
+vector of feature names is supplied, those features are used directly.}
 
-\item{assay}{assay to pull expression matrix from}
+\item{assay}{Character scalar. Assay from which expression values are read.
+The assay must exist in both Seurat objects.}
 
-\item{layer}{layer to pull expression matrix from}
+\item{layer}{Character scalar. Assay layer used for expression values,
+usually \code{"data"}, \code{"counts"}, or \code{"scale.data"}.}
 
-\item{method}{correlation metric: from psych pkg: pearson, spearman, kendall;
-from dismay}
+\item{method}{Character scalar. Correlation method. One of \code{"spearman"},
+\code{"pearson"}, \code{"kendall"}, or \code{"kendall_zi"}. The first three are passed to
+\code{psych::corr.test()}. \code{"kendall_zi"} uses
+\code{brathering::kendall_zi_cross()}. kendall_zi not tested well and only
+used when split is provided.}
 
-\item{heatmap_long_df_args}{arguments to fcexpr::heatmap_long_df for plotting
-results}
+\item{heatmap_long_df_args}{Named list of arguments passed to
+\code{fcexpr::heatmap_long_df()} when generating the heatmap.}
 
-\item{heatmap_ordering_args}{arguments to fcexpr::heatmap_ordering}
+\item{heatmap_ordering_args}{Named list of arguments passed to
+\code{fcexpr::heatmap_ordering()} before plotting.}
 
-\item{min_cells}{min cell number in both groups to calc correlation}
+\item{min_cells}{Integer. Minimum number of cells required in both compared
+groups. Correlations involving groups with fewer cells are set to \code{NA} in
+the plotting data.}
 
-\item{avg_expression_args}{args to scexpr::avg_expression}
+\item{avg_expression_args}{Named list of additional arguments passed to
+\code{scexpr::avg_expression()}.}
 }
 \value{
-list of data frames and plot
+A named list containing:
+\describe{
+\item{corrobj}{Raw correlation object or list of correlation objects.}
+\item{plot}{Heatmap plot object.}
+\item{corr_df_plot}{Long-format correlation data used for plotting.}
+\item{corr_df}{Long-format correlation data before plotting filters.}
+\item{corr_df_split}{Only when \code{split} is supplied; split-level correlation data.}
+}
 }
 \description{
-Check https://github.com/skinnider/dismay and https://github.com/tpq/propr
-propr could not be made for 2 matrices yet.
+Computes correlations between groups of cells defined by metadata columns in
+one Seurat object or between two Seurat objects. For each group, average
+expression is calculated first, then correlations are computed between group
+average-expression profiles. Optionally, correlations can be computed within
+shared levels of a splitting variable and then combined across split levels.
 }
 \examples{
 \dontrun{
-clustcorr <- cluster_correlation2(so, meta_cols = "SCT_harmony_snn_res.0.1")
+clustcorr <- cluster_correlation2(
+  objs = so,
+  meta_cols = "SCT_harmony_snn_res.0.1",
+  method = "spearman"
+)
+
+clustcorr2 <- cluster_correlation2(
+  objs = list(reference = so1, query = so2),
+  meta_cols = c("cluster", "celltype"),
+  split = "donor",
+  features = "pca",
+  min_cells = 10
+)
 }
 }

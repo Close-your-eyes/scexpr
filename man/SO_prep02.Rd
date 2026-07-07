@@ -21,14 +21,14 @@ SO_prep02(
   vars.to.regress = NULL,
   seed = 42,
   save_path = NULL,
-  save_ext = c("rds", "zap"),
+  save_ext = c("rds"),
   celltype_refs = NULL,
   celltype_label = c("label.main", "label.fine"),
   celltype_ref_clusters = NULL,
   diet_seurat = F,
   var_feature_filter = NULL,
   var_feature_set = NULL,
-  verbose = F,
+  verbose = T,
   FindVariableFeatures_args = list(),
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = T,
     residual_type = "pearson"),
@@ -96,7 +96,7 @@ rather vars.to.regress may be used in combination with batch_corr to regress per
 
 \item{save_path}{folder to save the resulting Seurat object as rds-file to}
 
-\item{save_ext}{save as rds or zap file?}
+\item{save_ext}{just rds now}
 
 \item{celltype_refs}{list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData(), MonacoImmune = celldex::MonacoImmuneData())}
 

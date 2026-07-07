@@ -32,6 +32,8 @@ of means (wrong naming)}
 
 \item{features}{features selection to increase speed further}
 
+\item{na_rm}{remove NA?}
+
 \item{mc.cores}{multicores for calc_avglog2fc}
 }
 \value{

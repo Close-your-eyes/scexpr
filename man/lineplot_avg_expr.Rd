@@ -9,8 +9,7 @@ lineplot_avg_expr(
   features,
   assay = "RNA",
   group = "orig.ident",
-  split = NULL,
-  return_df = F
+  split = NULL
 )
 }
 \arguments{

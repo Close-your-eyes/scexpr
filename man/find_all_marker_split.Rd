@@ -25,8 +25,6 @@ before marker detection. If \code{NULL}, existing identities are used.}
 
 \item{find_all_marker_args}{List. Additional arguments passed to
 \code{find_all_marker}. Defaults to \code{list(meta_col = NULL)}.}
-
-\item{...}{Deprecated. Additional arguments (not used).}
 }
 \value{
 A named list where each element corresponds to a group and contains

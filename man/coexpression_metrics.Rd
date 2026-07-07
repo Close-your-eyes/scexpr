@@ -23,6 +23,9 @@ coexpression_metrics(
 \item{layer}{layer in assay}
 
 \item{nameprefix}{prefix to metrics}
+
+\item{group}{Optional metadata column name in \code{obj@meta.data} used to summarize
+coexpression metrics by group. If \code{NULL}, grouped summaries are not returned.}
 }
 \value{
 data frame

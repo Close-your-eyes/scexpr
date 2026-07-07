@@ -31,10 +31,12 @@ idents of length ncol(test_obj)}
 
 \item{name_prefix}{prefix to all returned columns}
 
+\item{trainsingler_args}{args to SingleR::trainSingleR}
+
+\item{classifysingler_args}{args to SingleR::classifySingleR}
+
 \item{get_layer_args}{arguments to scexpr::get_layer (applies when test_obj
 or ref_obj is Seurat)}
-
-\item{singler_args}{arguments to SingleR::SingleR}
 }
 \value{
 list of data frame, matrix, named vector, score plot of SingleR

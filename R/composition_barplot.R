@@ -110,6 +110,9 @@ composition_barplot <- function(SO,
     dplyr::mutate(rel_x = n/x_total) |>
     dplyr::mutate(rel_fill = n/fill_total) # rel_fill is not used below
 
+  # cl <- compare_labels(SO[[x_cat]], SO[[fill_cat]])
+  #   browser()
+
   if (summarize_all_x) {
     table <- dplyr::bind_rows(table,
                               SO |>
@@ -282,8 +285,7 @@ composition_barplot <- function(SO,
   }
 
   if (plot_total_rel_labels) {
-    plot <-
-      plot +
+    plot <- plot +
       ggplot2::geom_text(data = table0,
                          ggplot2::aes(color = I(label_color), label = if(label_rel_pct) {pct2} else {pct_round},
                                       x = !!rlang::sym(x_cat), y = total_labels_ypos),
@@ -291,8 +293,7 @@ composition_barplot <- function(SO,
                          size = 4, inherit.aes = F)
   }
   if (plot_total_abs_labels) {
-    plot <-
-      plot +
+    plot <- plot +
       ggplot2::geom_text(data = table0,
                          ggplot2::aes(color = I(label_color), label = n, x = !!rlang::sym(x_cat), y = total_labels_ypos),
                          nudge_x = label_total_abs_nudge[1], nudge_y = label_total_abs_nudge[2],
@@ -300,17 +301,8 @@ composition_barplot <- function(SO,
   }
 
   if (flip) {
-    plot <-
-      plot +
-      ggplot2::coord_flip()
-    # if (plot_sigma) {
-    #   plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = Inf, y = total_labels_ypos*fctr, vjust = sigma_just, size = label_size)
-    # }
-  } #else {
-  # if (plot_sigma) {
-  #   plot <- plot + ggplot2::annotate("text", label = "\u03A3", x = -Inf, y = total_labels_ypos*fctr, hjust = sigma_just, size = label_size)
-  # }
-  #}
+    plot <- plot + ggplot2::coord_flip()
+  }
 
   return(list(plot = plot, data = table, data_total = table0))
 }

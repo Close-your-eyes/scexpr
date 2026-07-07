@@ -41,7 +41,8 @@ Imports:
     uwot,
     ggpointdensity,
     patchwork,
-    RANN
+    RANN,
+    ggdendro
 Suggests: 
     presto,
     scuttle,

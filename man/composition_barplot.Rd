@@ -43,6 +43,8 @@ composition_barplot(
 
 \item{col_pal}{color palette for bar filling}
 
+\item{geom_col_args}{args to geom_col}
+
 \item{plot_rel_labels}{plot relative labels of bar segment sizes}
 
 \item{label_only_largest}{label only the largest bar segment per x_cat,
@@ -61,6 +63,8 @@ x_cat occupies from total}
 this also affects the axis if y = "rel"}
 
 \item{label_rel_decimals}{number of decimal places for percent values}
+
+\item{label_rel_rm_zero}{remove leading zero from relative label?}
 
 \item{summarize_all_x}{add an extra column that summarizes (averages) all others}
 
@@ -82,7 +86,8 @@ e.g. when label_only_largest = T}
 
 \item{flip}{flip x and y axis}
 
-\item{color}{color of bars}
+\item{bw_cutoff}{cutoff value for label to switch between black and white
+depend upon background}
 }
 \value{
 list of plot and data

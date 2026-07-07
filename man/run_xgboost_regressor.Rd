@@ -60,6 +60,8 @@ One of:
 \item \code{"random"}: random search (uses \code{tuneLength})
 }}
 
+\item{train_repeat}{to repeats of caret::trainControl}
+
 \item{tuneGrid}{A \code{data.frame} specifying hyperparameter combinations
 for grid search. Used only when \code{train_search = "grid"}.}
 

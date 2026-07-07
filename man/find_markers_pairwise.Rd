@@ -23,7 +23,14 @@ find_markers_pairwise(
 
 \item{mc.cores}{multiple threads?}
 
+\item{method}{use scexpr::find_all_marker or Seurat::FindMarkers}
+
+\item{redundant}{return redundant results?}
+
 \item{...}{arguments to Seurat::FindMarkers}
+}
+\value{
+data.frame
 }
 \description{
 Find marker genes in pairwise comparisons

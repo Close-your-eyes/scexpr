@@ -55,7 +55,7 @@
 #' @param RunPCA_args arguments to Seurat::RunUMAP
 #' @param ... not used yet
 #' @param downsample_method how to downsample?
-#' @param save_ext save as rds or zap file?
+#' @param save_ext just rds now
 #' @param join_layers run SeuratObject::JoinLayers in the end?
 #' @param interactive_varfeat_selection only applies when hvf_determination_before_merge = F
 #' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
@@ -87,21 +87,20 @@ SO_prep02 <- function(SO_unprocessed,
                       vars.to.regress = NULL,
                       seed = 42,
                       save_path = NULL,
-                      save_ext = c("rds", "zap"),
+                      save_ext = c("rds"),
                       celltype_refs = NULL, # list of celldex::objects of seurat or matrix
                       celltype_label = c("label.main", "label.fine"),
                       celltype_ref_clusters = NULL,
                       diet_seurat = F,
                       var_feature_filter = NULL,
                       var_feature_set = NULL,
-                      verbose = F,
+                      verbose = T,
                       FindVariableFeatures_args = list(),
                       SCtransform_args = list(
                         vst.flavor = "v2",
                         method = "glmGamPoi",
                         conserve.memory = T,
-                        residual_type = "pearson"
-                      ),
+                        residual_type = "pearson"),
                       RunPCA_args = list(weight.by.var = T),
                       RunUMAP_args = list(metric = "cosine"),
                       RunTSNE_args = list(theta = 0.01),
@@ -121,16 +120,15 @@ SO_prep02 <- function(SO_unprocessed,
 
   pkg_checks()
   mydots <- list(...)
-  options(warn = 1)
   options(future.globals.maxSize = 20 * 1024^3)
 
-  # options(parallelly.availableCores.custom = function() {
-  #   ncores <- max(parallel::detectCores(), 1L, na.rm = TRUE)
-  #   ncores <- min(as.integer(0.75 * ncores), 4L)
-  #   max(1L, ncores)
-  # })
+  if (!interactive()) {
+    interactive_varfeat_selection <- F
+    interactive_pc_selection <- F
+  }
 
-  reductions <- match.arg(tolower(reductions), c("umap", "som", "gqtsom", "tsne"), several.ok = T)
+
+  reductions <- match.arg(tolower(reductions), c("umap", "tsne"), several.ok = T)
   normalization <- rlang::arg_match(normalization)
   normalization <- ifelse(normalization == "RNA", "LogNormalize", normalization)
   batch_corr <- rlang::arg_match(batch_corr)
@@ -151,15 +149,17 @@ SO_prep02 <- function(SO_unprocessed,
   celltype_label <- check_celltype_refs(celltype_refs = celltype_refs,
                                         celltype_label = celltype_label)
 
-  RunPCA_args <- check_RunPCA_args(#obj = SO,
+  RunPCA_args <- check_RunPCA_args(
     RunPCA_args = RunPCA_args,
     normalization = normalization,
     npcs = npcs,
+    nhvf = nhvf,
     seed = seed,
     verbose = verbose)
 
-  RunHarmony_args <- check_RunHarmony_args(RunHarmony_args = RunHarmony_args,
-                                           RunPCA_args = RunPCA_args)
+  c(RunHarmony_args, batch_corr) %<-% check_RunHarmony_args(RunHarmony_args = RunHarmony_args,
+                                                            RunPCA_args = RunPCA_args,
+                                                            batch_corr = batch_corr)
 
   check_celltype_ref_clusters(celltype_ref_clusters,
                               batch_corr,
@@ -311,7 +311,7 @@ SO_prep02 <- function(SO_unprocessed,
       }
 
     }, error = function(err) {
-      message("umap failed.")
+      message("UMAP failed: ", conditionMessage(err))
     })
   }
 
@@ -352,17 +352,9 @@ SO_prep02 <- function(SO_unprocessed,
     SO <- add_group_color_to_misc(obj = SO, meta_col = i)
   }
 
-  # try(expr = {
-  #   all_cluster <- unique(unname(unlist(SO@meta.data[,SeuratObject::Misc(SO, "clusterings")])))
-  #   # all_cluster <- all_cluster[order(as.numeric(all_cluster))]
-  #   all_cluster <- sort(all_cluster)
-  #   SeuratObject::Misc(SO, "clustering_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(all_cluster))), nm = all_cluster)
-  # }, silent = T)
-  # origids <- sort(unique(SO@meta.data$orig.ident))
-  # SeuratObject::Misc(SO, "orig.ident_colors") <- stats::setNames(as.character(colrr::col_pal("custom", n = length(origids))), nm = origids)
 
   # add meta cols
-  SO@meta.data$id <- rownames(SO@meta.data)
+  SO@meta.data$id <- Seurat::Cells(SO)
   try(expr = {
     # when metacols exist from SO_prep01 rownames_to_col (tibble) throws error
     newmeta <- SO@meta.data[,"id",drop = F]
@@ -430,8 +422,6 @@ SO_prep02 <- function(SO_unprocessed,
     dir.create(save_path, showWarnings = F, recursive = T)
     if (save_ext == "rds") {
       saveRDS(SO, compress = T, file = file.path(save_path, save.name))
-    } else if (save_ext == "zap") {
-      zap::zap_write(SO, dst = file.path(save_path, save.name), compress = "zstd")
     }
     message("SO saved to: ")
     message(file.path(save_path, save.name))
@@ -532,6 +522,7 @@ make_so_single <- function(SO_unprocessed,
       normalization = normalization,
       npcs = RunPCA_args[["npcs"]],
       seed = RunPCA_args[["seed"]],
+      nhvf = FindVariableFeatures_args[["nfeatures"]],
       verbose = RunPCA_args[["verbose"]])
 
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
@@ -739,6 +730,7 @@ make_so_multi_integrate <- function(SO_unprocessed,
       normalization = normalization,
       npcs = RunPCA_args[["npcs"]],
       seed = RunPCA_args[["seed"]],
+      nhvf = FindVariableFeatures_args[["nfeatures"]],
       verbose = RunPCA_args[["verbose"]])
 
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
@@ -994,12 +986,14 @@ make_so_multi_harmony <- function(SO_unprocessed,
       normalization = normalization,
       npcs = RunPCA_args[["npcs"]],
       seed = RunPCA_args[["seed"]],
+      nhvf = SCtransform_args[["variable.features.n"]],
       verbose = RunPCA_args[["verbose"]])
 
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
 
-    RunHarmony_args <- check_RunHarmony_args(RunHarmony_args = RunHarmony_args,
-                                             RunPCA_args = RunPCA_args)
+    c(RunHarmony_args, batch_corr) %<-% check_RunHarmony_args(RunHarmony_args = RunHarmony_args,
+                                                              RunPCA_args = RunPCA_args,
+                                                              batch_corr = batch_corr)
   }
   # SO <- Seurat::ProjectDim(SO, reduction = "pca", do.center = T, overwrite = F, verbose = verbose)
 
@@ -1065,17 +1059,38 @@ var_feature_filter_removal <- function(SO,
 }
 
 check_RunHarmony_args <- function(RunHarmony_args,
-                                  RunPCA_args) {
+                                  RunPCA_args,
+                                  batch_corr,
+                                  SO = NULL) {
   RunHarmony_args <- RunHarmony_args[which(!names(RunHarmony_args) %in% c("object", "assay.use", "verbose"))]
   RunHarmony_args[["reduction.use"]] <- RunPCA_args[["reduction.name"]]
   RunHarmony_args[["reduction.save"]] <- paste0("harmony_", RunPCA_args[["reduction.name"]])
   RunHarmony_args[["dims.use"]] <- 1:RunPCA_args[["npcs"]]
-  return(RunHarmony_args)
+
+  # for so_prep04
+  # providing SO is the gatekeeper to optionally modify batch_corr
+  if (!is.null(SO)) {
+    if (batch_corr == "harmony") {
+      if (!"group.by.vars" %in% names(RunHarmony_args)) {
+        stop("group.by.vars missing in RunHarmony_args.")
+      }
+      if (any(!RunHarmony_args[["group.by.vars"]] %in% names(SO@meta.data))) {
+        stop("some group.by.vars from RunHarmony_args not in names(SO@meta.data).")
+      }
+      if (length(unique(SO@meta.data[[RunHarmony_args[["group.by.vars"]]]])) == 1) {
+        message("only one level in group.by.vars: batch_corr set to none.")
+        batch_corr <- "none"
+      }
+    }
+  }
+
+  return(list(RunHarmony_args, batch_corr))
 }
 
 check_RunPCA_args <- function(RunPCA_args,
                               normalization,
                               npcs,
+                              nhvf,
                               seed = 42,
                               verbose = T) {
   # actually only very few arguments are allowed to be passed by RunPCA_args. Otherwise the function would break.
@@ -1086,7 +1101,7 @@ check_RunPCA_args <- function(RunPCA_args,
   RunPCA_args[["npcs"]] <- npcs
   RunPCA_args[["seed.use"]] <- seed
   RunPCA_args[["verbose"]] <- verbose
-  redname <- paste0("pca", npcs, "_", pca_ext)
+  redname <- paste0("pca", npcs, "_", pca_ext, nhvf)
   RunPCA_args[["reduction.name"]] <- redname
 
   # i <- 0
@@ -1226,7 +1241,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
       SeuratObject::CreateSeuratObject() |>
       SeuratObject::AddMetaData(x@meta.data) |>
       Seurat::NormalizeData(verbose = F, assay = "RNA")
-  }, mc.cores = min(1, parallel::detectCores()-4))
+  }, mc.cores = max(1, parallel::detectCores()-4))
 
   if (batch_corr == "harmony" && length(SO_unprocessed) > 1) {
     if (!"group.by.vars" %in% names(RunHarmony_args)) {
@@ -1253,16 +1268,8 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
     }
   }
 
-  samples <- names(SO_unprocessed)[which(grepl(paste(samples, collapse = "|"), names(SO_unprocessed)))]
+  # samples <- names(SO_unprocessed)[which(grepl(paste(samples, collapse = "|"), names(SO_unprocessed)))]
   SO_unprocessed <- SO_unprocessed[which(names(SO_unprocessed) %in% samples)]
-
-
-  # if (length(SO_unprocessed) > 1 && batch_corr == "harmony" && !"group.by.vars" %in% names(RunHarmony_args)) {
-  #   stop("Please provide one or more group.by.vars from meta.data in RunHarmony_args as a list: ", paste(names(SO_unprocessed[[1]]@meta.data), collapse = ", "), ".")
-  # } else if (length(SO_unprocessed) > 1 && batch_corr == "harmony" && "group.by.vars" %in% names(RunHarmony_args)) {
-  #   #if (any(RunHarmony_args[["group.by.vars"]] %in% names()))
-  #   # check all SO
-  # }
 
   return(list(SO_unprocessed, samples))
 }
@@ -1449,7 +1456,6 @@ run_celltyping <- function(SO,
 
 
 get_numeric_input <- function(prompt = "Enter a number: ") {
-  promt <- paste0(prompt, "\n")
   repeat {
     input <- readline(prompt)      # read as string
     num <- suppressWarnings(as.numeric(input))  # try to convert to numeric
