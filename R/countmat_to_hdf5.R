@@ -45,42 +45,102 @@ countmat_to_hdf5 <- function(mat,
     stop("mat has no rownames or colnames. use scexpr::get_layer to pull layer data from Seurat.")
   }
 
+
   if (!is.null(colsplit)) {
-    mat <- brathering::split_mat(
-      x = mat,
-      f = colsplit,
-      byrow = F
-    )
-    ncols <- purrr::map_int(mat, ncol)
-    if (any(ncols < min_split_cols)) {
-      message("splits with ncol below min_split_cols: ", paste(names(ncols[which(ncols < min_split_cols)]), collapse = ", "))
-      mat <- mat[which(ncols >= min_split_cols)]
+
+    tab <- table(colsplit)
+    if (any(tab < min_split_cols)) {
+      message("splits with ncol below min_split_cols: ", paste(names(tab[which(tab < min_split_cols)]), collapse = ", "))
+      tab <- tab[which(tab >= min_split_cols)]
     }
+
+    for (i in names(tab)) {
+      dir_to_create <- ifelse(is.null(sub_dir),
+                              file.path(out_dir, i),
+                              file.path(out_dir, i, sub_dir))
+      dir.create(dir_to_create, showWarnings = T, recursive = T)
+
+      for (j in types) {
+        path <- ifelse(j == "HDF5", file.path(dir_to_create, "filtered_feature_bc_matrix.h5"), dir_to_create)
+        DropletUtils::write10xCounts(
+          path = path,
+          x = mat[,which(colsplit == i)],
+          version = "3",
+          type = j,
+          overwrite = T,
+          ...
+        )
+        message(path)
+      }
+    }
+
   } else {
     mat <- list(mat)
-  }
 
-  for (i in seq_along(mat)) {
-    dir_to_create <- ifelse(is.null(names(mat)),
-                            ifelse(is.null(sub_dir),
-                                   out_dir,
-                                   file.path(out_dir, sub_dir)),
-                            ifelse(is.null(sub_dir),
-                                   file.path(out_dir, names(mat)[i]),
-                                   file.path(out_dir, names(mat)[i], sub_dir)))
-    dir.create(dir_to_create, showWarnings = T, recursive = T)
+    for (i in seq_along(mat)) {
+      dir_to_create <- ifelse(is.null(names(mat)),
+                              ifelse(is.null(sub_dir),
+                                     out_dir,
+                                     file.path(out_dir, sub_dir)),
+                              ifelse(is.null(sub_dir),
+                                     file.path(out_dir, names(mat)[i]),
+                                     file.path(out_dir, names(mat)[i], sub_dir)))
+      dir.create(dir_to_create, showWarnings = T, recursive = T)
 
-    for (j in types) {
-      path <- ifelse(j == "HDF5", file.path(dir_to_create, "filtered_feature_bc_matrix.h5"), dir_to_create)
-      DropletUtils::write10xCounts(
-        path = path,
-        x = mat[[i]],
-        version = "3",
-        type = j,
-        overwrite = T,
-        ...
-      )
-      message(path)
+      for (j in types) {
+        path <- ifelse(j == "HDF5", file.path(dir_to_create, "filtered_feature_bc_matrix.h5"), dir_to_create)
+        DropletUtils::write10xCounts(
+          path = path,
+          x = mat[[i]],
+          version = "3",
+          type = j,
+          overwrite = T,
+          ...
+        )
+        message(path)
+      }
     }
   }
+
+  ## uses more memory:
+  # if (!is.null(colsplit)) {
+  #   mat <- brathering::split_mat(
+  #     x = mat,
+  #     f = colsplit,
+  #     byrow = F
+  #   )
+  #   ncols <- purrr::map_int(mat, ncol)
+  #   if (any(ncols < min_split_cols)) {
+  #     message("splits with ncol below min_split_cols: ", paste(names(ncols[which(ncols < min_split_cols)]), collapse = ", "))
+  #     mat <- mat[which(ncols >= min_split_cols)]
+  #   }
+  # } else {
+  #   mat <- list(mat)
+  # }
+  #
+  # for (i in seq_along(mat)) {
+  #   dir_to_create <- ifelse(is.null(names(mat)),
+  #                           ifelse(is.null(sub_dir),
+  #                                  out_dir,
+  #                                  file.path(out_dir, sub_dir)),
+  #                           ifelse(is.null(sub_dir),
+  #                                  file.path(out_dir, names(mat)[i]),
+  #                                  file.path(out_dir, names(mat)[i], sub_dir)))
+  #   dir.create(dir_to_create, showWarnings = T, recursive = T)
+  #
+  #   for (j in types) {
+  #     path <- ifelse(j == "HDF5", file.path(dir_to_create, "filtered_feature_bc_matrix.h5"), dir_to_create)
+  #     DropletUtils::write10xCounts(
+  #       path = path,
+  #       x = mat[[i]],
+  #       version = "3",
+  #       type = j,
+  #       overwrite = T,
+  #       ...
+  #     )
+  #     message(path)
+  #   }
+  # }
+
+
 }

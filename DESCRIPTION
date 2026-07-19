@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Ways to analyze scRNAseq data sets
-Version: 0.1.4
+Version: 0.1.5
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -78,5 +78,8 @@ Suggests:
     SingleCellExperiment,
     igraph,
     glmGamPoi,
-    zap
+    zap,
+    knitr,
+    rmarkdown
 Config/roxygen2/version: 8.0.0
+VignetteBuilder: knitr

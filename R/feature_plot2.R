@@ -10,7 +10,9 @@
 #'   names or metadata column names. If missing, the function attempts to use
 #'   `Idents`, `seurat_clusters`, `orig.ident`, or the first shared metadata
 #'   column.
-#' @param reduction Name of the dimensionality reduction to use.
+#' @param reduction Name of the dimensionality reduction to use. Will be matched
+#'  against existing reductions. Optionally, provide a vector for multiple SO with
+#'  different reduction names.
 #' @param dims Numeric vector of length 2 specifying the dimensions to plot.
 #' @param assay Assay used to fetch expression values.
 #' @param cells Optional vector of cell names to highlight. Non-selected cells

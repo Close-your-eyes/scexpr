@@ -157,6 +157,7 @@ cluster_correlation2 <- function(objs,
     })
 
     # iterate over split_intersect, non-intersecting split-level are ignored
+
     if (method %in% c("pearson","spearman", "kendall")) {
       corrobj <- purrr::map(split_intersect,
                             ~psych::corr.test(x = avg_expr[[1]][[.x]],
@@ -228,9 +229,11 @@ cluster_correlation2 <- function(objs,
   })
 
   dendroplot <- NULL
+  hc <- NULL
   if (isSymmetric(corr_mat)) {
     dist_mat <- stats::as.dist(1 - corr_mat)
-    hcdata <- ggdendro::dendro_data(stats::hclust(dist_mat), type = "rectangle")
+    hc <- stats::hclust(dist_mat)
+    hcdata <- ggdendro::dendro_data(hc, type = "rectangle")
     dendroplot <- ggplot2::ggplot() +
       ggplot2::geom_segment(data = ggdendro::segment(hcdata),
                             ggplot2::aes(x = x, y = y, xend = xend, yend = yend)) +
@@ -278,7 +281,8 @@ cluster_correlation2 <- function(objs,
     plot = plot,
     corr_df_plot = rdf_plot,
     corr_df = rdf,
-    dendroplot = dendroplot
+    dendroplot = dendroplot,
+    hclust = hc
   )
 
   if (!is.null(split)) {
@@ -331,7 +335,7 @@ checks <- function(objs,
   if (length(features) == 1 && features == "all") {
     features <- Reduce(intersect, purrr::map(objs, scexpr:::get_gene_features))
   } else if (length(features) == 1 && features == "pca") {
-    features2 <- names(scexpr:::check.reduction(objs, reduction = "pca"))
+    features2 <- names(scexpr:::check.reduction(objs, reduction = "pca")[[1]])
     if (length(features2)>1) {
       message("more than 1 pca found: ", paste(features2, collapse = ","), ". using first.")
       features2 <- features2[1]

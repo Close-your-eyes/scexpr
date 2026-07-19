@@ -115,7 +115,9 @@ names or metadata column names. If missing, the function attempts to use
 \code{Idents}, \code{seurat_clusters}, \code{orig.ident}, or the first shared metadata
 column.}
 
-\item{reduction}{Name of the dimensionality reduction to use.}
+\item{reduction}{Name of the dimensionality reduction to use. Will be matched
+against existing reductions. Optionally, provide a vector for multiple SO with
+different reduction names.}
 
 \item{dims}{Numeric vector of length 2 specifying the dimensions to plot.}
 

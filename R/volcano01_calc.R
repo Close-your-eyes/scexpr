@@ -132,7 +132,7 @@ volcano01_calc <- function(SO,
 
   colname <- "volcano_groups"
   SO <- lapply(SO, function(x) {
-    cells <- rownames(x@meta.data)
+    cells <- cells2(x)
     x@meta.data[[colname]] <- dplyr::case_when(
       cells %in% pgc ~ pos_name[[1]],
       cells %in% ngc ~ neg_name[[1]],

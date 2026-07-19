@@ -19,7 +19,9 @@ rename_reduction <- function(obj,
   #                                       reduction = reduction)
 
   if (new_name %in% names(obj@reductions)) {
-    stop("new name already exists in obj@reductions")
+    if (length(names(obj@reductions)) > 1) {
+      stop("new name already exists in obj@reductions")
+    }
   }
 
   names(obj@reductions)[which(names(obj@reductions) == reduction)] <- new_name

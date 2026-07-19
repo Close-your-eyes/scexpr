@@ -72,8 +72,6 @@ avg_expression <- function(obj,
 
 
     obj <- purrr::map(obj, ~fun2(fun(transformer(.x))))
-    #obj <- purrr::map(obj, ~transformer(.x))
-    #tt <- as.matrix(obj[["PDC"]])
     obj <- do.call(cbind, obj)
     return(obj)
   })

@@ -74,54 +74,6 @@ check.SO <- function(SO,
   }
 }
 
-check.reduction <- function(SO,
-                            reduction = NULL,
-                            dims = c(1,2)) {
-
-  if (is.null(reduction)) return(reduction)
-
-  if (!is.list(SO)) {
-    SO <- list(SO)
-  }
-
-  red_list <- lapply(SO, function(x) names(x@reductions))
-  if (any(lengths(red_list) == 0)) {
-    stop("At least one SO has no reduction.")
-  }
-
-  common_red <- Reduce(intersect, red_list)
-  if (length(common_red) == 0) {
-    stop("No common reduction found in SOs.")
-  }
-
-  if ("reduction_preferred" %in% names(SO[[1]]@misc)) {
-    if (tolower(SO[[1]]@misc$reduction_preferred[1]) != tolower(reduction)) {
-      message("reduction set to SO[[1]]@misc$reduction_preferred[1]: ", SO[[1]]@misc$reduction_preferred[1])
-    }
-    reduction <- SO[[1]]@misc$reduction_preferred[1]
-  }
-
-  red <- grep(reduction, common_red, ignore.case = T, value = T)
-  if (length(red) == 0) {
-    red <- grep("umap", common_red, ignore.case = T, value = T)
-  }
-  if (length(red) == 0) {
-    red <- grep("tsne", common_red, ignore.case = T, value = T)
-  }
-  if (length(red) == 0) {
-    message("reduction not found in SOs.")
-
-    red <- common_red[which.min(utils::adist(reduction, common_red)[1,])]
-    #red <- sample(common_red, 1)
-  } else if (length(red) > 1) {
-    red <- common_red[which.min(utils::adist(reduction, common_red, ignore.case = T))]
-  }
-
-  key <- SO[[1]]@reductions[[red]]@key
-  red <- stats::setNames(gsub("_$", "", key), nm = red)
-  return(red)
-}
-
 check.and.get.cells <- function(SO,
                                 assay = c("RNA", "SCT"),
                                 cells = NULL,

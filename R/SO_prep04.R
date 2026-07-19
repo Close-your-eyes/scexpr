@@ -209,7 +209,7 @@ SO_prep04 <- function(SO,
 
         RunUMAP_args <- RunUMAP_args[which(!duplicated(names(RunUMAP_args)))]
         um <- Gmisc::fastDoCall(uwot::umap, RunUMAP_args)
-        rownames(um) <- Seurat::Cells(SO)
+        rownames(um) <- cells2(SO)
         colnames(um) <- paste0("umap", gsub("[^A-Za-z1-9]", "", red), "_", c(1,2))
         SO@reductions[[paste0("umap_", red)]] <- SeuratObject::CreateDimReducObject(embeddings = um, assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"))
       }

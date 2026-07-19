@@ -4,7 +4,16 @@
 \alias{downsample_seurat}
 \title{Downsample a Seurat object}
 \usage{
-downsample_seurat(obj, downsample = 1, group = NULL)
+downsample_seurat(
+  obj,
+  downsample = 1,
+  group = NULL,
+  nhvf = NULL,
+  features = NULL,
+  cells_in = NULL,
+  cells_ex = NULL,
+  recreate_RNA_assay = F
+)
 }
 \arguments{
 \item{obj}{A Seurat object.}
@@ -16,10 +25,32 @@ downsample_seurat(obj, downsample = 1, group = NULL)
 }}
 
 \item{group}{Optional metadata column used for stratified sampling.}
+
+\item{nhvf}{downsample to n variable features (RNA assay), var features
+are calculated before any downsampling or cell removal.}
+
+\item{features}{features retain when subsetting, joined with nhvf if provided}
+
+\item{cells_in}{cells to keep (before downsampling)}
+
+\item{cells_ex}{cells to exclude (before downsampling)}
+
+\item{recreate_RNA_assay}{sometimes LogMap in \code{seurat@assays[["RNA"]]@cells}
+is not subsetted. Force this by recreating RNA assay.}
 }
 \value{
 A downsampled Seurat object.
 }
 \description{
-Downsample a Seurat object
+Make a compact function with one subset command only because subset still
+leads to errors for unknown reason in some subsequent functions
+with seurat object, sometimes.
+}
+\examples{
+\dontrun{
+so02 <- downsample_seurat(so2, downsample = 300,
+                          recreate_RNA_assay = T,
+                          nhvf = 200, features = "CD3E",
+                          cells_in = cells2(subset(so2, !pca14_rna900_snn_res_0.1 \%in\% c("06", "07"))))
+}
 }

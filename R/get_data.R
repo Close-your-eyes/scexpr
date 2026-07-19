@@ -40,6 +40,8 @@
 #' @return a list of data frame
 #' @export
 #'
+#' @importFrom zeallot %<-%
+#'
 #' @examples
 #' \dontrun{
 #' datadf <- get_data(so, c("CD3E", "orig.ident"), try_df = T)
@@ -98,9 +100,9 @@ get_data <- function(SO,
   contour_feature <- scexpr:::check.features(SO = SO, features = contour_feature, rownames = F)
   split_feature <- scexpr:::check.features(SO = SO, features = split_feature, rownames = F)
   shape_feature <- scexpr:::check.features(SO = SO, features = shape_feature, rownames = F)
-  reduction <- scexpr:::check.reduction(SO = SO, reduction = reduction, dims = dims)
-  assay <- match.arg(assay, names(SO[[1]]@assays))
 
+  c(reduction, SO) %<-% check.reduction(SO = SO, reduction = reduction)
+  assay <- match.arg(assay, names(SO[[1]]@assays))
 
   if (qmax > 1) {
     #message("qmax and qmin are divided by 100. Please provide values between 0 and 1.")
@@ -155,6 +157,7 @@ get_data <- function(SO,
       }
     }
 
+
     # redundant to meta_features
     if (!is.null(meta_col)) {
       data <- cbind(data, x@meta.data[,meta_col,drop=F])
@@ -178,6 +181,7 @@ get_data <- function(SO,
     data <- tibble::rownames_to_column(data, "id")
     return(data)
   }, .id = "SO.split")
+
 
   # ensure that facet ordering is according to the order of SO objects provided
   data$SO.split <- factor(data$SO.split, levels = names(SO))
@@ -420,4 +424,98 @@ get_gene_features <- function(obj) {
   return(genes)
 }
 
+check.reduction <- function(SO,
+                            reduction = NULL) {
 
+  if (is.null(reduction)) return(list(reduction, SO))
+  SO <- if (is.list(SO)) SO else list(SO)
+  red_list <- purrr::map(SO, ~names(.x@reductions))
+  if (any(!lengths(red_list))) stop("At least one SO has no reduction.")
+  reduction <- brathering::recycle(reduction, SO)
+
+  reduction <- purrr::map2_chr(SO, reduction, function(x,y) {
+    if ("reduction_preferred" %in% names(x@misc)) {
+      if (tolower(x@misc$reduction_preferred[1]) != tolower(y)) {
+        message("reduction set to x@misc$reduction_preferred[1]: ", x@misc$reduction_preferred[1])
+      }
+      y <- x@misc$reduction_preferred[1]
+    }
+    return(y)
+  })
+
+  if (length(unique(reduction)) == 1) {
+    reduction <- unique(reduction)
+  }
+
+  if (length(reduction) == 1) {
+    common_red <- Reduce(intersect, red_list)
+    if (!length(common_red)) {
+      # only when multiple SO
+
+      message("No common reduction found in SOs. Will pick best matches and rename to a common label.")
+      red_match <- purrr::map(red_list, ~grep(reduction, .x, ignore.case = T, value = T))
+      if (any(x <- !lengths(red_match))) {
+        for (i in which(x)) {
+          red_match[[i]] <- red_list[[i]][which.min(utils::adist(reduction, red_list[[i]], ignore.case = T))]
+          # red_match[[i]] <- red_list[[i]][length(red_list[[i]])]
+        }
+      }
+      if (any(x <- lengths(red_match) > 1)) {
+        for (i in which(x)) {
+          red_match[[i]] <- red_match[[i]][which.min(utils::adist(reduction, red_match[[i]], ignore.case = T))]
+          # red_match[[i]] <- red_match[[i]][1]
+        }
+      }
+      message("using: ", paste(unlist(red_match), collapse = ", "))
+      # only keep required reduction to avoid name conflict
+      SO <- purrr::map2(SO, red_match, ~keep_reduction(.x, .y))
+      SO <- purrr::map2(SO, red_match, ~rename_reduction(.x, .y, reduction))
+      common_red <- reduction
+    }
+    red <- find_reduction(query = reduction, available = common_red)
+
+  } else if (length(reduction) > 1) {
+
+    if (length(reduction) != length(SO)) stop("length(reduction) != length(SO)")
+    reduction <- purrr::map2_chr(SO, reduction, ~find_reduction(query = .y, available = names(.x@reductions)))
+    SO <- purrr::map2(SO, reduction, ~keep_reduction(.x, .y))
+
+    if (all(grepl("umap", reduction))) {
+      red <- "umap"
+    } else if (all(grepl("tsne", reduction))) {
+      red <- "tsne"
+    } else {
+      red <- "reduction"
+    }
+    SO <- purrr::map2(SO, reduction, ~rename_reduction(.x, .y, red))
+  }
+
+  key <- SO[[1]]@reductions[[red]]@key
+  red <- stats::setNames(sub("_$", "", key), nm = red)
+  return(list(red, SO))
+}
+
+find_reduction <- function(query, available) {
+  matches <- grep(query, available, ignore.case = TRUE, value = TRUE)
+
+  if (!length(matches)) {
+    matches <- grep("umap", available, ignore.case = TRUE, value = TRUE)
+  }
+  if (!length(matches)) {
+    matches <- grep("tsne", available, ignore.case = TRUE, value = TRUE)
+  }
+  if (!length(matches)) {
+    message("Reduction not found; using closest match.")
+    matches <- available[which.min(utils::adist(query, available, ignore.case = TRUE)[1, ])]
+  }
+  if (length(matches) > 1) {
+    matches <- matches[which.min(utils::adist(query, matches, ignore.case = TRUE)[1, ])]
+  }
+
+  return(matches)
+}
+
+keep_reduction <- function(x, reduction) {
+  x@reductions <- x@reductions[reduction]
+  return(x)
+}

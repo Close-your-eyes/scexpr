@@ -1,0 +1,72 @@
+---
+title: "Feature plots with `feature_plot2()`"
+author: "scexpr"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+    fig_width: 7
+    fig_height: 5
+vignette: >
+  %\VignetteIndexEntry{Feature plots with feature_plot2()}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.align = "center",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+## Overview
+
+`feature_plot2()` draws gene expression or Seurat metadata on a two-dimensional embedding from the reductions slot. Just like Seurat's built-in function. It has several opinionated defaults and features that some people may view as an improvement over Seurat's function. It accepts either one Seurat object or a (named) list of multiple Seurat objects. Two small example Seurat objects made from PBMC data sets from 10X genomics are used for demonstration.
+
+```{r read-objects}
+so1 <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+so2 <- readRDS(system.file("extdata", "SO_pbmc8k_RNA_none_1_900_14_small.rds", package = "scexpr"))
+
+so1
+
+so2
+
+names(so1@meta.data)
+
+names(so2@meta.data)
+```
+
+## Basic plots
+
+```{r basic1}
+# one gene; expressers are colored while non-expressers are grey
+scexpr::feature_plot2(SO = so1, features = "MS4A1")
+
+# several genes, plotted as patchwork by default
+scexpr::feature_plot2(SO = so1, features = c("MS4A1", "CD3E", "CD68"))
+
+# adjust layout
+scexpr::feature_plot2(SO = so1, features = c("MS4A1", "CD3E", "CD68"), nrow_combine = 2)
+
+# co-plot meta columns
+scexpr::feature_plot2(SO = so1, features = c("MS4A1", "CD3E", "pca12_rna800_snn_res_0.1", "pct_mt"))
+
+# do not combine by patchwork
+plot_list <- scexpr::feature_plot2(SO = so1, features = c("MS4A1", "CD3E", "CD68"), combine = F)
+length(plot_list)
+
+# reduction names are matched, umap was default
+scexpr::feature_plot2(SO = so1, features = "CD3E", "tsne")
+scexpr::feature_plot2(SO = so1, features = "CD3E", "pca")
+
+# increase dot size
+scexpr::feature_plot2(SO = so1, features = "CD3E", pt_size = 3)
+
+# increase dot size of expressers only
+scexpr::feature_plot2(SO = so1, features = "CD3E", pt_size = 3)
+```

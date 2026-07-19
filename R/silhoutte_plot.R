@@ -37,7 +37,7 @@ silhouette_plot <- function(obj,
     dplyr::arrange(cluster, dplyr::desc(sil_width)) |>
     dplyr::mutate(row = dplyr::row_number()) |>
     dplyr::mutate(cluster = as.character(cluster))
-  rownames(sil_df) <- rownames(obj@meta.data)
+  rownames(sil_df) <- cells2(obj)
   #obj@misc[[paste0(clustering, "_silhoutte")]] <- sil_df
 
   plot <- ggplot2::ggplot(sil_df, ggplot2::aes(x = row, y = sil_width)) +

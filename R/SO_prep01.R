@@ -138,6 +138,8 @@ SO_prep01 <- function(data_dirs,
                                   decontX = decontX,
                                   batch_corr = batch_corr)
   #SoupX_return <- T
+  check_inputs2(sample_folders = ffbms)
+
 
   message("Reading filtered_feature_bc_matrix data.")
   SO <- parallel::mclapply(purrr::set_names(names(ffbms)), function(x) {
@@ -1062,4 +1064,19 @@ guess_species <- function(genes) {
   species <- if (human_like > mouse_like) "human" else "mouse"
 
   return(species)
+}
+
+check_inputs2 <- function(sample_folders) {
+  files_missing <- purrr::map_lgl(sample_folders, function(x) {
+    files <- list.files(x)
+    if (any(tools::file_ext(files) == "h5")) {
+      return(FALSE)
+    }
+    return(any(!"barcodes.tsv.gz" %in% files | !"matrix.mtx.gz" %in% files | !"features.tsv.gz" %in% files))
+  })
+
+  if (any(files_missing)) {
+    files_missing2 <- paste(names(files_missing)[which(files_missing)], collapse = ", ")
+    stop("these folders do not have all required files: ", files_missing2, "\nrequired are barcodes.tsv.gz, matrix.mtx.gz, features.tsv.gz.")
+  }
 }

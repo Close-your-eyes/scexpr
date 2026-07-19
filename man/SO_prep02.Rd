@@ -15,7 +15,7 @@ SO_prep02(
   reductions = c("umap"),
   nhvf = 800,
   npcs = 20,
-  normalization = c("SCT", "LogNormalize", "RNA"),
+  normalization = c("RNA", "SCT", "LogNormalize"),
   hvf_determination_before_merge = F,
   batch_corr = c("harmony", "integration", "none"),
   vars.to.regress = NULL,
@@ -41,10 +41,10 @@ SO_prep02(
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
   join_layers = T,
-  interactive_varfeat_selection = T,
+  interactive_varfeat_selection = F,
   interactive_varfeat_selection_inds = seq(max(nhvf/10, 50), min(3 * nhvf,
     nrow(SO_unprocessed[[1]])), length.out = 11),
-  interactive_pc_selection = T,
+  interactive_pc_selection = F,
   use_nn_for_umap = F,
   ...
 )

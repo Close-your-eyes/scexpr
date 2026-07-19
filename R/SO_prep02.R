@@ -81,7 +81,7 @@ SO_prep02 <- function(SO_unprocessed,
                       reductions = c("umap"),
                       nhvf = 800,
                       npcs = 20,
-                      normalization = c("SCT", "LogNormalize", "RNA"),
+                      normalization = c("RNA", "SCT", "LogNormalize"),
                       hvf_determination_before_merge = F,
                       batch_corr = c("harmony", "integration", "none"),
                       vars.to.regress = NULL,
@@ -110,11 +110,11 @@ SO_prep02 <- function(SO_unprocessed,
                       FindIntegrationAnchors_args = list(reduction = "rpca"),
                       IntegrateData_args = list(),
                       join_layers = T,
-                      interactive_varfeat_selection = T,
+                      interactive_varfeat_selection = F,
                       interactive_varfeat_selection_inds = seq(max(nhvf/10,50),
                                                                min(3*nhvf, nrow(SO_unprocessed[[1]])),
                                                                length.out = 11),
-                      interactive_pc_selection = T,
+                      interactive_pc_selection = F,
                       use_nn_for_umap = F,
                       ...) {
 
@@ -305,9 +305,15 @@ SO_prep02 <- function(SO_unprocessed,
 
         RunUMAP_args <- RunUMAP_args[which(!duplicated(names(RunUMAP_args)))]
         um <- Gmisc::fastDoCall(uwot::umap, RunUMAP_args)
-        rownames(um) <- Seurat::Cells(SO)
+        rownames(um) <- cells2(SO)
         colnames(um) <- paste0("umap", gsub("[^A-Za-z1-9]", "", red), "_", c(1,2))
-        SO@reductions[[paste0("umap_", red)]] <- SeuratObject::CreateDimReducObject(embeddings = um, assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"))
+        SO@reductions[[paste0("umap_", red)]] <- SeuratObject::CreateDimReducObject(embeddings = um,
+                                                                                    assay = switch(
+                                                                                      normalization,
+                                                                                      SCT = "SCT",
+                                                                                      LogNormalize = "RNA",
+                                                                                      RNA = "RNA"
+                                                                                    ))
       }
 
     }, error = function(err) {
@@ -404,7 +410,7 @@ SO_prep02 <- function(SO_unprocessed,
   save.name <- paste(
     "SO",
     export_prefix,
-    normalization,
+    ifelse(normalization == "LogNormalize", "RNA", normalization),
     batch_corr,
     downsample,
     length(Seurat::VariableFeatures(SO)),
@@ -1281,8 +1287,7 @@ subset_SO_unprocessed <- function(SO_unprocessed,
                                   downsample_method) {
   if (!is.null(cells)) {
     SO_unprocessed <- purrr::map(SO_unprocessed, function(x) {
-      #objcells <- Seurat::Cells(x)
-      objcells <- rownames(x@meta.data)
+      objcells <- cells2(x)
       inds <- which(objcells %in% cells)
       if (length(inds) == 0) {
         return(NULL)

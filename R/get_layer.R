@@ -30,9 +30,10 @@ get_layer <- function(obj,
                       transpose = F) {
 
   # split = NULL
-
   as <- rlang::arg_match(as)
   assay <- rlang::arg_match(assay, names(obj@assays))
+
+
 
   if (!is.null(features) && !length(features)) {
     # empty gene_features argument in get_data, e.g.
@@ -52,24 +53,22 @@ get_layer <- function(obj,
     }
   }
 
-  if (utils::compareVersion(as.character(obj@version), "4.9.9") == 1) {
-
-    x <- tryCatch(expr = {
-      get_layer_v5(obj = obj, assay = assay, layer = layer)
-    }, error = function(err) {
-      # fallback to v4 method, e.g. for integrated assay which looks in v5 object
-      # like assay from v4
-      return(get_layer_v4(obj = obj, assay = assay, layer = layer))
-    })
-
+  if (inherits(obj[[assay]], "Assay5")) {
+    x <- get_layer_v5(obj = obj, assay = assay, layer = layer)
   } else {
-
     x <- get_layer_v4(obj = obj, assay = assay, layer = layer)
-
   }
 
-  # if (layer == "data" && brathering::is_int_like(x)) {
-  #   message("data layer is all integers. should not be. did you run NormalizeData?")
+  # if (utils::compareVersion(as.character(obj@version), "4.9.9") == 1) {
+  #   x <- tryCatch(expr = {
+  #     get_layer_v5(obj = obj, assay = assay, layer = layer)
+  #   }, error = function(err) {
+  #     # fallback to v4 method, e.g. for integrated assay which looks in v5 object
+  #     # like assay from v4
+  #     return(get_layer_v4(obj = obj, assay = assay, layer = layer))
+  #   })
+  # } else {
+  #   x <- get_layer_v4(obj = obj, assay = assay, layer = layer)
   # }
 
   if (all(dim(x) == c(0,0))) {
@@ -110,8 +109,7 @@ get_layer <- function(obj,
 get_layer_v4 <- function(obj, assay, layer) {
   layer <- rlang::arg_match(layer, setdiff(methods::slotNames(obj@assays[[assay]]),
                                            c("assay.orig", "var.featuress", "meta.featuress", "misc", "key")))
-  x <- methods::slot(obj@assays[[assay]], layer)
-  return(x)
+  return(methods::slot(obj@assays[[assay]], layer))
 }
 
 get_layer_v5 <- function(obj, assay, layer) {
@@ -125,11 +123,6 @@ get_layer_v5 <- function(obj, assay, layer) {
       # get the error
       layer <- rlang::arg_match(layer, names(obj@assays[[assay]]@layers))
     }
-  } else {
-    # get the error
-    layer <- rlang::arg_match(layer, names(obj@assays[[assay]]@layers))
   }
-
-  x <- obj@assays[[assay]]@layers[[layer]]
-  return(x)
+  return(obj@assays[[assay]]@layers[[layer]])
 }

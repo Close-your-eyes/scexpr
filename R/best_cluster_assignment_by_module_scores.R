@@ -144,7 +144,7 @@ discretize_module_score_suggestive_clusters <- function(obj,
     ggplot2::geom_boxplot() +
     ggplot2::facet_wrap(ggplot2::vars(module))
 
-  obj@meta.data$id <- rownames(obj@meta.data)
+  obj@meta.data$id <- cells2(obj)
   obj <- Seurat::AddMetaData(obj, assigned$df[,c("id", "assigned")] |> dplyr::distinct() |> tibble::column_to_rownames("id"))
   p1 <- feature_plot2(obj, features = c("assigned", new_cols))
 
