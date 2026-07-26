@@ -474,7 +474,7 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
   zero_libsize_cells <- names(which(factors == 0))
   if (length(zero_libsize_cells) > 0) {
     message(length(zero_libsize_cells), " cell(s) found which have zero library size based on hvf. These are removed to allow running scDblFinder. See https://github.com/plger/scDblFinder/issues/55.")
-    SO <- subset(SO, cells = setdiff(names(factors), zero_libsize_cells))
+    SO <- subset2(SO, cells = setdiff(names(factors), zero_libsize_cells))
   }
 
   if (!is.null(min_UMI_var_feat)) {
@@ -482,7 +482,7 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
     if (any(UMI_sum < min_UMI_var_feat)) {
       message(sum(UMI_sum < min_UMI_var_feat), " cells removed for having less UMI in variable features as min_UMI_var_feat. See https://github.com/LTLA/BiocNeighbors/issues/24.")
     }
-    SO <- subset(SO, cells = names(UMI_sum[which(UMI_sum >= min_UMI_var_feat)]))
+    SO <- subset2(SO, cells = names(UMI_sum[which(UMI_sum >= min_UMI_var_feat)]))
   }
   # scDblFinder
 
@@ -760,7 +760,7 @@ run_soupx <- function(ffbms,
     if (is.null(SO)) {
       clusters <- Seurat::CreateSeuratObject(filt_data)
     } else {
-      clusters <- subset(Seurat::DietSeurat(SO, layers = "counts"), cells = intersect(Seurat::Cells(SO), rownames(sc$metaData)))
+      clusters <- subset2(Seurat::DietSeurat(SO, layers = "counts"), cells = intersect(Seurat::Cells(SO), rownames(sc$metaData)))
     }
     clusters <- clusters |>
       Seurat::NormalizeData(verbose = F) |>

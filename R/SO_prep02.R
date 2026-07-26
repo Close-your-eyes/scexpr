@@ -104,7 +104,7 @@ SO_prep02 <- function(SO_unprocessed,
                       RunPCA_args = list(weight.by.var = T),
                       RunUMAP_args = list(metric = "cosine"),
                       RunTSNE_args = list(theta = 0.01),
-                      FindNeighbors_args = list(dims = 1:npcs),
+                      FindNeighbors_args = list(),
                       FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                       RunHarmony_args = list(group.by.vars = "orig.ident"),
                       FindIntegrationAnchors_args = list(reduction = "rpca"),
@@ -1292,7 +1292,7 @@ subset_SO_unprocessed <- function(SO_unprocessed,
       if (length(inds) == 0) {
         return(NULL)
       }
-      return(subset(x, cells = objcells[which(objcells %in% cells)]))
+      return(subset2(x, cells = objcells[which(objcells %in% cells)]))
     })
   }
 
@@ -1349,7 +1349,7 @@ subset_SO_unprocessed <- function(SO_unprocessed,
       return(lvs)
     })
     SO_unprocessed <- purrr::pmap(list(SO_unprocessed, ncells, lvs),
-                                  function(x, y, z) subset(
+                                  function(x, y, z) subset2(
                                     x,
                                     cells = sample(Seurat::Cells(x), size = y, replace = F, prob = z)
                                   ))
@@ -1584,7 +1584,7 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 calc_neighbor_and_cluster <- function(obj,
                                       red = "pca",
                                       npcs = 10,
-                                      FindNeighbors_args = list(dims = 1:npcs),
+                                      FindNeighbors_args = list(),
                                       FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
                                       verbose = TRUE,
                                       mc.cores = 10) {

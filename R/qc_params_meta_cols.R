@@ -94,7 +94,8 @@ qc_params_meta_cols <- function (SO,
     theme +
     ggplot2::scale_color_manual(values = col_pal) +
     ggplot2::facet_grid(rows = ggplot2::vars(qc_param), cols = ggplot2::vars(meta.col), scales = "free", axes = "all", axis.labels = "margins") +
-    ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 4)))
+    ggplot2::guides(color = ggplot2::guide_legend(override.aes = list(size = 4))) +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 
   if (log) {
     plot <- plot + ggplot2::scale_y_log10()

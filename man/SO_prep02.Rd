@@ -35,7 +35,7 @@ SO_prep02(
   RunPCA_args = list(weight.by.var = T),
   RunUMAP_args = list(metric = "cosine"),
   RunTSNE_args = list(theta = 0.01),
-  FindNeighbors_args = list(dims = 1:npcs),
+  FindNeighbors_args = list(),
   FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
   RunHarmony_args = list(group.by.vars = "orig.ident"),
   FindIntegrationAnchors_args = list(reduction = "rpca"),

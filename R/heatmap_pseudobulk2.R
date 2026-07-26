@@ -690,7 +690,7 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
   # subset levels for calculation
   SO <- purrr::pmap(list(x = SO, y = levels_calc, z = meta_col), function(x,y,z) {
     if (length(y) < length(unique(x@meta.data[,z,drop=T]))) {
-      x <- subset(x, cells = rownames(x@meta.data[,z,drop=F][which(x@meta.data[,z] %in% y),,drop=F]))
+      x <- subset2(x, cells = rownames(x@meta.data[,z,drop=F][which(x@meta.data[,z] %in% y),,drop=F]))
     }
     return(x)
   })

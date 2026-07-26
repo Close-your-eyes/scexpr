@@ -55,7 +55,7 @@ find_markers_pairwise <- function(obj,
     out <- parallel::mclapply(all_pairs, function(z) {
       out <- tryCatch(expr = {
         if (method == "scexpr") {
-          temp <- find_all_marker(subset(ob, idents = z)) |>
+          temp <- find_all_marker(subset2(ob, idents = z)) |>
             dplyr::rename("ident.1" = group) |>
             dplyr::select(-avgExpr, -statistic)
           temp <- split(temp, temp$ident.1)

@@ -55,7 +55,7 @@ find_all_marker_split <- function(obj,
 
   #obj <- Seurat::SplitObject(obj, split.by = split)[groups]
   markerlist <- purrr::map(groups, ~Gmisc::fastDoCall(find_all_marker,
-                                                      args = c(list(obj = subset(obj, idents = .x)),
+                                                      args = c(list(obj = subset2(obj, idents = .x)),
                                                                find_all_marker_args)))
   return(markerlist)
 }

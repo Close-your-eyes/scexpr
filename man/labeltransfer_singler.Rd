@@ -85,7 +85,7 @@ genes <- muto_lt$singler_obj@metadata$de.genes
 genes <- purrr::map(genes, ~.x[c("PT", "PT_VCAM1")])
 genes <- genes[c("PT", "PT_VCAM1")]
 muto_lt2 <- labeltransfer_singler(test_obj = so,
-                                  ref_obj = subset(muto, celltype_muto \%in\% c("PT", "PT_VCAM1")),
+                                  ref_obj = subset2(muto, celltype_muto \%in\% c("PT", "PT_VCAM1")),
                                   test_clusters = "SCT_pca_snn_res.0.4",
                                   ref_labels = "celltype_muto",
                                   singler_args = list(de.method = "wilcox",

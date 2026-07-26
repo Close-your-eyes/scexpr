@@ -26,7 +26,7 @@
 #' so02 <- downsample_seurat(so2, downsample = 300,
 #'                           recreate_RNA_assay = T,
 #'                           nhvf = 200, features = "CD3E",
-#'                           cells_in = cells2(subset(so2, !pca14_rna900_snn_res_0.1 %in% c("06", "07"))))
+#'                           cells_in = cells2(subset2(so2, !pca14_rna900_snn_res_0.1 %in% c("06", "07"))))
 #' }
 downsample_seurat <- function(obj,
                               downsample = 1,
@@ -67,7 +67,7 @@ downsample_seurat <- function(obj,
     cells <- rownames(dplyr::slice_sample(meta, n = downsample, by = group))
   }
 
-  obj <- subset(obj, cells = cells, features = unique(c(nhvf, features)))
+  obj <- subset2(obj, cells = cells, features = unique(c(nhvf, features)))
 
   if (recreate_RNA_assay) {
     assaymeta <- obj@assays[["RNA"]]@meta.data

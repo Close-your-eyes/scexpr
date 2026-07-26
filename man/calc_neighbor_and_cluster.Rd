@@ -8,7 +8,7 @@ calc_neighbor_and_cluster(
   obj,
   red = "pca",
   npcs = 10,
-  FindNeighbors_args = list(dims = 1:npcs),
+  FindNeighbors_args = list(),
   FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
   verbose = TRUE,
   mc.cores = 10

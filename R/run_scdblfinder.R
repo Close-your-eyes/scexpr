@@ -191,8 +191,8 @@ run_scdblfinder <- function(obj,
   cells_keep <- obj@meta.data |>
     dplyr::filter(!(!!rlang::sym(samples_col) %in% nn[[samples_col]]))
 
-  obj2 <- subset(obj, cells = rownames(cells_keep))
-  obj2 <- subset(obj2, cells = highumi)
+  obj2 <- subset2(obj, cells = rownames(cells_keep))
+  obj2 <- subset2(obj2, cells = highumi)
 
   ## subset is defects
   scf <- scDblFinder::scDblFinder(sce = get_layer(obj = obj2,

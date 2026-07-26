@@ -40,7 +40,12 @@ merge_objects <- function(obj_list,
 
   obj_merge <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(obj_list, get_layer, assay = "RNA", layer = "counts", features = common_feat)),
                                           meta.data = purrr::map_dfr(obj_list, ~.x@meta.data))
-  obj_merge <- Seurat::NormalizeData(obj_merge)
+
+  if (all(purrr::map_lgl(obj_list, ~"data" %in% names(.x@assays$RNA@layers)))) {
+    obj_merge@assays$RNA@layers[["data"]] <- do.call(cbind, purrr::map(obj_list, get_layer, assay = "RNA", layer = "data", features = common_feat))
+  } else {
+    obj_merge <- Seurat::NormalizeData(obj_merge)
+  }
 
   if (merge_reductions) {
     ## no check for equal columns of reduction

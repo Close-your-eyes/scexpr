@@ -148,35 +148,8 @@ volcano01_calc <- function(SO,
     }, error = function(e) NULL)
 
 
-  # all(pgc %in% colnames(SO[[1]]))
-  # DietSeurat is slow ?!
-  # Seurat::DietSeurat(, assays = assay, counts = F)
-  # SO <- lapply(SO, function(x) Seurat::DietSeurat(subset(
-  #   x,
-  #   features = intersect(rownames(x), intersect_features),
-  #   cells = intersect(colnames(x), c(ngc, pgc))
-  # ), assays = assay, counts = T))
-
-
-  SO <- lapply(SO, function(x) subset(
-    x,
-    features = intersect(rownames(x), intersect_features),
-    cells = intersect(colnames(x), c(ngc, pgc))))
-
   if (length(SO) > 1) {
-    # this restores the counts matrix
-    ## fix this like in so_prep
-    #SO <- merge(x = SO[[1]], y = SO[2:length(SO)], merge.data = T)
-    #SO <- SeuratObject::JoinLayers(SO)
-    if (assay != "RNA") {
-      stop("multiple SO: only RNA currently")
-    }
-
-    SO <- Seurat::CreateSeuratObject(counts = do.call(cbind, purrr::map(SO, get_layer,
-                                                                        layer = "counts",
-                                                                        features = intersect_features)),
-                                     meta.data = dplyr::bind_rows(purrr::map(SO, ~.x@meta.data)))
-    SO <- Seurat::NormalizeData(SO, assay = "RNA", verbose = F)
+    SO <- merge_objects(obj_list = SO)
   } else {
     SO <- SO[[1]]
   }
@@ -197,7 +170,8 @@ volcano01_calc <- function(SO,
   if (length(min_pct_features) == 0) {
     stop("No features passed the min_pct filter. Try lowering min_pct.", call. = FALSE)
   }
-  SO <- Seurat::DietSeurat(SO, assays = assay, features = min_pct_features, layers = c("counts", "data"))
+
+  SO <- subset2(SO, features = min_pct_features, cells = c(ngc, pgc))
 
   # equal order of intersecting features which are taken into non-log space for wilcox test and FC calculation
   # DefaultAssay set above
@@ -239,7 +213,6 @@ volcano01_calc <- function(SO,
   attr(df, "min_pct") <- min_pct
   attr(df, "assay") <- assay
 
-  options(warn = default_warn)
   return(list(df = df,
               mat = vd,
               feat.plots = feat_plots,
@@ -282,10 +255,9 @@ calculate_DEG <- function(SO,
       }
       options(mc.cores = mc.cores)
     }
-   # tt <- get_data(SO, feature = "MALAT1", try_df = T, reduction = NULL)
 
     Seurat::Idents(SO) <- SO@meta.data[,1,drop=T]
-    df <- Seurat::FindMarkers(Seurat::GetAssay(SO, Seurat::DefaultAssay(SO)),
+    df <- Seurat::FindMarkers(SO@assays[[Seurat::DefaultAssay(SO)]],
                               test.use = method,
                               min.pct = 0, # filtered before
                               logfc.threshold = fc_thresh,
@@ -299,16 +271,26 @@ calculate_DEG <- function(SO,
     names(df)[which(names(df) == "pct.2")] <- paste0("pct.", ngn)
 
     SO <- get_layer(obj = SO, layer = layer)
-    SO <- expm1(SO) + 1 # actually works only for data slot
-    if (layer != "data") {
-      message("calculate_DEG: layer != 'data'. log expression values in returned df may be imprecise.")
+
+    if (layer == "data") {
+      # mean(exp(x)) = 1 + mean(expm1(x))
+      apm <- 1 + Matrix::rowMeans(
+        expm1(SO[, pgc, drop = FALSE])
+      )
+      anm <- 1 + Matrix::rowMeans(
+        expm1(SO[, ngc, drop = FALSE])
+      )
+    } else {
+      message(
+        "calculate_DEG: layer != 'data'; using values without inverse transformation."
+      )
+
+      apm <- Matrix::rowMeans(SO[, pgc, drop = FALSE])
+      anm <- Matrix::rowMeans(SO[, ngc, drop = FALSE])
     }
-    apm <- Matrix::rowMeans(SO[, pgc])
-    anm <- Matrix::rowMeans(SO[, ngc])
 
     df[[ngn]] <- round(log2(anm[rownames(df)]), 2)
     df[[pgn]] <- round(log2(apm[rownames(df)]), 2)
-
   }
 
 

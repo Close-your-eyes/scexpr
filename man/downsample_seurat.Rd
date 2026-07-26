@@ -51,6 +51,6 @@ with seurat object, sometimes.
 so02 <- downsample_seurat(so2, downsample = 300,
                           recreate_RNA_assay = T,
                           nhvf = 200, features = "CD3E",
-                          cells_in = cells2(subset(so2, !pca14_rna900_snn_res_0.1 \%in\% c("06", "07"))))
+                          cells_in = cells2(subset2(so2, !pca14_rna900_snn_res_0.1 \%in\% c("06", "07"))))
 }
 }
