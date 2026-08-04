@@ -162,7 +162,7 @@ SO_prep04 <- function(SO,
   )
   names_wo_clust <- names(SO@meta.data)
 
-  SO <- calc_neighbor_and_cluster(obj = SO,
+  SO <- find_neighbor_and_cluster(obj = SO,
                                   red = red,
                                   npcs = RunPCA_args[["npcs"]],
                                   FindNeighbors_args = FindNeighbors_args,

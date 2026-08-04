@@ -258,7 +258,7 @@ SO_prep02 <- function(SO_unprocessed,
   )
   names_wo_clust <- names(SO@meta.data)
 
-  SO <- calc_neighbor_and_cluster(obj = SO,
+  SO <- find_neighbor_and_cluster(obj = SO,
                                   red = red,
                                   npcs = RunPCA_args[["npcs"]],
                                   FindNeighbors_args = FindNeighbors_args,
@@ -1562,14 +1562,14 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 #' @examples
 #' \dontrun{
 #' # Cluster a Seurat object using the first 20 PCs
-#' seu <- calc_neighbor_and_cluster(
+#' seu <- find_neighbor_and_cluster(
 #'   seu,
 #'   red = "pca",
 #'   npcs = 20
 #' )
 #'
 #' # Run clustering at custom resolutions
-#' seu <- calc_neighbor_and_cluster(
+#' seu <- find_neighbor_and_cluster(
 #'   seu,
 #'   FindClusters_args = list(
 #'     resolution = c(0.2, 0.5, 1.0)
@@ -1577,11 +1577,11 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 #' )
 #'
 #' # Use a matrix of embeddings directly
-#' cl <- calc_neighbor_and_cluster(
+#' cl <- find_neighbor_and_cluster(
 #'   Embeddings(seu, "pca")[, 1:20]
 #' )
 #' }
-calc_neighbor_and_cluster <- function(obj,
+find_neighbor_and_cluster <- function(obj,
                                       red = "pca",
                                       npcs = 10,
                                       FindNeighbors_args = list(),
@@ -1606,6 +1606,10 @@ calc_neighbor_and_cluster <- function(obj,
     object <- obj@reductions[[red]]@cell.embeddings[,1:npcs]
   } else {
     object <- obj
+    if (is.null(rownames(object))) {
+      message("adding rownames")
+      rownames(object) <- seq(1, nrow(object))
+    }
   }
   nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = object,
                                                   verbose = verbose),

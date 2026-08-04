@@ -97,6 +97,14 @@
 #' lineage markers and validate the thresholds using independent annotations
 #' or held-out samples.
 #'
+#'   | Label       | Interpretation                                      |
+#'   | ----------- | --------------------------------------------------- |
+#'   | `CD4`       | Sufficient CD4 score and clear CD4 advantage        |
+#'   | `CD8`       | Sufficient CD8 score and clear CD8 advantage        |
+#'   | `mix`       | Both signatures high, but neither clearly dominates |
+#'   | `ambiguous` | Some signal exists, but evidence is insufficient    |
+#'   | `unknown`   | Neither lineage signature is sufficiently high      |
+#'
 #' The function depends on the project-specific helper functions
 #' \code{avg_expression()}, \code{join_meta_data()}, \code{find_all_marker()},
 #' \code{subset2()}, and \code{get_data()}.
@@ -156,32 +164,22 @@ derive_cd4_cd8_tcell_lineage <- function(obj,
       log_ratio <= -log2(cd4cd8_ratio)          ~ "CD8",
       TRUE                                        ~ "mix"))
 
-  obj <- join_meta_data(obj, df, by = group)
+  obj <- join_meta_data(obj, df[,c(group, colname)], by = group)
   obj@meta.data[[colname]][which(is.na(obj@meta.data[[colname]]))] <- "unknown"
 
-  tmark <- find_all_marker(subset2(obj, subset = !!rlang::sym(colname) %in% c("CD4", "CD8")), meta_col = colname)
-  tmarkcd4 <- dplyr::bind_rows(tmark |>
-                                 dplyr::filter(group == "CD4" & pct_in>30 & padj<1e-5) |>
-                                 dplyr::slice_max(avg_log2FC, n = 20),
-                               tmark |>
-                                 dplyr::filter(group == "CD4" & pct_in>30 & padj<1e-5) |>
-                                 dplyr::slice_max(logFC, n = 20)) |>
+  tmark <- find_all_marker(subset2(obj, subset = !!rlang::sym(colname) %in% c("CD4", "CD8")), meta_col = colname) |>
+    dplyr::filter(pct_in>30 & padj<1e-5)
+  tmark <- dplyr::bind_rows(dplyr::slice_max(tmark, avg_log2FC, n = 20, .by = group),
+                            dplyr::slice_max(tmark, logFC, n = 20, .by = group)) |>
     dplyr::distinct()
-  tmarkcd8 <- dplyr::bind_rows(tmark |>
-                                 dplyr::filter(group == "CD8" & pct_in>30 & padj<1e-5) |>
-                                 dplyr::slice_max(avg_log2FC, n = 20),
-                               tmark |>
-                                 dplyr::filter(group == "CD8" & pct_in>30 & padj<1e-5) |>
-                                 dplyr::slice_max(logFC, n = 20)) |>
-    dplyr::distinct()
-
+  tmark <- split(tmark$feature, tmark$group)
   obj <- UCell::AddModuleScore_UCell(obj,
-                                     features = list(CD4score = setdiff(tmarkcd4$feature, "CD4"),
-                                                     CD8score = setdiff(tmarkcd8$feature, c("CD8A", "CD8B"))),
+                                     features = list(CD4score = setdiff(tmark[["CD4"]], "CD4"),
+                                                     CD8score = setdiff(tmark[["CD8"]], c("CD8A", "CD8B"))),
                                      ncores = ncores)
 
-  tt <- get_data(obj, c("CD4score_UCell", "CD8score_UCell", colname), reduction = NULL, try_df = T) |>
-    dplyr::select(id, dplyr::ends_with("UCell"), dplyr::all_of(colname)) |>
+  tt <- get_data(obj, c("CD4score_UCell", "CD8score_UCell", colname, group), reduction = NULL, try_df = T) |>
+    dplyr::select(id, dplyr::ends_with("UCell"), dplyr::all_of(c(group, colname))) |>
     dplyr::mutate(diff = CD4score_UCell-CD8score_UCell)
 
   # summ <- tt |> dplyr::summarise(
@@ -326,6 +324,24 @@ derive_cd4_cd8_tcell_lineage <- function(obj,
       )
     )
 
+  # collapse clonotypes with different annotations to one lineage
+  # if scores are consistently higher for either lineage
+  tt2 <- tt |>
+    dplyr::distinct(cl_name, Tlin_predict) |>
+    dplyr::add_count(cl_name) |>
+    dplyr::filter(n>1) |>
+    tidyr::drop_na() |>
+    dplyr::distinct(!!rlang::sym(group))
+
+  for (i in tt2[[group]]) {
+    if (mean(tt[which(tt[[group]] == i),"CD4score_UCell"] > tt[which(tt[[group]] == i),"CD8score_UCell"]) > 0.9) {
+      tt[which(tt[[group]] == i),prediction_col] <- "CD4"
+    } else if (mean(tt[which(tt[[group]] == i),"CD4score_UCell"] < tt[which(tt[[group]] == i),"CD8score_UCell"]) > 0.9) {
+      tt[which(tt[[group]] == i),prediction_col] <- "CD8"
+    } else {
+      tt[which(tt[[group]] == i),prediction_col] <- "ambiguous"
+    }
+  }
 
   obj@misc$cd4_cd8_classification <- tt
   obj <- Seurat::AddMetaData(obj, tt |> tibble::column_to_rownames("id") |> dplyr::select(dplyr::all_of(prediction_col)))

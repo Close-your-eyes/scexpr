@@ -46,6 +46,9 @@ avg_expression <- function(obj,
 
   if (!is.null(group)) {
     f <- obj@meta.data[[group]]
+    if (is.null(f)) {
+      stop(group, " not found in meta.data.")
+    }
   } else {
     # return x as x below, no splitting
     f <- rep("1", nrow(obj@meta.data))
@@ -69,7 +72,6 @@ avg_expression <- function(obj,
                                                cells = cells),
                                  f = f,
                                  byrow = F)
-
 
     obj <- purrr::map(obj, ~fun2(fun(transformer(.x))))
     obj <- do.call(cbind, obj)

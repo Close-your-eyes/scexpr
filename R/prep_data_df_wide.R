@@ -128,7 +128,10 @@ prep_data_df_wide <- function(data,
   if (qmin > 0 || qmax < 1) {
     data <- purrr::map(data, function(x) {
       if (is.numeric(x[["feature"]])) {
-        x[["feature"]] <- scales::squish(x[["feature"]], range = c(stats::quantile(x[["feature"]], qmin), stats::quantile(x[["feature"]], qmax)))
+
+        x[["feature"]] <- scales::squish(x[["feature"]],
+                                         range = c(stats::quantile(x[["feature"]], qmin, na.rm = T),
+                                                   stats::quantile(x[["feature"]], qmax, na.rm = T)))
 
         ## dont do this here as non scrnaseq data are provided
         # if (all(x[["feature"]] >= 0)) { # > 0 or >= 0 ?!
@@ -176,24 +179,34 @@ prep_data_df_wide <- function(data,
       #x[["feature"]] <- factor(x[["feature"]], exclude = c())
 
       if (anyNA(x[["feature"]])) {
-        na_replace <- "NA"
-        while(na_replace %in% unique(x[["feature"]])) {
-          na_replace <- paste(c(na_replace, na_replace), collapse = "_")
-        }
-        level_order <- NULL
-        if (is.factor(x[["feature"]])) {
-          level_order <- levels(x[["feature"]])
-          x[["feature"]] <- as.character(x[["feature"]])
-        }
-        x[which(is.na(x[["feature"]])),1] <- na_replace
-        x <- dplyr::bind_rows(split(x, x[["feature"]])[names(sort(table(x[["feature"]]), decreasing = T))])
-        x[which(x[["feature"]] == na_replace),1] <- NA
-        if (bury_NA) {
-          x <- rbind(x[which(is.na(x[["feature"]])),], x[which(!is.na(x[["feature"]])),])
-        }
-        if (!is.null(level_order)) {
-          x[["feature"]] <- factor(x[["feature"]], levels = level_order)
-        }
+
+        x <- x |>
+          dplyr::add_count(.data$feature, name = "..feature_count") |>
+          dplyr::arrange(
+            if (bury_NA) dplyr::desc(is.na(.data$feature)) else 0L,
+            dplyr::desc(.data$..feature_count),
+            .data$feature
+          ) |>
+          dplyr::select(-"..feature_count")
+        #
+        # na_replace <- "NA"
+        # while(na_replace %in% unique(x[["feature"]])) {
+        #   na_replace <- paste(c(na_replace, na_replace), collapse = "_")
+        # }
+        # level_order <- NULL
+        # if (is.factor(x[["feature"]])) {
+        #   level_order <- levels(x[["feature"]])
+        #   x[["feature"]] <- as.character(x[["feature"]])
+        # }
+        # x[which(is.na(x[["feature"]])),1] <- na_replace
+        # x <- dplyr::bind_rows(split(x, x[["feature"]])[names(sort(table(x[["feature"]]), decreasing = T))])
+        # x[which(x[["feature"]] == na_replace),1] <- NA
+        # if (bury_NA) {
+        #   x <- rbind(x[which(is.na(x[["feature"]])),], x[which(!is.na(x[["feature"]])),])
+        # }
+        # if (!is.null(level_order)) {
+        #   x[["feature"]] <- factor(x[["feature"]], levels = level_order)
+        # }
       } else {
         x <- dplyr::bind_rows(split(x, x[["feature"]])[names(sort(table(x[["feature"]]), decreasing = T))])
       }

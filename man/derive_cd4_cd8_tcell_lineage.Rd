@@ -111,7 +111,15 @@ Marker selection and score calibration are performed on the same object.
 The resulting labels should therefore be treated as data-driven annotations,
 not as independently validated predictions. Where possible, inspect known
 lineage markers and validate the thresholds using independent annotations
-or held-out samples.
+or held-out samples.\tabular{ll}{
+   Label \tab Interpretation \cr
+   \code{CD4} \tab Sufficient CD4 score and clear CD4 advantage \cr
+   \code{CD8} \tab Sufficient CD8 score and clear CD8 advantage \cr
+   \code{mix} \tab Both signatures high, but neither clearly dominates \cr
+   \code{ambiguous} \tab Some signal exists, but evidence is insufficient \cr
+   \code{unknown} \tab Neither lineage signature is sufficiently high \cr
+}
+
 
 The function depends on the project-specific helper functions
 \code{avg_expression()}, \code{join_meta_data()}, \code{find_all_marker()},
