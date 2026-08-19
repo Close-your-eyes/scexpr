@@ -77,10 +77,11 @@ get_layer <- function(obj,
   }
 
   Seurat::DefaultAssay(obj) <- assay
-  rownames(x) <- rownames(x) %||% names(which(obj@assays[["RNA"]]@features[,layer]@.Data[,1])) #rownames(obj)
-  colnames(x) <- colnames(x) %||% names(which(obj@assays[["RNA"]]@cells[,layer]@.Data[,1])) #colnames(obj)
-  features <- features %||% rownames(x) #rownames(obj)
-  cells <- cells %||% colnames(x) #colnames(obj)
+  ## error with SCT ?!
+  rownames(x) <- rownames(x) %||% names(which(obj@assays[[assay]]@features[,layer]@.Data[,1]))
+  colnames(x) <- colnames(x) %||% names(which(obj@assays[[assay]]@cells[,layer]@.Data[,1]))
+  features <- features %||% rownames(x)
+  cells <- cells %||% colnames(x)
 
   if (!all(cells %in% colnames(x))) {
     message("get_layer: some cells not found.")

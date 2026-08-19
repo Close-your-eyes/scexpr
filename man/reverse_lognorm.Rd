@@ -5,14 +5,14 @@
 \title{Recreate counts layer from data layer}
 \usage{
 reverse_lognorm(
-  SO,
+  obj,
   assay = "RNA",
-  nCount_RNA = Seurat::Misc(SO, slot = "RNA_count_colSums"),
+  nCount_RNA = Seurat::Misc(obj, slot = "RNA_count_colSums"),
   scale.factor = 10000
 )
 }
 \arguments{
-\item{SO}{Seurat object}
+\item{obj}{Seurat object}
 
 \item{assay}{assay to use}
 

@@ -23,8 +23,8 @@ subset2 <- function(obj, ...) {
 
   for (i in names(obj@assays)) {
 
-    obj@assays[[i]]@cells <- obj@assays[[i]]@cells[which(obj@assays[[i]]@cells@.Data[,"counts"]),,drop = FALSE]
-    obj@assays[[i]]@features <- obj@assays[[i]]@features[which(obj@assays[[i]]@features@.Data[,"counts"]),,drop = FALSE]
+    try(obj@assays[[i]]@cells <- obj@assays[[i]]@cells[which(obj@assays[[i]]@cells@.Data[,"counts"]),,drop = FALSE], silent = T)
+    try(obj@assays[[i]]@features <- obj@assays[[i]]@features[which(obj@assays[[i]]@features@.Data[,"counts"]),,drop = FALSE], silent = T)
 
   }
 

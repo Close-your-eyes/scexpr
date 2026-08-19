@@ -34,7 +34,9 @@ labeltransfer_module_gsea <- function(test_obj,
                                       test_clusters,
                                       modules,
                                       AddModuleScore_UCell_args = list(ncores = 8,
-                                                                       name = "")) {
+                                                                       name = ""),
+                                      skip_module_score = T,
+                                      gsea_score = c("NES", "ES")) {
   if (!requireNamespace("UCell", quietly = T)) {
     BiocManager::install("UCell")
   }
@@ -69,66 +71,79 @@ labeltransfer_module_gsea <- function(test_obj,
     AddModuleScore_UCell_args[["name"]] <- "_Ucell"
   }
 
-  module_names <- paste0(names(modules), AddModuleScore_UCell_args[["name"]])
+  gsea_score <- rlang::arg_match(gsea_score)
 
-  # from seurat object returned: pull meta columns immediately
-  score_df <- Gmisc::fastDoCall(UCell::AddModuleScore_UCell,
-                                args = c(list(test_obj, features = modules),
-                                         AddModuleScore_UCell_args))@meta.data[,c(test_clusters, module_names),drop = F]
-  # avg scores by cluster
-  score_df_avg <- dplyr::summarize(score_df,
-                                   dplyr::across(
-                                     dplyr::all_of(module_names),
-                                     mean,
-                                     na.rm = TRUE),
-                                   .by = !!rlang::sym(test_clusters)) |>
-    dplyr::arrange(!!rlang::sym(test_clusters))
-  rownames(score_df_avg) <- score_df_avg[[test_clusters]]
+  modulescore <- NULL
+  if (!skip_module_score) {
+    module_names <- paste0(names(modules), AddModuleScore_UCell_args[["name"]])
 
-  score_df_avg_long <- brathering::mat_to_df_long(
-    score_df_avg[,-which(names(score_df_avg) == test_clusters)],
-    colnames_to = "module",
-    rownames_to = test_clusters,
-    values_to = "score")
-
-  score_df_avg_long2 <- score_df_avg_long |>
-    dplyr::slice_max(order_by = score,
-                     n = 1,
-                     by = !!rlang::sym(test_clusters)) |>
-    dplyr::mutate(label = round(score, 2)) |>
-    dplyr::mutate(label = gsub("0\\.", ".", as.character(label)))
-
-  scores_plot <- fcexpr::heatmap_long_df(score_df_avg_long,
-                                         groups = "module",
-                                         theme = colrr::theme_material(),
-                                         features = test_clusters,
-                                         values = "score",
-                                         values_zscored = F) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
-    ggplot2::geom_text(data = score_df_avg_long2,
-                       fontface = "bold",
-                       mapping = ggplot2::aes(label = label),
-                       color = "#8B7500FF")
- # colrr::col_pal("custom")
-  # get order from plot
-
-  xyorder <- brathering::gg_get_axis_text(scores_plot)
-  score_df_avg <- score_df_avg[xyorder$y,]
-
-  score_best <- dplyr::slice_max(
-    score_df_avg_long,
-    score,
-    n = 1,
-    by = !!rlang::sym(test_clusters)) |>
-    as.data.frame()
-  rownames(score_best) <- score_best[[test_clusters]]
-  score_best <- score_best[xyorder$y, ]
-
-  conv <- stats::setNames(score_best$module, score_best[[test_clusters]])
-  conv <- conv[xyorder$y]
+    # from seurat object returned: pull meta columns immediately
+    score_df <- Gmisc::fastDoCall(UCell::AddModuleScore_UCell,
+                                  args = c(list(test_obj, features = modules),
+                                           AddModuleScore_UCell_args))@meta.data[,c(test_clusters, module_names),drop = F]
+    # avg scores by cluster
+    score_df_avg <- dplyr::summarize(score_df,
+                                     dplyr::across(
+                                       dplyr::all_of(module_names),
+                                       mean,
+                                       na.rm = TRUE),
+                                     .by = !!rlang::sym(test_clusters)) |>
+      dplyr::arrange(!!rlang::sym(test_clusters))
+    rownames(score_df_avg) <- score_df_avg[[test_clusters]]
 
 
-  ## ---- do smth similar with gsea -----
+    score_df_avg_long <- brathering::mat_to_df_long(
+      score_df_avg[,-which(names(score_df_avg) == test_clusters)],
+      colnames_to = "module",
+      rownames_to = test_clusters,
+      values_to = "score")
+
+    score_df_avg_long2 <- score_df_avg_long |>
+      dplyr::slice_max(order_by = score,
+                       n = 1,
+                       by = !!rlang::sym(test_clusters)) |>
+      dplyr::mutate(label = round(score, 2)) |>
+      dplyr::mutate(label = gsub("0\\.", ".", as.character(label)))
+
+    scores_plot <- fcexpr::heatmap_long_df(score_df_avg_long,
+                                           groups = "module",
+                                           theme = colrr::theme_material(),
+                                           features = test_clusters,
+                                           values = "score",
+                                           values_zscored = F) +
+      ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)) +
+      ggplot2::geom_text(data = score_df_avg_long2,
+                         fontface = "bold",
+                         mapping = ggplot2::aes(label = label),
+                         color = "#8B7500FF")
+    # colrr::col_pal("custom")
+    # get order from plot
+
+    xyorder <- brathering::gg_get_axis_text(scores_plot)
+    score_df_avg <- score_df_avg[xyorder$y,]
+
+    score_best <- dplyr::slice_max(
+      score_df_avg_long,
+      score,
+      n = 1,
+      by = !!rlang::sym(test_clusters)) |>
+      as.data.frame()
+    rownames(score_best) <- score_best[[test_clusters]]
+    score_best <- score_best[xyorder$y, ]
+
+    conv <- stats::setNames(score_best$module, score_best[[test_clusters]])
+    conv <- conv[xyorder$y]
+
+    modulescore <- list(score = score_df,
+                        score_avg_wide = score_df_avg,
+                        score_avg_long = score_df_avg_long,
+                        score_avg_long_plot = scores_plot,
+                        score_avg_best = score_best,
+                        conv = conv)
+  }
+
+
+  # do smth similar with gsea
   # s2n <- gsea_s2n_groupwise(test_obj, test_clusters)
   res <- gsea_groupwise(test_obj,
                         test_clusters,
@@ -139,66 +154,58 @@ labeltransfer_module_gsea <- function(test_obj,
   resdf <- purrr::map_dfr(res, ~.x[["data"]]) |>
     dplyr::mutate(padj2 = -log(padj))
 
-
-## plot ES as NES was NA sometimes
-resdf2 <- resdf |>
-  dplyr::slice_max(order_by = ES,
-                   n = 1,
-                   by = !!rlang::sym(test_clusters)) |>
-  dplyr::mutate(label = round(ES, 2)) |>
-  dplyr::mutate(label = gsub("0\\.", ".", as.character(label)))
+  # plot NES or ES
+  resdf2 <- resdf |>
+    dplyr::slice_max(order_by = !!rlang::sym(gsea_score), n = 1, by = !!rlang::sym(test_clusters), na_rm = T) |>
+    as.data.frame()
   scores_plot2 <- fcexpr::heatmap_long_df(resdf,
                                           groups = "pathway",
                                           features = test_clusters,
-                                          values = "ES",
+                                          values = gsea_score,
                                           theme = colrr::theme_material(),
                                           dotsizes = "padj2",
                                           values_zscored = F,
                                           theme_args = list(panel.grid = ggplot2::element_blank(),
                                                             axis.text.x = ggplot2::element_text(angle = 40, hjust = 1))) +
-    ggplot2::geom_text(data = resdf2,
+    ggplot2::geom_text(data = resdf2 |>
+                         dplyr::mutate(label = round(!!rlang::sym(gsea_score), 2)) |>
+                         dplyr::mutate(label = gsub("0\\.", ".", as.character(label))),
                        fontface = "bold",
                        mapping = ggplot2::aes(label = label),
                        color = "#00BFFFFF")
   # colrr::col_pal("custom")
   xyorder2 <- brathering::gg_get_axis_text(scores_plot2)
+  rownames(resdf2) <- resdf2[[test_clusters]]
+  resdf2 <- resdf2[xyorder2$y, ]
 
-
-  score_best2 <- dplyr::slice_max(
-    resdf,
-    NES,
-    n = 1,
-    by = !!rlang::sym(test_clusters)) |>
-    as.data.frame()
-  rownames(score_best2) <- score_best2[[test_clusters]]
-  score_best2 <- score_best2[xyorder2$y, ]
-
-  conv2 <- stats::setNames(score_best2$pathway, score_best2[[test_clusters]])
+  conv2 <- stats::setNames(resdf2$pathway, resdf2[[test_clusters]])
   conv2 <- conv2[xyorder2$y]
 
-  score_best3 <- dplyr::left_join(
-    dplyr::select(score_best, 1,2),
-    dplyr::select(score_best2, 1,2),
-    by = test_clusters)
+  ## merge results
+  module_vs_gsea <- NULL
+  if (!skip_module_score) {
+    score_best3 <- dplyr::left_join(
+      dplyr::select(score_best, 1,2),
+      dplyr::select(resdf2, 1,2),
+      by = test_clusters)
 
-  # gsea plot with order from module plot
-  ### fails if ucell suffix is used?!
-  suppressMessages(utils::capture.output(scores_plot3 <- scores_plot2 +
-                                    ggplot2::scale_x_discrete(limits = xyorder$x) +
-                                    ggplot2::scale_y_discrete(limits = xyorder$y)))
-  scores_plot3 <- patchwork::wrap_plots(scores_plot, scores_plot3)
+    # gsea plot with order from module plot
+    ### fails if ucell suffix is used?!
+    suppressMessages(utils::capture.output(scores_plot3 <- scores_plot2 +
+                                             ggplot2::scale_x_discrete(limits = xyorder$x) +
+                                             ggplot2::scale_y_discrete(limits = xyorder$y)))
+    scores_plot3 <- patchwork::wrap_plots(scores_plot, scores_plot3)
 
-  return(list(modulescore = list(score = score_df,
-                                 score_avg_wide = score_df_avg,
-                                 score_avg_long = score_df_avg_long,
-                                 score_avg_long_plot = scores_plot,
-                                 score_avg_best = score_best,
-                                 conv = conv),
+    module_vs_gsea <- list(score_avg_best = score_best3,
+                           score_avg_long_plots = scores_plot3)
+  }
+
+
+  return(list(modulescore,
               gsea = list(#score = res[["meta"]],
-                          score_avg_long = resdf,
-                          score_avg_long_plot = scores_plot2,
-                          score_avg_best = score_best2,
-                          conv = conv2),
-              module_vs_gsea = list(score_avg_best = score_best3,
-                                    score_avg_long_plots = scores_plot3)))
+                score_avg_long = resdf,
+                score_avg_long_plot = scores_plot2,
+                score_avg_best = resdf2,
+                conv = conv2),
+              module_vs_gsea = module_vs_gsea))
 }

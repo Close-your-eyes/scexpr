@@ -35,6 +35,7 @@
 #'   \code{ggplot2::theme()}.
 #' @param col_pal_args List of arguments passed to \code{colrr::col_pal()}.
 #' @param color_text Color of label text. Defaults to automatic selection.
+#' @param split split seurat object and produce multiple pie charts?
 #'
 #' @return A ggplot2 object representing the pie chart.
 #'
@@ -53,11 +54,13 @@
 #' }
 freq_pie_chart <- function(SO,
                            meta_col,
+                           split = NULL,
                            order = NULL,
                            fill = "..auto..",
                            fill_na = "grey50",
                            color = "white",
-                           color_text = "..auto..",
+                           label_color_inside = "..auto..",
+                           label_color_outside = "..auto..",
                            radius_inside = 0.3,
                            label_outside = c("none", "abs", "rel"),
                            label_inside = c("rel", "abs", "none"),
@@ -65,8 +68,8 @@ freq_pie_chart <- function(SO,
                            label_size = 5,
                            label_radius_inside = 0.75,
                            label_radius_outside = 1.1,
-                           label_angle_inside = NULL, # circle or numeric
-                           label_angle_outside = NULL, # circle or numeric
+                           label_angle_inside = "radial_readable",
+                           label_angle_outside =  "radial_readable",
                            label_overlap = c("ignore", "alternate", "outside"),
                            overlap_outside_radius = 1.1,
                            label_rel_pct = F,
@@ -109,30 +112,45 @@ freq_pie_chart <- function(SO,
   }
 
   if (methods::is(SO, "Seurat")) {
-    SO <- SO@meta.data
+    if (!is.null(split)) {
+      SO <- purrr::map(Seurat::SplitObject(SO, split.by = split), ~.x@meta.data)
+    } else {
+      SO <- list(SO@meta.data)
+    }
+  } else {
+    if (is.data.frame(SO)) {
+      SO <- list(SO)
+    }
   }
+
   # brathering::
-  brathering::piechart(x = SO[[meta_col]],
-                       order = order,
-                       fill = fill,
-                       fill_na = fill_na,
-                       color = color,
-                       color_text = color_text,
-                       radius_inside = radius_inside,
-                       label_outside = label_outside,
-                       label_inside = label_inside,
-                       label_rel_cutoff = label_rel_cutoff,
-                       label_size = label_size,
-                       label_radius_inside = label_radius_inside,
-                       label_radius_outside = label_radius_outside,
-                       label_angle_inside = label_angle_inside,
-                       label_angle_outside = label_angle_outside,
-                       label_overlap = label_overlap,
-                       overlap_outside_radius = overlap_outside_radius,
-                       label_rel_pct = label_rel_pct,
-                       label_rel_dec = label_rel_dec,
-                       legend_title = legend_title,
-                       theme_args = theme_args,
-                       theme = theme,
-                       col_pal_args = col_pal_args)
+  pies <- purrr::map(SO, ~brathering::piechart(x = .x[[meta_col]],
+                                               order = order,
+                                               fill = fill,
+                                               fill_na = fill_na,
+                                               color = color,
+                                               label_color_inside = label_color_inside,
+                                               label_color_outside = label_color_outside,
+                                               radius_inside = radius_inside,
+                                               label_outside = label_outside,
+                                               label_inside = label_inside,
+                                               label_rel_cutoff = label_rel_cutoff,
+                                               label_size = label_size,
+                                               label_radius_inside = label_radius_inside,
+                                               label_radius_outside = label_radius_outside,
+                                               label_angle_inside = label_angle_inside,
+                                               label_angle_outside = label_angle_outside,
+                                               label_overlap = label_overlap,
+                                               overlap_outside_radius = overlap_outside_radius,
+                                               label_rel_pct = label_rel_pct,
+                                               label_rel_dec = label_rel_dec,
+                                               legend_title = legend_title,
+                                               theme_args = theme_args,
+                                               theme = theme,
+                                               col_pal_args = col_pal_args))
+
+  if (length(pies) == 1) {
+    pies <- pies[[1]]
+  }
+  return(pies)
 }

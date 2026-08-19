@@ -1,51 +1,118 @@
-#' Get data frame for plotting from Seurat object(s)
+#' Prepare plotting data from one or more Seurat objects
 #'
-#' @param SO one Seurat object or a list of multiple ones
-#' @param feature vector of features to fetch (genes or column names in
-#' meta data)
-#' @param reduction reduction to fetch from reductions slot of SO
-#' @param dims dimensions of the selected reduction to extract from SO
-#' @param assay which assay to get expression data from
-#' @param layer which layer/slot to get expression data from, e.g. counts or data
-#' @param cells vector of cell names to select for regular plotting (=1),
-#' deselected ones are plotted with color col_ex_cells (=0) in feature_plot
-#' @param meta_col meta data columns to attach
-#' @param qmin lower quantile of feature values where to cut the color scale
-#' @param qmax upper quantile
-#' @param order order rows from lowest to highest (negative at bottom)
-#' @param order_rev reverse row order
-#' @param order_abs absolute values for ordering: zeros first and anything
-#' distant from zero on top
-#' @param order_discr set TRUE to for order by abundance, only relevant for
-#' discrete meta features
-#' @param shuffle do shuffle rows (if order is FALSE) to randomize plotting
-#' order; if !order and !shuffle the provided order is not altered
-#' @param bury_NA put NA to the bottom which will bury them upon plotting
-#' @param na_rm remove NA values? (only for meta feature)
-#' @param inf_rm remove infinite values?
-#' @param label_feature feature for plotting labels
-#' @param contour_feature feature for plotting contours
-#' @param split_feature feature for creating facets
-#' @param shape_feature feature to shape plotted points by
-#' @param trajectory_slot not used currently
-#' @param downsample random downsample cells which will completely remove them
-#' from returned data frame and hence influence statistics and plotting
-#' @param feature_ex filter cells by an exclusion feature, cells with UMI>0
-#' are excluded and get col_ex_cells as color, passed to scexpr::get_data
-#' @param feature_cut filter cells by a one or more cutoff features,
-#' cells with UMI>feature_cut_expr are excluded and get col_ex_cells
-#' @param feature_cut_expr numeric vector of cutoff expressions
-#' @param try_df try to return one joined data frame
+#' Extract expression values, cell-level metadata, and two-dimensional
+#' embeddings from one or more Seurat objects. The result is split by requested
+#' feature so that each element can be passed directly to plotting functions.
 #'
-#' @return a list of data frame
+#' @details
+#' Gene features are read from `layer` in `assay`; metadata features are read
+#' from each object's `meta.data` slot. A requested feature must be present in
+#' every object. Features that are missing, or that occur both as a gene and as
+#' a metadata column, are reported and omitted.
+#'
+#' For numeric features, `qmin` and `qmax` winsorize values for visualization.
+#' For non-negative features, quantiles are calculated from positive values
+#' only. This changes the returned plotting values and therefore should not be
+#' used when the result will be used for downstream statistics.
+#'
+#' Row order determines plotting order: rows appearing later are typically
+#' drawn on top. Ordering and shuffling are applied independently to each
+#' requested feature.
+#'
+#' @param SO A Seurat object or a named list of Seurat objects. When multiple
+#'   objects are supplied, each requested feature must be available in all of
+#'   them.
+#' @param feature A character vector of gene names or columns in `meta.data` to
+#'   extract.
+#' @param reduction A reduction name, or one reduction name per object. Names
+#'   are matched case-insensitively; compatible reductions in multiple objects
+#'   may be renamed internally to a common label. Set to `NULL` to omit
+#'   embeddings.
+#'   An object's `misc` slot can override the requested reduction through, in
+#'   precedence order, `reduction_preferred`, `preferred_reduction`, and
+#'   `reduction`. Write the preferred reduction into one of these slots.
+#' @param dims A numeric vector of length two identifying the embedding
+#'   dimensions used by downstream plotting code. Defaults to `c(1, 2)`.
+#' @param assay Name of the assay from which gene expression is extracted.
+#' @param layer Name of the assay layer (or slot), such as `"counts"` or
+#'   `"data"`.
+#' @param cells Optional cell selection. Cell names identify rows to retain;
+#'   associated values are copied to the returned `cells` column, where
+#'   plotting code conventionally uses `1` for selected and `0` for excluded
+#'   cells.
+#' @param meta_col Optional character vector of additional `meta.data` columns
+#'   to append to every result.
+#' @param qmin,qmax Lower and upper quantiles used to winsorize numeric feature
+#'   values. Supply proportions between 0 and 1. If `qmax > 1`, both values are
+#'   interpreted as percentages and divided by 100.
+#' @param order Logical; if `TRUE`, order rows by feature value before
+#'   returning them.
+#' @param order_rev Logical; reverse the selected numeric ordering.
+#' @param order_abs Logical; when ordering numeric features, order by absolute
+#'   value so that values farthest from zero are drawn together. Ignored when
+#'   `order = FALSE`.
+#' @param order_discr Logical; for discrete features, group rows by decreasing
+#'   category abundance. The most abundant groups are placed first and are
+#'   therefore typically drawn behind smaller groups.
+#' @param shuffle Logical; randomly shuffle rows when numeric ordering is
+#'   disabled. For discrete features, shuffling is used only when
+#'   `order_discr = FALSE`.
+#' @param bury_NA Logical; place missing feature values first so that they are
+#'   typically hidden beneath non-missing points.
+#' @param na_rm Logical; remove rows whose requested feature is `NA`.
+#' @param inf_rm Logical; remove rows whose requested feature is infinite.
+#' @param label_feature Optional metadata column used for plot labels. It is
+#'   returned as `label_feature`.
+#' @param contour_feature Optional metadata column used for contours. It is
+#'   returned as `contour_feature`.
+#' @param split_feature Optional metadata column used for facets. It is
+#'   returned as `split_feature`; when omitted, that column is a factor with a
+#'   single level, `"1"`.
+#' @param shape_feature Optional metadata column used to map point shapes. It
+#'   is returned as `shape_feature`.
+#' @param trajectory_slot Reserved for compatibility; currently unused.
+#' @param downsample Cell downsampling specification passed to
+#'   `check.and.get.cells()`. Removed cells are absent from the returned data
+#'   and from any downstream calculations.
+#' @param feature_cut Optional feature or features used to flag cells by an
+#'   expression cutoff. Passed to `check.and.get.cells()`.
+#' @param feature_cut_expr Numeric cutoff value or vector corresponding to
+#'   `feature_cut`.
+#' @param feature_ex Optional exclusion feature. Cells with non-zero expression
+#'   are flagged by `check.and.get.cells()` for downstream plotting.
+#' @param try_df Logical; if `FALSE` (the default), return one data frame per
+#'   requested feature. If `TRUE`, attempt to join those frames into a single
+#'   wide data frame.
+#'
+#' @return If `try_df = FALSE`, a named list with one data frame per retained
+#'   feature. In each data frame, the requested values are stored in `feature`,
+#'   cell identifiers in `id`, object membership in `SO.split`, and selection
+#'   status in `cells`; requested embeddings and annotation columns are also
+#'   included. Each element carries attributes describing the feature, layer,
+#'   quantile limits, embedding dimensions, and optional plotting mappings.
+#'   If `try_df = TRUE`, the feature-specific frames are joined into one data
+#'   frame and each feature keeps its original column name.
 #' @export
 #'
 #' @importFrom zeallot %<-%
 #'
 #' @examples
 #' \dontrun{
-#' datadf <- get_data(so, c("CD3E", "orig.ident"), try_df = T)
-#' datalst <- get_data(so, c("CD3E", "orig.ident"), try_df = F)
+#' # Return one plotting data frame per feature.
+#' data_list <- get_data(
+#'   pbmc,
+#'   feature = c("CD3E", "orig.ident"),
+#'   reduction = "umap"
+#' )
+#'
+#' # Combine the feature columns into a single wide data frame.
+#' data_wide <- get_data(
+#'   pbmc,
+#'   feature = c("CD3E", "MS4A1"),
+#'   qmin = 0.01,
+#'   qmax = 0.99,
+#'   try_df = TRUE
+#' )
 #' }
 get_data <- function(SO,
                      feature,
@@ -129,7 +196,6 @@ get_data <- function(SO,
     stop("No feature left.")
   }
 
-
   data <- purrr::map_dfr(SO, function(x) {
     data <- cbind(
       get_layer(obj = x,
@@ -147,9 +213,10 @@ get_data <- function(SO,
       reduction <- unique(unlist(lapply(names(reduction), function(z) {
         names(x@reductions)[which.min(stringdist::stringdist(tolower(z), tolower(names(x@reductions))))]
       })))
+
       for (i in reduction) {
         # valid umap colnames can be umap_1 but also UMAP_1
-        # is case of multi-SO this could cause incompatability
+        # is case of multi-SO this could cause incompatibility
         # so always to lower
         red <- Seurat::Embeddings(x, reduction = i)
         colnames(red) <- tolower(colnames(red))
@@ -439,6 +506,18 @@ check.reduction <- function(SO,
         message("reduction set to x@misc$reduction_preferred[1]: ", x@misc$reduction_preferred[1])
       }
       y <- x@misc$reduction_preferred[1]
+    }
+    if ("preferred_reduction" %in% names(x@misc)) {
+      if (tolower(x@misc$preferred_reduction[1]) != tolower(y)) {
+        message("reduction set to x@misc$preferred_reduction[1]: ", x@misc$preferred_reduction[1])
+      }
+      y <- x@misc$preferred_reduction[1]
+    }
+    if ("reduction" %in% names(x@misc)) {
+      if (tolower(x@misc$reduction[1]) != tolower(y)) {
+        message("reduction set to x@misc$reduction[1]: ", x@misc$reduction[1])
+      }
+      y <- x@misc$reduction[1]
     }
     return(y)
   })

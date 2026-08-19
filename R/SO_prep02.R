@@ -1,75 +1,190 @@
-#' Prepare a somewhat standardized Seurat Object for further analyses
+#' Prepare a Seurat object for downstream analysis
 #'
+#' Normalize one or more sample-level Seurat objects, select variable features,
+#' merge or integrate samples, run PCA, correct batch effects, build neighbor
+#' graphs, cluster cells, calculate UMAP and/or t-SNE embeddings, and optionally
+#' transfer reference cell-type labels. The result can also be reduced in size
+#' and saved as an RDS file.
 #'
+#' @details
+#' `SO_prep02()` supports three multi-sample workflows:
 #'
-#' @param SO_unprocessed named list of split Seurat objects
-#' @param samples names of SO_unprocessed that are to include; if missing all are used
-#' @param cells vector of cell names to include; if missing all cells are used
-#' @param min_cells min number of cells per object in SO_unprocessed; objects with lower cell number are excluded
-#' @param downsample downsample a fraction of cells from each object in SO_unprocessed (downsample < 0);
-#' or an absolute number of cells per object (downsample > 1 & downsample >= min_cells)
-#' @param export_prefix prefix to the output rds file
-#' @param reductions which reduction to calculate, one of multiple of
-#' c("umap", "tsne")
-#' @param nhvf number high variables features, passed to Seurat::SCTransform
-#' or Seurat::FindVariableFeatures or Seurat::SelectIntegrationFeatures
-#' @param npcs number of principle components in calculate in pca and to
-#' consider for downstream functions like tSNE or UMAP
-#' @param normalization algorithm for normalization of UMIs, RNA and LogNormalize
-#' are the same
-#' @param batch_corr procedure for batch correction between samples in SO_unprocessed;
-#' only relevant if more than 1 sample is passed
-#' @param vars.to.regress passed to Seurat::SCTransform or Seurat::ScaleData; will be applied
-#' independent of what is set for batch_corr; if batch_corr is set to 'none', then only vars.to.regress is
-#' used to regress out a variable in meta.data which may be sample-specific; other then that
-#' it may not be meaningful to regress a sample-specific variable and perform batch_corr;
-#' rather vars.to.regress may be used in combination with batch_corr to regress percent_mito or so
-#' @param seed seed passed to several methods
-#' @param save_path folder to save the resulting Seurat object as rds-file to
-#' @param celltype_refs list(prim_cell_atlas = celldex::HumanPrimaryCellAtlasData(), MonacoImmune = celldex::MonacoImmuneData())
-#' @param celltype_label list of label names to use from the reference data set (one list entry per celltype_refs; each entry may contain a vector of labels)
-#' @param celltype_ref_clusters use a clustering as basis for grouped celltype annotation with SingleR. This will
-#' fundamentally speed up the calculation!
-#' e.g. if SCT assay is used and cluster_resolutions includes 0.8 then pass: SCT_snn_res.0.8.
-#' when integration procedure assay is used: integrated_snn_res.0.8. For RNA assay: RNA_snn_res.0.8.
-#' @param diet_seurat logical whether to run Seurat::DietSeurat
-#' @param verbose print messages and progress bars from functions
-#' @param var_feature_filter character vector of features which are to exclude from variable features;
-#' this will affect downstream PCA, dimension reduction and clustering;
-#' e.g.: var_feature_filter = `grep("^TR[ABGD]V", rownames(SOqc_split[[1]])`, value = T) to
-#' exclude T cell receptor gene segments
-#' @param hvf_determination_before_merge determine variable features before or after merging multiple samples;
-#' either by the standard LogNormalize workflow or by SCTransform function; this is most important for
-#' deciding whether SCtransform is run on multiple samples separately before merging (set to TRUE) or
-#' after merging (set to FALSE); in my experience and when batch_corr = harmony, setting
-#' it to FALSE yields better results; see: https://github.com/hbctraining/scRNA-seq_online/blob/master/lessons/06a_integration_harmony.md and subsequent links
-#' @param FindVariableFeatures_args arguments to Seurat::FindVariableFeatures
-#' @param SCtransform_args arguments to Seurat::SCTransform but c("object", "assay", "new.assay.name", "seed.use", "verbose")
-#' @param RunUMAP_args arguments to Seurat::RunUMAP
-#' @param RunTSNE_args arguments to scexpr::run_fft_tsne
-#' @param FindNeighbors_args arguments to Seurat::FindNeighbors
-#' @param FindClusters_args arguments to Seurat::FindClusters
-#' @param RunHarmony_args arguments to harmony::RunHarmony
-#' @param FindIntegrationAnchors_args arguments to Seurat::FindIntegrationAnchors
-#' @param IntegrateData_args by default features.to.integrate = rownames(Seurat::GetAssayData(`SO_unprocessed[[1]]`, assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA")))
-#' @param RunPCA_args arguments to Seurat::RunUMAP
-#' @param ... not used yet
-#' @param downsample_method how to downsample?
-#' @param save_ext just rds now
-#' @param join_layers run SeuratObject::JoinLayers in the end?
-#' @param interactive_varfeat_selection only applies when hvf_determination_before_merge = F
-#' @param interactive_varfeat_selection_inds only applies when hvf_determination_before_merge = F
-#' @param interactive_pc_selection do conduct interactive PC selection?
-#' @param var_feature_set set hvf manually
-#' @param use_nn_for_umap re-use nearest neighbor graph from cluster calc for umap?
+#' * `batch_corr = "harmony"` merges samples and runs Harmony after PCA.
+#' * `batch_corr = "integration"` uses Seurat anchors and `IntegrateData()`.
+#' * `batch_corr = "none"` merges samples without batch correction.
 #'
-#' @return Seurat Object, as R object and saved to disk as rds file
+#' A single retained sample always uses `batch_corr = "none"`. The value
+#' `"RNA"` for `normalization` is an alias for `"LogNormalize"`. With multiple
+#' samples,
+#' `hvf_determination_before_merge` controls whether variable features (and, for
+#' SCT, transformation) are determined separately before merging or on the
+#' merged object.
+#'
+#' Input objects are reconstructed from their RNA count layers and metadata
+#' before processing. Existing reductions, graphs, commands, and non-RNA assays
+#' are therefore not carried forward. Cells and samples are filtered before
+#' this reconstruction.
+#'
+#' The function sets `future.globals.maxSize` to 20 GiB. It also checks for
+#' required packages and attempts to install missing dependencies. Interactive
+#' feature and PC selection are automatically disabled outside an interactive R
+#' session.
+#'
+#' @param SO_unprocessed A named list of sample-level Seurat objects, or a
+#'   character vector of RDS paths containing such objects. For a single sample,
+#'   supply a named list of length one.
+#' @param samples Optional character vector naming the input samples to retain.
+#'   Matching is case-insensitive. By default, all samples are used.
+#' @param cells Optional character vector of cell names to retain. Objects with
+#'   no matching cells are removed. By default, all cells are used.
+#' @param min_cells Minimum number of cells required after cell selection and
+#'   downsampling. Smaller objects are removed. Defaults to `50`.
+#' @param downsample Per-object downsampling target. A value between `0` and `1`
+#'   is the fraction of cells to retain; a value above `1` is the target number
+#'   of cells. With uniform downsampling, `1` retains all cells. Absolute
+#'   targets below `min_cells` are raised to `min_cells`.
+#' @param downsample_method Downsampling strategy: `"uniform"` uses uniform
+#'   random sampling, whereas `"leverage"` samples using Seurat leverage
+#'   scores. For leverage sampling, use `0 < downsample < 1` or `downsample > 1`
+#'   so that a target cell count can be derived.
+#' @param export_prefix Optional string included in the generated RDS filename.
+#' @param reductions Character vector containing one or both of `"umap"` and
+#'   `"tsne"`. Requested embeddings are calculated from the PCA, Harmony, or
+#'   integrated reduction selected by the workflow.
+#' @param nhvf Number of highly variable features requested from
+#'   `SCTransform()`, `FindVariableFeatures()`, or
+#'   `SelectIntegrationFeatures()`, as applicable.
+#' @param npcs Number of principal components to calculate and use for neighbor
+#'   finding, clustering, and dimensionality reduction. Interactive PC selection
+#'   initially calculates at least 50 components.
+#' @param normalization Normalization method. `"SCT"` uses `SCTransform()`;
+#'   `"RNA"` and `"LogNormalize"` both use the standard log-normalization
+#'   workflow.
+#' @param hvf_determination_before_merge Logical; determine variable features
+#'   separately in each sample before merging. If `FALSE`, determine them on the
+#'   merged object. This option also determines whether SCT is first run per
+#'   sample or after merging in the Harmony/no-correction workflow.
+#' @param batch_corr Batch-correction strategy: `"harmony"`, `"integration"`,
+#'   or `"none"`. Batch correction is disabled when only one sample remains.
+#' @param vars.to.regress Optional metadata variables passed to `SCTransform()`
+#'   or `ScaleData()`. These regressions are independent of `batch_corr`; they
+#'   are generally most useful for technical covariates such as mitochondrial
+#'   percentage.
+#' @param seed Random seed forwarded to PCA, SCT, UMAP, t-SNE, and other
+#'   supported steps.
+#' @param save_path Optional directory in which to save the processed object.
+#'   If `NULL`, the object is returned without being written to disk. Missing
+#'   directories are created recursively.
+#' @param save_ext Output extension. Currently only `"rds"` is supported.
+#' @param celltype_refs Optional named list of reference data sets for SingleR
+#'   annotation. Each reference may be a `SummarizedExperiment`, Seurat object,
+#'   or gene-by-cell matrix.
+#' @param celltype_label Reference label fields to use. Supply one character
+#'   vector, which is recycled across references, or a list with one entry per
+#'   element of `celltype_refs`. Each entry may contain multiple label fields.
+#' @param celltype_ref_clusters Optional metadata column containing clusters for
+#'   grouped SingleR annotation. When omitted or unavailable in the processed
+#'   object, annotation is performed at single-cell resolution.
+#' @param sacrifice_count_slot Logical; run `sacrifice_count_slot` before returning and
+#'   saving the object. RNA count column sums are stored in
+#'   `Misc(SO, "RNA_count_colSums")` before counts are removed.
+#' @param var_feature_filter Optional character vector of genes to exclude from
+#'   the variable-feature set. Variable-feature selection may be rerun to retain
+#'   the requested number of features after exclusion. This changes PCA and all
+#'   downstream analyses based on it.
+#' @param var_feature_set Optional character vector used as the variable-feature
+#'   set. Duplicate names are removed. Interactive variable-feature selection is
+#'   skipped when this argument is supplied.
+#' @param verbose Logical; show messages and progress output from supported
+#'   processing steps.
+#' @param FindVariableFeatures_args Named list of additional arguments for
+#'   `Seurat::FindVariableFeatures()`. `object`, `assay`, and `verbose` are
+#'   controlled internally; `nfeatures` is set from `nhvf`.
+#' @param SCtransform_args Named list of additional arguments for
+#'   `Seurat::SCTransform()`. `object`, `assay`, `new.assay.name`, `seed.use`,
+#'   and `verbose` are controlled internally; `variable.features.n` is set from
+#'   `nhvf`.
+#' @param RunPCA_args Named list of additional arguments for
+#'   `Seurat::RunPCA()`. `npcs`, `seed.use`, `verbose`, and `reduction.name` are
+#'   controlled internally; `assay` and `reduction.key` are ignored.
+#' @param RunUMAP_args Named list of additional arguments for
+#'   `Seurat::RunUMAP()` or, when `use_nn_for_umap = TRUE`, compatible arguments
+#'   for `uwot::umap()`. PCA dimensions are used by default.
+#' @param RunTSNE_args Named list of additional arguments for
+#'   `scexpr::run_fft_tsne()`. If that call fails, the function falls back to
+#'   `Seurat::RunTSNE()`.
+#' @param FindNeighbors_args Named list of additional arguments passed to
+#'   `FindNeighbors2()`. The input object, reduction, and verbosity are
+#'   controlled internally.
+#' @param FindClusters_args Named list of additional arguments for
+#'   `Seurat::FindClusters()`. Its `resolution` element may contain multiple
+#'   resolutions; the default is `seq(0.1, 0.8, 0.1)`.
+#' @param RunHarmony_args Named list of additional arguments for Harmony.
+#'   `group.by.vars` must identify metadata columns when Harmony is requested.
+#'   The input reduction, output reduction name, and dimensions are set from the
+#'   PCA configuration.
+#' @param FindIntegrationAnchors_args Named list of additional arguments for
+#'   `Seurat::FindIntegrationAnchors()`. Defaults are derived for anchor
+#'   features, filtering, scoring, reduction, and dimensions when omitted.
+#' @param IntegrateData_args Named list of additional arguments for
+#'   `Seurat::IntegrateData()`. By default, all features in the applicable SCT
+#'   or RNA layer are integrated.
+#' @param join_layers Logical; attempt `SeuratObject::JoinLayers()` for every
+#'   assay before returning the object. Errors are ignored.
+#' @param interactive_varfeat_selection Logical; display variable-feature plots
+#'   and prompt for the number of features. No `var_feature_set` may be supplied,
+#'   and R must be running interactively. In multi-sample merge workflows, this
+#'   option applies only when `hvf_determination_before_merge = FALSE`.
+#' @param interactive_varfeat_selection_inds Numeric vector of candidate
+#'   variable-feature counts displayed during interactive selection.
+#' @param interactive_pc_selection Logical; display an elbow plot and prompt for
+#'   the number of PCs. Used only in an interactive R session.
+#' @param use_nn_for_umap Logical; reuse the ranked nearest-neighbor result from
+#'   clustering and call `uwot::umap()` directly instead of
+#'   `Seurat::RunUMAP()`.
+#' @param ... Reserved for future use; currently ignored.
+#'
+#' @return A processed Seurat object. Depending on the selected workflow, it
+#'   contains normalized assays, variable features, PCA and optional batch-
+#'   corrected reductions, neighbor graphs, cluster metadata, and requested
+#'   UMAP/t-SNE embeddings. Additional metadata may include `id`, `barcode`,
+#'   `prefix`, and SingleR labels. The `misc` slot records clustering columns,
+#'   RNA count column sums, the generated object filename, and related plotting
+#'   metadata. If `save_path` is supplied, the same object is also saved there
+#'   as a compressed RDS file.
 #' @export
 #' @importFrom zeallot %<-%
 #'
 #' @examples
 #' \dontrun{
-#' # for future issues: options(future.globals.maxSize = 1000 * 1024^2)
+#' # Process one sample with log normalization and UMAP.
+#' prepared <- SO_prep02(
+#'   SO_unprocessed = list(sample_1 = sample_1),
+#'   normalization = "LogNormalize",
+#'   batch_corr = "none",
+#'   reductions = "umap"
+#' )
+#'
+#' # Merge samples, correct sample effects with Harmony, and save the result.
+#' prepared <- SO_prep02(
+#'   SO_unprocessed = sample_objects,
+#'   normalization = "SCT",
+#'   batch_corr = "harmony",
+#'   RunHarmony_args = list(group.by.vars = "orig.ident"),
+#'   reductions = c("umap", "tsne"),
+#'   save_path = "processed"
+#' )
+#'
+#' # Exclude receptor genes from the variable-feature set.
+#' receptor_genes <- grep(
+#'   "^TR[ABGD]V",
+#'   rownames(sample_objects[[1]]),
+#'   value = TRUE
+#' )
+#' prepared <- SO_prep02(
+#'   SO_unprocessed = sample_objects,
+#'   var_feature_filter = receptor_genes
+#' )
 #' }
 SO_prep02 <- function(SO_unprocessed,
                       samples = NULL,
@@ -91,7 +206,7 @@ SO_prep02 <- function(SO_unprocessed,
                       celltype_refs = NULL, # list of celldex::objects of seurat or matrix
                       celltype_label = c("label.main", "label.fine"),
                       celltype_ref_clusters = NULL,
-                      diet_seurat = F,
+                      sacrifice_count_slot = F,
                       var_feature_filter = NULL,
                       var_feature_set = NULL,
                       verbose = T,
@@ -391,11 +506,8 @@ SO_prep02 <- function(SO_unprocessed,
     }
   }
 
-  # remove counts as they can be recalculated with rev_lognorm
-  Seurat::Misc(SO, slot = "RNA_count_colSums") <- Matrix::colSums(get_layer(obj = SO, layer = "counts", assay = "RNA"))
-  if (diet_seurat) {
-    SO <- Seurat::DietSeurat(SO, assays = names(SO@assays), counts = F, dimreducs = names(SO@reductions))
-  }
+  # option to remove counts as they can be recalculated with rev_lognorm
+  SO <- sacrifice_count_slot(SO, rm_count = sacrifice_count_slot)
 
   try(expr = {
     # quick to calculate
@@ -427,7 +539,13 @@ SO_prep02 <- function(SO_unprocessed,
     }
     dir.create(save_path, showWarnings = F, recursive = T)
     if (save_ext == "rds") {
-      saveRDS(SO, compress = T, file = file.path(save_path, save.name))
+      readr::write_rds(
+        SO,
+        file.path(save_path, save.name),
+        compress = "gz",
+        version = 3,
+        compression = 3
+      )
     }
     message("SO saved to: ")
     message(file.path(save_path, save.name))
@@ -1234,6 +1352,15 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
     stop("SO_unprocessed has no names.")
   }
 
+  if (is.null(samples)) {
+    samples <- names(SO_unprocessed)
+  } else {
+    if (any(!tolower(samples) %in% tolower(names(SO_unprocessed)))) {
+      message("samples not found in SO_unprocessed: ", paste(samples[which(!samples %in% names(SO_unprocessed))], collapse = ","))
+    }
+  }
+  SO_unprocessed <- SO_unprocessed[which(tolower(names(SO_unprocessed)) %in% tolower(samples))]
+
   SO_unprocessed <- subset_SO_unprocessed(
     SO_unprocessed = SO_unprocessed,
     cells = cells,
@@ -1266,16 +1393,14 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
     }
   }
 
-  if (is.null(samples)) {
-    samples <- names(SO_unprocessed)
-  } else {
-    if (any(!samples %in% names(SO_unprocessed))) {
-      message("samples not found in SO_unprocessed: ", samples[which(!samples %in% names(SO_unprocessed))])
-    }
-  }
-
-  # samples <- names(SO_unprocessed)[which(grepl(paste(samples, collapse = "|"), names(SO_unprocessed)))]
-  SO_unprocessed <- SO_unprocessed[which(names(SO_unprocessed) %in% samples)]
+  # if (is.null(samples)) {
+  #   samples <- names(SO_unprocessed)
+  # } else {
+  #   if (any(!samples %in% names(SO_unprocessed))) {
+  #     message("samples not found in SO_unprocessed: ", samples[which(!samples %in% names(SO_unprocessed))])
+  #   }
+  # }
+  # SO_unprocessed <- SO_unprocessed[which(names(SO_unprocessed) %in% samples)]
 
   return(list(SO_unprocessed, samples))
 }

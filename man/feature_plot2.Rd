@@ -117,7 +117,10 @@ column.}
 
 \item{reduction}{Name of the dimensionality reduction to use. Will be matched
 against existing reductions. Optionally, provide a vector for multiple SO with
-different reduction names.}
+different reduction names.
+An object's \code{misc} slot can override the requested reduction through, in
+precedence order, \code{reduction_preferred}, \code{preferred_reduction}, and
+\code{reduction}. Write the preferred reduction into one of these slots.}
 
 \item{dims}{Numeric vector of length 2 specifying the dimensions to plot.}
 
@@ -169,8 +172,19 @@ non-expressing values.}
 \item{col_pal_d_args}{Arguments for discrete colour palettes. If
 \code{name = "..auto.."}, colours may be read from \code{SO@misc$metacolors}.}
 
-\item{col_steps}{Colour step specification: \code{NULL}, \code{"..auto.."}, a number of
-bins, or explicit break values.}
+\item{col_steps}{Controls whether and how the scale is binned. One of:
+\itemize{
+\item \code{NULL} for a continuous colour bar.
+\item A single number giving the approximate number of breaks.
+\item A numeric vector giving the exact internal break positions.
+\item \code{"..auto.."} to choose breaks automatically.
+\item A named n-tile specification: \code{"..tertiles.."},
+\code{"..terciles.."}, \code{"..quartiles.."}, \code{"..quintiles.."},
+\code{"..sextiles.."}, \code{"..septiles.."}, \code{"..octiles.."},
+\code{"..noniles.."}, \code{"..deciles.."}, or \code{"..quantiles.."}.
+\item A numeric n-tile specification such as \code{"..6tiles.."} or
+\code{"..12tiles.."}.
+}}
 
 \item{col_steps_nice}{Logical; use pretty step breaks.}
 

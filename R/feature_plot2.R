@@ -13,6 +13,9 @@
 #' @param reduction Name of the dimensionality reduction to use. Will be matched
 #'  against existing reductions. Optionally, provide a vector for multiple SO with
 #'  different reduction names.
+#'  An object's `misc` slot can override the requested reduction through, in
+#'  precedence order, `reduction_preferred`, `preferred_reduction`, and
+#'  `reduction`. Write the preferred reduction into one of these slots.
 #' @param dims Numeric vector of length 2 specifying the dimensions to plot.
 #' @param assay Assay used to fetch expression values.
 #' @param cells Optional vector of cell names to highlight. Non-selected cells
@@ -58,8 +61,19 @@
 #' @param col_pal_c_args Arguments for continuous colour palettes.
 #' @param col_pal_d_args Arguments for discrete colour palettes. If
 #'   `name = "..auto.."`, colours may be read from `SO@misc$metacolors`.
-#' @param col_steps Colour step specification: `NULL`, `"..auto.."`, a number of
-#'   bins, or explicit break values.
+#' @param col_steps Controls whether and how the scale is binned. One of:
+#'   \itemize{
+#'     \item `NULL` for a continuous colour bar.
+#'     \item A single number giving the approximate number of breaks.
+#'     \item A numeric vector giving the exact internal break positions.
+#'     \item `"..auto.."` to choose breaks automatically.
+#'     \item A named n-tile specification: `"..tertiles.."`,
+#'       `"..terciles.."`, `"..quartiles.."`, `"..quintiles.."`,
+#'       `"..sextiles.."`, `"..septiles.."`, `"..octiles.."`,
+#'       `"..noniles.."`, `"..deciles.."`, or `"..quantiles.."`.
+#'     \item A numeric n-tile specification such as `"..6tiles.."` or
+#'       `"..12tiles.."`.
+#'   }
 #' @param col_steps_nice Logical; use pretty step breaks.
 #' @param col_trans_log Logical; apply logarithmic colour transformation.
 #' @param col_legend_c_args Arguments passed to the continuous colour guide.
@@ -333,8 +347,7 @@ feature_plot2 <- function(
     cell_hull_plot = F,
     cell_hull_args = list(color = "grey30",
                           linewidth = 0.1,
-                          alpha = 1)
-) {
+                          alpha = 1)) {
 
   ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 
@@ -347,6 +360,13 @@ feature_plot2 <- function(
   }
 
   SO <- scexpr:::check.SO(SO = SO)
+
+  # maybe strange time to do that
+  if (length(reduction)>1 && all(reduction %in% scexpr:::get_gene_features(SO[[1]]))) {
+    SO <- purrr::map(SO, ~add_feature_dimreduc(.x, features = reduction))
+  }
+
+
 
   if (missing(features)) {
     if (all(purrr::map_lgl(SO, ~!is.null(Seurat::Idents(.x))))) {
@@ -366,9 +386,14 @@ feature_plot2 <- function(
   }
 
   dotlist <- list(...)
-  for (i in c("contour_feature", "label_feature", "split_feature", "shape_feature", "feature_ex", "feature_cut", "feature_cut_expr")) {
-    if (!is.null(dotlist[[i]])) {get_data_args[[i]] <- dotlist[[i]]}
+  if (length(dotlist)) {
+    message("ellipsis args: ", paste(names(dotlist), collapse = ", "))
+
+    for (i in intersect(names(dotlist), names(formals(get_data)))) {
+      get_data_args[[i]] <- dotlist[[i]]
+    }
   }
+
   label_center_fun <- rlang::arg_match(label_center_fun)
 
 

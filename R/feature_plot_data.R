@@ -29,8 +29,19 @@
 #'   The palette can be specified by name, a single colour, or a vector of
 #'   colours.
 #' @param col_pal_d_args Arguments for discrete colour palettes.
-#' @param col_steps Colour break specification. Can be `NULL`,
-#'   `"..auto.."`, a number of bins, or explicit break values.
+#' @param col_steps Controls whether and how the scale is binned. One of:
+#'   \itemize{
+#'     \item `NULL` for a continuous colour bar.
+#'     \item A single number giving the approximate number of breaks.
+#'     \item A numeric vector giving the exact internal break positions.
+#'     \item `"..auto.."` to choose breaks automatically.
+#'     \item A named n-tile specification: `"..tertiles.."`,
+#'       `"..terciles.."`, `"..quartiles.."`, `"..quintiles.."`,
+#'       `"..sextiles.."`, `"..septiles.."`, `"..octiles.."`,
+#'       `"..noniles.."`, `"..deciles.."`, or `"..quantiles.."`.
+#'     \item A numeric n-tile specification such as `"..6tiles.."` or
+#'       `"..12tiles.."`.
+#'   }
 #' @param col_steps_nice Logical; use ggplot2's "pretty" break algorithm.
 #' @param col_trans_log Logical; apply logarithmic colour transformation.
 #' @param legendbreaks Legend break specification.
@@ -369,6 +380,7 @@ feature_plot_data <- function(data,
     ggplot2::geom_point(data = ~dplyr::filter(., cells == 0), ggplot2::aes(shape = !!shapeby), size = pt_size, color = col_ex_cells) +
     theme +
     Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
+
 
   if (attr(data, "feature_type") == "gene") {
     freqs <- scexpr:::get_freqs(data = data)

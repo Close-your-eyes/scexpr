@@ -75,7 +75,7 @@ check.SO <- function(SO,
 }
 
 check.and.get.cells <- function(SO,
-                                assay = c("RNA", "SCT"),
+                                assay,
                                 cells = NULL,
                                 feature_cut = NULL,
                                 feature_cut_expr = 0,
@@ -106,7 +106,7 @@ check.and.get.cells <- function(SO,
     feature_cut_expr <- rep(feature_cut_expr, length(feature_cut))
   }
 
-  assay <- match.arg(assay, c("RNA", "SCT"))
+  # assay <- match.arg(assay, c("RNA", "SCT"))
 
   if (any(duplicated(cells))) {
     message("Duplicates found in cells. Made unique now.")
@@ -461,7 +461,7 @@ add_color_scale <- function(plot,
         if (attr(plot[["data"]], "feature_type") == "gene") {
           if (!is.null(attr(plot[["data"]], "layer"))) {
             if (attr(plot[["data"]], "layer") == "data") {
-              col_legend_c_args[["title"]] <- "log\nUMI"
+              col_legend_c_args[["title"]] <- "log\nnorm\nUMI"
             } else if (attr(plot[["data"]], "layer") == "counts") {
               col_legend_c_args[["title"]] <- "UMI"
             } else {

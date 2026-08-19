@@ -169,14 +169,16 @@ derive_cd4_cd8_tcell_lineage <- function(obj,
 
   tmark <- find_all_marker(subset2(obj, subset = !!rlang::sym(colname) %in% c("CD4", "CD8")), meta_col = colname) |>
     dplyr::filter(pct_in>30 & padj<1e-5)
-  tmark <- dplyr::bind_rows(dplyr::slice_max(tmark, avg_log2FC, n = 20, .by = group),
-                            dplyr::slice_max(tmark, logFC, n = 20, .by = group)) |>
+  tmark <- dplyr::bind_rows(dplyr::slice_max(tmark, avg_log2FC, n = 20, by = group),
+                            dplyr::slice_max(tmark, logFC, n = 20, by = group)) |>
     dplyr::distinct()
   tmark <- split(tmark$feature, tmark$group)
-  obj <- UCell::AddModuleScore_UCell(obj,
+
+  obj <- UCell::AddModuleScore_UCell(obj = obj,
                                      features = list(CD4score = setdiff(tmark[["CD4"]], "CD4"),
                                                      CD8score = setdiff(tmark[["CD8"]], c("CD8A", "CD8B"))),
-                                     ncores = ncores)
+                                     ncores = ncores,
+                                     force.gc = T)
 
   tt <- get_data(obj, c("CD4score_UCell", "CD8score_UCell", colname, group), reduction = NULL, try_df = T) |>
     dplyr::select(id, dplyr::ends_with("UCell"), dplyr::all_of(c(group, colname))) |>

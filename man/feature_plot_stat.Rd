@@ -8,6 +8,7 @@ feature_plot_stat(
   SO,
   features,
   meta_col = "orig.ident",
+  color_by = meta_col,
   get_data_args = list(assay = "RNA", layer = "data", cells = NULL),
   geom1 = c("jitter", "point", "sina", "none"),
   geom2 = c("boxplot", "violin", "none"),
@@ -38,7 +39,8 @@ feature_plot_stat(
   geom3_args = list(outlier.shape = NA, alpha = 0.5, width = 0.4),
   facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins"),
   axis_expansion_y_mult = c(0.02, 0.125),
-  add_pwc = F
+  add_pwc = F,
+  reorder = F
 )
 }
 \arguments{
@@ -47,6 +49,8 @@ feature_plot_stat(
 \item{features}{Character vector of feature names (e.g., genes) to plot.}
 
 \item{meta_col}{Character scalar specifying the metadata column used for grouping.}
+
+\item{color_by}{meta data column to color by}
 
 \item{get_data_args}{List of arguments passed to \code{get_data()}, including
 \code{assay}, \code{layer}, and \code{cells}.}
@@ -109,6 +113,8 @@ a boxplot is plotted only on those groups where median across all cells is zero.
 \item{axis_expansion_y_mult}{Numeric vector of length 2 controlling y-axis expansion.}
 
 \item{add_pwc}{add default ggpubr::geom_pwc?}
+
+\item{reorder}{reorder x-axis by y-levels (only for one feature)}
 }
 \value{
 A \code{ggplot2} object.

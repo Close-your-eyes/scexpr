@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_data.R
 \name{get_data}
 \alias{get_data}
-\title{Get data frame for plotting from Seurat object(s)}
+\title{Prepare plotting data from one or more Seurat objects}
 \usage{
 get_data(
   SO,
@@ -36,79 +36,143 @@ get_data(
 )
 }
 \arguments{
-\item{SO}{one Seurat object or a list of multiple ones}
+\item{SO}{A Seurat object or a named list of Seurat objects. When multiple
+objects are supplied, each requested feature must be available in all of
+them.}
 
-\item{feature}{vector of features to fetch (genes or column names in
-meta data)}
+\item{feature}{A character vector of gene names or columns in \code{meta.data} to
+extract.}
 
-\item{reduction}{reduction to fetch from reductions slot of SO}
+\item{reduction}{A reduction name, or one reduction name per object. Names
+are matched case-insensitively; compatible reductions in multiple objects
+may be renamed internally to a common label. Set to \code{NULL} to omit
+embeddings.
+An object's \code{misc} slot can override the requested reduction through, in
+precedence order, \code{reduction_preferred}, \code{preferred_reduction}, and
+\code{reduction}. Write the preferred reduction into one of these slots.}
 
-\item{dims}{dimensions of the selected reduction to extract from SO}
+\item{dims}{A numeric vector of length two identifying the embedding
+dimensions used by downstream plotting code. Defaults to \code{c(1, 2)}.}
 
-\item{assay}{which assay to get expression data from}
+\item{assay}{Name of the assay from which gene expression is extracted.}
 
-\item{layer}{which layer/slot to get expression data from, e.g. counts or data}
+\item{layer}{Name of the assay layer (or slot), such as \code{"counts"} or
+\code{"data"}.}
 
-\item{cells}{vector of cell names to select for regular plotting (=1),
-deselected ones are plotted with color col_ex_cells (=0) in feature_plot}
+\item{cells}{Optional cell selection. Cell names identify rows to retain;
+associated values are copied to the returned \code{cells} column, where
+plotting code conventionally uses \code{1} for selected and \code{0} for excluded
+cells.}
 
-\item{meta_col}{meta data columns to attach}
+\item{meta_col}{Optional character vector of additional \code{meta.data} columns
+to append to every result.}
 
-\item{qmin}{lower quantile of feature values where to cut the color scale}
+\item{qmin, qmax}{Lower and upper quantiles used to winsorize numeric feature
+values. Supply proportions between 0 and 1. If \code{qmax > 1}, both values are
+interpreted as percentages and divided by 100.}
 
-\item{qmax}{upper quantile}
+\item{order}{Logical; if \code{TRUE}, order rows by feature value before
+returning them.}
 
-\item{order}{order rows from lowest to highest (negative at bottom)}
+\item{order_rev}{Logical; reverse the selected numeric ordering.}
 
-\item{order_rev}{reverse row order}
+\item{order_abs}{Logical; when ordering numeric features, order by absolute
+value so that values farthest from zero are drawn together. Ignored when
+\code{order = FALSE}.}
 
-\item{order_abs}{absolute values for ordering: zeros first and anything
-distant from zero on top}
+\item{order_discr}{Logical; for discrete features, group rows by decreasing
+category abundance. The most abundant groups are placed first and are
+therefore typically drawn behind smaller groups.}
 
-\item{order_discr}{set TRUE to for order by abundance, only relevant for
-discrete meta features}
+\item{shuffle}{Logical; randomly shuffle rows when numeric ordering is
+disabled. For discrete features, shuffling is used only when
+\code{order_discr = FALSE}.}
 
-\item{shuffle}{do shuffle rows (if order is FALSE) to randomize plotting
-order; if !order and !shuffle the provided order is not altered}
+\item{bury_NA}{Logical; place missing feature values first so that they are
+typically hidden beneath non-missing points.}
 
-\item{bury_NA}{put NA to the bottom which will bury them upon plotting}
+\item{na_rm}{Logical; remove rows whose requested feature is \code{NA}.}
 
-\item{na_rm}{remove NA values? (only for meta feature)}
+\item{inf_rm}{Logical; remove rows whose requested feature is infinite.}
 
-\item{inf_rm}{remove infinite values?}
+\item{label_feature}{Optional metadata column used for plot labels. It is
+returned as \code{label_feature}.}
 
-\item{label_feature}{feature for plotting labels}
+\item{contour_feature}{Optional metadata column used for contours. It is
+returned as \code{contour_feature}.}
 
-\item{contour_feature}{feature for plotting contours}
+\item{split_feature}{Optional metadata column used for facets. It is
+returned as \code{split_feature}; when omitted, that column is a factor with a
+single level, \code{"1"}.}
 
-\item{split_feature}{feature for creating facets}
+\item{shape_feature}{Optional metadata column used to map point shapes. It
+is returned as \code{shape_feature}.}
 
-\item{shape_feature}{feature to shape plotted points by}
+\item{trajectory_slot}{Reserved for compatibility; currently unused.}
 
-\item{trajectory_slot}{not used currently}
+\item{downsample}{Cell downsampling specification passed to
+\code{check.and.get.cells()}. Removed cells are absent from the returned data
+and from any downstream calculations.}
 
-\item{downsample}{random downsample cells which will completely remove them
-from returned data frame and hence influence statistics and plotting}
+\item{feature_cut}{Optional feature or features used to flag cells by an
+expression cutoff. Passed to \code{check.and.get.cells()}.}
 
-\item{feature_cut}{filter cells by a one or more cutoff features,
-cells with UMI>feature_cut_expr are excluded and get col_ex_cells}
+\item{feature_cut_expr}{Numeric cutoff value or vector corresponding to
+\code{feature_cut}.}
 
-\item{feature_cut_expr}{numeric vector of cutoff expressions}
+\item{feature_ex}{Optional exclusion feature. Cells with non-zero expression
+are flagged by \code{check.and.get.cells()} for downstream plotting.}
 
-\item{feature_ex}{filter cells by an exclusion feature, cells with UMI>0
-are excluded and get col_ex_cells as color, passed to scexpr::get_data}
-
-\item{try_df}{try to return one joined data frame}
+\item{try_df}{Logical; if \code{FALSE} (the default), return one data frame per
+requested feature. If \code{TRUE}, attempt to join those frames into a single
+wide data frame.}
 }
 \value{
-a list of data frame
+If \code{try_df = FALSE}, a named list with one data frame per retained
+feature. In each data frame, the requested values are stored in \code{feature},
+cell identifiers in \code{id}, object membership in \code{SO.split}, and selection
+status in \code{cells}; requested embeddings and annotation columns are also
+included. Each element carries attributes describing the feature, layer,
+quantile limits, embedding dimensions, and optional plotting mappings.
+If \code{try_df = TRUE}, the feature-specific frames are joined into one data
+frame and each feature keeps its original column name.
 }
 \description{
-Get data frame for plotting from Seurat object(s)
+Extract expression values, cell-level metadata, and two-dimensional
+embeddings from one or more Seurat objects. The result is split by requested
+feature so that each element can be passed directly to plotting functions.
+}
+\details{
+Gene features are read from \code{layer} in \code{assay}; metadata features are read
+from each object's \code{meta.data} slot. A requested feature must be present in
+every object. Features that are missing, or that occur both as a gene and as
+a metadata column, are reported and omitted.
+
+For numeric features, \code{qmin} and \code{qmax} winsorize values for visualization.
+For non-negative features, quantiles are calculated from positive values
+only. This changes the returned plotting values and therefore should not be
+used when the result will be used for downstream statistics.
+
+Row order determines plotting order: rows appearing later are typically
+drawn on top. Ordering and shuffling are applied independently to each
+requested feature.
 }
 \examples{
 \dontrun{
-datadf <- get_data(so, c("CD3E", "orig.ident"), try_df = T)
-datalst <- get_data(so, c("CD3E", "orig.ident"), try_df = F)
+# Return one plotting data frame per feature.
+data_list <- get_data(
+  pbmc,
+  feature = c("CD3E", "orig.ident"),
+  reduction = "umap"
+)
+
+# Combine the feature columns into a single wide data frame.
+data_wide <- get_data(
+  pbmc,
+  feature = c("CD3E", "MS4A1"),
+  qmin = 0.01,
+  qmax = 0.99,
+  try_df = TRUE
+)
 }
 }

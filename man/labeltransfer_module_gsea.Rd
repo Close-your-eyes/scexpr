@@ -9,7 +9,9 @@ labeltransfer_module_gsea(
   test_obj,
   test_clusters,
   modules,
-  AddModuleScore_UCell_args = list(ncores = 8, name = "")
+  AddModuleScore_UCell_args = list(ncores = 8, name = ""),
+  skip_module_score = T,
+  gsea_score = c("NES", "ES")
 )
 }
 \arguments{

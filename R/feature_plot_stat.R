@@ -40,6 +40,8 @@
 #' @param theme_args args to theme
 #' @param geom3_args args to geom3
 #' @param add_pwc add default ggpubr::geom_pwc?
+#' @param reorder reorder x-axis by y-levels (only for one feature)
+#' @param color_by meta data column to color by
 #'
 #' @details
 #' The function extracts expression data using \code{get_data()} and visualizes
@@ -72,6 +74,7 @@
 feature_plot_stat <- function(SO,
                               features,
                               meta_col = "orig.ident",
+                              color_by = meta_col,
                               get_data_args = list(assay = "RNA",
                                                    layer = "data",
                                                    cells = NULL),
@@ -106,7 +109,8 @@ feature_plot_stat <- function(SO,
                                                     axes = "all",
                                                     axis.labels = "margins"),
                               axis_expansion_y_mult = c(0.02,0.125),
-                              add_pwc = F) {
+                              add_pwc = F,
+                              reorder = F) {
 
 
   # handle facetting
@@ -124,9 +128,15 @@ feature_plot_stat <- function(SO,
   if (is.na(meta_col) || missing(meta_col) || meta_col == "" || is.null(meta_col)) {
     stop("meta_col required.")
   }
+
   if (length(meta_col) > 1) {
     meta_col <- meta_col[1]
     message("Please provide only one meta_col. Using first element of meta_col.")
+  }
+
+  if (length(color_by) > 1) {
+    color_by <- color_by[1]
+    message("Please provide only one color_by Using first element of color_by")
   }
 
   geom1 <- rlang::arg_match(geom1)
@@ -138,6 +148,12 @@ feature_plot_stat <- function(SO,
   assay <- Seurat::DefaultAssay(SO[[1]])
   features <- scexpr:::check.features(SO = SO, features = features, meta.data = T)
   meta_col <- scexpr:::check.features(SO = SO, features = meta_col, rownames = F)
+  color_by <- scexpr:::check.features(SO = SO, features = color_by, rownames = F)
+
+  if (reorder && length(features) > 1) {
+    message("reorder currently only works with one feature.")
+    reorder <- F
+  }
 
   get_data_args[["cells"]] <- scexpr:::check.and.get.cells(SO = SO,
                                                            assay = get_data_args[["assay"]],
@@ -149,9 +165,8 @@ feature_plot_stat <- function(SO,
 
   data <- Gmisc::fastDoCall(get_data, args = c(list(SO = SO,
                                                     reduction = NULL,
-                                                    meta_col = meta_col,
+                                                    meta_col = unique(c(meta_col, color_by)),
                                                     feature = features), get_data_args))
-
   # data <- get_data(SO,
   #                  feature = features,
   #                  reduction = NULL,
@@ -170,10 +185,20 @@ feature_plot_stat <- function(SO,
   ylab <- "feature"
   if (all(features %in% all_gene_feat)) {
     if (get_data_args[["layer"]] == "data") {
-      ylab <- "norm UMI"
+      ylab <- "log norm UMI"
     } else if (get_data_args[["layer"]] == "counts") {
       ylab <- "UMI"
     }
+  }
+
+  if (reorder) {
+    meta_order <- data |>
+      dplyr::summarise(feature_median = median(feature),
+                       feature_mean = mean(feature),
+                       .by = !!rlang::sym(meta_col)) |>
+      dplyr::arrange(-feature_median, -feature_mean) |>
+      dplyr::pull(!!rlang::sym(meta_col))
+    data[[meta_col]] <- factor(data[[meta_col]], levels = meta_order)
   }
 
   if (expr_freq_size>0) {
@@ -192,6 +217,7 @@ feature_plot_stat <- function(SO,
 
     names(stat)[which(names(stat) == "SO.split")] <- legend_title
   }
+
   names(data)[which(names(data) == "SO.split")] <- legend_title
   data <- data |>
     dplyr::mutate(feature_split = ifelse(feature_split %in% all_gene_feat,
@@ -240,13 +266,19 @@ feature_plot_stat <- function(SO,
                   "..auto.." = ggplot2::geom_boxplot,
                   "none" = ggplot2::geom_blank)
 
-  color_aes <- ifelse(length(SO) > 1, legend_title, meta_col)
+
+  if (color_by == meta_col) {
+    color_aes <- ifelse(length(SO) > 1, legend_title, meta_col)
+  } else {
+    color_aes <- color_by
+  }
+
 
 
   if (col_pal[1] == "..auto..") {
     if ("metacolors" %in% names(SO[[1]]@misc) && is.list(SO[[1]]@misc[["metacolors"]])) {
-      if (meta_col %in% names(SO[[1]]@misc[["metacolors"]])) {
-        col_pal <- SO[[1]]@misc[["metacolors"]][[meta_col]]
+      if (color_by %in% names(SO[[1]]@misc[["metacolors"]])) {
+        col_pal <- SO[[1]]@misc[["metacolors"]][[color_by]]
       } else {
         col_pal <- colrr::col_pal("custom")
       }
@@ -255,7 +287,8 @@ feature_plot_stat <- function(SO,
     }
   }
 
-  if (length(SO) == 1 && !"legend.position" %in% names(theme_args)) {
+  # default behavior for legend
+  if (length(SO) == 1 && !"legend.position" %in% names(theme_args) && color_by == meta_col) {
     theme_args <- c(theme_args, list(legend.position = "none"))
   }
 
@@ -268,6 +301,7 @@ feature_plot_stat <- function(SO,
                                  fct_lvls = if (is.factor(data[[color_aes]])) levels(data[[color_aes]]) else sort(unique(data[[color_aes]])),
                                  missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_args), col_pal_args[["missing_fct_to_na"]], T),
                                  col_pal_args = col_pal_args[-which(names(col_pal_args) %in% c("name", "missing_fct_to_na"))])
+
 
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +

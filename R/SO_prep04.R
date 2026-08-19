@@ -211,7 +211,8 @@ SO_prep04 <- function(SO,
         um <- Gmisc::fastDoCall(uwot::umap, RunUMAP_args)
         rownames(um) <- cells2(SO)
         colnames(um) <- paste0("umap", gsub("[^A-Za-z1-9]", "", red), "_", c(1,2))
-        SO@reductions[[paste0("umap_", red)]] <- SeuratObject::CreateDimReducObject(embeddings = um, assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"))
+        SO@reductions[[paste0("umap_", red)]] <- SeuratObject::CreateDimReducObject(embeddings = um,
+                                                                                    assay = switch(normalization, SCT = "SCT", LogNormalize = "RNA", RNA = "RNA"))
       }
 
     }, error = function(err) {

@@ -7,11 +7,13 @@
 freq_pie_chart(
   SO,
   meta_col,
+  split = NULL,
   order = NULL,
   fill = "..auto..",
   fill_na = "grey50",
   color = "white",
-  color_text = "..auto..",
+  label_color_inside = "..auto..",
+  label_color_outside = "..auto..",
   radius_inside = 0.3,
   label_outside = c("none", "abs", "rel"),
   label_inside = c("rel", "abs", "none"),
@@ -19,8 +21,8 @@ freq_pie_chart(
   label_size = 5,
   label_radius_inside = 0.75,
   label_radius_outside = 1.1,
-  label_angle_inside = NULL,
-  label_angle_outside = NULL,
+  label_angle_inside = "radial_readable",
+  label_angle_outside = "radial_readable",
   label_overlap = c("ignore", "alternate", "outside"),
   overlap_outside_radius = 1.1,
   label_rel_pct = F,
@@ -41,6 +43,8 @@ its \code{meta.data} slot will be used.}
 
 \item{meta_col}{Character scalar. Column name in metadata used to compute frequencies.}
 
+\item{split}{split seurat object and produce multiple pie charts?}
+
 \item{order}{Optional character vector specifying the order of categories in the plot.}
 
 \item{fill}{A vector of fill colors or a palette function. Defaults to
@@ -49,8 +53,6 @@ its \code{meta.data} slot will be used.}
 \item{fill_na}{Color used for missing values. Defaults to \code{"grey50"}.}
 
 \item{color}{Border color of pie slices. Defaults to \code{"white"}.}
-
-\item{color_text}{Color of label text. Defaults to automatic selection.}
 
 \item{radius_inside}{Numeric. Inner radius of the pie chart (for donut charts).}
 
@@ -89,6 +91,8 @@ its \code{meta.data} slot will be used.}
 \code{ggplot2::theme()}.}
 
 \item{col_pal_args}{List of arguments passed to \code{colrr::col_pal()}.}
+
+\item{color_text}{Color of label text. Defaults to automatic selection.}
 }
 \value{
 A ggplot2 object representing the pie chart.

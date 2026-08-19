@@ -114,8 +114,19 @@ colours.}
 
 \item{col_pal_d_args}{Arguments for discrete colour palettes.}
 
-\item{col_steps}{Colour break specification. Can be \code{NULL},
-\code{"..auto.."}, a number of bins, or explicit break values.}
+\item{col_steps}{Controls whether and how the scale is binned. One of:
+\itemize{
+\item \code{NULL} for a continuous colour bar.
+\item A single number giving the approximate number of breaks.
+\item A numeric vector giving the exact internal break positions.
+\item \code{"..auto.."} to choose breaks automatically.
+\item A named n-tile specification: \code{"..tertiles.."},
+\code{"..terciles.."}, \code{"..quartiles.."}, \code{"..quintiles.."},
+\code{"..sextiles.."}, \code{"..septiles.."}, \code{"..octiles.."},
+\code{"..noniles.."}, \code{"..deciles.."}, or \code{"..quantiles.."}.
+\item A numeric n-tile specification such as \code{"..6tiles.."} or
+\code{"..12tiles.."}.
+}}
 
 \item{col_steps_nice}{Logical; use ggplot2's "pretty" break algorithm.}
 
