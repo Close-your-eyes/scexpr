@@ -21,22 +21,28 @@
 #' \dontrun{
 #' meta_statplot(
 #'   obj = SO,
-#'   group1 = "seurat_clusters",
-#'   group2 = "orig.ident",
+#'   group1 = "orig.ident",
+#'   group2 = "disease",
 #'   features = c("CD3D", "MS4A1", "LYZ")
 #' )
 #' }
-meta_statplot <- function(obj, group1, group2, features) {
+meta_statplot <- function(obj,
+                          group1 = "orig.ident",
+                          group2,
+                          features) {
 
-  avgexpr <- scexpr::avg_expression(obj, group = group1, features = features)[[1]] |>
+  avgexpr <- avg_expression(obj, group = group1, features = features)[[1]] |>
     as.data.frame() |>
-    brathering::mat_to_df_long(values_to = "avg_expr", colnames_to = group1, rownames_to = "feature") |>
+    brathering::mat_to_df_long(values_to = "avg norm UMI", colnames_to = group1, rownames_to = "feature") |>
     dplyr::left_join(dplyr::distinct(obj@meta.data, !!rlang::sym(group1), !!rlang::sym(group2)), by = group1)
-  plot <- ggplot2::ggplot(avgexpr, ggplot2::aes(!!rlang::sym(group2), avg_expr)) +
+
+  plot <- ggplot2::ggplot(avgexpr, ggplot2::aes(!!rlang::sym(group2), `avg norm UMI`)) +
+    ggplot2::geom_boxplot(outlier.shape = NA) +
     ggplot2::geom_point() +
     colrr::theme_material(white = T, style = "prismy") +
+    ggplot2::theme(strip.text.x = ggplot2::element_text(face = "italic")) +
     ggpubr::geom_pwc() +
     ggplot2::facet_wrap(vars(feature), scales = "free_y")
 
-  return(plot)
+  return(list(data = avgexpr, plot = plot))
 }

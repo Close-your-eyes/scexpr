@@ -32,6 +32,7 @@
 #' and `gene_ranks`, respectively.
 #'
 #' @param ... Currently unused; reserved for future extensions.
+#' @param return_leading_edge_cols
 #'
 #' @return A named list with:
 #' \describe{
@@ -99,6 +100,7 @@ gsea_on_msigdbr <- function(gene_ranks,
                             gene_sets = NULL,
                             return_gene_sets_subset = T,
                             return_gene_sets = T,
+                            return_leading_edge_cols = T,
                             use_msigdbr = F,
                             msigdbr_args = list(
                               db_species = "HS",
@@ -157,17 +159,19 @@ gsea_on_msigdbr <- function(gene_ranks,
   }
 
   results <- as.data.frame(Gmisc::fastDoCall(fgsea_fun, args = fgsea_args))
+
   if (use_msigdbr) {
     results <- dplyr::left_join(results, gene_sets.list[["sets_cats"]], by = c("pathway" = "gs_name"))
   }
 
-
-  results$leadingEdge_sorted_chr <- purrr::map_chr(purrr::map(results$leadingEdge, sort), paste, collapse = ",")
-  results$leadingEdge_size <- lengths(results$leadingEdge)
-  results$leadingEdge_size_rel <- results$leadingEdge_size/results$size
-  results$leadingEdge_rank <- purrr::map_int(results$pathway, function(x) ifelse(results[["ES"]][[which(results[["pathway"]] == x)]] > 0,
-                                                                                 max(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene_ranks)))),
-                                                                                 min(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene_ranks))))))
+  if (return_leading_edge_cols) {
+    results$leadingEdge_sorted_chr <- purrr::map_chr(purrr::map(results$leadingEdge, sort), paste, collapse = ",")
+    results$leadingEdge_size <- lengths(results$leadingEdge)
+    results$leadingEdge_size_rel <- results$leadingEdge_size/results$size
+    results$leadingEdge_rank <- purrr::map_int(results$pathway, function(x) ifelse(results[["ES"]][[which(results[["pathway"]] == x)]] > 0,
+                                                                                   max(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene_ranks)))),
+                                                                                   min(match(results[["leadingEdge"]][[which(results[["pathway"]] == x)]], names(rev(gene_ranks))))))
+  }
 
   return(list(data = results,
               gene_sets = if (return_gene_sets) {gene_sets} else {NULL},

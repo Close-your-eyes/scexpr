@@ -126,6 +126,10 @@ colours.}
 \code{"..noniles.."}, \code{"..deciles.."}, or \code{"..quantiles.."}.
 \item A numeric n-tile specification such as \code{"..6tiles.."} or
 \code{"..12tiles.."}.
+\item leading and trailing dots are optional
+\item add a trailing "0" behind tiles, e.g. \code{"octiles0"} will only
+use scale values above 0 to derive bins. Useful for genes with many
+dropout cells.
 }}
 
 \item{col_steps_nice}{Logical; use ggplot2's "pretty" break algorithm.}

@@ -106,7 +106,6 @@ get_mask_subset <- function(obj,
   }
 
   # mask matrix to df
-
   mask <- raw_img_array_to_df(raw_array = mask,
                               subset_factor = subset_factor,
                               hull_inside = T,
@@ -118,6 +117,13 @@ get_mask_subset <- function(obj,
 
   if (!is.null(cell_coords) && !is.null(rownames(cell_coords)) && "z" %in% names(mask)) {
     # check for mistmatch levels?
+    mask_cell_names <- unique(mask$z)
+    x <- length(intersect(mask_cell_names, rownames(cell_coords)))/length(rownames(cell_coords))
+    if (x<0.5) {
+      message("only ", round(x*100), " % of cell names from image mask found in object's cell names.")
+      message(paste0(unique(mask_cell_names)[1:10], collapse = ", "))
+      message(paste0(unique(rownames(cell_coords))[1:10], collapse = ", "))
+    }
     mask <- dplyr::filter(mask, z %in% rownames(cell_coords))
   }
 

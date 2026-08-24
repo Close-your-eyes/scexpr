@@ -4,7 +4,7 @@
 \alias{meta_statplot}
 \title{Plot average feature expression across metadata groups}
 \usage{
-meta_statplot(obj, group1, group2, features)
+meta_statplot(obj, group1 = "orig.ident", group2, features)
 }
 \arguments{
 \item{obj}{A Seurat object containing expression data and metadata.}
@@ -31,8 +31,8 @@ faceted statistical plots for each feature.
 \dontrun{
 meta_statplot(
   obj = SO,
-  group1 = "seurat_clusters",
-  group2 = "orig.ident",
+  group1 = "orig.ident",
+  group2 = "disease",
   features = c("CD3D", "MS4A1", "LYZ")
 )
 }

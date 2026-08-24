@@ -51,37 +51,24 @@ SCT_to_disk <- function(obj,
   if ("object_name" %in% names(obj@misc)) {
     savefile <- brathering::suffix_add(obj@misc[["object_name"]], suffix = "_SCT")
   }
-  savepath <- file.path(save_dir, savefile)
-
-
 
 
   message("writing SCT assay to disk.")
-
-  readr::write_rds(
-    obj@assays[["SCT"]],
-    savepath,
-    compress = "gz",
-    version = 3,
-    compression = compression
-  )
-  message(savepath)
-
+  brathering::saverds2(x = obj@assays[["SCT"]],
+                       file = file.path(save_dir, savefile),
+                       compression = compression)
   obj@assays[["SCT"]] <- NULL
 
   if (update_on_disk) {
     if ("object_name" %in% names(obj@misc)) {
       message("writing obj without SCT assay to disk.")
-      readr::write_rds(
-        obj,
-        file.path(save_dir, obj@misc[["object_name"]]),
-        compress = "gz",
-        version = 3,
-        compression = compression
-      )
+      brathering::saverds2(x = obj,
+                           file = file.path(save_dir, obj@misc[["object_name"]]),
+                           compression = compression)
     } else {
       message("object_name not found in misc-slot. NOT saving object w/o SCT to disk.")
     }
   }
+
   return(obj)
 }

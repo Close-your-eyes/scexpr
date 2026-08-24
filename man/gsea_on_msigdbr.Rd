@@ -9,6 +9,7 @@ gsea_on_msigdbr(
   gene_sets = NULL,
   return_gene_sets_subset = T,
   return_gene_sets = T,
+  return_leading_edge_cols = T,
   use_msigdbr = F,
   msigdbr_args = list(db_species = "HS", species = "human", collection = c("C1", "C2",
     "C3", "C4", "C5", "C6", "C7", "C8", "H")),

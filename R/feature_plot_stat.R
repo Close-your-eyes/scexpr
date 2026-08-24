@@ -176,7 +176,13 @@ feature_plot_stat <- function(SO,
   #                  meta_col = meta_col,
   #                  #try_df = T,
   #                  split_feature = split_feature)
-  all_gene_feat <- unique(unlist(purrr::map(SO, scexpr:::get_gene_features)))
+
+
+  all_gene_feat <- unique(unlist(purrr::map(SO, ~scexpr:::get_gene_features(
+    .x,
+    assays = get_data_args[["assay"]],
+    layer = get_data_args[["layer"]]
+  ))))
   data <- dplyr::bind_rows(data, .id = "feature_split") ## different features
 
   # split_feature requires testing - include in pivoting etc and geom_text

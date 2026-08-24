@@ -2,9 +2,9 @@
 % Please edit documentation in R/join_meta_data.R
 \name{join_meta_data}
 \alias{join_meta_data}
-\title{Join Metadata to a Seurat Object}
+\title{Coalesce Selected Metadata into a Seurat Object}
 \usage{
-join_meta_data(obj, df, by = NULL, rm_nonjoin = T)
+join_meta_data(obj, df, by = NULL, cols = NULL, verbose = T)
 }
 \arguments{
 \item{obj}{A Seurat object.}
@@ -12,28 +12,28 @@ join_meta_data(obj, df, by = NULL, rm_nonjoin = T)
 \item{df}{A data frame containing metadata to join.}
 
 \item{by}{A character vector specifying the join columns. Passed to
-\code{\link[dplyr:left_join]{dplyr::left_join()}}. If \code{NULL}, the join uses all variables shared by
-both data frames.}
+\code{coalesce_join()}.}
+
+\item{cols}{A character vector specifying columns from \code{df} to add or
+coalesce. If \code{NULL}, all non-join columns in \code{df} are used.}
+
+\item{verbose}{print all messages?}
 }
 \value{
-The Seurat object with the joined data stored in its
-\code{meta.data} slot.
+The Seurat object with updated data stored in its \code{meta.data} slot.
 }
 \description{
-Adds columns from a data frame to the cell-level metadata of a Seurat
-object using a left join.
+Adds selected columns from a data frame to the cell-level metadata of a
+Seurat object using \code{coalesce_join()}. Existing non-NA metadata values are
+prioritized over values from \code{df}.
 }
 \examples{
 \dontrun{
-additional_metadata <- data.frame(
-  sample_id = c("sample1", "sample2"),
-  treatment = c("control", "treated")
-)
-
 object <- join_meta_data(
   object,
   additional_metadata,
-  by = "sample_id"
+  by = "sample_id",
+  cols = c("treatment", "batch")
 )
 }
 }

@@ -4,26 +4,45 @@
 \alias{subset2}
 \title{Subset an Object and Remove Empty Assay Entries}
 \usage{
-subset2(obj, ...)
+subset2(obj, ..., min_obs = 1, by = "orig.ident")
 }
 \arguments{
-\item{obj}{An object containing an \code{assays} slot. Each assay must
-contain \code{cells} and \code{features} membership maps with a
-\code{counts} column.}
+\item{obj}{An object containing \code{assays} and \code{meta.data} slots.
+Assays are expected to contain \code{cells} and \code{features} membership
+maps with a \code{counts} column.}
 
 \item{...}{Additional arguments passed to \code{\link[base]{subset}}.}
+
+\item{min_obs}{A numeric value specifying the minimum number of cells
+required for each group defined by \code{by}. Group filtering is performed
+only when \code{min_obs > 1}. Defaults to \code{1}.}
+
+\item{by}{A character string naming the column in \code{obj@meta.data} used
+to group cells when applying \code{min_obs}. Defaults to
+\code{"orig.ident"}.}
 }
 \value{
 The subsetted object with assay cell and feature membership maps
-restricted to entries present in the \code{counts} layer.
+restricted to entries present in the \code{counts} layer. When
+\code{min_obs > 1}, only groups containing at least \code{min_obs} cells
+are retained. If \code{by} is not found, or if no groups meet the
+threshold, the object is returned without group filtering.
 }
 \description{
-Subsets an object using its \code{subset()} method, then removes cells and
-features from each assay when they are absent from the assay's
-\code{counts} layer.
+Subsets an object using its \code{subset()} method and restricts each assay's
+cell and feature membership maps to entries present in the \code{counts}
+layer. Optionally removes groups represented by fewer than a specified
+number of cells.
 }
 \examples{
 \dontrun{
 obj_subset <- subset2(obj, subset = cell_type == "T cell")
+
+obj_subset <- subset2(
+  obj,
+  subset = cell_type == "T cell",
+  min_obs = 10,
+  by = "orig.ident"
+)
 }
 }

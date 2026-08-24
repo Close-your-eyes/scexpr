@@ -424,7 +424,7 @@ get_data <- function(SO,
     for(i in names(data)) {
       names(data[[i]])[which(names(data[[i]]) == "feature")] <- i
     }
-    data <- purrr::reduce(data, dplyr::left_join)
+    suppressMessages(data <- purrr::reduce(data, dplyr::left_join))
   }
 
   # data <- dplyr::bind_rows(data)
@@ -485,9 +485,10 @@ thaw_cols <- function(df, classes) {
   return(df)
 }
 
-get_gene_features <- function(obj) {
-  genes <- unique(unlist(purrr::map(SeuratObject::Assays(obj),
-                                    ~rownames(get_layer(obj, assay = .x, layer = "counts")))))
+get_gene_features <- function(obj, assays = "RNA", layer = "data") {
+  # handle layer = NULL or adjust layer by what exists in obj
+  genes <- unique(unlist(purrr::map(assays, #SeuratObject::Assays(obj),
+                                    ~rownames(get_layer(obj, assay = .x, layer = layer)))))
   return(genes)
 }
 
