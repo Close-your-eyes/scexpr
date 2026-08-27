@@ -44,5 +44,17 @@ obj_subset <- subset2(
   min_obs = 10,
   by = "orig.ident"
 )
+
+# manual subset:
+so@assays$RNA@layers$data <- so@assays$RNA@layers$data[, inds]
+so@assays$RNA@cells <- so@assays$RNA@cells[inds,]
+so@assays$ADT <- NULL
+so@assays$HTO <- NULL
+so@graphs <- list()
+so@meta.data <- so@meta.data[inds,]
+so@reductions$umap_harmony@cell.embeddings <- so@reductions$umap_harmony@cell.embeddings[inds,]
+so@reductions$umap_integrated@cell.embeddings <- so@reductions$umap_integrated@cell.embeddings[inds,]
+so@reductions$umap_simple@cell.embeddings <- so@reductions$umap_simple@cell.embeddings[inds,]
+Seurat::Idents(so) <- so@meta.data$orig.ident
 }
 }

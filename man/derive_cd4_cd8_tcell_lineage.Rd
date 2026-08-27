@@ -10,7 +10,8 @@ derive_cd4_cd8_tcell_lineage(
   min_expression = 0,
   cd4cd8_ratio = 3,
   colname = "Tlin",
-  ncores = 6
+  ncores = 6,
+  skip_module_scores = T
 )
 }
 \arguments{

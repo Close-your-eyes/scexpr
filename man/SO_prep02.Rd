@@ -16,6 +16,7 @@ SO_prep02(
   nhvf = 800,
   npcs = 20,
   normalization = c("RNA", "SCT", "LogNormalize"),
+  scaling = c("scale", "clr_shifted"),
   hvf_determination_before_merge = F,
   batch_corr = c("harmony", "integration", "none"),
   vars.to.regress = NULL,
@@ -90,6 +91,10 @@ initially calculates at least 50 components.}
 \item{normalization}{Normalization method. \code{"SCT"} uses \code{SCTransform()};
 \code{"RNA"} and \code{"LogNormalize"} both use the standard log-normalization
 workflow.}
+
+\item{scaling}{how to create scale.data layer when normalizationn is RNA:
+i) with ScaleData from Seurat or proportional fit (shifted CLR) from
+Pachterlab: \code{\link[=proportional_fit_pachterlab]{proportional_fit_pachterlab()}}}
 
 \item{hvf_determination_before_merge}{Logical; determine variable features
 separately in each sample before merging. If \code{FALSE}, determine them on the

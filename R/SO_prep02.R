@@ -143,6 +143,9 @@
 #'   clustering and call `uwot::umap()` directly instead of
 #'   `Seurat::RunUMAP()`.
 #' @param ... Reserved for future use; currently ignored.
+#' @param scaling how to create scale.data layer when normalization is RNA:
+#' i) with ScaleData from Seurat or proportional fit (shifted CLR) from
+#' Pachterlab: [proportional_fit_pachterlab()]
 #'
 #' @return A processed Seurat object. Depending on the selected workflow, it
 #'   contains normalized assays, variable features, PCA and optional batch-
@@ -197,6 +200,7 @@ SO_prep02 <- function(SO_unprocessed,
                       nhvf = 800,
                       npcs = 20,
                       normalization = c("RNA", "SCT", "LogNormalize"),
+                      scaling = c("scale", "clr_shifted"),
                       hvf_determination_before_merge = F,
                       batch_corr = c("harmony", "integration", "none"),
                       vars.to.regress = NULL,
@@ -242,7 +246,7 @@ SO_prep02 <- function(SO_unprocessed,
     interactive_pc_selection <- F
   }
 
-
+  scaling <- rlang::arg_match(scaling)
   reductions <- match.arg(tolower(reductions), c("umap", "tsne"), several.ok = T)
   normalization <- rlang::arg_match(normalization)
   normalization <- ifelse(normalization == "RNA", "LogNormalize", normalization)
@@ -632,7 +636,19 @@ make_so_single <- function(SO_unprocessed,
                                        SCtransform_args = SCtransform_args,
                                        FindVariableFeatures_args = FindVariableFeatures_args)
     }
-    SO <- Seurat::ScaleData(SO, assay = "RNA", verbose = FindVariableFeatures_args[["verbose"]])
+
+    if (scaling == "scale") {
+      SO <- Seurat::ScaleData(
+        SO,
+        assay = "RNA",
+        vars.to.regress = vars.to.regress,
+        verbose = FindVariableFeatures_args[["verbose"]]
+      )
+    } else {
+      SO <- proportional_fit_pachterlab(SO, vars.to.regress = vars.to.regress)
+    }
+
+
   }
 
   SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
@@ -798,12 +814,19 @@ make_so_multi_integrate <- function(SO_unprocessed,
   # }
 
   SO_unprocessed <- lapply(SO_unprocessed, function(x) {
-    x <- Seurat::ScaleData(
-      x,
-      features = anchor.features,
-      assay = "RNA",
-      verbose = FindVariableFeatures_args[["verbose"]]
-    )
+
+    if (scaling == "scale") {
+      x <- Seurat::ScaleData(
+        x,
+        features = anchor.features,
+        assay = "RNA",
+        verbose = FindVariableFeatures_args[["verbose"]]
+      )
+    } else {
+      x <- proportional_fit_pachterlab(x, features = anchor.features, vars.to.regress = vars.to.regress)
+    }
+
+
     x <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = x,
                                                          features = anchor.features,
                                                          assay = ifelse(normalization == "SCT", "SCT", "RNA")),
@@ -841,7 +864,11 @@ make_so_multi_integrate <- function(SO_unprocessed,
     message("If running on a subset of the original object after running PrepSCTFindMarkers(), FindMarkers() should be invoked with recorrect_umi = FALSE.")
   }
 
-  SO <- Seurat::ScaleData(SO, assay = "integrated", verbose = SCtransform_args[["verbose"]]) # see https://satijalab.org/seurat/articles/integration_introduction.html
+  if (scaling == "scale") {
+    SO <- Seurat::ScaleData(SO, assay = "integrated", vars.to.regress = vars.to.regress, verbose = SCtransform_args[["verbose"]]) # see https://satijalab.org/seurat/articles/integration_introduction.html
+  } else {
+    SO <- proportional_fit_pachterlab(SO, assay = "integrated", vars.to.regress = vars.to.regress)
+  }
 
   SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
 
@@ -1094,10 +1121,24 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                          FindVariableFeatures_args = FindVariableFeatures_args)
       }
     }
-    SO <- Seurat::ScaleData(SO, vars.to.regress = vars.to.regress, verbose = FindVariableFeatures_args[["verbose"]])
+
+    if (scaling == "scale") {
+      SO <- Seurat::ScaleData(
+        SO,
+        assay = "RNA",
+        vars.to.regress = vars.to.regress,
+        verbose = FindVariableFeatures_args[["verbose"]]
+      )
+    } else {
+      SO <- proportional_fit_pachterlab(SO, vars.to.regress = vars.to.regress)
+    }
+
   }
 
-  SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
+  SO <- Gmisc::fastDoCall(
+    Seurat::RunPCA,
+    args = c(list(object = SO), RunPCA_args)
+  )
 
   if (interactive_pc_selection) {
     print(scexpr::elbowplot2(SO, npcs = RunPCA_args[["npcs"]])[["plot"]])
