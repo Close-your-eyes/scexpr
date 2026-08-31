@@ -321,7 +321,8 @@ SO_prep02 <- function(SO_unprocessed,
                                        interactive_varfeat_selection = interactive_varfeat_selection,
                                        interactive_varfeat_selection_inds = interactive_varfeat_selection_inds,
                                        interactive_pc_selection = interactive_pc_selection,
-                                       var_feature_set = var_feature_set)
+                                       var_feature_set = var_feature_set,
+                                       scaling = scaling)
   } else if (length(SO_unprocessed) > 1) {
     if (batch_corr %in% c("none", "harmony")) {
       c(SO,
@@ -339,7 +340,8 @@ SO_prep02 <- function(SO_unprocessed,
                                                     interactive_varfeat_selection = interactive_varfeat_selection,
                                                     interactive_varfeat_selection_inds = interactive_varfeat_selection_inds,
                                                     interactive_pc_selection = interactive_pc_selection,
-                                                    var_feature_set = var_feature_set)
+                                                    var_feature_set = var_feature_set,
+                                                    scaling = scaling)
     } else if (batch_corr == "integration") {
       c(SO,
         RunPCA_args) %<-% make_so_multi_integrate(SO_unprocessed = SO_unprocessed,
@@ -355,7 +357,8 @@ SO_prep02 <- function(SO_unprocessed,
                                                   interactive_varfeat_selection = interactive_varfeat_selection,
                                                   interactive_varfeat_selection_inds = interactive_varfeat_selection_inds,
                                                   interactive_pc_selection = interactive_pc_selection,
-                                                  var_feature_set = var_feature_set)
+                                                  var_feature_set = var_feature_set,
+                                                  scaling = scaling)
     }
   }
 
@@ -568,7 +571,8 @@ make_so_single <- function(SO_unprocessed,
                            interactive_varfeat_selection,
                            interactive_varfeat_selection_inds,
                            interactive_pc_selection,
-                           var_feature_set) {
+                           var_feature_set,
+                           scaling) {
 
   SO <- SO_unprocessed[[1]]
   rm(SO_unprocessed)
@@ -687,7 +691,8 @@ make_so_multi_integrate <- function(SO_unprocessed,
                                     interactive_varfeat_selection,
                                     interactive_varfeat_selection_inds,
                                     interactive_pc_selection,
-                                    var_feature_set) {
+                                    var_feature_set,
+                                    scaling) {
 
   k.filter <- as.integer(min(200, min(sapply(SO_unprocessed, ncol))/2))
   k.score <- as.integer(min(30, min(sapply(SO_unprocessed, ncol))/6))
@@ -904,7 +909,8 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                   interactive_varfeat_selection,
                                   interactive_varfeat_selection_inds,
                                   interactive_pc_selection,
-                                  var_feature_set) {
+                                  var_feature_set,
+                                  scaling) {
 
 
   ### run SCT separately on unmerged SOs?

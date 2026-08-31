@@ -92,7 +92,7 @@ initially calculates at least 50 components.}
 \code{"RNA"} and \code{"LogNormalize"} both use the standard log-normalization
 workflow.}
 
-\item{scaling}{how to create scale.data layer when normalizationn is RNA:
+\item{scaling}{how to create scale.data layer when normalization is RNA:
 i) with ScaleData from Seurat or proportional fit (shifted CLR) from
 Pachterlab: \code{\link[=proportional_fit_pachterlab]{proportional_fit_pachterlab()}}}
 

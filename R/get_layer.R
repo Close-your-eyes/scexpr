@@ -78,8 +78,15 @@ get_layer <- function(obj,
 
   Seurat::DefaultAssay(obj) <- assay
   ## error with SCT ?!
+
   rownames(x) <- rownames(x) %||% names(which(obj@assays[[assay]]@features[,layer]@.Data[,1]))
-  colnames(x) <- colnames(x) %||% names(which(obj@assays[[assay]]@cells[,layer]@.Data[,1]))
+  colnames(x) <- tryCatch(expr = {
+    colnames(x) %||% names(which(obj@assays[[assay]]@cells[,layer]@.Data[,1]))
+  },
+  error = function(err) {
+    cells2(obj)
+  })
+
   features <- features %||% rownames(x)
   cells <- cells %||% colnames(x)
 
@@ -92,19 +99,19 @@ get_layer <- function(obj,
     features <- features[which(features %in% rownames(x))]
   }
 
-  data <- x[features, cells, drop = F]
+  x <- x[features, cells, drop = F]
 
   if (transpose) {
-    data <- Matrix::t(data)
+    x <- Matrix::t(x)
   }
   if (as == "dense") {
-    data <- as.matrix(data)
+    x <- as.matrix(x)
   }
   if (as == "df") {
-    data <- data.frame(as.matrix(data), check.names = F)
+    x <- x.frame(as.matrix(x), check.names = F)
   }
 
-  return(data)
+  return(x)
 }
 
 get_layer_v4 <- function(obj, assay, layer) {
