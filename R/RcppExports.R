@@ -5,11 +5,3 @@ calculateRowSumsInCpp <- function(mat, cols) {
     .Call(`_scexpr_calculateRowSumsInCpp`, mat, cols)
 }
 
-countOccurrencesInCpp <- function(mat, cols) {
-    .Call(`_scexpr_countOccurrencesInCpp`, mat, cols)
-}
-
-orderAndConcatenateStrings <- function(mat) {
-    .Call(`_scexpr_orderAndConcatenateStrings`, mat)
-}
-
