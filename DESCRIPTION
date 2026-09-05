@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Ways to analyze scRNAseq data sets
-Version: 0.1.7
+Version: 0.1.8
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -89,7 +89,6 @@ Suggests:
     limma,
     fgsea,
     AnnotationDbi,
-    Biostrings,
     org.Hs.eg.db,
     org.Mm.eg.db,
     SingleR,
