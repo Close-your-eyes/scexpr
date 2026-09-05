@@ -17,7 +17,7 @@
 #'   metadata.
 #'
 #' @export
-#'
+#' @importFrom rlang :=
 #' @examples
 #' \dontrun{
 #' sokid5 <- add_group_counts(

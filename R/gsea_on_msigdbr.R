@@ -32,7 +32,7 @@
 #' and `gene_ranks`, respectively.
 #'
 #' @param ... Currently unused; reserved for future extensions.
-#' @param return_leading_edge_cols
+#' @param return_leading_edge_cols include leading edge columns in return
 #'
 #' @return A named list with:
 #' \describe{
@@ -139,9 +139,6 @@ gsea_on_msigdbr <- function(gene_ranks,
   fgsea_fun <- match.fun(fgsea_fun)
 
   if (use_msigdbr) {
-    if (!requireNamespace("msigdbr", quietly = T)) {
-      utils::install.packages("msigdbr")
-    }
     gene_sets.list <- c(gene_sets, .get.split.msigdbr(msigdbr_args = msigdbr_args))
     gene_sets <- gene_sets.list[["sets"]]
   }

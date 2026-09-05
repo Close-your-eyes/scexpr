@@ -91,17 +91,8 @@ qc_diagnostic <- function(data_dirs,
   if (!requireNamespace("brathering", quietly = T)) {
     pak::pak("Close-your-eyes/brathering")
   }
-  if (!requireNamespace("matrixStats", quietly = T)) {
-    utils::install.packages("matrixStats")
-  }
-  if (!requireNamespace("hdf5r", quietly = T)) {
-    utils::install.packages("hdf5r")
-  }
   if (!requireNamespace("uwot", quietly = T)) {
     utils::install.packages("uwot")
-  }
-  if (!requireNamespace("devtools", quietly = T)) {
-    utils::install.packages("devtools")
   }
   if (!requireNamespace("presto", quietly = T)) {
     pak::pak("immunogenomics/presto")

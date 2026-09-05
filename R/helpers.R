@@ -218,6 +218,7 @@ check_aliases <- function(feature, feature.aliases, data) {
 
 #' @param data data.frame
 #' @importFrom zeallot %<-%
+#' @importFrom rlang :=
 get_freqs <- function(data) {
 
   freq.expr.by.split.SO <- dplyr::group_by(data, split_feature, SO.split)
@@ -657,8 +658,16 @@ add_axes_expansion <- function(plot,
       # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
       axes_lim_names <- rev(axes_lim_names)
     }
+
     names(axes_lim_set) <- axes_lim_names[seq_along(axes_lim_set)]
-    plot <- plot + Gmisc::fastDoCall(ggplot2::expand_limits, args = axes_lim_set)
+    # plot <- plot + Gmisc::fastDoCall(ggplot2::expand_limits, args = axes_lim_set)
+    if ("x" %in% names(axes_lim_set)) {
+      plot <- plot + ggplot2::scale_x_continuous(limits = axes_lim_set[["x"]])
+    }
+    if ("y" %in% names(axes_lim_set)) {
+      plot <- plot + ggplot2::scale_x_continuous(limits = axes_lim_set[["y"]])
+    }
+
   }
   return(plot)
 }
@@ -724,7 +733,7 @@ add_labels <- function(plot = plot,
     ## calculate separate avg coordinates for multi clusters
     # collapse them if too few cells or if too close
     dtach <- !"mclust" %in% .packages()
-    null <- capture.output(library(mclust))
+    requireNamespace("mclust")
     label_df_multi <- purrr::pmap_dfr(.l = asplit(dip_p, 2), .f = function(label_feature, SO.split, xp, yp) {
       set.seed(as.numeric(xp))
       datasub <-
@@ -845,7 +854,7 @@ get_dim_avg_multi <- function(data,
                               min_range_frac = 0.2,
                               label_center_fun) {
 
-  null <- capture.output(library(mclust))
+  requireNamespace("mclust")
   mcl <- mclust::Mclust(data_dim1 <- data[[dim1]], verbose = F)
   cluster_split <- split(data_dim1, mcl[["classification"]])
   # filter low fraction splits
@@ -907,6 +916,8 @@ collapse_close_points <- function(x, y, threshold, return_cluster = F) {
   return(result)
 }
 
+
+#' @importFrom rlang :=
 add_contour <- function(plot,
                         label_center_fun = c("median", "mean"),
                         contour_rm_outlier = F,
@@ -932,7 +943,7 @@ add_contour <- function(plot,
 
   if (contour_multi_try) {
     dtach <- !"mclust" %in% .packages()
-    null <- capture.output(library(mclust))
+    requireNamespace("mclust")
   } else {
     dtach <- F
   }

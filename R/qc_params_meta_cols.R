@@ -28,17 +28,21 @@
 #' )
 #' }
 
-qc_params_meta_cols <- function (SO,
-                                 meta_cols = "orig.idents",
-                                 qc_cols = c("nFeature_RNA", "nCount_RNA", "pct_mt"),
-                                 cells = NULL,
-                                 theme = colrr::theme_material(style = "prismy", white = T),
-                                 color_by = NULL,
-                                 log = F,
-                                 boxplot = T,
-                                 width = 0.2,
-                                 size = 0.4,
-                                 col_pal = "custom") {
+qc_params_meta_cols <- function(SO,
+                                meta_cols = "orig.ident",
+                                qc_cols = c("nFeature_RNA", "nCount_RNA", "pct_mt"),
+                                cells = NULL,
+                                theme = colrr::theme_material(style = "prismy", white = T),
+                                color_by = NULL,
+                                log = F,
+                                boxplot = T,
+                                width = 0.2,
+                                size = 0.4,
+                                col_pal = "custom") {
+
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
 
   if (missing(meta_cols)) {
     stop("Please provide meta_cols.")
@@ -81,15 +85,17 @@ qc_params_meta_cols <- function (SO,
   col_pal <- colrr::make_col_pal(col_pal)
 
   plot <- ggplot2::ggplot(data, ggplot2::aes(x = level, y = value))
+
+  if (boxplot) {
+    plot <- plot + ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.6)
+  }
+
   if (!is.null(color_by)) {
     plot <- plot + ggplot2::geom_jitter(width = width, size = size, ggplot2::aes(color = !!rlang::sym(color_by)))
   } else {
     plot <- plot + ggplot2::geom_jitter(width = width, size = size)
   }
 
-  if (boxplot) {
-    plot <- plot + ggplot2::geom_boxplot(outlier.shape = NA, alpha = 0.6)
-  }
   plot <- plot +
     theme +
     ggplot2::scale_color_manual(values = col_pal) +

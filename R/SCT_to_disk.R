@@ -19,9 +19,9 @@
 #' @param obj A Seurat object. When an SCT assay is present, the object must
 #'   contain at least one other assay to use as the default assay.
 #' @param save_dir Character string specifying an existing directory in which
+#' @param update_on_disk update object on disk?
+#' @param compression gz compression rate
 #'   to save the RDS file or files. Defaults to the current working directory.
-#' @param compress passed to saveRDS
-#'
 #' @return The input Seurat object with the `"SCT"` assay removed and its
 #'   default assay set to the first remaining assay. If no SCT assay is
 #'   present, the original object is returned unchanged.
@@ -35,7 +35,11 @@
 SCT_to_disk <- function(obj,
                         save_dir = getwd(),
                         update_on_disk = T,
-                        compression = 3L) {
+                        compression = 1L) {
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
 
   if (!"SCT" %in% names(obj@assays)) {
     message("no SCT assay.")

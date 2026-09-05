@@ -33,6 +33,7 @@
 #'
 #' @param ncores Positive integer giving the number of CPU cores supplied to
 #'   \code{\link[UCell]{AddModuleScore_UCell}}. Default is \code{6}.
+#' @param skip_module_scores skipt module score calculation
 #'
 #' @details
 #' The initial group-level assignment uses
@@ -110,7 +111,7 @@
 #' \code{subset2()}, and \code{get_data()}.
 #'
 #' @export
-#'
+#' @importFrom rlang :=
 #' @examples
 #' \dontrun{
 #' t_cells <- derive_cd4_cd8_tcell_lineage(
@@ -135,6 +136,9 @@ derive_cd4_cd8_tcell_lineage <- function(obj,
                                          ncores = 6,
                                          skip_module_scores = T) {
 
+  if (!requireNamespace("UCell", quietly = T)) {
+    BiocManager::install("UCell")
+  }
 
   obj <- infer_cd4_cd8_lineage(
     obj = obj,
@@ -366,13 +370,78 @@ infer_cd4_cd8_lineage <- function(
 
 #' Assign unknown T cells by weighted voting on a Seurat SNN graph
 #'
-#' Known labels are never changed. Only cells whose current label is in
-#' `unknown` (or is NA) are eligible for assignment. SNN edge weights are used
-#' as vote weights, and only known cells are allowed to vote.
+#' Assigns CD4/CD8 lineage labels to unknown cells using weighted votes from
+#' neighboring, previously labeled cells in a Seurat shared nearest-neighbor
+#' (SNN) graph. Known labels are preserved. Only cells whose current label is
+#' missing or included in `unknown` are eligible for assignment.
 #'
-#' @return The Seurat object with four added metadata columns: the voted label,
-#'   vote confidence, number of labeled neighbors, and fraction of neighboring
-#'   SNN weight connected to labeled cells.
+#' For each cell, the function sums the SNN edge weights connected to known
+#' cells in each trusted class. An assignment is accepted only when there is a
+#' unique winning class and all confidence, neighbor-count, and labeled-weight
+#' thresholds are satisfied. Exact ties remain unresolved.
+#'
+#' The function also prints a composition bar plot comparing the original and
+#' voted labels.
+#'
+#' @param object A Seurat object containing cell metadata and an SNN graph.
+#' @param label_col A single character string naming the metadata column that
+#'   contains the current lineage labels.
+#' @param graph_name A single character string naming the SNN graph to use.
+#'   If `NULL`, the function first looks for
+#'   `paste0(DefaultAssay(object), "_snn")`; otherwise, it uses the only graph
+#'   whose name ends in `"snn"`. An error is raised if no graph can be selected
+#'   unambiguously.
+#' @param classes A character vector of two or more trusted class labels.
+#'   Only cells carrying one of these labels are allowed to vote.
+#' @param unknown A character vector of labels treated as unknown. Cells with
+#'   these labels, as well as cells with `NA` labels, are eligible for
+#'   assignment.
+#' @param output_col A single character string naming the metadata column in
+#'   which voted labels are stored.
+#' @param min_confidence Minimum required winning-class vote fraction, between
+#'   zero and one. Confidence is calculated as the winning class's labeled
+#'   SNN weight divided by the total SNN weight from labeled neighbors.
+#' @param min_labeled_neighbors Minimum number of positively weighted,
+#'   known-labeled neighbors required for assignment.
+#' @param min_labeled_weight_fraction Minimum required fraction of a candidate
+#'   cell's total neighboring SNN weight that must connect to known-labeled
+#'   cells, between zero and one.
+#' @param unresolved_label Label assigned to eligible cells that do not satisfy
+#'   the assignment criteria.
+#'
+#' @return The input Seurat object with four metadata columns added:
+#'   \itemize{
+#'     \item `output_col`: the final voted label;
+#'     \item `paste0(output_col, "_confidence")`: the winning vote fraction;
+#'     \item `paste0(output_col, "_n_labeled_neighbors")`: the number of
+#'       known-labeled neighbors;
+#'     \item `paste0(output_col, "_labeled_weight_fraction")`: the fraction of
+#'       total neighboring SNN weight connected to known-labeled cells.
+#'   }
+#'
+#' @details
+#' Cells whose original label belongs to `classes` are treated as trusted and
+#' are never changed. Labels that are neither trusted nor included in
+#' `unknown` are also preserved, but those cells cannot vote.
+#'
+#' Voting is performed once from the original trusted labels; newly assigned
+#' cells do not subsequently vote. Consequently, this function performs
+#' one-step label transfer rather than iterative graph propagation.
+#'
+#' @examples
+#' \dontrun{
+#' object <- vote_cd4_cd8_lineage_snn(
+#'   object,
+#'   label_col = "cd4cd8lin",
+#'   graph_name = "RNA_snn",
+#'   classes = c("CD4", "CD8"),
+#'   unknown = c("unknown", "ambiguous"),
+#'   min_confidence = 0.8,
+#'   min_labeled_neighbors = 3
+#' )
+#' }
+#'
+#' @export
 vote_cd4_cd8_lineage_snn <- function(
     object,
     label_col = "cd4cd8lin",
@@ -547,6 +616,10 @@ vote_cd4_cd8_lineage_snn <- function(
 add_cd4_cd8_scores <- function(obj,
                                label_col = "cd4cd8lin",
                                ncores = 8) {
+
+  if (!requireNamespace("UCell", quietly = T)) {
+    BiocManager::install("UCell")
+  }
 
   tmark <- find_all_marker(subset2(
     obj,

@@ -32,6 +32,8 @@ restricted to genes present in \code{gene_ranks}.}
 the output. Set to \code{FALSE} to reduce memory use when repeatedly using the
 same gene sets.}
 
+\item{return_leading_edge_cols}{include leading edge columns in return}
+
 \item{use_msigdbr}{Logical. If \code{TRUE}, retrieve gene sets from MSigDB using
 \code{msigdbr::msigdbr()} and combine them with any manually supplied \code{gene_sets}.}
 

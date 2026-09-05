@@ -33,6 +33,7 @@
 #' indicate the fraction of cells in each coexpression group and the fraction
 #' expressing `ref_feature`.
 #'
+#' @importFrom rlang :=
 #' @examples
 #' \dontrun{
 #' coexpression_stats(
@@ -47,6 +48,14 @@ coexpression_stats <- function(obj,
                                features,
                                ref_feature,
                                metric = "coexpr_sum") {
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
+
 
   combs <- purrr::list_flatten(
     brathering::combnn(unique(features), min_len = 2, return_numeric = F),

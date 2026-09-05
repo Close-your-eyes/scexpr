@@ -183,6 +183,7 @@
 #' `patchwork::wrap_plots()`
 #'
 #' @examples
+#' SO <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
 #' feature_plot2(
 #'   SO,
 #'   features = c("MS4A1", "CD3D"),
@@ -362,6 +363,11 @@ feature_plot2 <- function(
   if (!requireNamespace("colrr", quietly = T)) {
     pak::pak("Close-your-eyes/colrr")
   }
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
 
   SO <- scexpr:::check.SO(SO = SO)
 

@@ -60,6 +60,7 @@ housekeeping and cellular-state programs in single-cell and
 bulk transcriptomic datasets.
 }
 \examples{
+\dontrun{
 # Return pattern definitions
 patterns <- core_cellular_machinery_genes()
 
@@ -68,4 +69,5 @@ genes <- core_cellular_machinery_genes(seurat_obj)
 
 # Access a specific pattern set
 patterns[[1]]$ribosome
+}
 }

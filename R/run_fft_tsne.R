@@ -142,6 +142,11 @@ run_fft_tsne <- function(
     get_costs = FALSE,
     df = 1.0) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
+
   reduction <- match.arg(reduction, names(SO@reductions))
   X <- SO@reductions[[reduction]]@cell.embeddings
   if (is.null(dims_in)) {

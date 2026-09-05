@@ -19,7 +19,6 @@ Plots mean-variance plots with different cutoffs. Variable features need
 to be calculated in obj before calling this function.
 }
 \examples{
-\dontrun{
-plot <- varfeat_plot(so)
-}
+seu <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+out <- varfeat_plot(seu) # a bit stupid because all are var_feat
 }

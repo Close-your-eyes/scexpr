@@ -1,82 +1,137 @@
-#' Run a bunch of default quality checks on scRNAseq data from 10X genomics (Cell Ranger)
+#' Prepare and quality-control 10x single-cell RNA-seq data
 #'
-#' Taking Cell Rangers output, namely the (i) feature, (ii) barcode, (iii) matrix files
-#' within respective folder(s), filtered_feature_bc_matrix and optionally additionally raw_feature_bc_matrix,
-#' a very default Seurat Object is generated and quality metrics are computed. Moreover, these
-#' metrics are used to cluster the cells. Groups of cells with low quality scores (e.g. high
-#' mt-fraction plus low number of detected features) will likely clusters together. This allows to filter them easily.
-#' If raw_feature_bc_matrix is provided, \href{https://github.com/constantAmateur/SoupX}{SoupX} may be run.
-#' In that case the whole pipeline in run twice.
-#' Namely, once with the original count matrix and once with a corrected count matrix after running SoupX with default
-#' settings. If raw_feature_bc_matrix is not available, only \href{https://github.com/campbio/celda}{DecontX}
-#' is available to check for ambient RNA contamination. Both of these metrics (SoupX and DecontX estimation of ambient RNA)
-#' become part of clustering by qc metrics if set to TRUE. \href{https://github.com/plger/scDblFinder}{scDblFinder} is run
-#' to detect doublets which is another quality metric.
-#' In addition to qc metrics, a number of principle components (PCs) from feature expression may be added to clustering and
-#' dimension reduction as also the feature composition of low quality transcriptomes may be skewed.
-#' This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
-#' also a pure analysis with feature expression values only is run. That may allow cluster-wise application
-#' of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
-#' a first round based on qc metric clustering.
-#' If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
-#' (i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
-#' of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
-#' the common Seurat object though, the merged and harmonized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
+#' @description
+#' Reads one or more 10x Genomics gene-expression count matrices, creates
+#' per-sample Seurat objects, and runs a standard preprocessing and
+#' quality-control workflow. Samples are merged before expression-based
+#' dimensional reduction and clustering. When more than one sample is present,
+#' Harmony can be used for batch correction.
 #'
-#' Checkout https://www.10xgenomics.com/analysis-guides/introduction-to-ambient-rna-correction.
+#' @details
+#' The function supports two input modes. By default, `data_dirs` is searched
+#' recursively for directories named `filtered_feature_bc_matrix` or
+#' `filtered_gene_bc_matrices` and, when requested for SoupX, matching raw
+#' matrix directories. Alternatively, named filtered-matrix directories can be
+#' supplied through `ffbms`. Direct input currently disables SoupX and DecontX.
 #'
+#' Quality-control metadata include log-transformed UMI and detected-feature
+#' counts, species-dependent mitochondrial and ribosomal feature percentages,
+#' and, when requested and successfully calculated, scDblFinder and ambient-RNA
+#' estimates. These variables are rescaled and used for a separate UMAP and
+#' graph clustering. Setting `PCs_to_meta_clustering` above zero adds the
+#' indicated number of leading expression PCs to this QC representation.
 #'
-#' @param data_dirs list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
-#' on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
-#' is missing, SoupX is disable for all others
-#' @param nhvf number of highly variable features for every of the procedures
-#' @param npcs number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets
-#' @param resolution resolution (louvain algorithm) for clustering based on feature expression
-#' @param SoupX logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.
-#' @param resolution_SoupX resolution (louvain algorithm) for SoupX analysis
-#' @param cells vector of cell names to include, consider the trailing '-1' in cell names
-#' @param invert_cells invert cell selection, if TRUE cell names provides in 'cells' are excluded
-#' @param decontX logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)
-#' @param resolution_meta resolution(s) (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (PCs_to_meta_clustering)
-#' @param PCs_to_meta_clustering how many principle components (PCs) from phenotypic clustering to add to qc meta data;
-#' this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
-#' phenotypic influence becomes; one or more integers can be supplied to explore the effect; pass 0, to have no PCs included in meta clustering; e.g. when
-#' PCs_to_meta_clustering = 3 PCs 1-3 are used, when PCs_to_meta_clustering = 1 only PC 1 is used.
-#' @param scDblFinder logical, whether to run doublet detection algorithm from scDblFinder
-#' @param SoupX_return logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
-#' have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
-#' filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.
-#' @param feature_rm character vector of features to remove from count matrices;
-#' removal is done after aggregation (if feature_aggr is provided)
-#' @param feature_aggr named list of character vectors of features to aggregate;
-#' names of of list entries are names of the aggregated feature; aggregation of counts
-#' is simply done by addition; aggregation is done before feature removal (if feature_rm is provided)
-#' @param min_UMI min number of UMI per cell (colSums)
-#' @param min_UMI_var_feat min number of UMI in variable featured per cell (colSums); only relevant if scDblFinder = T
-#' @param ffbms named paths to folders with raw/filtered feature matrix files or .h5 files; this will skip any procedure with data_dirs
-#' @param rfbms named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs
-#' @param batch_corr which batch correction to apply for integration of different samples
-#' @param diet_seurat run diet seurat?
-#' @param SoupX_autoEstCont_args args to autoEstCont
-#' @param sample_prefix_to_cell_id add sample prefix to cell names? i.e. sample folder names
-#' @param early_exit only read count matrices without much processing (no dim red etc)
-#' @param reduction which reduction(s) to calculate
-#' @param mc.cores parallel computing (speed up reading many samples)
-#' @param equalize_feature_order only relevant if early_exit: filter for equal features and order them
-#' @param common_cells only relevant if early_exit: filter for equal cells,
-#' e.g. when same sample was mapped differently and slightly different cells
-#' were annotated by CellRanger
+#' SoupX is run only when a raw matrix is found for every discovered sample.
+#' If any raw matrix is missing, SoupX is disabled for the complete run. DecontX
+#' and scDblFinder are run separately by sample. SoupX- and DecontX-derived
+#' values are estimates and are not automatic cell-removal thresholds.
 #'
-#' @return a list of Seurat object and data frame with marker genes for clusters based on feature expression
+#' With `early_exit = TRUE`, the function stops after reading the matrices,
+#' applying cell and feature filters, creating per-sample Seurat objects, and
+#' adding the available basic QC or doublet metadata. Expression preprocessing,
+#' ambient-RNA estimation, merged clustering, and QC-metadata clustering are
+#' skipped.
+#'
+#' @param data_dirs Character vector or list of directories to search
+#'   recursively for 10x filtered-matrix folders. This argument is ignored when
+#'   `ffbms` or `rfbms` is supplied.
+#' @param nhvf Positive integer giving the number of highly variable features
+#'   used during expression preprocessing, doublet detection, SoupX processing,
+#'   and DecontX estimation.
+#' @param npcs Positive integer giving the number of expression principal
+#'   components to calculate and use in downstream analyses.
+#' @param resolution Numeric vector of graph-clustering resolutions for the
+#'   expression-based analysis. One resulting clustering is selected for
+#'   downstream QC calculations.
+#' @param resolution_SoupX Single numeric graph-clustering resolution used to
+#'   define clusters for SoupX contamination estimation.
+#' @param resolution_meta Numeric vector of graph-clustering resolutions for
+#'   clustering the rescaled QC metadata.
+#' @param PCs_to_meta_clustering Numeric vector. For each value `n`, a separate
+#'   QC representation is created using the QC variables and the first `n`
+#'   expression PCs. Use `0` for QC variables alone. Positive values should be
+#'   whole numbers no greater than `npcs`.
+#' @param scDblFinder Logical; run scDblFinder independently on each sample and
+#'   add `dbl_score` and `dbl_class` to cell metadata. A failed sample-level run
+#'   is reported and processing continues without those fields for that sample.
+#' @param min_UMI Numeric scalar or `NULL`. Cells with fewer total counts than
+#'   this value are removed while reading each filtered matrix. Use `NULL` to
+#'   disable this filter.
+#' @param min_UMI_var_feat Numeric scalar or `NULL`. When `scDblFinder = TRUE`,
+#'   cells with fewer counts across the selected variable features are removed
+#'   before doublet detection. Use `NULL` to disable this filter.
+#' @param SoupX Logical; estimate ambient-RNA contamination with SoupX. Requires
+#'   matching filtered and raw matrix directories for every sample discovered
+#'   through `data_dirs`.
+#' @param decontX Logical; estimate ambient-RNA contamination with
+#'   `celda::decontX()` separately for each sample and add the result as
+#'   `pct_soup_decontX`. Direct `ffbms`/`rfbms` input currently disables this
+#'   option.
+#' @param SoupX_return Logical; if SoupX runs, also preprocess and return a
+#'   Seurat object made from the SoupX-adjusted counts together with per-sample
+#'   SoupX diagnostics. Otherwise, only the estimated contamination percentage
+#'   is added to the original object.
+#' @param SoupX_autoEstCont_args Named list of additional arguments passed to
+#'   `SoupX::autoEstCont()`. Do not supply `sc` or `tfidfMin`, which are set by
+#'   this function.
+#' @param cells Optional character vector of unprefixed 10x cell barcodes to
+#'   retain in each sample. Selection occurs before sample prefixes are added.
+#' @param invert_cells Logical; if `TRUE`, exclude the matching barcodes in
+#'   `cells` instead of retaining them.
+#' @param feature_rm Optional character vector of feature names to remove after
+#'   any feature aggregation.
+#' @param feature_aggr Optional named list of character vectors. Each element
+#'   identifies features whose counts are summed into a new feature named after
+#'   that list element. Aggregation precedes `feature_rm`.
+#' @param ffbms Optional named character vector of filtered 10x matrix
+#'   directories. Each directory must contain a matrix HDF5 file or the standard
+#'   compressed Matrix Market files. Supplying this argument bypasses discovery
+#'   through `data_dirs`.
+#' @param rfbms Optional named character vector of raw 10x matrix directories,
+#'   paired to `ffbms` by name. In the current direct-input branch, SoupX and
+#'   DecontX are disabled, so these paths are not used for contamination
+#'   estimation.
+#' @param diet_seurat Logical; after the complete workflow, reduce returned
+#'   Seurat objects with `Seurat::DietSeurat()` and remove the RNA `data` and
+#'   `scale.data` layers. Ignored when `early_exit = TRUE`.
+#' @param batch_corr Character scalar, either `"harmony"` or `"none"`. Harmony
+#'   is used only for multiple samples; for a single sample this is changed to
+#'   `"none"`.
+#' @param reduction Character scalar, either `"tsne"` or `"umap"`, specifying
+#'   the expression-based nonlinear reduction requested from `SO_prep02()`.
+#' @param sample_prefix_to_cell_id Logical; prepend each sample name and `"__"`
+#'   to cell barcodes to keep cell names unique across samples.
+#' @param early_exit Logical; return per-sample objects before merged expression
+#'   processing and contamination or QC-metadata analyses.
+#' @param equalize_feature_order Logical; with `early_exit = TRUE`, restrict and
+#'   reorder features consistently across samples using
+#'   `make_equal_feature_order()`.
+#' @param common_cells Logical; with `early_exit = TRUE`, restrict samples to
+#'   barcodes shared across all inputs after removing sample prefixes.
+#' @param mc.cores Positive integer giving the number of forked workers supplied
+#'   to `parallel::mclapply()` when reading and creating sample objects.
+#'
+#' @return A named list. With `early_exit = TRUE`, each element is a per-sample
+#'   Seurat object. Otherwise, the list contains `original`, the processed
+#'   Seurat object based on the original counts. When both `SoupX = TRUE` and
+#'   `SoupX_return = TRUE` remain enabled after input validation, it additionally
+#'   contains `SoupX`, a processed Seurat object based on adjusted counts, and
+#'   `SoupX_results`, a named list of per-sample SoupX diagnostic objects and
+#'   summaries.
+#'
 #' @export
-#'
 #' @importFrom zeallot %<-%
 #'
 #' @examples
 #' \dontrun{
-#' # root folder with filtered/raw feature matrices
-#' samples <- list.dirs(datadir, recursive = F)
+#' # Search sample directories for 10x matrix folders.
+#' samples <- list.dirs("path/to/cellranger", recursive = FALSE)
 #' out <- SO_prep01(samples)
+#'
+#' # Read named filtered-matrix directories and return before integration.
+#' filtered <- c(sample_A = "sample_A/filtered_feature_bc_matrix",
+#'               sample_B = "sample_B/filtered_feature_bc_matrix")
+#' out_early <- SO_prep01(ffbms = filtered, early_exit = TRUE)
 #' }
 SO_prep01 <- function(data_dirs,
                       nhvf = 2000,
@@ -98,9 +153,9 @@ SO_prep01 <- function(data_dirs,
                       feature_aggr = NULL,
                       ffbms = NULL,
                       rfbms = NULL,
+                      diet_seurat = F,
                       batch_corr = c("harmony", "none"),
-                      reduction = c("tsne", "umap"),
-                      diet_seurat = T,
+                      reduction = c("umap", "tsne"),
                       sample_prefix_to_cell_id = T,
                       early_exit = F,
                       equalize_feature_order = F,
@@ -113,18 +168,6 @@ SO_prep01 <- function(data_dirs,
   batch_corr <- rlang::arg_match(batch_corr)
   reduction <- rlang::arg_match(reduction)
 
-  # zeallot::operator(c(ffbms,
-  #                     rfbms,
-  #                     SoupX,
-  #                     SoupX_return,
-  #                     decontX,
-  #                     batch_corr), check_inputs(ffbms = ffbms,
-  #                                               rfbms = rfbms,
-  #                                               data_dirs = data_dirs,
-  #                                               SoupX = SoupX,
-  #                                               SoupX_return = SoupX_return,
-  #                                               decontX = decontX,
-  #                                               batch_corr = batch_corr))
   c(ffbms,
     rfbms,
     SoupX,
@@ -143,28 +186,22 @@ SO_prep01 <- function(data_dirs,
 
   message("Reading filtered_feature_bc_matrix data.")
   SO <- parallel::mclapply(purrr::set_names(names(ffbms)), function(x) {
-
-    message(x)
-    # this adds folder name prefix to cell names
-    #names(x) <- basename(dirname(x))
-
-    # not SO yet but matrix only
-    mat <- read_10X_data(path = ffbms[x],
-                         cells = cells,
-                         min_UMI = min_UMI,
-                         name = x,
-                         sample_prefix_to_cell_id = sample_prefix_to_cell_id,
-                         invert_cells = invert_cells)
-    return(mat)
-
+    read_10X_data(path = ffbms[x],
+                  cells = cells,
+                  min_UMI = min_UMI,
+                  name = x,
+                  sample_prefix_to_cell_id = sample_prefix_to_cell_id,
+                  invert_cells = invert_cells)
   }, mc.cores = mc.cores)
 
-  if (is.null(SO)) {
-    stop("SO is NULL. check.")
+  SO <- purrr::discard(SO, is.null)
+
+  if (!length(SO)) {
+    stop("No filtered_feature_bc_matrix successfully read.")
   }
 
   if (early_exit) {
-    ## check it here, otherwise it is done it is done in SO_prep02
+    ## check it here, otherwise it is done in SO_prep02
     if (equalize_feature_order) {
       SO <- scexpr:::make_equal_feature_order(SO)
     }
@@ -175,7 +212,6 @@ SO_prep01 <- function(data_dirs,
 
 
   SO <- parallel::mclapply(SO, function(x) {
-
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
       x <- aggregate_or_remove_features(filt_data = x,
                                         feature_rm = feature_rm,
@@ -197,12 +233,16 @@ SO_prep01 <- function(data_dirs,
                                        min_UMI_var_feat = min_UMI_var_feat,
                                        npcs = npcs)
       }, error = function(err){
-        err
+        print(err)
       })
 
     }
     return(x)
   }, mc.cores = mc.cores)
+
+  if (scDblFinder && any(purrr::map_lgl(SO, ~!"dbl_score" %in% names(.x@meta.data)))) {
+    message("doublet calculation failed in at least one object.")
+  }
 
   for (i in names(SO)) {
     SO[[i]]@meta.data$orig.ident <- i
@@ -213,7 +253,7 @@ SO_prep01 <- function(data_dirs,
   }
 
   if (length(SO) > 1) {
-    message("Preparing merged and harmonized Seurat object with ", sum(lengths(lapply(SO, Seurat::Cells))), " cells.")
+    message("Preparing merged and harmonized Seurat object with ", sum(lengths(purrr::map(SO, Seurat::Cells))), " cells.")
   } else {
     message("Preparing Seurat object.")
   }
@@ -228,8 +268,7 @@ SO_prep01 <- function(data_dirs,
                   FindClusters_args = list(resolution = resolution),
                   normalization = "LogNormalize",
                   interactive_varfeat_selection = F,
-                  interactive_pc_selection = F,
-                  diet_seurat = F)
+                  interactive_pc_selection = F)
 
   # only save a useful cluster resolution
   allclust <- SO@misc$clusterings[-length(SO@misc$clusterings)]
@@ -238,7 +277,7 @@ SO_prep01 <- function(data_dirs,
   choice <- ifelse(!length(candidates), names(nclust)[1], candidates[length(candidates)])
   # for qc_plot2; in analogy to meta_clustering
   names(choice) <- reduction
-  resolution <- brathering::strsplit2(choice, "\\.")[[1]][2]
+  resolution <- as.numeric(brathering::strsplit2(choice, "_", -1)[[1]][2])
   suppressWarnings(SeuratObject::Misc(SO, "clusterings") <- choice)
 
   if (SoupX) {
@@ -255,7 +294,8 @@ SO_prep01 <- function(data_dirs,
                                SoupX_return = SoupX_return,
                                SoupX_autoEstCont_args = SoupX_autoEstCont_args,
                                feature_aggr = feature_aggr,
-                               feature_rm = feature_rm)
+                               feature_rm = feature_rm,
+                               reduction = reduction)
 
     # add percentage of soup as meta data, similar to decontX
 
@@ -294,12 +334,12 @@ SO_prep01 <- function(data_dirs,
 
 
   if (diet_seurat) {
-    SO <- lapply(SO, function(SO) Seurat::DietSeurat(SO, dimreducs = c(names(SO@reductions))))
+    SO <- purrr::map(SO, ~Seurat::DietSeurat(.x, dimreducs = names(.x@reductions)))
 
-    SO <- lapply(SO, function(SO) {
-      SO@assays[["RNA"]]@layers[["data"]] <- NULL
-      SO@assays[["RNA"]]@layers[["scale.data"]] <- NULL
-      return(SO)
+    SO <- purrr::map(SO, function(x) {
+      x@assays[["RNA"]]@layers[["data"]] <- NULL
+      x@assays[["RNA"]]@layers[["scale.data"]] <- NULL
+      return(x)
     })
   }
 
@@ -413,17 +453,7 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 
 install_pkgs <- function(SoupX, scDblFinder, decontX) {
-  for (p in c("matrixStats", "hdf5r", "uwot", "devtools", "patchwork", "BiocManager")) {
-    if (!requireNamespace(p, quietly = TRUE)) {
-      utils::install.packages(p)
-    }
-  }
-
-  if (SoupX && !requireNamespace("SoupX", quietly = T)) {
-    utils::install.packages("SoupX")
-  }
   if (scDblFinder && !requireNamespace("scDblFinder", quietly = T)) {
-    # BiocManager::install("scDblFinder")
     pak::pak("plger/scDblFinder")
   }
   if (decontX && !requireNamespace("celda", quietly = T)) {
@@ -432,9 +462,11 @@ install_pkgs <- function(SoupX, scDblFinder, decontX) {
   if (!requireNamespace("scuttle", quietly = T)) {
     BiocManager::install("scuttle")
   }
-
   if (!requireNamespace("presto", quietly = T)) {
     pak::pak("immunogenomics/presto")
+  }
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
   }
 }
 
@@ -542,6 +574,7 @@ read_10X_data <- function(path,
       }
     } else {
       if (verbose) message("Non of cells found in data.")
+      return(NULL)
     }
   }
   if (ncol(filt_data) == 0) {
@@ -699,7 +732,8 @@ run_soupx <- function(ffbms,
                       SoupX_return = F,
                       SoupX_autoEstCont_args = list(),
                       feature_aggr = NULL,
-                      feature_rm = NULL) {
+                      feature_rm = NULL,
+                      reduction = "umap") {
   # ffmbs and rfbms are paired by name
 
   # use filt_data which may have been reduced 'cells' selection; raw_feature_bc_matrix will provide the whole picture of the soup
@@ -712,7 +746,7 @@ run_soupx <- function(ffbms,
   #   rfbms <- list(sample = rfbms)
   # }
 
-  SoupX_results <- lapply(stats::setNames(names(rfbms), names(rfbms)), function(x) {
+  SoupX_results <- purrr::map(purrr::set_names(names(rfbms)), function(x) {
     message(x)
     # just read again
     cells <- NULL
@@ -729,7 +763,6 @@ run_soupx <- function(ffbms,
                               min_UMI = NULL,
                               verbose = F,
                               name = x)
-
     # will never be many features, so irrelevant to remove them for soup estimation
     if (!is.null(feature_rm) || !is.null(feature_aggr)) {
       filt_data <- aggregate_or_remove_features(filt_data = filt_data,
@@ -777,8 +810,15 @@ run_soupx <- function(ffbms,
 
     message("Running SoupX.")
 
-    sc <- Gmisc::fastDoCall(what = SoupX::autoEstCont,
-                            args = c(list(sc = sc), SoupX_autoEstCont_args))
+    sc <- tryCatch(expr = {
+      Gmisc::fastDoCall(what = SoupX::autoEstCont,
+                        args = c(list(sc = sc, tfidfMin = 1), SoupX_autoEstCont_args))
+    },
+    error = function(err) {
+      Gmisc::fastDoCall(what = SoupX::autoEstCont,
+                        args = c(list(sc = sc, tfidfMin = 0.5), SoupX_autoEstCont_args))
+    })
+
     sx_counts <- SoupX::adjustCounts(sc = sc, verbose = 0)
 
     if (SoupX_return) {
@@ -795,15 +835,14 @@ run_soupx <- function(ffbms,
                          FindClusters_args = list(resolution = resolution),
                          normalization = "LogNormalize",
                          interactive_varfeat_selection = F,
-                         interactive_pc_selection = F,
-                         diet_seurat = F)
+                         interactive_pc_selection = F)
 
       SO_sx <- SeuratObject::AddMetaData(object = SO_sx,
                                          metadata = (Matrix::colSums(sc[["toc"]]) - Matrix::colSums(sx_counts))/Matrix::colSums(sc[["toc"]])*100,
                                          col.name = "pct_soup_SoupX")
 
       sc <- SoupX::setDR(sc = sc,
-                         DR = SO_sx@reductions[[reduction]]@cell.embeddings)
+                         DR = SO_sx@reductions[[length(SO_sx@reductions)]]@cell.embeddings)
 
       sc_info_df <- data.frame(n_expr_uncorrected = Matrix::rowSums(sc$toc > 0),
                                n_expr_corrected = Matrix::rowSums(sx_counts > 0)) |>
@@ -833,8 +872,7 @@ run_soupx <- function(ffbms,
                      FindClusters_args = list(resolution = resolution),
                      normalization = "LogNormalize",
                      interactive_varfeat_selection = F,
-                     interactive_pc_selection = F,
-                     diet_seurat = F)
+                     interactive_pc_selection = F)
     # rm seurat to save ram
     SoupX_results <- purrr::map(SoupX_results, ~.x[-1])
     SoupX_results <- list(SoupX = SOx, SoupX_results = SoupX_results)
@@ -910,21 +948,21 @@ cluster_on_metadata <- function(SO,
     if ("pct_mt" %in% names(SO@meta.data)) {
       SO@meta.data$pct_mt_log <- log1p(SO@meta.data$pct_mt)
       # this could be done above with SO
-      # replace NA wiht 0 to avoid error in umap calculation
+      # replace NA with 0 to avoid error in umap calculation
       SO@meta.data$pct_mt <- ifelse(is.na(SO@meta.data$pct_mt), 0, SO@meta.data$pct_mt)
       SO@meta.data$pct_mt_log <- ifelse(is.na(SO@meta.data$pct_mt_log), 0, SO@meta.data$pct_mt_log)
     }
 
     ## multi-dirs: split matrix!
-    SO@meta.data$residuals <- unlist(lapply(unique(SO@meta.data$orig.ident),
-                                            function(x) stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log,
-                                                                                   data = SO@meta.data[which(SO@meta.data$orig.ident == x),]))))
+    # SO@meta.data$residuals <- unlist(lapply(unique(SO@meta.data$orig.ident),
+    #                                         function(x) stats::residuals(stats::lm(nCount_RNA_log~nFeature_RNA_log,
+    #                                                                                data = SO@meta.data[which(SO@meta.data$orig.ident == x),]))))
 
     ## clustering on meta data (quality metrics)
     message("Running dimension reduction and clustering on qc meta data.")
 
     for (nn in PCs_to_meta_clustering) {
-      meta2 <- dplyr::select(SO@meta.data, dplyr::all_of(qc_cols), residuals)
+      meta2 <- dplyr::select(SO@meta.data, dplyr::all_of(qc_cols))
       if (nn > 0) {
         meta2 <- cbind(meta2, SO@reductions[[ifelse(batch_corr == "harmony" && length(ffbms) > 1,
                                                     grep("^harmony", names(SO@reductions), value = T),
@@ -993,17 +1031,12 @@ make_equal_cells <- function(x) {
     return(cells[[x]])
   })
 
-  lens <- purrr::map_dbl(cells_rmprefix, length)
-  if (length(unique(lens)) > 1) {
-    # different features
-    common_cells <- purrr::reduce(cells_rmprefix, intersect)
+  common_cells <- purrr::reduce(cells_rmprefix, intersect)
+  if (any(length(common_cells) < lengths(cells_rmprefix))) {
+    message("different cells across input samples. reducing to common: n = ", length(common_cells))
     match_inds <- purrr::map(cells_rmprefix, ~which(.x %in% common_cells))
     x <- purrr::map2(x, match_inds, function(x,y) x[,y])
-    message("different cells across input samples. reducing to common: n = ", length(common_cells))
-    message("original: ")
-    print(lens)
   }
-  # no ordering of cells yet
 
   return(x)
 }
@@ -1024,8 +1057,12 @@ make_equal_cells <- function(x) {
 #' }
 add_pct_featset_and_cc <- function(obj, species = "..auto..") {
 
+  if (!requireNamespace("UCell", quietly = T)) {
+    BiocManager::install("UCell")
+  }
+
   if (species == "..auto..") {
-    species <- guess_species(scexpr:::get_gene_features(obj))
+    species <- guess_species(get_gene_features(obj))
   } else {
     species <- rlang::arg_match(species, values = c("human", "mouse"))
   }

@@ -8,8 +8,7 @@ qc_plot_log(
   SO1,
   SO2 = NULL,
   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log", "dbl_score"),
-  x_cat = "orig.ident",
-  sec_axis_lin = T
+  x_cat = "orig.ident"
 )
 }
 \arguments{
@@ -23,10 +22,6 @@ plot. Only columns present in the provided Seurat object(s) are used.}
 
 \item{x_cat}{Metadata column used as the x-axis grouping variable. Defaults
 to \code{"orig.ident"}.}
-
-\item{sec_axis_lin}{Logical; add a secondary y-axis showing the inverse
-log1p transformation via \code{expm1()}. Intended for log-transformed QC
-metrics.}
 }
 \value{
 A faceted \code{ggplot2} object showing QC metric distributions by \code{x_cat}.
@@ -46,23 +41,19 @@ filtering.
 The function expects QC metrics to be stored in \code{SO1@meta.data}, and, when
 \code{SO2} is supplied, also in \code{SO2@meta.data}. Missing QC columns are silently
 ignored unless none of the requested columns are found.
-
-When \code{sec_axis_lin = TRUE}, the primary y-axis is assumed to be log1p-scaled,
-and the secondary axis displays values transformed back to the original
-linear scale using \code{expm1()}.
 }
 \examples{
+so_raw <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+so_filtered <- subset(so_raw, pct_mt<8)
 qc_plot_log(
   SO1 = so_filtered,
   SO2 = so_raw,
-  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log"),
+  qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt"),
   x_cat = "orig.ident"
 )
 
 qc_plot_log(
-  SO1 = so,
-  qc_cols = c("nCount_RNA_log", "nFeature_RNA_log"),
-  sec_axis_lin = FALSE
+  SO1 = so_raw,
+  qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt")
 )
-
 }

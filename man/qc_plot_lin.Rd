@@ -47,6 +47,8 @@ as the retained/filtered object, and cells present only in the larger object
 are overlaid in red.
 }
 \examples{
+so_raw <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+so_filtered <- subset(so_raw, pct_mt<8)
 qc_plot_lin(
   SO1 = so_filtered,
   SO2 = so_raw,
@@ -55,8 +57,7 @@ qc_plot_lin(
 )
 
 qc_plot_lin(
-  SO1 = so,
-  qc_cols = c("nCount_RNA", "nFeature_RNA", "dbl_score")
+  SO1 = so_raw,
+  qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt")
 )
-
 }

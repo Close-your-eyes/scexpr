@@ -100,6 +100,7 @@
 #' @export
 #'
 #' @importFrom magrittr %>%
+#' @importFrom rlang :=
 #'
 #' @examples
 feature_plot <- function(SO,

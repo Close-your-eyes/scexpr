@@ -39,8 +39,11 @@ coexpression_metrics <- function(obj,
   if (!requireNamespace("brathering", quietly = T)) {
     pak::pak("Close-your-eyes/brathering")
   }
+  if (!requireNamespace("UCell", quietly = T)) {
+    BiocManager::install("UCell")
+  }
 
-  lay <- scexpr::get_layer(
+  lay <- get_layer(
     obj = obj,
     assay = assay,
     layer = layer,

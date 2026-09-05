@@ -34,7 +34,7 @@
 #'
 #' @return list of plot and data
 #' @export
-#'
+#' @importFrom rlang :=
 #'
 #' @examples
 #' \dontrun{
@@ -166,7 +166,7 @@ composition_barplot <- function(SO,
       names(col_pal) <- sort(unique(table[,fill_cat,drop=T]))
     }
     table$bar_segment_cols <- col_pal[as.character(table[,fill_cat,drop=T])]
-    table$label_color <- brathering:::bw_txt(table$bar_segment_cols, cutoff = bw_cutoff)
+    table$label_color <- brathering::bw_txt(table$bar_segment_cols, cutoff = bw_cutoff)
   }
 
   ## use cumsum approach to define label position in middle of bars

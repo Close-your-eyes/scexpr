@@ -380,14 +380,6 @@ cluster_correlation <- function(SO,
     fill = colrr::col_pal("spectral", direction = -1)
   )
 
-  # cm.plot <- ggplot2::ggplot(cm.melt, ggplot2::aes(x = Var1, y = Var2, fill = value)) +
-  #   ggplot2::geom_tile(colour = "black") +
-  #   #ggplot2::scale_fill_gradient2(high = "#BC3F2B", low = "#4C6CA6", mid = "#edf9ff", midpoint = median(cm.melt$value)) +
-  #   ggplot2::scale_fill_gradientn(colors = pp) +
-  #   ggplot2::labs(x = paste0(names(SO)[1], " ", meta.cols[1]), y = paste0(names(SO)[2], " ", meta.cols[2])) +
-  #   ggplot2::theme_classic() +
-  #   ggplot2::coord_fixed(ratio = aspect.ratio)
-
   if (corr.in.percent) {
     cm.plot <- cm.plot + ggplot2::geom_text(size = cm.plot[["theme"]][["text"]][["size"]] *(5/14), ggplot2::aes(label = paste0(round(value*100, 0), " %")))
   } else {

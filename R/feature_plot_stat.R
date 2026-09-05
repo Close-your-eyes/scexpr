@@ -42,6 +42,7 @@
 #' @param add_pwc add default ggpubr::geom_pwc?
 #' @param reorder reorder x-axis by y-levels (only for one feature)
 #' @param color_by meta data column to color by
+#' @param pwc_args arugments to ggpubr::geom_pwc
 #'
 #' @details
 #' The function extracts expression data using \code{get_data()} and visualizes
@@ -110,17 +111,20 @@ feature_plot_stat <- function(SO,
                                                     axis.labels = "margins"),
                               axis_expansion_y_mult = c(0.02,0.125),
                               add_pwc = F,
+                              pwc_args = list(label = "p.signif", tip.length = 0, hide.ns = TRUE),
                               reorder = F) {
 
 
   # handle facetting
   # check fun from promotion
 
-
-
   if (!requireNamespace("colrr", quietly = T)) {
     pak::pak("Close-your-eyes/colrr")
   }
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
 
   if (missing(SO)) {
     stop("Seurat object list or feature vector is missing.")
@@ -199,7 +203,7 @@ feature_plot_stat <- function(SO,
 
   if (reorder) {
     meta_order <- data |>
-      dplyr::summarise(feature_median = median(feature),
+      dplyr::summarise(feature_median = stats::median(feature),
                        feature_mean = mean(feature),
                        .by = !!rlang::sym(meta_col)) |>
       dplyr::arrange(-feature_median, -feature_mean) |>
@@ -245,8 +249,8 @@ feature_plot_stat <- function(SO,
 
   if (geom3 != "none") {
     if (geom3 == "..auto..") {
-      datasummary <- dplyr::summarise(data, median = stats::median(feature), .by = c(!!rlang::sym(meta_col), feature_split))
-      median0 <- datasummary |> dplyr::filter(median == 0)
+      datasummary <- dplyr::summarise(data, median0 = stats::median(feature), .by = c(!!rlang::sym(meta_col), feature_split))
+      median0 <- datasummary |> dplyr::filter(median0 == 0)
       datageom3 <- data |>
         dplyr::filter(feature > 0) |>
         dplyr::filter(!!rlang::sym(meta_col) %in% median0[[meta_col]] & feature_split %in% median0[["feature_split"]])
@@ -348,7 +352,7 @@ feature_plot_stat <- function(SO,
   if (expr_freq_size>0) {
     plot <- plot +
       ggplot2::geom_text(data = stat,
-                         color = brathering:::bw_txt(bckgr_col),
+                         color = brathering::bw_txt(bckgr_col),
                          ggplot2::aes(label = !!rlang::sym(ifelse(expr_freq_pct,
                                                                   "pct.expr.adjust.pct",
                                                                   "pct.expr.adjust")),
@@ -359,7 +363,7 @@ feature_plot_stat <- function(SO,
   }
 
   if (add_pwc) {
-    plot <- plot + ggpubr::geom_pwc(label = "p.signif", tip.length = 0)
+    plot <- plot + Gmisc::fastDoCall(what = ggpubr::geom_pwc, args = pwc_args)
   }
 
 

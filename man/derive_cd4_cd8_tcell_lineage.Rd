@@ -42,6 +42,8 @@ predictions are stored in a column named
 
 \item{ncores}{Positive integer giving the number of CPU cores supplied to
 \code{\link[UCell]{AddModuleScore_UCell}}. Default is \code{6}.}
+
+\item{skip_module_scores}{skipt module score calculation}
 }
 \value{
 The input Seurat object with:

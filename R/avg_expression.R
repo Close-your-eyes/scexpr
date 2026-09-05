@@ -42,6 +42,11 @@ avg_expression <- function(obj,
                            return_as = c("list", "df"),
                            na_to_zero = F) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
+
   return_as <- rlang::arg_match(return_as)
 
   if (!is.null(group)) {

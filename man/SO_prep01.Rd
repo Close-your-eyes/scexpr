@@ -2,7 +2,7 @@
 % Please edit documentation in R/SO_prep01.R
 \name{SO_prep01}
 \alias{SO_prep01}
-\title{Run a bunch of default quality checks on scRNAseq data from 10X genomics (Cell Ranger)}
+\title{Prepare and quality-control 10x single-cell RNA-seq data}
 \usage{
 SO_prep01(
   data_dirs,
@@ -25,9 +25,9 @@ SO_prep01(
   feature_aggr = NULL,
   ffbms = NULL,
   rfbms = NULL,
+  diet_seurat = F,
   batch_corr = c("harmony", "none"),
-  reduction = c("tsne", "umap"),
-  diet_seurat = T,
+  reduction = c("umap", "tsne"),
   sample_prefix_to_cell_id = T,
   early_exit = F,
   equalize_feature_order = F,
@@ -36,108 +36,162 @@ SO_prep01(
 )
 }
 \arguments{
-\item{data_dirs}{list or vector of parent direction(s) which will be search for folders called "filtered_feature_bc_matrix";
-on the same level where each of these folders is found, a raw_feature_bc_matrix folder may exist to enable SoupX; if one "raw_feature_bc_matrix"
-is missing, SoupX is disable for all others}
+\item{data_dirs}{Character vector or list of directories to search
+recursively for 10x filtered-matrix folders. This argument is ignored when
+\code{ffbms} or \code{rfbms} is supplied.}
 
-\item{nhvf}{number of highly variable features for every of the procedures}
+\item{nhvf}{Positive integer giving the number of highly variable features
+used during expression preprocessing, doublet detection, SoupX processing,
+and DecontX estimation.}
 
-\item{npcs}{number or principle components to calculate, e.g. 12 for diverse data sets and 8 for isolated subsets}
+\item{npcs}{Positive integer giving the number of expression principal
+components to calculate and use in downstream analyses.}
 
-\item{resolution}{resolution (louvain algorithm) for clustering based on feature expression}
+\item{resolution}{Numeric vector of graph-clustering resolutions for the
+expression-based analysis. One resulting clustering is selected for
+downstream QC calculations.}
 
-\item{resolution_SoupX}{resolution (louvain algorithm) for SoupX analysis}
+\item{resolution_SoupX}{Single numeric graph-clustering resolution used to
+define clusters for SoupX contamination estimation.}
 
-\item{resolution_meta}{resolution(s) (louvain algorithm) for clustering based on qc meta data and optionally additional PC dimensions (PCs_to_meta_clustering)}
+\item{resolution_meta}{Numeric vector of graph-clustering resolutions for
+clustering the rescaled QC metadata.}
 
-\item{PCs_to_meta_clustering}{how many principle components (PCs) from phenotypic clustering to add to qc meta data;
-this will generate a mixed clustering (PCs from phenotypes (RNA) and qc meta data like pct mt and nCount_RNA); the more PCs are added the greater the
-phenotypic influence becomes; one or more integers can be supplied to explore the effect; pass 0, to have no PCs included in meta clustering; e.g. when
-PCs_to_meta_clustering = 3 PCs 1-3 are used, when PCs_to_meta_clustering = 1 only PC 1 is used.}
+\item{PCs_to_meta_clustering}{Numeric vector. For each value \code{n}, a separate
+QC representation is created using the QC variables and the first \code{n}
+expression PCs. Use \code{0} for QC variables alone. Positive values should be
+whole numbers no greater than \code{npcs}.}
 
-\item{scDblFinder}{logical, whether to run doublet detection algorithm from scDblFinder}
+\item{scDblFinder}{Logical; run scDblFinder independently on each sample and
+add \code{dbl_score} and \code{dbl_class} to cell metadata. A failed sample-level run
+is reported and processing continues without those fields for that sample.}
 
-\item{min_UMI}{min number of UMI per cell (colSums)}
+\item{min_UMI}{Numeric scalar or \code{NULL}. Cells with fewer total counts than
+this value are removed while reading each filtered matrix. Use \code{NULL} to
+disable this filter.}
 
-\item{min_UMI_var_feat}{min number of UMI in variable featured per cell (colSums); only relevant if scDblFinder = T}
+\item{min_UMI_var_feat}{Numeric scalar or \code{NULL}. When \code{scDblFinder = TRUE},
+cells with fewer counts across the selected variable features are removed
+before doublet detection. Use \code{NULL} to disable this filter.}
 
-\item{SoupX}{logical whether to run SoupX. If TRUE, raw_feature_bc_matrix is needed.}
+\item{SoupX}{Logical; estimate ambient-RNA contamination with SoupX. Requires
+matching filtered and raw matrix directories for every sample discovered
+through \code{data_dirs}.}
 
-\item{decontX}{logical whether to run celda::decontX to estimate RNA soup (contaminating ambient RNA molecules)}
+\item{decontX}{Logical; estimate ambient-RNA contamination with
+\code{celda::decontX()} separately for each sample and add the result as
+\code{pct_soup_decontX}. Direct \code{ffbms}/\code{rfbms} input currently disables this
+option.}
 
-\item{SoupX_return}{logical whether to return a full Seurat-object and diagnostics from SoupX (TRUE) or whether to run SoupX without these returns and just
-have the Soup-metric included as an additional quality-control metric along with pct_mt and nCount_RNA etc. Will be set to FALSE if more than one data_dir with
-filtered_feature_bc_matrix is supplied. So, only possible when data set are provided one by one.}
+\item{SoupX_return}{Logical; if SoupX runs, also preprocess and return a
+Seurat object made from the SoupX-adjusted counts together with per-sample
+SoupX diagnostics. Otherwise, only the estimated contamination percentage
+is added to the original object.}
 
-\item{SoupX_autoEstCont_args}{args to autoEstCont}
+\item{SoupX_autoEstCont_args}{Named list of additional arguments passed to
+\code{SoupX::autoEstCont()}. Do not supply \code{sc} or \code{tfidfMin}, which are set by
+this function.}
 
-\item{cells}{vector of cell names to include, consider the trailing '-1' in cell names}
+\item{cells}{Optional character vector of unprefixed 10x cell barcodes to
+retain in each sample. Selection occurs before sample prefixes are added.}
 
-\item{invert_cells}{invert cell selection, if TRUE cell names provides in 'cells' are excluded}
+\item{invert_cells}{Logical; if \code{TRUE}, exclude the matching barcodes in
+\code{cells} instead of retaining them.}
 
-\item{feature_rm}{character vector of features to remove from count matrices;
-removal is done after aggregation (if feature_aggr is provided)}
+\item{feature_rm}{Optional character vector of feature names to remove after
+any feature aggregation.}
 
-\item{feature_aggr}{named list of character vectors of features to aggregate;
-names of of list entries are names of the aggregated feature; aggregation of counts
-is simply done by addition; aggregation is done before feature removal (if feature_rm is provided)}
+\item{feature_aggr}{Optional named list of character vectors. Each element
+identifies features whose counts are summed into a new feature named after
+that list element. Aggregation precedes \code{feature_rm}.}
 
-\item{ffbms}{named paths to folders with raw/filtered feature matrix files or .h5 files; this will skip any procedure with data_dirs}
+\item{ffbms}{Optional named character vector of filtered 10x matrix
+directories. Each directory must contain a matrix HDF5 file or the standard
+compressed Matrix Market files. Supplying this argument bypasses discovery
+through \code{data_dirs}.}
 
-\item{rfbms}{named paths to folders with filtered/raw feature matrix files or .h5 files; this will skip any procedure with data_dirs}
+\item{rfbms}{Optional named character vector of raw 10x matrix directories,
+paired to \code{ffbms} by name. In the current direct-input branch, SoupX and
+DecontX are disabled, so these paths are not used for contamination
+estimation.}
 
-\item{batch_corr}{which batch correction to apply for integration of different samples}
+\item{diet_seurat}{Logical; after the complete workflow, reduce returned
+Seurat objects with \code{Seurat::DietSeurat()} and remove the RNA \code{data} and
+\code{scale.data} layers. Ignored when \code{early_exit = TRUE}.}
 
-\item{reduction}{which reduction(s) to calculate}
+\item{batch_corr}{Character scalar, either \code{"harmony"} or \code{"none"}. Harmony
+is used only for multiple samples; for a single sample this is changed to
+\code{"none"}.}
 
-\item{diet_seurat}{run diet seurat?}
+\item{reduction}{Character scalar, either \code{"tsne"} or \code{"umap"}, specifying
+the expression-based nonlinear reduction requested from \code{SO_prep02()}.}
 
-\item{sample_prefix_to_cell_id}{add sample prefix to cell names? i.e. sample folder names}
+\item{sample_prefix_to_cell_id}{Logical; prepend each sample name and \code{"__"}
+to cell barcodes to keep cell names unique across samples.}
 
-\item{early_exit}{only read count matrices without much processing (no dim red etc)}
+\item{early_exit}{Logical; return per-sample objects before merged expression
+processing and contamination or QC-metadata analyses.}
 
-\item{equalize_feature_order}{only relevant if early_exit: filter for equal features and order them}
+\item{equalize_feature_order}{Logical; with \code{early_exit = TRUE}, restrict and
+reorder features consistently across samples using
+\code{make_equal_feature_order()}.}
 
-\item{common_cells}{only relevant if early_exit: filter for equal cells,
-e.g. when same sample was mapped differently and slightly different cells
-were annotated by CellRanger}
+\item{common_cells}{Logical; with \code{early_exit = TRUE}, restrict samples to
+barcodes shared across all inputs after removing sample prefixes.}
 
-\item{mc.cores}{parallel computing (speed up reading many samples)}
+\item{mc.cores}{Positive integer giving the number of forked workers supplied
+to \code{parallel::mclapply()} when reading and creating sample objects.}
 }
 \value{
-a list of Seurat object and data frame with marker genes for clusters based on feature expression
+A named list. With \code{early_exit = TRUE}, each element is a per-sample
+Seurat object. Otherwise, the list contains \code{original}, the processed
+Seurat object based on the original counts. When both \code{SoupX = TRUE} and
+\code{SoupX_return = TRUE} remain enabled after input validation, it additionally
+contains \code{SoupX}, a processed Seurat object based on adjusted counts, and
+\code{SoupX_results}, a named list of per-sample SoupX diagnostic objects and
+summaries.
 }
 \description{
-Taking Cell Rangers output, namely the (i) feature, (ii) barcode, (iii) matrix files
-within respective folder(s), filtered_feature_bc_matrix and optionally additionally raw_feature_bc_matrix,
-a very default Seurat Object is generated and quality metrics are computed. Moreover, these
-metrics are used to cluster the cells. Groups of cells with low quality scores (e.g. high
-mt-fraction plus low number of detected features) will likely clusters together. This allows to filter them easily.
-If raw_feature_bc_matrix is provided, \href{https://github.com/constantAmateur/SoupX}{SoupX} may be run.
-In that case the whole pipeline in run twice.
-Namely, once with the original count matrix and once with a corrected count matrix after running SoupX with default
-settings. If raw_feature_bc_matrix is not available, only \href{https://github.com/campbio/celda}{DecontX}
-is available to check for ambient RNA contamination. Both of these metrics (SoupX and DecontX estimation of ambient RNA)
-become part of clustering by qc metrics if set to TRUE. \href{https://github.com/plger/scDblFinder}{scDblFinder} is run
-to detect doublets which is another quality metric.
-In addition to qc metrics, a number of principle components (PCs) from feature expression may be added to clustering and
-dimension reduction as also the feature composition of low quality transcriptomes may be skewed.
-This will likely cause these cells to cluster separately even more. Apart from clustering with meta data,
-also a pure analysis with feature expression values only is run. That may allow cluster-wise application
-of additional filters for qc metrics after very definite low quality transcriptomes have been eliminated in
-a first round based on qc metric clustering.
-If data_dirs contains multiple samples then integration of samples is done with \href{"https://github.com/immunogenomics/harmony"}{harmony}.
-(i) Detection of soup (ambient RNA) by SoupX and decontX, (ii) detection of doublets and (iii) calculation of residuals from the linear model
-of nCount_RNA_log vs nFeature_RNA_log is done sample-wise when multiple data_dirs are detected/provided. Results are written into
-the common Seurat object though, the merged and harmonized PCA space of which is subject for clustering the cells based on feature expression (phenotypes)
+Reads one or more 10x Genomics gene-expression count matrices, creates
+per-sample Seurat objects, and runs a standard preprocessing and
+quality-control workflow. Samples are merged before expression-based
+dimensional reduction and clustering. When more than one sample is present,
+Harmony can be used for batch correction.
 }
 \details{
-Checkout https://www.10xgenomics.com/analysis-guides/introduction-to-ambient-rna-correction.
+The function supports two input modes. By default, \code{data_dirs} is searched
+recursively for directories named \code{filtered_feature_bc_matrix} or
+\code{filtered_gene_bc_matrices} and, when requested for SoupX, matching raw
+matrix directories. Alternatively, named filtered-matrix directories can be
+supplied through \code{ffbms}. Direct input currently disables SoupX and DecontX.
+
+Quality-control metadata include log-transformed UMI and detected-feature
+counts, species-dependent mitochondrial and ribosomal feature percentages,
+and, when requested and successfully calculated, scDblFinder and ambient-RNA
+estimates. These variables are rescaled and used for a separate UMAP and
+graph clustering. Setting \code{PCs_to_meta_clustering} above zero adds the
+indicated number of leading expression PCs to this QC representation.
+
+SoupX is run only when a raw matrix is found for every discovered sample.
+If any raw matrix is missing, SoupX is disabled for the complete run. DecontX
+and scDblFinder are run separately by sample. SoupX- and DecontX-derived
+values are estimates and are not automatic cell-removal thresholds.
+
+With \code{early_exit = TRUE}, the function stops after reading the matrices,
+applying cell and feature filters, creating per-sample Seurat objects, and
+adding the available basic QC or doublet metadata. Expression preprocessing,
+ambient-RNA estimation, merged clustering, and QC-metadata clustering are
+skipped.
 }
 \examples{
 \dontrun{
-# root folder with filtered/raw feature matrices
-samples <- list.dirs(datadir, recursive = F)
+# Search sample directories for 10x matrix folders.
+samples <- list.dirs("path/to/cellranger", recursive = FALSE)
 out <- SO_prep01(samples)
+
+# Read named filtered-matrix directories and return before integration.
+filtered <- c(sample_A = "sample_A/filtered_feature_bc_matrix",
+              sample_B = "sample_B/filtered_feature_bc_matrix")
+out_early <- SO_prep01(ffbms = filtered, early_exit = TRUE)
 }
 }

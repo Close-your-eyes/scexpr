@@ -88,20 +88,6 @@ find_markers_pairwise <- function(obj,
 
   return(out)
 
-  # fun <- if (assay %in% c("RNA", "SCT") && layer == "data") expm1 else identity
-  # out <- parallel::mclapply(all_pairs[1:2], function(z) {
-  #   out <- presto::wilcoxauc(X = fun(get_layer(obj, assay = assay, layer = layer)),
-  #                            y = obj@meta.data[[group]],
-  #                            groups_use = z) |>
-  #     dplyr::select(-statistic, -pval)
-  #   dplyr::left_join(out |> dplyr::filter(group == z[1]) |>
-  #                      dplyr::rename("in" = group, "avgExpr_in" = avgExpr),
-  #                    out |> dplyr::filter(group == z[2]) |>
-  #                      dplyr::rename("out" = group, "avgExpr_out" = avgExpr) |>
-  #                      dplyr::select(feature, out, avgExpr_out),
-  #                    by = "feature")
-  # }, mc.cores = mc.cores)
-  #
 }
 
 make_list_of_lists_redundant <- function(x) {

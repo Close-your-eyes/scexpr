@@ -46,6 +46,8 @@ grid, star, sphere, random, hive, sugiyama}
 
 \item{expand_y}{mult y axis expansion}
 
+\item{label_split}{label split chars}
+
 \item{...}{args to ggraph::geom_node_label}
 }
 \value{

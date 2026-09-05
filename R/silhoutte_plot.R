@@ -30,6 +30,10 @@ silhouette_plot <- function(obj,
                            theme = colrr::theme_material(white = T),
                            col_pal = colrr::col_pal("custom")) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
+
   sil <- cluster::silhouette(x = as.numeric(as.character(obj@meta.data[[clustering]])),
                              dist = stats::dist(obj@reductions[[reduction]]@cell.embeddings))
   # factoextra::fviz_silhouette(sil)

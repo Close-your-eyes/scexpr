@@ -82,17 +82,16 @@ freq_expression <- function(obj,
                    split_feature = split_feature)
   data <- dplyr::bind_rows(data, .id = "feature_split")
 
-  stat <-
-    data %>%
-    dplyr::mutate(max.feat.expr = max(feature), .by = feature_split) %>%
-    dplyr::group_by(dplyr::across(dplyr::all_of(c("feature_split", meta_col, "SO.split", "max.feat.expr")))) %>%
+  stat <- data |>
+    dplyr::mutate(max.feat.expr = max(feature), .by = feature_split) |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(c("feature_split", meta_col, "SO.split", "max.feat.expr")))) |>
     dplyr::summarise(pct.expr = sum(feature > 0)/dplyr::n(), .groups = "drop")
 
   if (format_pct) {
     stat <- stat |>
       dplyr::mutate(pct.expr.adjust.pct = dplyr::case_when(pct.expr == 0 ~ "0 %",
                                                            pct.expr > 0 & pct.expr < 0.01 ~ "> 1 %",
-                                                           pct.expr >= 0.01 ~ paste0(round(pct.expr*100, expr.freq.decimals), " %"))) %>%
+                                                           pct.expr >= 0.01 ~ paste0(round(pct.expr*100, expr.freq.decimals), " %"))) |>
       dplyr::mutate(pct.expr.adjust = dplyr::case_when(pct.expr == 0 ~ "0",
                                                        pct.expr > 0 & pct.expr < 0.01 ~ "> 0.01",
                                                        pct.expr >= 0.01 ~ as.character(round(pct.expr, expr.freq.decimals))))

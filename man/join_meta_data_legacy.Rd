@@ -14,6 +14,8 @@ join_meta_data_legacy(obj, df, by = NULL, rm_nonjoin = T)
 \item{by}{A character vector specifying the join columns. Passed to
 \code{\link[dplyr:left_join]{dplyr::left_join()}}. If \code{NULL}, the join uses all variables shared by
 both data frames.}
+
+\item{rm_nonjoin}{remove non-joined columns}
 }
 \value{
 The Seurat object with the joined data stored in its

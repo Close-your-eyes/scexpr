@@ -52,8 +52,7 @@ counts <- Matrix::Matrix(
   sparse = TRUE
 )
 
-normalized <- proportional_fit_pachterlab(counts)
-normalized
+normalized <- proportional_fit_pachterlab_matrix(counts)
 colMeans(normalized)
 }
 \references{

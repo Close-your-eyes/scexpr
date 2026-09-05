@@ -52,7 +52,7 @@
 #'
 #' @returns ggplot object
 #' @export
-#'
+#' @importFrom rlang :=
 #' @examples
 #' \dontrun{
 #'   volc <- scexpr::volcano01_calc(

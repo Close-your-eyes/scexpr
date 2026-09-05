@@ -6,7 +6,7 @@
 \usage{
 qc_params_meta_cols(
   SO,
-  meta_cols = "orig.idents",
+  meta_cols = "orig.ident",
   qc_cols = c("nFeature_RNA", "nCount_RNA", "pct_mt"),
   cells = NULL,
   theme = colrr::theme_material(style = "prismy", white = T),

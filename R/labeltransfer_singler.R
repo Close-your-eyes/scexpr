@@ -90,6 +90,10 @@ labeltransfer_singler <- function(test_obj,
                                   get_layer_args = list(layer = "data",
                                                         assay = "RNA")) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
+
   check_depends()
 
 
@@ -220,6 +224,9 @@ labeltransfer_singler <- function(test_obj,
 
 check_depends <- function() {
 
+  if (!requireNamespace("BiocParallel", quietly = T)) {
+    BiocManager::install("BiocParallel")
+  }
   if (!requireNamespace("SingleR", quietly = T)) {
     BiocManager::install("SingleR")
   }
@@ -281,6 +288,7 @@ prep_ref_vars <- function(ref_obj, ref_labels, get_layer_args) {
   return(list(ref_obj, ref_labels, ref_labels_name))
 }
 
+#' @importFrom rlang :=
 prep_score_df <- function(labels,
                           name_prefix,
                           ref_labels_name,
@@ -379,7 +387,7 @@ plot_results <- function(score_df,
   } else {
 
     score_df_pseudobulk <- score_df |>
-      dplyr::summarise(score = median(score), .by = c(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")), !!rlang::sym(ref_labels_name)))
+      dplyr::summarise(score = stats::median(score), .by = c(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")), !!rlang::sym(ref_labels_name)))
     score_df_textlabels <-
       score_df_pseudobulk |>
       dplyr::filter(!!rlang::sym(paste0(ref_labels_name, "_assigned_label")) == !!rlang::sym(ref_labels_name)) |>
@@ -473,6 +481,9 @@ build_return_vars <- function(score_df,
 }
 
 singler_aggr <- function(test, clusters, num.threads) {
+  if (!requireNamespace("scrapper", quietly = T)) {
+    BiocManager::install("scrapper")
+  }
   if (!is.null(clusters)) {
     agg <- scrapper::aggregateAcrossCells(
       x = test,

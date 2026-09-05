@@ -10,6 +10,8 @@
 #' @param test_clusters meta.data column in test_obj
 #' @param modules list of named gene sets / modules / pathways
 #' @param AddModuleScore_UCell_args arguments to UCell::AddModuleScore_UCell
+#' @param skip_module_score do not calc module scores for speed
+#' @param gsea_score wich score to plot?
 #'
 #' @returns list
 #' @export
@@ -48,6 +50,9 @@ labeltransfer_module_gsea <- function(test_obj,
   }
   if (!requireNamespace("brathering", quietly = T)) {
     pak::pak("Close-your-eyes/brathering")
+  }
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
   }
 
   message("GSEA results may give a nice picture of similarities.")

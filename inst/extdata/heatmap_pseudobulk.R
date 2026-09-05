@@ -150,9 +150,6 @@ heatmap_pseudobulk <- function(SO,
 
   # ... arguments to ggrepel, like nudge_y
 
-  if (!requireNamespace("devtools", quietly = T)) {
-    utils::install.packages("devtools")
-  }
   if (!requireNamespace("presto", quietly = T)) {
     pak::pak("immunogenomics/presto")
   }

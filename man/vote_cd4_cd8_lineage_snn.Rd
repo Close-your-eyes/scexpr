@@ -17,13 +17,87 @@ vote_cd4_cd8_lineage_snn(
   unresolved_label = "unknown"
 )
 }
+\arguments{
+\item{object}{A Seurat object containing cell metadata and an SNN graph.}
+
+\item{label_col}{A single character string naming the metadata column that
+contains the current lineage labels.}
+
+\item{graph_name}{A single character string naming the SNN graph to use.
+If \code{NULL}, the function first looks for
+\code{paste0(DefaultAssay(object), "_snn")}; otherwise, it uses the only graph
+whose name ends in \code{"snn"}. An error is raised if no graph can be selected
+unambiguously.}
+
+\item{classes}{A character vector of two or more trusted class labels.
+Only cells carrying one of these labels are allowed to vote.}
+
+\item{unknown}{A character vector of labels treated as unknown. Cells with
+these labels, as well as cells with \code{NA} labels, are eligible for
+assignment.}
+
+\item{output_col}{A single character string naming the metadata column in
+which voted labels are stored.}
+
+\item{min_confidence}{Minimum required winning-class vote fraction, between
+zero and one. Confidence is calculated as the winning class's labeled
+SNN weight divided by the total SNN weight from labeled neighbors.}
+
+\item{min_labeled_neighbors}{Minimum number of positively weighted,
+known-labeled neighbors required for assignment.}
+
+\item{min_labeled_weight_fraction}{Minimum required fraction of a candidate
+cell's total neighboring SNN weight that must connect to known-labeled
+cells, between zero and one.}
+
+\item{unresolved_label}{Label assigned to eligible cells that do not satisfy
+the assignment criteria.}
+}
 \value{
-The Seurat object with four added metadata columns: the voted label,
-vote confidence, number of labeled neighbors, and fraction of neighboring
-SNN weight connected to labeled cells.
+The input Seurat object with four metadata columns added:
+\itemize{
+\item \code{output_col}: the final voted label;
+\item \code{paste0(output_col, "_confidence")}: the winning vote fraction;
+\item \code{paste0(output_col, "_n_labeled_neighbors")}: the number of
+known-labeled neighbors;
+\item \code{paste0(output_col, "_labeled_weight_fraction")}: the fraction of
+total neighboring SNN weight connected to known-labeled cells.
+}
 }
 \description{
-Known labels are never changed. Only cells whose current label is in
-\code{unknown} (or is NA) are eligible for assignment. SNN edge weights are used
-as vote weights, and only known cells are allowed to vote.
+Assigns CD4/CD8 lineage labels to unknown cells using weighted votes from
+neighboring, previously labeled cells in a Seurat shared nearest-neighbor
+(SNN) graph. Known labels are preserved. Only cells whose current label is
+missing or included in \code{unknown} are eligible for assignment.
+}
+\details{
+For each cell, the function sums the SNN edge weights connected to known
+cells in each trusted class. An assignment is accepted only when there is a
+unique winning class and all confidence, neighbor-count, and labeled-weight
+thresholds are satisfied. Exact ties remain unresolved.
+
+The function also prints a composition bar plot comparing the original and
+voted labels.
+
+Cells whose original label belongs to \code{classes} are treated as trusted and
+are never changed. Labels that are neither trusted nor included in
+\code{unknown} are also preserved, but those cells cannot vote.
+
+Voting is performed once from the original trusted labels; newly assigned
+cells do not subsequently vote. Consequently, this function performs
+one-step label transfer rather than iterative graph propagation.
+}
+\examples{
+\dontrun{
+object <- vote_cd4_cd8_lineage_snn(
+  object,
+  label_col = "cd4cd8lin",
+  graph_name = "RNA_snn",
+  classes = c("CD4", "CD8"),
+  unknown = c("unknown", "ambiguous"),
+  min_confidence = 0.8,
+  min_labeled_neighbors = 3
+)
+}
+
 }

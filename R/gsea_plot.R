@@ -80,22 +80,20 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
+#' so <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
 #' s2n <- scexpr::gsea_s2n_groupwise(
 #'   obj = so,
-#'   group = "integrated_snn_res.0.7"
+#'   group = "pca12_rna800_snn_res_0.1"
 #' )
-#'
-#' gene_ranks <- sort(s2n[, "20"], decreasing = TRUE)
-#'
 #' gsea_res <- scexpr::gsea_on_msigdbr(
-#'   gene_ranks = gene_ranks,
-#'   use_msigdbr = TRUE
+#'   gene_ranks = s2n[,"01"],
+#'   use_msigdbr = TRUE,
+#'   msigdbr_args = list(db_species = "HS", species = "human",
+#'                       collection = c("H"))
 #' )
 #'
-#' ## Plot significant pathways
-#' plots <- gsea_plot(gsea_res, padj_min = 0.01)
-#'
+#' ## Plot pathways
+#' plots <- gsea_plot(gsea_res, padj_min = 0.6)
 #' plots[[1]]
 #'
 #' ## Plot selected pathways only
@@ -110,9 +108,6 @@
 #'   label_genes = "leadingEdge",
 #'   annotation_pos = c("auto", NA)
 #' )
-#'
-#' plots[[1]]
-#' }
 gsea_plot <- function(data,
                       padj_min = 0.01,
                       return_metric_plot = F,
@@ -124,7 +119,7 @@ gsea_plot <- function(data,
                       color_ES_lims = "black",
                       color_leadingEdge = "hotpink2",
                       label_genes = NULL, # leave NULL by default because it may take some time in case many gene sets are tested
-                      theme = theme_bw(),
+                      theme = ggplot2::theme_bw(),
                       plot_leadingEdge_rank = T,
                       plot_leadingEdge_size = T,
                       plot_subtitle = T,
@@ -134,6 +129,10 @@ gsea_plot <- function(data,
                       annotation_with_name = F,
                       annotation = "{pval}<br>{es}<br>{nes}",
                       plot_ranking_color = T) {
+
+  if (!requireNamespace("fgsea", quietly = TRUE)) {
+    BiocManager::install("fgsea")
+  }
 
   results <- data$data
   if (!is.null(padj_min)) {
@@ -147,6 +146,7 @@ gsea_plot <- function(data,
       return(NULL)
     }
   }
+
 
   gsea_plots <- lapply(stats::setNames(results$pathway, results$pathway), function(x) {
     gsea_plot_data <- prep_gsea(gene.set = data$gene_sets[[x]],
@@ -197,7 +197,7 @@ make_gsea_plot <- function(data,
                            color_ES_lims = "black",
                            color_leadingEdge = "hotpink2",
                            label_genes = NULL, # leave NULL by default because it may take some time in case many gene sets are tested
-                           theme = theme_bw(),
+                           theme = ggplot2::theme_bw(),
                            plot_leadingEdge_rank = T,
                            plot_leadingEdge_size = T,
                            plot_subtitle = T,
@@ -208,14 +208,17 @@ make_gsea_plot <- function(data,
                            annotation = "{pval}<br>{es}<br>{nes}",
                            plot_ranking_color = T) {
 
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
 
   data_colorbar <-
-    as.data.frame(data$stats) %>%
-    dplyr::mutate(zscore = as.vector(round(scale(stat),0))) %>%
-    dplyr::mutate(zscore = ifelse(zscore < min(zscore_lims), min(zscore_lims), zscore)) %>%
-    dplyr::mutate(zscore = ifelse(zscore > max(zscore_lims), max(zscore_lims), zscore)) %>%
-    dplyr::group_by(zscore) %>%
-    dplyr::filter(rank %in% c(min(rank), max(rank))) %>%
+    as.data.frame(data$stats) |>
+    dplyr::mutate(zscore = as.vector(round(scale(stat),0))) |>
+    dplyr::mutate(zscore = ifelse(zscore < min(zscore_lims), min(zscore_lims), zscore)) |>
+    dplyr::mutate(zscore = ifelse(zscore > max(zscore_lims), max(zscore_lims), zscore)) |>
+    dplyr::group_by(zscore) |>
+    dplyr::filter(rank %in% c(min(rank), max(rank))) |>
     dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
 
   color_scale_limits <- range(round(scale(data$stats$stat),0))
@@ -275,12 +278,17 @@ make_gsea_plot <- function(data,
       ggplot2::labs(fill = "ranking metric\n[z-score]")
   }
 
+
   if (!is.null(label_genes)) {
-    p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") le_gene_df else all_gene_df[which(all_gene_df$gene %in% label_genes)], ggplot2::aes(label = gene, x = x, y = 0),
-                                      max.overlaps = length(le_ranks),
+    p <- p + ggrepel::geom_text_repel(data = if (label_genes == "leadingEdge") dplyr::filter(data$rank_df, leadingEdge) else dplyr::filter(data$rank_df, gene %in% label_genes),
+                                      mapping = ggplot2::aes(
+                                        x = rank,
+                                        y = 0,
+                                        label = gene),
+                                      max.overlaps = nrow(dplyr::filter(data$rank_df, leadingEdge)),
                                       max.time = 5,
-                                      nudge_y = data[["spreadES"]]/2.5,
-                                      nudge_x = data[["leadingEdge_rank"]]*6,
+                                      # nudge_y = data[["spreadES"]]/2.5,
+                                      # nudge_x = data[["leadingEdge_rank"]]*6,
                                       segment.size = 0.2,
                                       segment.color = "grey80")
   }
@@ -421,17 +429,18 @@ prep_gsea <- function(gene.set,
     split_func(zscore_cuts[which(zscore_cuts <= 0)],4)
   }
   data <-
-    x %>%
-    dplyr::mutate(zscore = cut(stat_scale, breaks = zscore_cuts)) %>% # as.numeric(as.factor())
-    dplyr::group_by(zscore) %>%
+    x |>
+    dplyr::mutate(zscore = cut(stat_scale, breaks = zscore_cuts)) |> # as.numeric(as.factor())
+    dplyr::group_by(zscore) |>
     dplyr::summarise(min_rank = min(rank), max_rank = max(rank))
-  data$zscore <- factor(data$zscore, levels = data %>% dplyr::arrange(min_rank) %>% dplyr::pull(zscore))
+  data$zscore <- factor(data$zscore, levels = data |> dplyr::arrange(min_rank) |> dplyr::pull(zscore))
   data <- dplyr::arrange(data, zscore)
   data$fill_col <- ""
 
   # manually take care, that positive stats become reddish color and negative bluish
-  pos_col <- RColorBrewer::brewer.pal(10, "RdBu")[1:5]
-  neg_col <- RColorBrewer::brewer.pal(10, "RdBu")[6:10]
+
+  pos_col <- colrr::col_pal("RdBu", n = 10)[1:5]
+  neg_col <- colrr::col_pal("RdBu", n = 10)[6:10]
   data[which(grepl("^\\(-", data$zscore)),"fill_col"] <- grDevices::colorRampPalette(neg_col, interpolate = "linear")(length(which(grepl("^\\(-", data$zscore))))
   data[which(grepl("^\\([[:digit:]]", data$zscore)),"fill_col"] <- grDevices::colorRampPalette(pos_col, interpolate = "linear")(length(which(grepl("^\\([[:digit:]]", data$zscore))))
 
@@ -467,9 +476,10 @@ prep_gsea <- function(gene.set,
   n <- length(statsAdj)
   xs <- as.vector(rbind(pathway - 1, pathway))
   ys <- as.vector(rbind(bottoms, tops))
-  toPlot <- data.table::data.table(rank=c(0, xs, n + 1), ES=c(0, ys, 0))
-  ticks <- data.table::data.table(rank=pathway, stat=statsAdj[pathway])
-  stats <- data.table::data.table(rank=seq_along(stats), stat=statsAdj)
+
+  toPlot <- data.frame(rank=c(0, xs, n + 1), ES=c(0, ys, 0))
+  ticks <- data.frame(rank=pathway, stat=statsAdj[pathway])
+  stats <- data.frame(rank=seq_along(stats), stat=statsAdj)
 
   res <- list(
     curve=toPlot,

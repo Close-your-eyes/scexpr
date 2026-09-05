@@ -18,7 +18,7 @@
 #'
 #' @returns ggplot
 #' @export
-#'
+#' @importFrom rlang :=
 #' @examples
 #' \dontrun{
 #' gsea <- scexpr::gsea_on_msigdbr(gene_ranks = gene_ranks,
@@ -47,6 +47,10 @@ gsea_plot_summary <- function(gsea_df,
                               col_pal = colrr::col_pal(name = "spectral", direction = -1),
                               title = NULL,
                               plot_order = c("NES", "leadingEdge_size_rel", "ES", "padj")) {
+
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
 
   x <- rlang::arg_match(x)
   y <- rlang::arg_match(y)

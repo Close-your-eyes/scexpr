@@ -10,10 +10,13 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
-#' plot <- varfeat_plot(so)
-#' }
+#' seu <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+#' out <- varfeat_plot(seu) # a bit stupid because all are var_feat
 varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
+
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
 
   hvfdat <- SeuratObject::HVFInfo(obj)
   names(n_varfeat) <- n_varfeat
@@ -43,8 +46,10 @@ varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
       ggplot2::geom_point(data = dplyr::slice_max(hvfdat, order_by = !!rlang::sym(yvar), n = nvarfeat), color = "tomato2", size = 0.2) +
       ggplot2::facet_wrap(nvarfeat)
   })
-  varfeatplots <- c(list(density = ggplot2::ggplot(hvfdat, ggplot2::aes(!!rlang::sym(xvar), !!rlang::sym(yvar))) +
-                           ggpointdensity::geom_pointdensity(size = 0.2) +
+
+  hvfdat$density <- brathering::density_est(x = hvfdat$mean, y = hvfdat$variance.standardized)$raw
+  varfeatplots <- c(list(density = ggplot2::ggplot(hvfdat, ggplot2::aes(!!rlang::sym(xvar), !!rlang::sym(yvar), color = density)) +
+                           ggplot2::geom_point(size = 0.2) +
                            colrr::theme_material() +
                            ggplot2::scale_x_log10() +
                            ggplot2::scale_y_log10() +

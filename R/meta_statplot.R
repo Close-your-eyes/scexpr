@@ -30,6 +30,12 @@ meta_statplot <- function(obj,
                           group1 = "orig.ident",
                           group2,
                           features) {
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
 
   avgexpr <- avg_expression(obj, group = group1, features = features)[[1]] |>
     as.data.frame() |>
@@ -42,7 +48,7 @@ meta_statplot <- function(obj,
     colrr::theme_material(white = T, style = "prismy") +
     ggplot2::theme(strip.text.x = ggplot2::element_text(face = "italic")) +
     ggpubr::geom_pwc() +
-    ggplot2::facet_wrap(vars(feature), scales = "free_y")
+    ggplot2::facet_wrap(ggplot2::vars(feature), scales = "free_y")
 
   return(list(data = avgexpr, plot = plot))
 }

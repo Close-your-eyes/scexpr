@@ -34,25 +34,20 @@ hs_mm_ortholog_table <- function(features_hs,
   # markerdf2tecprg_sub2 <- markerdf2tecprg_sub |>
   #   dplyr::left_join(orthologs, by = c("feature" = "HGNC.symbol"))
 
-  if (!requireNamespace("remotes", quietly = T)) {
-    utils::install.packages("remotes")
-  }
+
   if (!requireNamespace("UCell", quietly = T)) {
-    remotes::install_github("carmonalab/UCell")
+    BiocManager::install("UCell")
   }
   if (!requireNamespace("scGate", quietly = T)) {
-    remotes::install_github("carmonalab/scGate")
+    pak::pak("carmonalab/scGate")
   }
   if (!requireNamespace("ProjecTILs", quietly = T)) {
-    remotes::install_github("carmonalab/STACAS")
+    pak::pak("carmonalab/STACAS")
   }
   if (!requireNamespace("ProjecTILs", quietly = T)) {
-    remotes::install_github("carmonalab/ProjecTILs")
+    pak::pak("carmonalab/ProjecTILs")
   }
-  if (!requireNamespace("BiocManager", quietly = TRUE)) {
-    utils::install.packages("BiocManager")
-  }
-  if (!requireNamespace("biomaRt", quietly = TRUE)) {
+  if (!requireNamespace("biomaRt", quietly = T)) {
     BiocManager::install("biomaRt")
   }
 

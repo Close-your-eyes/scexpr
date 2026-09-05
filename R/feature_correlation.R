@@ -25,8 +25,8 @@
 #'
 #'
 #' @examples
-#' \dontrun{
-#' }
+#' seu <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+#' out <- feature_correlation(seu, Seurat::VariableFeatures(seu))
 feature_correlation <- function(SO,
                                 features,
                                 assay = "RNA",
@@ -41,16 +41,6 @@ feature_correlation <- function(SO,
                                 topn = c(10,10), # n for min and max
                                 ...) {
 
-  if (!requireNamespace("psych", quietly = T)) {
-    utils::install.packages("psych")
-  }
-  if (!requireNamespace("reshape2", quietly = T)) {
-    utils::install.packages("reshape2")
-  }
-  if (!requireNamespace("Matrix", quietly = T)) {
-    utils::install.packages("Matrix")
-  }
-
   if (missing(features)) {
     stop("Please provide features.")
   }
@@ -64,9 +54,9 @@ feature_correlation <- function(SO,
     topn <- c(10,10)
   }
 
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  features <- .check.features(SO = SO, features = unique(features), meta.data = F, meta.data.numeric = T)
-  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
+  SO <- check.SO(SO = SO, assay = assay, length = 1)
+  features <- check.features(SO = SO, features = unique(features), meta.data = F, meta.data.numeric = T)
+  cells <- check.and.get.cells(SO = SO, assay = assay, cells = cells, included_only = T)
 
   ref_mat <- get_layer(obj = SO,
                        assay = assay,
@@ -115,9 +105,9 @@ feature_correlation <- function(SO,
                                                         method = method),
                                                    dots[which(names(dots) %in% names(formals(psych::corr.test)))]))
 
-    corr_df <- merge(merge(reshape2::melt(t(corr_obj[["r"]]), value.name = "r"),
-                           reshape2::melt(t(corr_obj[["p"]]), value.name = "p")),
-                     reshape2::melt(t(corr_obj[["p.adj"]]), value.name = "p.adj"))
+    corr_df <- merge(merge(as.data.frame(brathering::mat_to_df_long(t(corr_obj[["r"]]), rownames_to = "Var1", colnames_to = "Var2", values_to = "r")),
+                           as.data.frame(brathering::mat_to_df_long(t(corr_obj[["p"]]), rownames_to = "Var1", colnames_to = "Var2", values_to = "p"))),
+                     as.data.frame(brathering::mat_to_df_long(t(corr_obj[["p.adj"]]), rownames_to = "Var1", colnames_to = "Var2", values_to = "p.adj")))
 
     if (is.numeric(limit_p)) {
       corr_df$p.adj[which(corr_df$p.adj == 0)] <- limit_p
@@ -158,10 +148,10 @@ feature_correlation <- function(SO,
       theme +
       do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
   } else {
-    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = .reorder_within(ref_feature, r, feature_group), fill = !!rlang::sym(bar.fill))) +
+    plot <- ggplot2::ggplot(corr_df_plot, ggplot2::aes(x = r, y = brathering::reorder_within(ref_feature, r, feature_group), fill = !!rlang::sym(bar.fill))) +
       ggplot2::geom_bar(stat = "identity", color = "black") +
       theme +
-      .scale_y_reordered() +
+      brathering::scale_y_reordered() +
       do.call(ggplot2::theme, args = dots[which(names(dots) %in% names(formals(ggplot2::theme)))])
   }
 
@@ -194,11 +184,6 @@ feature_correlation <- function(SO,
   # for spearman:
   # get rank diff by observation
   # https://www.simplilearn.com/tutorials/statistics-tutorial/spearmans-rank-correlation
-
-  '  ggplot(corr_df, aes(x = r, y = minus.log10.p.adj)) +
-    geom_point() +
-    theme_bw() +
-    facet_wrap(vars(feature))'
 
 
 
@@ -234,8 +219,8 @@ filter_feature <- function(SO,
                            cells = NULL,
                            min.pct = 0.1) {
   # needs checking
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
+  SO <- check.SO(SO = SO, assay = assay, length = 1)
+  cells <- check.and.get.cells(SO = SO, assay = assay, cells = cells, included_only = T)
 
   # filter non expressed features first
 
@@ -253,29 +238,13 @@ pct_feature <- function(SO,
                         assay = "RNA") {
 
   # needs checking
-  SO <- .check.SO(SO = SO, assay = assay, split.by = NULL, shape.by = NULL, length = 1)
-  cells <- .check.and.get.cells(SO = SO, assay = assay, cells = cells, return.included.cells.only = T)
-  #features <- .check.features(SO = SO, features = unique(features), meta.data = F) # need speed up first
+  SO <- check.SO(SO = SO, assay = assay, length = 1)
+  cells <- check.and.get.cells(SO = SO, assay = assay, cells = cells, included_only = T)
 
   ## case of dichtomous meta.col
-  features <- intersect(feaures, rownames(get_layer(obj = SO, assay = assay)))
+  features <- intersect(features, rownames(get_layer(obj = SO, assay = assay)))
 
   return(Matrix::rowSums(get_layer(obj = SO, assay = assay, cells = cells, features = features) > 0)/length(cells))
-}
-
-.reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
-  new_x <- paste(x, within, sep = sep)
-  stats::reorder(new_x, by, FUN = fun)
-}
-
-.scale_x_reordered <- function(..., sep = "___") {
-  reg <- paste0(sep, ".+$")
-  ggplot2::scale_x_discrete(labels = function(x) gsub(reg, "", x), ...)
-}
-
-.scale_y_reordered <- function(..., sep = "___") {
-  reg <- paste0(sep, ".+$")
-  ggplot2::scale_y_discrete(labels = function(x) gsub(reg, "", x), ...)
 }
 
 # try this:

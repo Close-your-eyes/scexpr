@@ -7,18 +7,22 @@
 #'
 #' @examples
 gsea_inspect_ranked_list <- function(x) {
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
+  }
+
   tab <- table(x)
   tabstack <- utils::stack(tab) |>
     dplyr::mutate(ind_ind = as.numeric(ind), ind_num = as.numeric(as.character(ind)))
   n_tied_elements <- sum(tab[tab > 1])
   rel_tied_elements <- n_tied_elements/length(x)
 
-  p <- ggplot2::ggplot(tabstack, aes(ind_ind, values)) +
+  p <- ggplot2::ggplot(tabstack, ggplot2::aes(ind_ind, values)) +
     ggplot2::geom_col(color = "white") +
     colrr::theme_material() +
     ggplot2::labs(x = "index", y = "count", subtitle = paste0(round(rel_tied_elements*100, 2), " % tied"))
 
-  p2 <- ggplot2::ggplot(tabstack, aes(ind_num, values)) +
+  p2 <- ggplot2::ggplot(tabstack, ggplot2::aes(ind_num, values)) +
     ggplot2::geom_col(color = "white") +
     colrr::theme_material() +
     ggplot2::labs(y = "count", subtitle = paste0(round(rel_tied_elements*100, 2), " % tied"))

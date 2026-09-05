@@ -67,16 +67,19 @@ Differential expression is then performed using
 only among expressing cells (expression > 0).
 }
 \examples{
+seu <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
 # One-vs-rest marker analysis from a Seurat object
 res <- find_marker_in_expr_all(
   obj = seu,
-  group = "cell_type"
+  group = "pca12_rna800_snn_res_0.1",
+  mc.cores = 1
 )
 
 # One-vs-rest marker analysis from a matrix
 res <- find_marker_in_expr_all(
-  obj = mat,
-  group = cluster_ids
+  obj = get_layer(seu),
+  group = seu$pca12_rna800_snn_res_0.1,
+  mc.cores = 1
 )
 }
 \seealso{

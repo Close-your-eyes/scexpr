@@ -12,7 +12,6 @@
 #'   \code{colrr::col_pal("custom")}.
 #' @param fill_na Color used for missing values. Defaults to \code{"grey50"}.
 #' @param color Border color of pie slices. Defaults to \code{"white"}.
-#' @param color_text Color of labels. Use \code{"..auto.."} for automatic selection.
 #' @param radius_inside Numeric. Inner radius of the pie chart (for donut charts).
 #' @param label_outside Character. Type of labels outside the pie. One of
 #'   \code{"none"}, \code{"abs"}, or \code{"rel"}.
@@ -22,8 +21,12 @@
 #' @param label_size Numeric. Text size of labels.
 #' @param label_radius_inside Numeric. Radial position for inside labels.
 #' @param label_radius_outside Numeric. Radial position for outside labels.
-#' @param label_angle_inside Numeric or \code{"circle"}. Angle for inside labels.
-#' @param label_angle_outside Numeric or \code{"circle"}. Angle for outside labels.
+#' @param label_angle_inside Inside-label orientation. Supply
+#'   `"radial_readable"`, `"radial"`, `"tangent_readable"`, or `"tangent"`;
+#'   alternatively, supply one or more numeric angles in degrees as interpreted
+#'   by [ggplot2::geom_text()]. See **Label angles**.
+#' @param label_angle_outside Outside-label orientation. Accepts the same values
+#'   as `label_angle_inside`.
 #' @param label_overlap Character. Strategy for overlapping labels. One of
 #'   \code{"ignore"}, \code{"alternate"}, or \code{"outside"}.
 #' @param overlap_outside_radius Numeric. Radius used when resolving label overlap outside.
@@ -34,8 +37,29 @@
 #' @param theme_args A named list of additional theme modifications applied via
 #'   \code{ggplot2::theme()}.
 #' @param col_pal_args List of arguments passed to \code{colrr::col_pal()}.
-#' @param color_text Color of label text. Defaults to automatic selection.
 #' @param split split seurat object and produce multiple pie charts?
+#' @param label_color_inside label color
+#' @param label_color_outside label color
+#'
+#' @section Label angles:
+#' Slice angles used by [ggforce::geom_arc_bar()] are measured in radians,
+#' beginning at 12 o'clock and increasing clockwise. Text angles passed to
+#' [ggplot2::geom_text()] are measured in degrees, with positive values rotating
+#' counterclockwise.
+#'
+#' The named label-angle modes are:
+#'
+#' * `"radial"`: align the text baseline with the slice's radial direction.
+#' * `"radial_readable"`: use radial alignment and flip labels on the opposite
+#'   half of the circle to keep them upright.
+#' * `"tangent"`: align the text baseline with the circle's tangent, making it
+#'   orthogonal to the slice's radial direction.
+#' * `"tangent_readable"`: use tangential alignment and flip equivalent
+#'   orientations to keep labels upright.
+#'
+#' Modes without the `_readable` suffix preserve the uncorrected geometric
+#' orientation, so some labels may appear upside down. Numeric angles bypass
+#' automatic calculation; for example, `0` makes labels horizontal.
 #'
 #' @return A ggplot2 object representing the pie chart.
 #'

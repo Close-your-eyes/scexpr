@@ -59,11 +59,11 @@ seurat_size_tree <- function(object) {
     element_names[empty] <- which(empty)
 
     for (i in seq_along(x)) {
-      branch <- if (i == length(x)) "└── " else "├── "
+      branch <- if (i == length(x)) "\\-- " else "+-- "
 
       cat(
         prefix, branch,
-        element_names[[i]], " — ",
+        element_names[[i]], " - ",
         size_text(x[[i]]), "\n",
         sep = ""
       )
@@ -72,19 +72,19 @@ seurat_size_tree <- function(object) {
 
   top_slots <- methods::slotNames(object)
 
-  cat("Total size — ", size_text(object), "\n", sep = "")
+  cat("Total size - ", size_text(object), "\n", sep = "")
 
   for (i in seq_along(top_slots)) {
     slot_name  <- top_slots[[i]]
     slot_value <- methods::slot(object, slot_name)
     last_slot  <- i == length(top_slots)
 
-    branch <- if (last_slot) "└── " else "├── "
-    prefix <- if (last_slot) "    " else "│   "
+    branch <- if (last_slot) "\\-- " else "+-- "
+    prefix <- if (last_slot) "    " else "|   "
 
     cat(
       branch, "@", slot_name,
-      " — ", size_text(slot_value), "\n",
+      " - ", size_text(slot_value), "\n",
       sep = ""
     )
 
@@ -96,15 +96,15 @@ seurat_size_tree <- function(object) {
         assay <- slot_value[[j]]
         last_assay <- j == length(slot_value)
 
-        assay_branch <- if (last_assay) "└── " else "├── "
+        assay_branch <- if (last_assay) "\\-- " else "+-- "
         layer_prefix <- paste0(
           prefix,
-          if (last_assay) "    " else "│   "
+          if (last_assay) "    " else "|   "
         )
 
         cat(
           prefix, assay_branch,
-          assay_names[[j]], " — ",
+          assay_names[[j]], " - ",
           size_text(assay), "\n",
           sep = ""
         )
@@ -119,11 +119,11 @@ seurat_size_tree <- function(object) {
           )
 
           layer_branch <-
-            if (k == length(layer_names)) "└── " else "├── "
+            if (k == length(layer_names)) "\\-- " else "+-- "
 
           cat(
             layer_prefix, layer_branch,
-            layer_name, " — ",
+            layer_name, " - ",
             size_text(layer), "\n",
             sep = ""
           )

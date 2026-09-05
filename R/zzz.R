@@ -56,8 +56,8 @@
   #           pak::pak('mojaveazure/seurat-object', ref = 'release/4.1.4') # say no to updates
   #           pak::pak('satijalab/seurat', ref = 'seurat4')  # say no to updates
   #           or
-  #           remotes::install_version('Seurat', version = '4.4.0', repos = 'http://cran.us.r-project.org')
-  #           remotes::install_version('SeuratObject', version = '4.1.4', repos = 'http://cran.us.r-project.org')")
+  #           pak::pak('Seurat', version = '4.4.0', repos = 'http://cran.us.r-project.org')
+  #           pak::pak('SeuratObject', version = '4.1.4', repos = 'http://cran.us.r-project.org')")
   # }
 }
 

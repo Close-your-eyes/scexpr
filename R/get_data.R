@@ -144,6 +144,9 @@ get_data <- function(SO,
                      try_df = F) {
 
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
 
   if (missing(SO)) {stop("Seurat object missing.")}
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}
@@ -485,8 +488,47 @@ thaw_cols <- function(df, classes) {
   return(df)
 }
 
-get_gene_features <- function(obj, assays = "RNA", layer = "data") {
+#' Get unique gene features from one or more assays
+#'
+#' Retrieves feature names from the requested layer of each selected assay and
+#' returns their union. Duplicate feature names across assays are removed.
+#'
+#' @param obj A Seurat object containing the requested assays and layers.
+#' @param assays A character vector naming the assays from which to retrieve
+#'   gene features. Defaults to `"RNA"`.
+#' @param layer A single character string naming the assay layer to use. If
+#'   `NULL`, the first available layer of the selected assay is used. The named
+#'   layer must be available in every requested assay.
+#'
+#' @return A character vector containing the unique gene feature names found
+#'   across the requested assays.
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Retrieve genes from the first available RNA assay layer
+#' genes <- get_gene_features(obj)
+#'
+#' # Retrieve genes from a specific layer
+#' genes <- get_gene_features(
+#'   obj,
+#'   assays = "RNA",
+#'   layer = "data"
+#' )
+#'
+#' # Retrieve the union of genes from multiple assays
+#' genes <- get_gene_features(
+#'   obj,
+#'   assays = c("RNA", "SCT"),
+#'   layer = "counts"
+#' )
+#' }
+get_gene_features <- function(obj, assays = "RNA", layer = NULL) {
   # handle layer = NULL or adjust layer by what exists in obj
+  if (is.null(layer)) {
+    layer <- names(obj@assays[[assays]]@layers)[1]
+  }
   genes <- unique(unlist(purrr::map(assays, #SeuratObject::Assays(obj),
                                     ~rownames(get_layer(obj, assay = .x, layer = layer)))))
   return(genes)

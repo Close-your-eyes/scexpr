@@ -394,6 +394,7 @@ column across all provided Seurat objects.
 }
 
 \examples{
+SO <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
 feature_plot2(
   SO,
   features = c("MS4A1", "CD3D"),

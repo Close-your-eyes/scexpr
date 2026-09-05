@@ -51,6 +51,7 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' # Return pattern definitions
 #' patterns <- core_cellular_machinery_genes()
 #'
@@ -59,6 +60,7 @@
 #'
 #' # Access a specific pattern set
 #' patterns[[1]]$ribosome
+#' }
 core_cellular_machinery_genes <- function(obj = NULL) {
 
   core_cell_biology_patterns <- list(
@@ -226,7 +228,7 @@ core_cellular_machinery_genes <- function(obj = NULL) {
   )
 
   # tfs <- dorothea::dorothea_hs |> dplyr::distinct(tf) |> dplyr::pull(tf)
-  tfs <- vroom::vroom(system.file("extdata", "collectri_tf.tsv.gz", package = "scexpr")) |>
+  tfs <- vroom::vroom(system.file("extdata", "collectri_tf.tsv.gz", package = "scexpr"), show_col_types = F) |>
     dplyr::distinct(source) |>
     dplyr::pull(source)
 

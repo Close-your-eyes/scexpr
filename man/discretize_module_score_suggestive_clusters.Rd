@@ -25,6 +25,8 @@ discretize_module_score_suggestive_clusters(
 
 \item{method_cluster}{cluster method}
 
+\item{n_times_modules_subcluster}{n_times_modules_subcluster}
+
 \item{AddModuleScore_UCell_args}{args to UCell::AddModuleScore_UCell when
 method_score is module_score}
 
@@ -33,6 +35,8 @@ is gsea}
 
 \item{get_layer_args}{args to scexpr::getLayer in scexpr::gsea_groupwise
 when method_score is gsea}
+
+\item{gsea_overcluster_resolution}{cluster resolution}
 }
 \value{
 list

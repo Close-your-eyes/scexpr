@@ -10,8 +10,8 @@
 #' is gsea
 #' @param get_layer_args args to scexpr::getLayer in scexpr::gsea_groupwise
 #' when method_score is gsea
-#' @param n_times_modules_subcluster
-#' @param gsea_overcluster_resolution
+#' @param n_times_modules_subcluster n_times_modules_subcluster
+#' @param gsea_overcluster_resolution cluster resolution
 #'
 #' @returns list
 #' @export
@@ -26,6 +26,13 @@ discretize_module_score_suggestive_clusters <- function(obj,
                                                         fgseaMultilevel_args = list(pathways = modules),
                                                         get_layer_args = list(),
                                                         gsea_overcluster_resolution = 2) {
+
+  if (!requireNamespace("UCell", quietly = T)) {
+    BiocManager::install("UCell")
+  }
+  if (!requireNamespace("fcexpr", quietly = T)) {
+    pak::pak("Close-your-eyes/fcexpr")
+  }
 
   method_score <- rlang::arg_match(method_score)
   method_cluster <- rlang::arg_match(method_cluster)
@@ -196,7 +203,8 @@ best_cluster_assignment_by_module_scores0 <- function(df,
   # ggplot(so_data, aes(x = cluster, y = score)) +
   #   geom_jitter(width = 0.1) +
   #   geom_boxplot() +
-  #   facet_wrap(vars(pt_pathway2))
+  #   facet_wrap(ggplot2::vars(pt_pathway2))
+
 
 
   mean_scores <- dplyr::summarise(

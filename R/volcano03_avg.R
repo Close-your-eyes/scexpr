@@ -17,6 +17,10 @@ volcano03_avg <- function(volc01_df_list,
                           pos_name,
                           logfc_avg_fun = mean) {
 
+  if (!requireNamespace("metapod", quietly = T)) {
+    BiocManager::install("metapod")
+  }
+
   id <- "volc_ind"
   logfc <- purrr::map_dfr(volc01_df_list, ~dplyr::select(.x, feature, avg_log2FC), .id = id) |>
     tidyr::pivot_wider(names_from = !!rlang::sym(id), values_from = avg_log2FC) |>

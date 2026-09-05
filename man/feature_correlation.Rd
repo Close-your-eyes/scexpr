@@ -57,6 +57,6 @@ this analysis is not super-clean but may still provide a valid, relative, compar
 Other methods considering the dropout-effect exist: \href{"https://academic.oup.com/nargab/article/3/3/lqab072/6348150"}{COTAN}.
 }
 \examples{
-\dontrun{
-}
+seu <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+out <- feature_correlation(seu, Seurat::VariableFeatures(seu))
 }

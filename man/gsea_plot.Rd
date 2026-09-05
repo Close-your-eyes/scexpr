@@ -16,7 +16,7 @@ gsea_plot(
   color_ES_lims = "black",
   color_leadingEdge = "hotpink2",
   label_genes = NULL,
-  theme = theme_bw(),
+  theme = ggplot2::theme_bw(),
   plot_leadingEdge_rank = T,
   plot_leadingEdge_size = T,
   plot_subtitle = T,
@@ -109,22 +109,20 @@ Large result sets can create many plots. When more than 100 pathways pass the
 filter, the function prompts interactively before plotting.
 }
 \examples{
-\dontrun{
+so <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
 s2n <- scexpr::gsea_s2n_groupwise(
   obj = so,
-  group = "integrated_snn_res.0.7"
+  group = "pca12_rna800_snn_res_0.1"
 )
-
-gene_ranks <- sort(s2n[, "20"], decreasing = TRUE)
-
 gsea_res <- scexpr::gsea_on_msigdbr(
-  gene_ranks = gene_ranks,
-  use_msigdbr = TRUE
+  gene_ranks = s2n[,"01"],
+  use_msigdbr = TRUE,
+  msigdbr_args = list(db_species = "HS", species = "human",
+                      collection = c("H"))
 )
 
-## Plot significant pathways
-plots <- gsea_plot(gsea_res, padj_min = 0.01)
-
+## Plot pathways
+plots <- gsea_plot(gsea_res, padj_min = 0.6)
 plots[[1]]
 
 ## Plot selected pathways only
@@ -139,7 +137,4 @@ plots <- gsea_plot(
   label_genes = "leadingEdge",
   annotation_pos = c("auto", NA)
 )
-
-plots[[1]]
-}
 }

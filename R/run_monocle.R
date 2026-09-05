@@ -25,17 +25,21 @@ run_monocle <- function(obj) {
   #                        'limma', 'lme4', 'S4Vectors', 'SingleCellExperiment',
   #                        'SummarizedExperiment', 'batchelor', 'HDF5Array',
   #                        'ggrastr'))
-  # remotes::install_github("bnprks/BPCells/r")
-  # remotes::install_github("https://github.com/cran/grr")
+  # pak::pak"bnprks/BPCells/r")
+  # pak::pak"https://github.com/cran/grr")
   # #sudo port install hdf5
   # pak::pak('cole-trapnell-lab/monocle3')
-  # remotes::install_github('satijalab/seurat-wrappers')
+  # pak::pak'satijalab/seurat-wrappers')
 
   #obj <- readRDS("/Volumes/CMS_SSD_2TB/R_scRNAseq/2020_10XGenomics_PBMCs/data/SO_processed/full_objects/SO_SC3_v3_NextGem_SI_PBMC_10K_SCT_none_1_500_10_220617-154703.rds")
 
   if (!requireNamespace("seurat-wrappers", quietly = T)) {
-    remotes::install_github("satijalab/seurat-wrappers")
+    pak::pak("satijalab/seurat-wrappers")
   }
+  if (!requireNamespace("monocle3", quietly = T)) {
+    pak::pak('cole-trapnell-lab/monocle3')
+  }
+
   reduction_method <- "UMAP"
   cds <- SeuratWrappers::as.cell_data_set(obj)
   # use pre-calculated umap

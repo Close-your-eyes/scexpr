@@ -4,16 +4,18 @@
 \alias{SCT_to_disk}
 \title{Save an SCT assay to disk}
 \usage{
-SCT_to_disk(obj, save_dir = getwd(), update_on_disk = T, compression = 3L)
+SCT_to_disk(obj, save_dir = getwd(), update_on_disk = T, compression = 1L)
 }
 \arguments{
 \item{obj}{A Seurat object. When an SCT assay is present, the object must
 contain at least one other assay to use as the default assay.}
 
-\item{save_dir}{Character string specifying an existing directory in which
-to save the RDS file or files. Defaults to the current working directory.}
+\item{save_dir}{Character string specifying an existing directory in which}
 
-\item{compress}{passed to saveRDS}
+\item{update_on_disk}{update object on disk?}
+
+\item{compression}{gz compression rate
+to save the RDS file or files. Defaults to the current working directory.}
 }
 \value{
 The input Seurat object with the \code{"SCT"} assay removed and its

@@ -46,25 +46,25 @@ elbowplot2 <- function(obj,
     })
 
     stdev <- pca$sdev
-    var <- stdev^2
+    variance <- stdev^2
     df <- data.frame(pc = seq_along(stdev),
                      stdev = stdev,
-                     var = var,
-                     var_pct = var/sum(var)*100,
-                     var_cum = cumsum(var),
-                     var_cum_pct = cumsum(var)/sum(var)*100) |>
+                     variance = variance,
+                     var_pct = variance/sum(variance)*100,
+                     var_cum = cumsum(variance),
+                     var_cum_pct = cumsum(variance)/sum(variance)*100) |>
       dplyr::filter(pc <= npcs)
 
-    p1 <- ggplot2::ggplot(df, ggplot2::aes(x = pc, y = var)) +
+    p1 <- ggplot2::ggplot(df, ggplot2::aes(x = pc, y = variance)) +
       ggplot2::geom_point() +
-      ggplot2::scale_y_sqrt(sec.axis = ggplot2::sec_axis(~ . / sum(var)*100, name = "var_pct")) +
+      ggplot2::scale_y_sqrt(sec.axis = ggplot2::sec_axis(~ . / sum(variance)*100, name = "var_pct")) +
       ggplot2::scale_x_continuous() +
       theme +
       ggplot2::labs(subtitle = x)
 
     p2 <- ggplot2::ggplot(df, ggplot2::aes(x = pc, y = var_cum)) +
       ggplot2::geom_point() +
-      ggplot2::scale_y_sqrt(sec.axis = ggplot2::sec_axis(~ . / sum(var)*100, name = "var_cum_pct")) +
+      ggplot2::scale_y_sqrt(sec.axis = ggplot2::sec_axis(~ . / sum(variance)*100, name = "var_cum_pct")) +
       ggplot2::scale_x_continuous() +
       theme
 
@@ -98,7 +98,7 @@ elbowplot2 <- function(obj,
   #   data = df,
   #   iter = 200,
   #   start_lower = list(a = 0, b = 1e-4, c = 0),
-  #   start_upper = list(a = max(df$var), b = 1, c = median(tail(df$var, 10))),
+  #   start_upper = list(a = max(df$var), b = 1, c = stats::median(tail(df$var, 10))),
   #   lower = c(a = 0, b = 0, c = 0)
   # )
   # predict(fit, 1:100)
@@ -124,7 +124,7 @@ elbowplot2 <- function(obj,
   #   ggplot2::scale_y_sqrt(sec.axis = ggplot2::sec_axis(~ . / sum(var)*100, name = "var_pct")) +
   #   ggplot2::scale_x_continuous(limits = c(1,npcs)) +
   #   theme +
-  #   ggplot2::facet_wrap(vars(obj), scales = "free_y")
+  #   ggplot2::facet_wrap(ggplot2::vars(obj), scales = "free_y")
   #
   # p2 <- ggplot2::ggplot(df, ggplot2::aes(x = pc, y = var_cum)) +
   #   ggplot2::geom_point(mapping = mapping) +

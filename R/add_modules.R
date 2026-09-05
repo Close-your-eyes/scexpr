@@ -88,6 +88,13 @@ add_modules <- function(obj,
 
   # use kruskall for filtering? kw <- matrixTests::col_kruskalwallis(meta, so$MajorCluster2)
 
+  if (!requireNamespace("BiocParallel", quietly = T)) {
+    BiocManager::install("BiocParallel")
+  }
+  if (!requireNamespace("UCell", quietly = T)) {
+    BiocManager::install("UCell")
+  }
+
   stopifnot(inherits(obj, "Seurat"))
   stopifnot(is.list(modules))
   stopifnot(is.numeric(minlen), minlen > 0)

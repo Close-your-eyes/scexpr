@@ -79,6 +79,7 @@ reverse_lognorm <- function(obj,
 #' the original counts from the log-normalized data layer.
 #'
 #' @param obj A Seurat object containing an RNA assay with a `"counts"` layer.
+#' @param rm_count remove the count layer (if F: just RNA_count_colSums added)
 #'
 #' @return A Seurat object with the RNA counts layer removed and its per-cell
 #'   column sums stored in `Seurat::Misc()`.
@@ -92,7 +93,8 @@ reverse_lognorm <- function(obj,
 #' # Reconstruct the counts matrix
 #' counts <- reverse_lognorm(obj)
 #' }
-sacrifice_count_slot <- function(obj, rm_count = F) {
+sacrifice_count_slot <- function(obj,
+                                 rm_count = F) {
 
   Seurat::Misc(obj, slot = "RNA_count_colSums") <-
     Matrix::colSums(

@@ -31,7 +31,6 @@
 #' @param complete_seq_columns which columns in hla_ref to use in order to define complete cases (e.g. no missing exons)
 #' @param make_reads_distinct logical whether to remove duplicated reads (read_seq_colName)
 #'
-#' @importFrom magrittr %>%
 #' @import Matrix
 #'
 #' @return list of data frames and ggplot2 objects which, upon visual inspection, may allow to infer hla type
@@ -127,19 +126,16 @@ hla_typing <- function(hla_ref,
   hla_ref <- hla_ref[,colSums(is.na(hla_ref)) < nrow(hla_ref)]
 
   complete_alleles <-
-    hla_ref %>%
-    dplyr::select(dplyr::all_of(names(.)[which(names(.) %in% complete_seq_columns)]), allele) %>%
-    #dplyr::select(dplyr::matches("Exon[[:digit:]]$"), dplyr::contains("UTR"), allele) %>%
-    dplyr::filter(stats::complete.cases(.)) %>%
+    hla_ref |>
+    dplyr::select(dplyr::all_of(names(hla_ref)[which(names(hla_ref) %in% complete_seq_columns)]), allele)
+  complete_alleles <- complete_alleles |>
+    dplyr::filter(stats::complete.cases(complete_alleles))|>
     dplyr::pull(!!rlang::sym(hla_allele_colName))
 
   hla_ref <- hla_ref |>
     dplyr::mutate(complete_seq = allele %in% complete_alleles) |>
     dplyr::distinct(!!rlang::sym(hla_seq_colName), .keep_all = TRUE)
 
-  'dplyr::group_by(allele_coding) %>%
-    dplyr::mutate(allele_coding_Exon2_3_max_len = seq_Exon2_3_length == max(seq_Exon2_3_length)) %>%
-    dplyr::ungroup() %>%'
 
   if (make_reads_distinct) {
     n_before <- nrow(reads)
@@ -169,18 +165,6 @@ hla_typing <- function(hla_ref,
   if (is.null(first_round_results)) {
     return(NULL)
   }
-
-'  allele_group12_medians <-
-    first_round_results[["pair_res1_df"]] %>%
-    dplyr::group_by(allele_group12) %>%
-    dplyr::summarise(median_frac_match_reads_expl = median(frac_match_reads_expl)) %>%
-    dplyr::arrange(dplyr::desc(median_frac_match_reads_expl))'
-
- ' top_alleles <-
-    first_round_results[["pair_res1_df"]] %>%
-    dplyr::filter(frac_match_reads_expl >= allele_group12_medians[1,2,drop=T]) %>%
-    dplyr::select(allele1, allele2)
-  top_alleles <- unique(c(top_alleles$allele1, top_alleles$allele2))'
 
   top_alleles <- colnames(first_round_results[["top_sin_res_mat"]])
 
@@ -230,7 +214,7 @@ run_read_matching_and_report_results <- function(hla_ref,
                                                  arg_list = arg_list,
                                                  ...) {
 
-  library(Matrix) # required for sparseMatrix below; saves memory
+  requireNamespace(Matrix) # required for sparseMatrix below; saves memory
   message("Calculating single matches.")
   if ("strand" %in% names(reads)) {
     single_res <- lapply(split(reads, as.character(reads$strand)),
@@ -289,18 +273,6 @@ run_read_matching_and_report_results <- function(hla_ref,
   col.combs <- t(utils::combn(1:ncol(top_single_res), 2, simplify = T))
   message("Calculating pairwise matches. Combinations: ", nrow(col.combs), ".")
 
-  # Call the C++ function to calculate row sums
-  # Source the C++ code
-  '
-  sourceCpp("/Users/vonskopnik/Documents/R_packages/scexpr/src/calculateRowSumsInCpp2.cpp")
-  system.time(results <- countOccurrencesInCpp(top_single_res, col.combs)) # col.combs[1:2,,drop=F]
-  col.combs2 <- brathering::split_mat(col.combs, n_chunks = 4, byrow = T)
-  system.time(
-    pairwise_results <- lapply_fun(col.combs2, function(x) {
-      countOccurrencesInCpp(top_single_res, x)
-    }, ...)
-  )'
-
   # doing this in R was too slow. other packages did not have the functionality
   # so, written in c++
   if (identical(lapply_fun, parallel::mclapply) && "mc.cores" %in% names(arg_list)) {
@@ -313,150 +285,79 @@ run_read_matching_and_report_results <- function(hla_ref,
     pairwise_results <- scexpr:::countOccurrencesInCpp(top_single_res, col.combs)
   }
 
-  # other attempts with collapse package
-  # however, it does not support subsetting in c++
-  '  #top_single_res[1:3,1:5]
-  pairwise_results <- matrix(0, nrow = length(col.combs), ncol = 2)
-  # Iterate over each combination of columns
-  for (i in seq_along(col.combs)) {
-    # Compute row sums for the current combination using fsum()
-    temp <- collapse::fsum(t(top_single_res[, col.combs[[i]]]))
-    # Count occurrences of 1 and 2 in row sums
-    pairwise_results[i, 1] <- sum(temp == 1)
-    pairwise_results[i, 2] <- sum(temp == 2)
-  }
-'
-
-  '
-  tt <- collapse::fsubset(top_single_res, subset = list(c(1:2), c(4:5)))
-  out <- collapse::fsum(x = t(top_single_res), vars = c(1,2))
-  collapse::collap(t(top_single_res), by = c(1,2), FUN = collapse::fsum)
-  m <- qM(mtcars)
-  nrow(m)
-  tt <- fsum(m, g = list(c(rep(1,16),rep(2,16)),
-                         c(rep(3,10),rep(4,22)),
-                         c(rep(5,5),rep(6,27))))
-
-  fsum(m, g)
-  pairwise_results <- purrr::map(col.combs, function(x) {
-    temp <- Matrix::rowSums(top_single_res[,x])
-    return(c(sum(temp == 1), sum(temp == 2)))
-  }, .progress = T)'
-
-
-  ## old version, working:
-  'col.combs <- utils::combn(1:ncol(top_single_res), 2, simplify = F)
-  pairwise_results <- lapply_fun(col.combs, function(x) {
-    temp <- matrixStats::rowSums2(top_single_res, cols = x)
-    #temp <- collapse::fsum(t(top_single_res[,x]))
-    #temp <- Matrix::rowSums(top_single_res[,x])
-    return(c(sum(temp == 1), sum(temp == 2)))
-  }, ...)'
-
   pair_res_df <-
     data.frame(uni_expl_reads = pairwise_results[,1], # sapply(pairwise_results, "[", 1),
                dbl_expl_reads = pairwise_results[,2], # sapply(pairwise_results, "[", 2),
                allele1 = colnames(top_single_res)[col.combs[,1]],
-               allele2 = colnames(top_single_res)[col.combs[,2]]) %>%
-    dplyr::mutate(tot_expl_reads = uni_expl_reads + dbl_expl_reads, .after = dbl_expl_reads)  %>%
+               allele2 = colnames(top_single_res)[col.combs[,2]]) |>
+    dplyr::mutate(tot_expl_reads = uni_expl_reads + dbl_expl_reads, .after = dbl_expl_reads) |>
     dplyr::mutate(uni_expl_reads_rank = dplyr::dense_rank(-uni_expl_reads),
-                  tot_expl_reads_rank = dplyr::dense_rank(-tot_expl_reads)) %>%
-    dplyr::mutate(rank_sum = (tot_expl_reads_rank + uni_expl_reads_rank)/2)  %>%
-    dplyr::mutate(allele_comb = scexpr:::orderAndConcatenateStrings(as.matrix(.[c("allele1", "allele2")])), .after = "allele2") %>%
-    #dplyr::mutate(rank_int = dplyr::dense_rank(base::interaction(-tot_expl_reads, -uni_expl_reads, lex.order = TRUE))) %>%
-    dplyr::group_by(allele_comb) %>%
-    #dplyr::filter(rank_int == min(rank_int)) %>%
-    dplyr::filter(rank_sum == min(rank_sum)) %>%
-    dplyr::ungroup() %>%
-    dplyr::distinct(allele_comb, .keep_all = T) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele1" = hla_allele_colName)) %>%
-    dplyr::rename("p_group1" = p_group_colName, "g_group1" = g_group_colName) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele2" = hla_allele_colName)) %>%
-    dplyr::rename("p_group2" = p_group_colName, "g_group2" = g_group_colName) %>%
-    dplyr::left_join(top_sin_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), expl_reads), by = c("allele1" = hla_allele_colName)) %>%
-    dplyr::rename("allele1_expl_reads" = expl_reads) %>%
-    dplyr::left_join(top_sin_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), expl_reads), by = c("allele2" = hla_allele_colName)) %>%
-    dplyr::rename("allele2_expl_reads" = expl_reads) %>%
-    dplyr::mutate(expl_reads_overall = !!reads_w_min_one_match_sum) %>%
-    dplyr::mutate(non_expl_reads_overall = !!reads_w_no_match_sum) %>%
-    dplyr::mutate(allele12_expl_read_diff = abs(allele1_expl_reads - allele2_expl_reads)) %>%
-    dplyr::mutate(frac_match_reads_expl = tot_expl_reads/expl_reads_overall) %>%
-    dplyr::mutate(frac_all_reads_expl = tot_expl_reads/(expl_reads_overall + non_expl_reads_overall)) %>%
-    dplyr::mutate(p_group12 = paste0(p_group1, "_", p_group2)) %>%
-    dplyr::mutate(g_group12 = paste0(g_group1, "_", g_group2)) %>%
-    dplyr::mutate(allele_group1 = stringr::str_extract(allele1, "[:alpha:]\\*[:digit:]{2}")) %>%
-    dplyr::mutate(allele_group2 = stringr::str_extract(allele2, "[:alpha:]\\*[:digit:]{2}")) %>%
+                  tot_expl_reads_rank = dplyr::dense_rank(-tot_expl_reads)) |>
+    dplyr::mutate(rank_sum = (tot_expl_reads_rank + uni_expl_reads_rank)/2)
+  pair_res_df <- pair_res_df |>
+    dplyr::mutate(allele_comb = scexpr:::orderAndConcatenateStrings(as.matrix(pair_res_df[c("allele1", "allele2")])), .after = "allele2")|>
+    #dplyr::mutate(rank_int = dplyr::dense_rank(base::interaction(-tot_expl_reads, -uni_expl_reads, lex.order = TRUE)))|>
+    dplyr::group_by(allele_comb)|>
+    #dplyr::filter(rank_int == min(rank_int))|>
+    dplyr::filter(rank_sum == min(rank_sum))|>
+    dplyr::ungroup()|>
+    dplyr::distinct(allele_comb, .keep_all = T)|>
+    dplyr::left_join(hla_ref|> dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele1" = hla_allele_colName))|>
+    dplyr::rename("p_group1" = p_group_colName, "g_group1" = g_group_colName)|>
+    dplyr::left_join(hla_ref|> dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele2" = hla_allele_colName))|>
+    dplyr::rename("p_group2" = p_group_colName, "g_group2" = g_group_colName)|>
+    dplyr::left_join(top_sin_res_df|> dplyr::select(dplyr::all_of(hla_allele_colName), expl_reads), by = c("allele1" = hla_allele_colName))|>
+    dplyr::rename("allele1_expl_reads" = expl_reads)|>
+    dplyr::left_join(top_sin_res_df|> dplyr::select(dplyr::all_of(hla_allele_colName), expl_reads), by = c("allele2" = hla_allele_colName))|>
+    dplyr::rename("allele2_expl_reads" = expl_reads)|>
+    dplyr::mutate(expl_reads_overall = !!reads_w_min_one_match_sum)|>
+    dplyr::mutate(non_expl_reads_overall = !!reads_w_no_match_sum)|>
+    dplyr::mutate(allele12_expl_read_diff = abs(allele1_expl_reads - allele2_expl_reads))|>
+    dplyr::mutate(frac_match_reads_expl = tot_expl_reads/expl_reads_overall)|>
+    dplyr::mutate(frac_all_reads_expl = tot_expl_reads/(expl_reads_overall + non_expl_reads_overall))|>
+    dplyr::mutate(p_group12 = paste0(p_group1, "_", p_group2))|>
+    dplyr::mutate(g_group12 = paste0(g_group1, "_", g_group2))|>
+    dplyr::mutate(allele_group1 = stringr::str_extract(allele1, "[:alpha:]\\*[:digit:]{2}"))|>
+    dplyr::mutate(allele_group2 = stringr::str_extract(allele2, "[:alpha:]\\*[:digit:]{2}"))|>
     dplyr::mutate(allele_group12 = paste0(allele_group1, "_", allele_group2))
 
-
-  #pair_res_df <- dplyr::mutate(pair_res_df, allele_comb = scexpr:::orderAndConcatenateStrings(as.matrix(pair_res_df[,c("allele1", "allele2")])), .after = "allele2")
-  #top_pair_res_df$allele_comb <- apply(top_pair_res_df[,c("allele1", "allele2")], 1, function(x) paste(sort(c(x[1], x[2])), collapse = "_"))
-  #anyDuplicated(pair_res_df$allele_comb)
-
-  '  top_pair_res_df <-
-    dplyr::bind_rows(pair_res_df %>%
-                       dplyr::slice_min(n = top_n_pairwise_results*2, order_by = uni_expl_reads_rank, with_ties = F),
-                     pair_res_df %>%
-                       dplyr::slice_min(n = top_n_pairwise_results*2, order_by = tot_expl_reads_rank, with_ties = F)) %>%
-    dplyr::distinct() %>%
-    dplyr::mutate(rank_int = dplyr::dense_rank(base::interaction(-tot_expl_reads, -uni_expl_reads, lex.order = TRUE))) %>%
-    dplyr::group_by(allele_comb) %>%
-    dplyr::filter(rank_int == min(rank_int)) %>%
-    dplyr::ungroup() %>%
-    dplyr::distinct(allele_comb, .keep_all = T) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele1" = hla_allele_colName)) %>% dplyr::rename("p_group1" = p_group_colName, "g_group1" = g_group_colName) %>%
-    dplyr::left_join(hla_ref %>% dplyr::select(dplyr::all_of(c(hla_allele_colName, p_group_colName, g_group_colName))), by = c("allele2" = hla_allele_colName)) %>% dplyr::rename("p_group2" = p_group_colName, "g_group2" = g_group_colName) %>%
-    dplyr::left_join(top_sin_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), n_Hit), by = c("allele1" = hla_allele_colName)) %>% dplyr::rename("allele1_expl_reads" = n_Hit) %>%
-    dplyr::left_join(top_sin_res_df %>% dplyr::select(dplyr::all_of(hla_allele_colName), n_Hit), by = c("allele2" = hla_allele_colName)) %>% dplyr::rename("allele2_expl_reads" = n_Hit) %>%
-    dplyr::mutate(n_Hit = n_Hit) %>%
-    dplyr::mutate(n_noHit = n_noHit) %>%
-    dplyr::mutate(allele12_expl_read_diff = abs(allele1_expl_reads - allele2_expl_reads)) %>%
-    dplyr::mutate(frac_match_reads_expl = tot_expl_reads/n_Hit) %>%
-    dplyr::mutate(frac_all_reads_expl = tot_expl_reads/(n_Hit + n_noHit)) %>%
-    dplyr::mutate(p_group12 = paste0(p_group1, "_", p_group2)) %>%
-    dplyr::mutate(g_group12 = paste0(g_group1, "_", g_group2)) %>%
-    dplyr::mutate(allele_group1 = stringr::str_extract(allele1, "[:alpha:]\\*[:digit:]{2}")) %>%
-    dplyr::mutate(allele_group2 = stringr::str_extract(allele2, "[:alpha:]\\*[:digit:]{2}")) %>%
-    dplyr::mutate(allele_group12 = paste0(allele_group1, "_", allele_group2))
-
-'
   ## plotting
   top_pair_res_plot1 <-
     #top_pair_res_df
-    pair_res_df %>%
-    dplyr::group_by(p_group12) %>%
-    dplyr::slice_min(order_by = rank_sum, n = 1) %>%
+    pair_res_df|>
+    dplyr::group_by(p_group12)|>
+    dplyr::slice_min(order_by = rank_sum, n = 1)|>
     dplyr::ungroup()
 
   allele_group12_medians <-
-    top_pair_res_plot1 %>%
-    dplyr::group_by(allele_group12) %>%
-    dplyr::summarise(median_frac_match_reads_expl = stats::median(frac_match_reads_expl)) %>%
+    top_pair_res_plot1|>
+    dplyr::group_by(allele_group12)|>
+    dplyr::summarise(median_frac_match_reads_expl = stats::median(frac_match_reads_expl))|>
     dplyr::arrange(dplyr::desc(median_frac_match_reads_expl))
 
-  overview_plot <- ggplot2::ggplot(top_pair_res_plot1, ggplot2::aes(x = reorder_within(allele_group2, frac_match_reads_expl, allele_group1), y = frac_match_reads_expl)) +
+  overview_plot <- ggplot2::ggplot(top_pair_res_plot1, ggplot2::aes(x = brathering::reorder_within(allele_group2, frac_match_reads_expl, allele_group1), y = frac_match_reads_expl)) +
     ggplot2::geom_boxplot() +
     ggplot2::theme_bw() +
     ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, vjust = 0.5), panel.grid.minor = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
-    scale_x_reordered() +
+    brathering::scale_x_reordered() +
     ggplot2::labs(x = "allele_group2") +
     ggplot2::geom_hline(yintercept = allele_group12_medians[1,2,drop=T], color = "tomato2") +
     ggplot2::geom_hline(yintercept = max(top_pair_res_plot1$frac_match_reads_expl), color = "forestgreen") +
     ggplot2::facet_wrap(ggplot2::vars(allele_group1), nrow = 1, scales = "free_x")
 
   top_pair_res_plot2 <-
-    top_pair_res_plot1 %>%
-    dplyr::mutate(rank_plot = dplyr::row_number(-tot_expl_reads)) %>%
-    dplyr::slice_min(order_by = rank_plot, n = top_n_pairwise_results) %>%
-    dplyr::arrange(rank_plot) %>%
+    top_pair_res_plot1|>
+    dplyr::mutate(rank_plot = dplyr::row_number(-tot_expl_reads))|>
+    dplyr::slice_min(order_by = rank_plot, n = top_n_pairwise_results)|>
+    dplyr::arrange(rank_plot)|>
     dplyr::mutate(plot.color = as.factor(ifelse(rank_plot %% 2 != 0, 1, 2)))
 
-  sin_plot <- ggplot2::ggplot(top_sin_res_df, ggplot2::aes(x = reorder_within(!!rlang::sym(hla_allele_colName), expl_reads, allele_group), y = expl_reads)) +
+  sin_plot <- ggplot2::ggplot(top_sin_res_df, ggplot2::aes(x = brathering::reorder_within(!!rlang::sym(hla_allele_colName), expl_reads, allele_group), y = expl_reads)) +
     ggplot2::geom_bar(stat = "identity") +
     ggplot2::xlab("allele") +
     ggplot2::ylab("n explained reads") +
     ggplot2::theme_bw() +
-    scale_x_reordered() +
+    brathering::scale_x_reordered() +
     ggplot2::theme(axis.text.x = ggplot2::element_blank(), axis.ticks.x = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(), strip.background = ggplot2::element_rect(fill = "white"), panel.grid.major.x = ggplot2::element_blank(), text = ggplot2::element_text(family = "Courier")) +
     ggplot2::facet_wrap(ggplot2::vars(allele_group), scales = "free_x")
 
@@ -547,10 +448,6 @@ single_matching <- function(reads,
   reads <- stats::setNames(reads[,read_seq_colName,drop=T], reads[,read_name_colName,drop=T])
   single_res <- do.call(rbind, lapply_fun(split(reads, ceiling(seq_along(reads)/1e3)), function(rrr) {
 
-    'hit_matrix <- methods::as(Biostrings::vcountPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
-                                                      pdict = Biostrings::PDict(reads[rows,read_seq_colName,drop=T], max.mismatch = 0),
-                                                      max.mismatch = 0),
-                              "sparseMatrix")'
     # vwhichPDict allows for max.mismatch, but vcountPDict does not
     hit_matrix <- Biostrings::vwhichPDict(subject = Biostrings::DNAStringSet(hla_ref[,hla_seq_colName,drop=T]),
                                           pdict = Biostrings::PDict(rrr, max.mismatch = maxmis),
@@ -563,22 +460,4 @@ single_matching <- function(reads,
   }, ...))
   return(single_res)
 }
-
-reorder_within <- function(x, by, within, fun = mean, sep = "___", ...) {
-  new_x <- paste(x, within, sep = sep)
-  stats::reorder(new_x, by, FUN = fun)
-}
-
-scale_x_reordered <- function(..., sep = "___") {
-  reg <- paste0(sep, ".+$")
-  ggplot2::scale_x_discrete(labels = function(x) gsub(reg, "", x), ...)
-}
-
-scale_y_reordered <- function(..., sep = "___") {
-  reg <- paste0(sep, ".+$")
-  ggplot2::scale_y_discrete(labels = function(x) gsub(reg, "", x), ...)
-}
-
-
-
 

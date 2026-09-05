@@ -32,6 +32,8 @@ add_doublets}
 \item{min_umi}{minimum total UMI sum across features per cell; cells below
 are not considered for doublet inference}
 
+\item{min_cells_per_group}{min number of cell per group}
+
 \item{dims}{arg to scDblFinder::scDblFinder}
 
 \item{add_doublets}{add artificial doublets}

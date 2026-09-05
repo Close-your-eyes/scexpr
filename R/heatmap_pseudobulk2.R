@@ -247,9 +247,6 @@ heatmap_pseudobulk2 <- function(SO,
                                 pval_logfc = "logFC",
                                 pval_text_args = list(size = 5, vjust = 0.75)) {
 
-  if (!requireNamespace("devtools", quietly = T)) {
-    utils::install.packages("devtools")
-  }
   if (!requireNamespace("presto", quietly = T)) {
     pak::pak("immunogenomics/presto")
   }
@@ -258,6 +255,9 @@ heatmap_pseudobulk2 <- function(SO,
   }
   if (!requireNamespace("brathering", quietly = T)) {
     pak::pak("Close-your-eyes/brathering")
+  }
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
   }
 
   feature_order <- rlang::arg_match(feature_order)

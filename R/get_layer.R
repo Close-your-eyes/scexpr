@@ -48,7 +48,7 @@ get_layer <- function(obj,
       return(mat)
     }
     if (as == "sparse") {
-      library(Matrix)
+      requireNamespace("Matrix")
       return(methods::as(mat, "sparseMatrix"))
     }
   }
@@ -108,7 +108,7 @@ get_layer <- function(obj,
     x <- as.matrix(x)
   }
   if (as == "df") {
-    x <- x.frame(as.matrix(x), check.names = F)
+    x <- data.frame(as.matrix(x), check.names = F)
   }
 
   return(x)

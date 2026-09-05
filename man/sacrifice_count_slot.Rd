@@ -8,6 +8,8 @@ sacrifice_count_slot(obj, rm_count = F)
 }
 \arguments{
 \item{obj}{A Seurat object containing an RNA assay with a \code{"counts"} layer.}
+
+\item{rm_count}{remove the count layer (if F: just RNA_count_colSums added)}
 }
 \value{
 A Seurat object with the RNA counts layer removed and its per-cell

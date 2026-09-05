@@ -48,7 +48,7 @@
 #' }
 #'
 #' @export
-#'
+#' @importFrom rlang :=
 #' @examples
 #' \dontrun{
 #' clustcorr <- cluster_correlation2(

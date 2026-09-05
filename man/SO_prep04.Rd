@@ -125,6 +125,6 @@ ggplot(df, aes(x = reorder(name, value), y = value)) +
   geom_boxplot() +
   geom_point()
 
-dfsumm <- dplyr::summarise(df, meanval = median(value), minval = min(value), .by = name)
+dfsumm <- dplyr::summarise(df, meanval = stats::median(value), minval = min(value), .by = name)
 #' }
 }

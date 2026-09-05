@@ -67,11 +67,12 @@ convert_gene_identifier <- function (idents,
 
   # https://medium.com/computational-biology/gene-id-mapping-using-r-14ff50eec9ba
 
-  if (!requireNamespace("BiocManager", quietly = T)) {
-    utils::install.packages("BiocManager")
-  }
+
   if (!requireNamespace("limma", quietly = T)) {
     BiocManager::install("limma")
+  }
+  if (!requireNamespace("AnnotationDbi", quietly = T)) {
+    BiocManager::install("AnnotationDbi")
   }
 
 

@@ -91,11 +91,8 @@ volcano01_calc <- function(SO,
                            mc.cores = 1,
                            ...) {
 
-  if (!requireNamespace("colrr", quietly = TRUE)) {
-    stop(
-      "Package 'colrr' is required. Install it with: pak::pak('Close-your-eyes/colrr')",
-      call. = FALSE
-    )
+  if (!requireNamespace("colrr", quietly = T)) {
+    pak::pak("Close-your-eyes/colrr")
   }
 
   if (missing(neg_cells) || missing(pos_cells)) {
@@ -330,16 +327,11 @@ calculate_DEG <- function(SO,
   }
 
   if (method == "custom") {
-    if (!requireNamespace("matrixTests", quietly = T)) {
-      utils::install.packages("matrixTests")
-    }
-
     SO <- get_layer(obj = SO, layer = layer)
 
     SO <- expm1(SO) + 1
     p <- matrixTests::row_wilcoxon_twosample(as.matrix(SO[, ngc]), as.matrix(SO[, pgc]))$pvalue
     apm <- Matrix::rowMeans(SO[, pgc])
-    anm <- Matrix::rowMeans(SO[, ngc])
 
     if (is.null(n.feat.for.p.adj)) {
       n.feat.for.p.adj <- nrow(SO)

@@ -65,16 +65,19 @@ levels among expressing cells rather than overall abundance driven by
 differences in detection frequency.
 }
 \examples{
-# Using a Seurat object
+seu <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+seu <- subset(seu, pca12_rna800_snn_res_0.1 \%in\% c("01", "02"))
+# One-vs-rest marker analysis from a Seurat object
 res <- find_marker_in_expr_dich(
   obj = seu,
-  group = "cell_type"
+  group = "pca12_rna800_snn_res_0.1",
+  mc.cores = 1
 )
 
-# Using an expression matrix
-grp <- rep(c("A", "B"), each = ncol(mat) / 2)
+# One-vs-rest marker analysis from a matrix
 res <- find_marker_in_expr_dich(
-  obj = mat,
-  group = grp
+  obj = get_layer(seu),
+  group = seu$pca12_rna800_snn_res_0.1,
+  mc.cores = 1
 )
 }

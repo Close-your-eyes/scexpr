@@ -19,6 +19,10 @@ add_doublets <- function(obj,
                          prep_new_obj = T,
                          ...) {
 
+  if (!requireNamespace("scDblFinder", quietly = T)) {
+    pak::pak("plger/scDblFinder")
+  }
+
   if (!methods::is(obj, "Seurat")) {
     stop("obj should be a Seurat.")
   }
@@ -127,6 +131,7 @@ add_doublets <- function(obj,
 #' @param dims arg to scDblFinder::scDblFinder
 #' @param add_doublets add artificial doublets
 #' @param add_doublets_tell tell scDblFinder::scDblFinder about artificial doublets
+#' @param min_cells_per_group min number of cell per group
 #'
 #' @returns seurat
 #' @export
@@ -145,6 +150,10 @@ run_scdblfinder <- function(obj,
                             dims = ncol(obj@reductions$pca@cell.embeddings),
                             add_doublets = F,
                             add_doublets_tell = F) {
+
+  if (!requireNamespace("scDblFinder", quietly = T)) {
+    pak::pak("plger/scDblFinder")
+  }
 
   if (any(!c(samples_col, clusters_col) %in% names(obj@meta.data))) {
     stop("samples_col or clusters_col not found.")

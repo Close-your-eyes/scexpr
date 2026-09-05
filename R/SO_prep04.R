@@ -68,7 +68,7 @@
 #'   geom_boxplot() +
 #'   geom_point()
 #'
-#' dfsumm <- dplyr::summarise(df, meanval = median(value), minval = min(value), .by = name)
+#' dfsumm <- dplyr::summarise(df, meanval = stats::median(value), minval = min(value), .by = name)
 #' #' }
 SO_prep04 <- function(SO,
                       reductions = c("umap"),

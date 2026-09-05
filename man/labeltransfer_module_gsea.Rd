@@ -22,6 +22,10 @@ labeltransfer_module_gsea(
 \item{modules}{list of named gene sets / modules / pathways}
 
 \item{AddModuleScore_UCell_args}{arguments to UCell::AddModuleScore_UCell}
+
+\item{skip_module_score}{do not calc module scores for speed}
+
+\item{gsea_score}{wich score to plot?}
 }
 \value{
 list

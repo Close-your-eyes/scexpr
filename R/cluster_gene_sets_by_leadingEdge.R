@@ -89,9 +89,9 @@ cluster_gene_sets_by_leadingEdge <- function(gsea_data_df,
   LE_elements_df$cluster <- clust[LE_elements_df$pathway, 1]
   LE_elements_df$in_pathway <- as.logical(LE_elements_df$in_pathway)
   LE_elements_df <-
-    LE_elements_df %>%
-    dplyr::group_by(cluster, gene) %>%
-    dplyr::summarise(pathway_freq = sum(in_pathway)/dplyr::n(), .groups = "drop") %>%
+    LE_elements_df |>
+    dplyr::group_by(cluster, gene) |>
+    dplyr::summarise(pathway_freq = sum(in_pathway)/dplyr::n(), .groups = "drop") |>
     as.data.frame()
 
   return(list(data = gsea_data_df, LE_elements = LE_elements, gene_freq_by_cluster = LE_elements_df))

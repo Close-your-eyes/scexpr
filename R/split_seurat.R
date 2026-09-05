@@ -38,12 +38,17 @@ split_seurat <- function(obj,
                          diet = F,
                          diet_args = list(misc = F, layers = "counts", assays = "RNA")) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
+
   if (diet) {
     diet_args <- c(list(object = obj), diet_args)
     obj <- Gmisc::fastDoCall(Seurat::DietSeurat, diet_args)
   }
   cells <- brathering::split_chunks(
-    x = scexpr::cells2(obj),
+    x = cells2(obj),
     chunks = chunks,
     size = size,
     shuffle = shuffle

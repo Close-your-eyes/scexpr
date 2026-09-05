@@ -8,6 +8,7 @@
 #' @param by A character vector specifying the join columns. Passed to
 #'   [dplyr::left_join()]. If `NULL`, the join uses all variables shared by
 #'   both data frames.
+#' @param rm_nonjoin remove non-joined columns
 #'
 #' @return The Seurat object with the joined data stored in its
 #'   `meta.data` slot.
@@ -27,7 +28,11 @@
 #'   by = "sample_id"
 #' )
 #' }
-join_meta_data_legacy <- function(obj, df, by = NULL, rm_nonjoin = T) {
+join_meta_data_legacy <- function(obj,
+                                  df,
+                                  by = NULL,
+                                  rm_nonjoin = T) {
+
 
   original_n <- nrow(obj@meta.data)
 
@@ -118,6 +123,11 @@ join_meta_data <- function(obj,
                            by = NULL,
                            cols = NULL,
                            verbose = T) {
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
   original_meta <- obj@meta.data
   original_n <- nrow(original_meta)
 

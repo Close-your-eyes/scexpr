@@ -13,6 +13,13 @@
 #' get_GO_parents(go[1])
 #' #' }
 get_GO_parents <- function(goid) {
+  if (!requireNamespace("AnnotationDbi", quietly = T)) {
+    BiocManager::install("AnnotationDbi")
+  }
+  if (!requireNamespace("GO.db", quietly = T)) {
+    BiocManager::install("GO.db")
+  }
+
   y <- AnnotationDbi::mget(unique(goid), GO.db::GOBPPARENTS, ifnotfound=NA)
   y <- purrr::discard(y, anyNA)
 
@@ -88,6 +95,13 @@ get_GO_parents_recursive <- function(goid, seen = character()) {
 #'               "GO:0006629", "GO:0016054", "GO:0044282", "GO:0006631", "GO:0016053"))
 #' }
 get_GO_meta <- function(goid) {
+
+  if (!requireNamespace("AnnotationDbi", quietly = T)) {
+    BiocManager::install("AnnotationDbi")
+  }
+  if (!requireNamespace("GO.db", quietly = T)) {
+    BiocManager::install("GO.db")
+  }
   AnnotationDbi::mget(goid, GO.db::GOTERM, ifnotfound=NA)
 }
 
@@ -129,6 +143,7 @@ get_GO_term <- function(goid) {
 #' @param ... args to ggraph::geom_node_label
 #' @param expand_x mult x axis expansion
 #' @param expand_y mult y axis expansion
+#' @param label_split label split chars
 #'
 #' @returns ggplot
 #' @export
@@ -154,6 +169,11 @@ plot_GO_graph <- function(goid = "",
                           expand_y = c(0.1,0.1),
                           label_split = " |_|-",
                           ...) {
+
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
 
   multiline <- rlang::arg_match(multiline)
 

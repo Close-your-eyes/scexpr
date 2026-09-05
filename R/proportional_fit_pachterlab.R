@@ -48,8 +48,7 @@
 #'   sparse = TRUE
 #' )
 #'
-#' normalized <- proportional_fit_pachterlab(counts)
-#' normalized
+#' normalized <- proportional_fit_pachterlab_matrix(counts)
 #' colMeans(normalized)
 proportional_fit_pachterlab_matrix <- function(x) {
   # Scale cells to mean depth

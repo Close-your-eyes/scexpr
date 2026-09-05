@@ -149,19 +149,10 @@
 #' `scexpr::get_data()`
 #'
 #' @examples
-#' data <- scexpr::get_data(
-#'   object,
-#'   feature = "MS4A1"
-#' )
-#'
-#' p <- feature_plot_data(
-#'   data,
-#'   pt_size = 0.4,
-#'   freq_plot = TRUE
-#' )
-#'
-#' p
-#'
+#' object <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+#' data <- scexpr::get_data(object, feature = "MS4A1")
+#' feature_plot_data(data[[1]], pt_size = 0.4, freq_plot = TRUE)
+#' @importFrom rlang :=
 #' @export
 feature_plot_data <- function(data,
                               pt_size = 0.3,
@@ -481,7 +472,7 @@ feature_plot_data <- function(data,
 
       if (!"text.color" %in% names(name_anno_args) || name_anno_args[["text.color"]] == "..auto..") {
         bckgr <- scexpr:::get_background_col(plot)
-        name_anno_args[["text.color"]] <- brathering:::bw_txt(bckgr, cutoff = 40)
+        name_anno_args[["text.color"]] <- brathering::bw_txt(bckgr, cutoff = 40)
       }
 
       empty_corner <- brathering::corner_scores(ggobj = plot)
@@ -510,7 +501,7 @@ feature_plot_data <- function(data,
 
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = name_anno_args)
       } else {
-        library(ggtext)
+        requireNamespace("ggtext")
         plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
                                                                           label = annotation_freq_df$freq3),
                                                                      name_anno_args))
@@ -572,7 +563,8 @@ feature_plot_data <- function(data,
 
   if (axes_arrows) {
     bckgr <- scexpr:::get_background_col(plot)
-    suggest_bw <- brathering:::bw_txt(bckgr, cutoff = 40)
+    suggest_bw <- brathering::bw_txt(bckgr, cutoff = 40)
+    browser()
     plot <- brathering::gg_axes_arrows(plot,
                                        annotate_args = list(size = 3, color = suggest_bw),
                                        arrow_args = list(angle = 25,
@@ -643,7 +635,7 @@ feature_plot_gene <- function(plot,
 
   if (col_non_expr == "..auto..") {
     bckgr <- scexpr:::get_background_col(plot)
-    suggest_bw <- brathering:::bw_txt(bckgr, cutoff = 40)
+    suggest_bw <- brathering::bw_txt(bckgr, cutoff = 40)
     col_non_expr <- ifelse(suggest_bw == "white", "black", "grey85")
   }
 
@@ -691,7 +683,7 @@ feature_plot_gene <- function(plot,
     plot <- plot + ggrepel::geom_text_repel(
       data = freqs2,
       size = freq_size,
-      color = ifelse(freq_col == "..auto..", brathering:::bw_txt(plot[["theme"]][["plot.background"]][["fill"]]), freq_col),
+      color = ifelse(freq_col == "..auto..", brathering::bw_txt(plot[["theme"]][["plot.background"]][["fill"]]), freq_col),
       ggplot2::aes(
         label = freq2,
         x = freq_pos[1],

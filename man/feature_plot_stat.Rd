@@ -40,6 +40,7 @@ feature_plot_stat(
   facetting_args = list(scales = "free_y", axes = "all", axis.labels = "margins"),
   axis_expansion_y_mult = c(0.02, 0.125),
   add_pwc = F,
+  pwc_args = list(label = "p.signif", tip.length = 0, hide.ns = TRUE),
   reorder = F
 )
 }
@@ -113,6 +114,8 @@ a boxplot is plotted only on those groups where median across all cells is zero.
 \item{axis_expansion_y_mult}{Numeric vector of length 2 controlling y-axis expansion.}
 
 \item{add_pwc}{add default ggpubr::geom_pwc?}
+
+\item{pwc_args}{arugments to ggpubr::geom_pwc}
 
 \item{reorder}{reorder x-axis by y-levels (only for one feature)}
 }

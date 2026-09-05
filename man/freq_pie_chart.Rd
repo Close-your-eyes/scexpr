@@ -54,6 +54,10 @@ its \code{meta.data} slot will be used.}
 
 \item{color}{Border color of pie slices. Defaults to \code{"white"}.}
 
+\item{label_color_inside}{label color}
+
+\item{label_color_outside}{label color}
+
 \item{radius_inside}{Numeric. Inner radius of the pie chart (for donut charts).}
 
 \item{label_outside}{Character. Type of labels outside the pie. One of
@@ -70,9 +74,13 @@ its \code{meta.data} slot will be used.}
 
 \item{label_radius_outside}{Numeric. Radial position for outside labels.}
 
-\item{label_angle_inside}{Numeric or \code{"circle"}. Angle for inside labels.}
+\item{label_angle_inside}{Inside-label orientation. Supply
+\code{"radial_readable"}, \code{"radial"}, \code{"tangent_readable"}, or \code{"tangent"};
+alternatively, supply one or more numeric angles in degrees as interpreted
+by \code{\link[ggplot2:geom_text]{ggplot2::geom_text()}}. See \strong{Label angles}.}
 
-\item{label_angle_outside}{Numeric or \code{"circle"}. Angle for outside labels.}
+\item{label_angle_outside}{Outside-label orientation. Accepts the same values
+as \code{label_angle_inside}.}
 
 \item{label_overlap}{Character. Strategy for overlapping labels. One of
 \code{"ignore"}, \code{"alternate"}, or \code{"outside"}.}
@@ -91,8 +99,6 @@ its \code{meta.data} slot will be used.}
 \code{ggplot2::theme()}.}
 
 \item{col_pal_args}{List of arguments passed to \code{colrr::col_pal()}.}
-
-\item{color_text}{Color of label text. Defaults to automatic selection.}
 }
 \value{
 A ggplot2 object representing the pie chart.
@@ -109,6 +115,29 @@ This function automatically installs the required packages
 Internally, it extracts the selected metadata column and forwards all
 arguments to \code{brathering::piechart()}.
 }
+\section{Label angles}{
+
+Slice angles used by \code{\link[ggforce:geom_arc_bar]{ggforce::geom_arc_bar()}} are measured in radians,
+beginning at 12 o'clock and increasing clockwise. Text angles passed to
+\code{\link[ggplot2:geom_text]{ggplot2::geom_text()}} are measured in degrees, with positive values rotating
+counterclockwise.
+
+The named label-angle modes are:
+\itemize{
+\item \code{"radial"}: align the text baseline with the slice's radial direction.
+\item \code{"radial_readable"}: use radial alignment and flip labels on the opposite
+half of the circle to keep them upright.
+\item \code{"tangent"}: align the text baseline with the circle's tangent, making it
+orthogonal to the slice's radial direction.
+\item \code{"tangent_readable"}: use tangential alignment and flip equivalent
+orientations to keep labels upright.
+}
+
+Modes without the \verb{_readable} suffix preserve the uncorrected geometric
+orientation, so some labels may appear upside down. Numeric angles bypass
+automatic calculation; for example, \code{0} makes labels horizontal.
+}
+
 \examples{
 \dontrun{
 plot <- freq_pie_chart(so, "celltype")

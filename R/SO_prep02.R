@@ -247,7 +247,9 @@ SO_prep02 <- function(SO_unprocessed,
   }
 
   scaling <- rlang::arg_match(scaling)
-  reductions <- match.arg(tolower(reductions), c("umap", "tsne"), several.ok = T)
+  if (!is.null(reductions)) {
+    reductions <- match.arg(tolower(reductions), c("umap", "tsne"), several.ok = T)
+  }
   normalization <- rlang::arg_match(normalization)
   normalization <- ifelse(normalization == "RNA", "LogNormalize", normalization)
   batch_corr <- rlang::arg_match(batch_corr)
@@ -449,6 +451,7 @@ SO_prep02 <- function(SO_unprocessed,
     tryCatch(expr = {
       SO <- Gmisc::fastDoCall(scexpr::run_fft_tsne, args = c(list(SO = SO,
                                                                   reduction = red,
+                                                                  perplexity = min(30, length(cells2(SO))/4),
                                                                   reduction.name = paste0("tsne_", red),
                                                                   rand_seed = seed),
                                                              RunTSNE_args))
@@ -463,6 +466,7 @@ SO_prep02 <- function(SO_unprocessed,
       #RunTSNE_args[["tsne.method"]] <- "FIt-SNE"
       SO <- Gmisc::fastDoCall(Seurat::RunTSNE, args = c(list(object = SO,
                                                              reduction = red,
+                                                             perplexity = min(30, length(cells2(SO))/4),
                                                              reduction.name = paste0("tsne_", red),
                                                              seed.use = seed,
                                                              verbose = verbose),
@@ -1761,6 +1765,15 @@ find_neighbor_and_cluster <- function(obj,
                                       verbose = TRUE,
                                       mc.cores = 10) {
 
+  FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
+  if (!"resolution" %in% names(FindClusters_args)) {
+    FindClusters_args[["resolution"]] <- 0.8
+  } else {
+    if (is.null(FindClusters_args[["resolution"]])) {
+      return(obj)
+    }
+  }
+
   # see /Volumes/CMS_SSD_2TB/R_scRNAseq/R_scripts/distance_matrices_and_umap.R
   message("FindNeighbors and FindClusters")
   FindNeighbors_args <- FindNeighbors_args[which(!names(FindNeighbors_args) %in% c("object", "reduction", "verbose"))]
@@ -1791,11 +1804,6 @@ find_neighbor_and_cluster <- function(obj,
     names(nn_list[["graphs"]]) <- paste0(red, "_", c("nn", "snn")) # norm, "_",
     obj@graphs <- nn_list[["graphs"]]
     obj@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
-  }
-
-  FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
-  if (!"resolution" %in% names(FindClusters_args)) {
-    FindClusters_args[["resolution"]] <- 0.8
   }
 
   cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
@@ -1869,20 +1877,5 @@ pkg_checks <- function() {
   if (!requireNamespace("colrr", quietly = T)) {
     pak::pak("Close-your-eyes/colrr")
   }
-  if (!requireNamespace("BiocManager", quietly = T)) {
-    utils::install.packages("BiocManager")
-  }
-  if (!requireNamespace("glmGamPoi", quietly = T)) {
-    BiocManager::install("glmGamPoi")
-  }
-  if (!requireNamespace("Gmisc", quietly = T)) {
-    utils::install.packages("Gmisc")
-  }
-  if (!requireNamespace("harmony", quietly = T)) {
-    utils::install.packages("harmony")
-  }
-  # if (!requireNamespace("zap", quietly = T)) {
-  #   pak::pak("coolbutuseless/zap")
-  # }
 }
 

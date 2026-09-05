@@ -17,9 +17,6 @@
 #'   plot. Only columns present in the provided Seurat object(s) are used.
 #' @param x_cat Metadata column used as the x-axis grouping variable. Defaults
 #'   to `"orig.ident"`.
-#' @param sec_axis_lin Logical; add a secondary y-axis showing the inverse
-#'   log1p transformation via `expm1()`. Intended for log-transformed QC
-#'   metrics.
 #'
 #' @return
 #' A faceted `ggplot2` object showing QC metric distributions by `x_cat`.
@@ -29,24 +26,21 @@
 #' `SO2` is supplied, also in `SO2@meta.data`. Missing QC columns are silently
 #' ignored unless none of the requested columns are found.
 #'
-#' When `sec_axis_lin = TRUE`, the primary y-axis is assumed to be log1p-scaled,
-#' and the secondary axis displays values transformed back to the original
-#' linear scale using `expm1()`.
 #'
 #' @examples
+#' so_raw <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+#' so_filtered <- subset(so_raw, pct_mt<8)
 #' qc_plot_log(
 #'   SO1 = so_filtered,
 #'   SO2 = so_raw,
-#'   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log", "pct_mt_log"),
+#'   qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt"),
 #'   x_cat = "orig.ident"
 #' )
 #'
 #' qc_plot_log(
-#'   SO1 = so,
-#'   qc_cols = c("nCount_RNA_log", "nFeature_RNA_log"),
-#'   sec_axis_lin = FALSE
+#'   SO1 = so_raw,
+#'   qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt")
 #' )
-#'
 #' @export
 qc_plot_log <- function(SO1,
                         SO2 = NULL,
@@ -55,8 +49,7 @@ qc_plot_log <- function(SO1,
                           "nFeature_RNA_log",
                           "pct_mt_log",
                           "dbl_score"),
-                        x_cat = "orig.ident",
-                        sec_axis_lin = T) {
+                        x_cat = "orig.ident") {
 
   breaks <- c(seq(0, 1e1, 2e0),
               seq(0, 1e2, 2e1),
@@ -79,10 +72,6 @@ qc_plot_log <- function(SO1,
 
   if(!is.null(SO2) && !x_cat %in% names(SO1@meta.data)) {
     stop("x_cat not found in SO2.")
-  }
-
-  if (!is.logical(sec_axis_lin)) {
-    stop("sec_axis_lin has to be logical: TRUE or FALSE.")
   }
 
   if (!is.null(SO2)) {
@@ -117,9 +106,19 @@ qc_plot_log <- function(SO1,
     ppp <- ppp + ggplot2::geom_jitter(data = meta_data2, width = 0.1, color = "tomato2", size = 0.3)
   }
 
-  if (sec_axis_lin) {
-    ppp <- ppp + ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~expm1(.), breaks = breaks))
-  }
+  # if (sec_axis_lin) {
+  #   ppp <- ppp +
+  #     ggplot2::scale_y_continuous(
+  #       sec.axis = ggplot2::sec_axis(
+  #         transform = \(x) x,
+  #         breaks = log1p(breaks),
+  #         labels = \(x) scales::label_number()(expm1(x))
+  #       )
+  #     )
+  #   try(expr = {ppp <- ppp + ggplot2::scale_y_continuous(sec.axis = ggplot2::sec_axis(~expm1(.), breaks = breaks))},
+  #       silent = T)
+  # }
+
   return(ppp)
 }
 
@@ -156,6 +155,8 @@ qc_plot_log <- function(SO1,
 #' are overlaid in red.
 #'
 #' @examples
+#' so_raw <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
+#' so_filtered <- subset(so_raw, pct_mt<8)
 #' qc_plot_lin(
 #'   SO1 = so_filtered,
 #'   SO2 = so_raw,
@@ -164,10 +165,9 @@ qc_plot_log <- function(SO1,
 #' )
 #'
 #' qc_plot_lin(
-#'   SO1 = so,
-#'   qc_cols = c("nCount_RNA", "nFeature_RNA", "dbl_score")
+#'   SO1 = so_raw,
+#'   qc_cols = c("nCount_RNA", "nFeature_RNA", "pct_mt")
 #' )
-#'
 #' @export
 qc_plot_lin <- function(SO1,
                         SO2 = NULL,
@@ -318,17 +318,23 @@ qc_plot2 <- function(SO,
   qc_p1 <- suppressMessages(feature_plot2(SO,
                                           features = c(gsub("_log$", "", qc_cols), "orig.ident", SO@misc$clusterings),
                                           reduction = reduction,
+                                          col_legend_d_args = list(
+                                            ncol = 1,
+                                            override.aes = list(size = 4),
+                                            title = "..auto..",
+                                            order = 1),
                                           get_data_args = list(shuffle = T, order_discr = F, qmax = 99.5)))
 
-  qc_p2 <- purrr::map2(stats::setNames(red_name, red_name), clust_name,  function(red_name, clust_name) {
+  qc_p2 <- purrr::map2(purrr::set_names(red_name), clust_name,
+                       function(red_name, clust_name) {
     p1 <- patchwork::wrap_plots(feature_plot2(SO,
                                               features = clust_name,
                                               reduction = red_name,
-                                              pt.size = 0.5),
+                                              pt_size = 0.5),
                                 feature_plot2(SO,
                                               features = "orig.ident",
                                               reduction = red_name,
-                                              pt.size = 0.5,
+                                              pt_size = 0.5,
                                               get_data_args = list(shuffle = T, order_discr = F)),
                                 freq_pie_chart(
                                   SO = SO,
@@ -338,7 +344,7 @@ qc_plot2 <- function(SO,
                                 ncol = 1,
                                 heights = c(0.35,0.35,0.3)
     )
-    p2 <- purrr::map(stats::setNames(qc_cols, qc_cols), function(feature) {
+    p2 <- purrr::map(purrr::set_names(qc_cols), function(feature) {
       make_stat_plot(
         SO = SO,
         feature = feature,
