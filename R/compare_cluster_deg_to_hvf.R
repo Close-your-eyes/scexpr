@@ -39,6 +39,10 @@ compare_cluster_deg_to_hvf <- function(obj,
                                        topn_per_group = 10,
                                        verbose = T) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
   rawmarker <- find_all_marker(obj, meta_col = meta_col, na_rm = T)
   marker <- rawmarker |>
     dplyr::filter(avg_log2FC>avg_log2FC_cut & pct_in>pct_in_cut & padj<padj_cut) |>

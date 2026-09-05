@@ -423,6 +423,10 @@ run_xgboost_multi_classifier <- function(df,
     stop("install old version of xgboost 1.7.11.1 like so: install.packages('xgboost', repos = 'https://p3m.dev/cran/2025-12-01')")
   }
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
   if (!is.data.frame(df)) {
     stop("df must be data frame.")
   }

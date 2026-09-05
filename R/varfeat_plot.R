@@ -17,6 +17,9 @@ varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
   if (!requireNamespace("colrr", quietly = T)) {
     pak::pak("Close-your-eyes/colrr")
   }
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
 
   hvfdat <- SeuratObject::HVFInfo(obj)
   names(n_varfeat) <- n_varfeat

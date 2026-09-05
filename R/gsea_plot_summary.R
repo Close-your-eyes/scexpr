@@ -171,6 +171,10 @@ gsea_plot_summary_default_groups <- function(gsea_df,
                                              sep = "_",
                                              ...) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
   metric <- rlang::arg_match(metric)
 
   if (any(!split %in% names(gsea_df))) {

@@ -41,6 +41,10 @@ feature_correlation <- function(SO,
                                 topn = c(10,10), # n for min and max
                                 ...) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
   if (missing(features)) {
     stop("Please provide features.")
   }

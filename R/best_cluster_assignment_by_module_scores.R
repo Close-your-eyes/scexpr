@@ -33,6 +33,9 @@ discretize_module_score_suggestive_clusters <- function(obj,
   if (!requireNamespace("fcexpr", quietly = T)) {
     pak::pak("Close-your-eyes/fcexpr")
   }
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
 
   method_score <- rlang::arg_match(method_score)
   method_cluster <- rlang::arg_match(method_cluster)

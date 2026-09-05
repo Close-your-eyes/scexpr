@@ -154,6 +154,9 @@ run_scdblfinder <- function(obj,
   if (!requireNamespace("scDblFinder", quietly = T)) {
     pak::pak("plger/scDblFinder")
   }
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
 
   if (any(!c(samples_col, clusters_col) %in% names(obj@meta.data))) {
     stop("samples_col or clusters_col not found.")

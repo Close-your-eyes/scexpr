@@ -1765,6 +1765,10 @@ find_neighbor_and_cluster <- function(obj,
                                       verbose = TRUE,
                                       mc.cores = 10) {
 
+  if (!requireNamespace("brathering", quietly = T)) {
+    pak::pak("Close-your-eyes/brathering")
+  }
+
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   if (!"resolution" %in% names(FindClusters_args)) {
     FindClusters_args[["resolution"]] <- 0.8
