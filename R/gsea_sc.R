@@ -48,9 +48,8 @@ gsea_sc <- function(obj,
                     gene_sets,
                     mc.cores = 16) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("msigdbr", "brathering"))
+
 
   if (missing(gene_sets)) {
     stop("gene_sets is missing.")

@@ -44,6 +44,10 @@
 #'
 #' @export
 seurat_size_tree <- function(object) {
+
+  .ensure_packages(c(
+    "lobstr"
+  ))
   size_text <- function(x) {
     format(lobstr::obj_size(x), units = "auto")
   }

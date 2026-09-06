@@ -39,9 +39,7 @@ compare_cluster_deg_to_hvf <- function(obj,
                                        topn_per_group = 10,
                                        verbose = T) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   rawmarker <- find_all_marker(obj, meta_col = meta_col, na_rm = T)
   marker <- rawmarker |>

@@ -112,9 +112,7 @@ volcano02_plot <- function(volc01_df,
                            linewidth = 0.5,
                            arrows = c("<-- -->", "\u2190 \u2192")) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("forcats", "ggrepel", "colrr"))
 
   vd <- as.data.frame(volc01_df)
 

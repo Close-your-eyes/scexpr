@@ -19,13 +19,8 @@ cds_dimred_to_seurat <- function(cds,
                                  assay = "RNA") {
 
 
-  if (!requireNamespace("BiocManager", quietly = T)) {
-    utils::install.packages("BiocManager")
-  }
 
-  if (!requireNamespace("SingleCellExperiment", quietly = T)) {
-    BiocManager::install("SingleCellExperiment")
-  }
+  .ensure_package("SingleCellExperiment")
 
   if (grepl("_", suffix)) {
     stop("suffix should not contain an underscore.")

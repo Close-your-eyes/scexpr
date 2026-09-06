@@ -13,12 +13,7 @@
 #' get_GO_parents(go[1])
 #' #' }
 get_GO_parents <- function(goid) {
-  if (!requireNamespace("AnnotationDbi", quietly = T)) {
-    BiocManager::install("AnnotationDbi")
-  }
-  if (!requireNamespace("GO.db", quietly = T)) {
-    BiocManager::install("GO.db")
-  }
+  .ensure_packages(c("AnnotationDbi", "GO.db"))
 
   y <- AnnotationDbi::mget(unique(goid), GO.db::GOBPPARENTS, ifnotfound=NA)
   y <- purrr::discard(y, anyNA)
@@ -96,12 +91,7 @@ get_GO_parents_recursive <- function(goid, seen = character()) {
 #' }
 get_GO_meta <- function(goid) {
 
-  if (!requireNamespace("AnnotationDbi", quietly = T)) {
-    BiocManager::install("AnnotationDbi")
-  }
-  if (!requireNamespace("GO.db", quietly = T)) {
-    BiocManager::install("GO.db")
-  }
+  .ensure_packages(c("AnnotationDbi", "GO.db"))
   AnnotationDbi::mget(goid, GO.db::GOTERM, ifnotfound=NA)
 }
 
@@ -170,9 +160,7 @@ plot_GO_graph <- function(goid = "",
                           label_split = " |_|-",
                           ...) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("ggraph", "igraph", "brathering"))
 
 
   multiline <- rlang::arg_match(multiline)
@@ -277,4 +265,3 @@ set_start_vertex_and_subset_all_below <- function(graph, key = "name", value) {
 #   threshold = 0.7,
 #   orgdb = "org.Hs.eg.db"
 # )
-

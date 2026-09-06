@@ -75,9 +75,7 @@ find_marker_in_expr_dich <- function(obj,
                                      get_layer_args = list(),
                                      mc.cores = 4) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   # dich  =  dichotomous
 
@@ -248,4 +246,3 @@ find_marker_in_expr_all <- function(obj,
 
   return(out)
 }
-

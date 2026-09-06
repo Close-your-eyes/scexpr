@@ -72,6 +72,10 @@ freq_expression <- function(obj,
                             split_feature = NULL,
                             format_pct = F) {
 
+  .ensure_packages(c(
+    "stringdist"
+  ))
+
   data <- get_data(obj,
                    feature = features,
                    reduction = NULL,

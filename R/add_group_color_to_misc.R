@@ -30,9 +30,7 @@ add_group_color_to_misc <- function(obj,
   ## update_metacolor_slot
   ## no checking yet
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_package("colrr")
 
   un_group <- sort(unique(obj@meta.data[[meta_col]]))
 

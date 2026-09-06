@@ -31,12 +31,8 @@ countmat_to_hdf5 <- function(mat,
                              types = c("sparse", "HDF5"),
                              min_split_cols = 10,
                              ...) {
-  if (!requireNamespace("DropletUtils", quietly = T)) {
-    BiocManager::install("DropletUtils")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("DropletUtils")
+  .ensure_package("brathering")
 
   types <- rlang::arg_match(types, multiple = T)
   types <- sort(types, decreasing = T) # write sparse first

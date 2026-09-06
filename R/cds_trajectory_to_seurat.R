@@ -23,9 +23,7 @@ cds_trajectory_to_seurat <- function(cds,
                                      name = "trajectory",
                                      pseudotime_metacol_name = "pseudotime") {
 
-  if (!requireNamespace("monocle3", quietly = T)) {
-    pak::pak('cole-trapnell-lab/monocle3')
-  }
+  .ensure_packages(c("igraph", "SingleCellExperiment", "monocle3"))
 
   if (!methods::is(cds, "cell_data_set")) {
     stop("cds has to be an cell_data_set object.")

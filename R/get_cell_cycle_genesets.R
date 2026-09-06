@@ -7,6 +7,10 @@
 #' ccgenelsz <- get_cell_cycle_genesets()
 get_cell_cycle_genesets <- function() {
 
+  .ensure_packages(c(
+    "vroom"
+  ))
+
   # seur <- c(Seurat::cc.genes, Seurat::cc.genes.updated.2019)
   # names(seur) <- c("seurat_legacy_S", "seurat_legacy_G2M", "seurat_2019_S", "seurat_2019_G2M")
   #

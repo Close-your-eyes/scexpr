@@ -63,6 +63,10 @@
 #' }
 core_cellular_machinery_genes <- function(obj = NULL) {
 
+  .ensure_packages(c(
+    "vroom"
+  ))
+
   core_cell_biology_patterns <- list(
 
     ribosome = c(

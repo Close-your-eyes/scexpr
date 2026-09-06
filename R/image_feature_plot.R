@@ -97,9 +97,7 @@ image_feature_plot <- function(obj,
                                col_binary = F,
                                expr_only = F) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("forcats", "ggnewscale", "sp", "colrr"))
 
   if (length(feature) > 1) {
     stop("only one feature at a time, yet.")

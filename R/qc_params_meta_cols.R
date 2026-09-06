@@ -40,9 +40,7 @@ qc_params_meta_cols <- function(SO,
                                 size = 0.4,
                                 col_pal = "custom") {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("forcats", "colrr"))
 
   if (missing(meta_cols)) {
     stop("Please provide meta_cols.")

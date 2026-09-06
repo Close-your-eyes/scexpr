@@ -48,9 +48,8 @@ gsea_plot_summary <- function(gsea_df,
                               title = NULL,
                               plot_order = c("NES", "leadingEdge_size_rel", "ES", "padj")) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("forcats", "colrr"))
+
 
   x <- rlang::arg_match(x)
   y <- rlang::arg_match(y)
@@ -171,9 +170,7 @@ gsea_plot_summary_default_groups <- function(gsea_df,
                                              sep = "_",
                                              ...) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("forcats", "brathering"))
 
   metric <- rlang::arg_match(metric)
 

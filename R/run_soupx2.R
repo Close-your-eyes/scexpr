@@ -27,6 +27,10 @@ run_soupx2 <- function(filt,
                        autoEstCont_args = list(),
                        adjustCounts_method = "subtraction") {
 
+  .ensure_packages(c(
+    "SoupX"
+  ))
+
   # c("subtraction", "soupOnly", "multinomial")
   adjustCounts_method <- rlang::arg_match(adjustCounts_method, multiple = T)
 
@@ -78,5 +82,4 @@ add_soup_pct_meta <- function(so,
   so <- SeuratObject::AddMetaData(object = so, metadata = pct_soup, col.name = name)
   return(so)
 }
-
 

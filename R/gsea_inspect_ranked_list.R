@@ -7,9 +7,7 @@
 #'
 #' @examples
 gsea_inspect_ranked_list <- function(x) {
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_package("colrr")
 
   tab <- table(x)
   tabstack <- utils::stack(tab) |>

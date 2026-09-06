@@ -21,6 +21,10 @@
 #'}
 run_monocle <- function(obj) {
 
+  .ensure_packages(c(
+    "igraph"
+  ))
+
   # BiocManager::install(c('BiocGenerics', 'DelayedArray', 'DelayedMatrixStats',
   #                        'limma', 'lme4', 'S4Vectors', 'SingleCellExperiment',
   #                        'SummarizedExperiment', 'batchelor', 'HDF5Array',
@@ -33,12 +37,7 @@ run_monocle <- function(obj) {
 
   #obj <- readRDS("/Volumes/CMS_SSD_2TB/R_scRNAseq/2020_10XGenomics_PBMCs/data/SO_processed/full_objects/SO_SC3_v3_NextGem_SI_PBMC_10K_SCT_none_1_500_10_220617-154703.rds")
 
-  if (!requireNamespace("seurat-wrappers", quietly = T)) {
-    pak::pak("satijalab/seurat-wrappers")
-  }
-  if (!requireNamespace("monocle3", quietly = T)) {
-    pak::pak('cole-trapnell-lab/monocle3')
-  }
+  .ensure_package(c("monocle3", "SeuratWrappers"))
 
   reduction_method <- "UMAP"
   cds <- SeuratWrappers::as.cell_data_set(obj)

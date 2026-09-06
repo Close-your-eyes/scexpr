@@ -90,11 +90,7 @@ labeltransfer_singler <- function(test_obj,
                                   get_layer_args = list(layer = "data",
                                                         assay = "RNA")) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-
-  check_depends()
+  .ensure_packages(c("BiocParallel", "brathering", "fcexpr", "gt", "SingleR", "colrr"))
 
 
   if (missing(ref_labels) || !length(ref_labels)) {
@@ -220,24 +216,6 @@ labeltransfer_singler <- function(test_obj,
   ))
 }
 
-
-
-check_depends <- function() {
-
-  if (!requireNamespace("BiocParallel", quietly = T)) {
-    BiocManager::install("BiocParallel")
-  }
-  if (!requireNamespace("SingleR", quietly = T)) {
-    BiocManager::install("SingleR")
-  }
-  if (!requireNamespace("fcexpr", quietly = T)) {
-    pak::pak("Close-your-eyes/fcexpr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-
-}
 
 prep_test_vars <- function(test_obj, test_clusters, get_layer_args) {
   test_clusters_name <- "test_cells" # default when no clause below applies
@@ -481,9 +459,7 @@ build_return_vars <- function(score_df,
 }
 
 singler_aggr <- function(test, clusters, num.threads) {
-  if (!requireNamespace("scrapper", quietly = T)) {
-    BiocManager::install("scrapper")
-  }
+  .ensure_package("scrapper")
   if (!is.null(clusters)) {
     agg <- scrapper::aggregateAcrossCells(
       x = test,

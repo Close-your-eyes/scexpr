@@ -112,12 +112,8 @@ freq_pie_chart <- function(SO,
                            col_pal_args = list(missing_fct_to_na = T)) {
 
   #  panel.background = ggplot2::element_rect(fill = "white")
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("colrr", "brathering",))
+
 
   if (fill[1] == "..auto..") {
     if (methods::is(SO, "Seurat")) {

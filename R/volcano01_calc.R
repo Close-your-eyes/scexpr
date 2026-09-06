@@ -91,9 +91,7 @@ volcano01_calc <- function(SO,
                            mc.cores = 1,
                            ...) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("matrixTests", "colrr"))
 
   if (missing(neg_cells) || missing(pos_cells)) {
     stop("pos_cells and neg_cells are required.")
@@ -238,9 +236,7 @@ calculate_DEG <- function(SO,
 
 
   if (method %in% c("MAST", "wilcox", "wilcox_limma", "bimod", "roc", "t", "negbinom", "poisson", "LR", "DESeq2")) {
-    if (!requireNamespace("MAST", quietly = T)) {
-      BiocManager::install("MAST")
-    }
+    .ensure_package("MAST")
 
     # Underlying MAST functions used:
     # Model fitting → MAST::zlm()
@@ -293,12 +289,7 @@ calculate_DEG <- function(SO,
 
 
   if (method == "limma") {
-    if (!requireNamespace("BiocManager", quietly = T)) {
-      utils::install.packages("BiocManager")
-    }
-    if (!requireNamespace("limma", quietly = T)) {
-      BiocManager::install("limma")
-    }
+    .ensure_package("limma")
 
     SO <- get_layer(obj = SO, layer = layer)
 

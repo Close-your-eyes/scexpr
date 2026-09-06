@@ -24,9 +24,7 @@ add_density_est <- function(obj,
                             name = paste0(reduction, "_dens"),
                             density_est_args = list(n = 200, h = 1),
                             type = c("scaled", "raw")) {
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   if (missing(reduction)) {
     stop("reduction missing.")

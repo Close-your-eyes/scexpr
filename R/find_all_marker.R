@@ -31,9 +31,7 @@ find_all_marker <- function(obj,
                             na_rm = F,
                             mc.cores = 1) {
 
-  if (!requireNamespace("presto", quietly = T)) {
-    pak::pak("immunogenomics/presto")
-  }
+  .ensure_package("presto")
 
   obj <- scexpr:::check.SO(
     obj,

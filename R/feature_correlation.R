@@ -41,9 +41,8 @@ feature_correlation <- function(SO,
                                 topn = c(10,10), # n for min and max
                                 ...) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("colrr", "psych", "brathering"))
+
 
   if (missing(features)) {
     stop("Please provide features.")
@@ -261,5 +260,3 @@ pct_feature <- function(SO,
 
 # from Twitter:
 # https://divingintogeneticsandgenomics.rbind.io/post/how-to-do-gene-correlation-for-single-cell-rnaseq-data-part-1/
-
-

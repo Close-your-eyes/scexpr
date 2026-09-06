@@ -19,9 +19,7 @@ add_doublets <- function(obj,
                          prep_new_obj = T,
                          ...) {
 
-  if (!requireNamespace("scDblFinder", quietly = T)) {
-    pak::pak("plger/scDblFinder")
-  }
+  .ensure_package("scDblFinder")
 
   if (!methods::is(obj, "Seurat")) {
     stop("obj should be a Seurat.")
@@ -151,12 +149,8 @@ run_scdblfinder <- function(obj,
                             add_doublets = F,
                             add_doublets_tell = F) {
 
-  if (!requireNamespace("scDblFinder", quietly = T)) {
-    pak::pak("plger/scDblFinder")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package(c("scDblFinder", "brathering"))
+
 
   if (any(!c(samples_col, clusters_col) %in% names(obj@meta.data))) {
     stop("samples_col or clusters_col not found.")

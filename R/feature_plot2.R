@@ -354,20 +354,13 @@ feature_plot2 <- function(
                           linewidth = 0.1,
                           alpha = 1)) {
 
+  .ensure_packages(c("colrr", "brathering", "ggtext", "sp"))
+
   ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 
   ## label position calculation is not facetted!!
 
   contour_ggnewscale <- F # T not tested yet
-
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-
 
   SO <- scexpr:::check.SO(SO = SO)
 
@@ -570,4 +563,3 @@ feature_plot2 <- function(
 
   return(plots)
 }
-

@@ -124,9 +124,7 @@ join_meta_data <- function(obj,
                            cols = NULL,
                            verbose = T) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   original_meta <- obj@meta.data
   original_n <- nrow(original_meta)

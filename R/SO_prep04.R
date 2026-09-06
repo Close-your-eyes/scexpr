@@ -102,6 +102,12 @@ SO_prep04 <- function(SO,
                       use_nn_for_umap = F,
                       ...) {
 
+  .ensure_packages(c(
+    "harmony",
+    "patchwork",
+    "uwot"
+  ))
+
   options(future.globals.maxSize = 20 * 1024^3)
 
   reductions <- match.arg(tolower(reductions), c("umap", "tsne"), several.ok = T)
@@ -461,4 +467,3 @@ make_so_simple <- function(SO,
 
   return(SO)
 }
-

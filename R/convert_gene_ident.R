@@ -24,9 +24,7 @@ convert_gene_ident <- function(x,
                                           "gene_biotype",
                                           "description")) {
 
-  if (!requireNamespace("biomaRt", quietly = T)) {
-    BiocManager::install("biomaRt")
-  }
+  .ensure_package("biomaRt")
 
   # make sure all input are in output
   output <- unique(c(output, input))

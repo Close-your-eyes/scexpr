@@ -372,7 +372,7 @@ run_xgboost_multi_classifier <- function(df,
                                          seed = sample.int(.Machine$integer.max, 1),
                                          ...) {
 
-
+  .ensure_packages(c("brathering", "caret", "pROC"))
 
   # tune grid:
   # eta: learning rate, 0.01 → slow, safer, needs more trees, 0.3 → fast, risk of overfitting 0.1 → very common default
@@ -421,10 +421,6 @@ run_xgboost_multi_classifier <- function(df,
   if (utils::compareVersion(as.character(utils::packageVersion("xgboost")), "1.8") == 1) {
     message("https://stackoverflow.com/questions/79849114/new-version-of-xgboost-package-is-not-working-under-caret-environment")
     stop("install old version of xgboost 1.7.11.1 like so: install.packages('xgboost', repos = 'https://p3m.dev/cran/2025-12-01')")
-  }
-
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
   }
 
   if (!is.data.frame(df)) {

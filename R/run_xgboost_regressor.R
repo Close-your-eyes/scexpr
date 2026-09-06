@@ -288,13 +288,11 @@ run_xgboost_regressor <- function(df,
                                   seed = 42,
                                   ...) {
 
+  .ensure_packages(c("brathering", "caret"))
+
   if (utils::compareVersion(as.character(utils::packageVersion("xgboost")), "1.8") == 1) {
     message("https://stackoverflow.com/questions/79849114/new-version-of-xgboost-package-is-not-working-under-caret-environment")
     stop("install old version of xgboost 1.7.11.1 like so: install.packages('xgboost', repos = 'https://p3m.dev/cran/2025-12-01')")
-  }
-
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
   }
 
   if (!is.data.frame(df)) {
@@ -386,6 +384,4 @@ run_xgboost_regressor <- function(df,
     residuals = df[,1] - pred_full
   ))
 }
-
-
 

@@ -39,21 +39,8 @@ labeltransfer_module_gsea <- function(test_obj,
                                                                        name = ""),
                                       skip_module_score = T,
                                       gsea_score = c("NES", "ES")) {
-  if (!requireNamespace("UCell", quietly = T)) {
-    BiocManager::install("UCell")
-  }
-  if (!requireNamespace("fgsea", quietly = T)) {
-    pak::pak("alserglab/fgsea")
-  }
-  if (!requireNamespace("fcexpr", quietly = T)) {
-    pak::pak("Close-your-eyes/fcexpr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+
+  .ensure_packages(c("patchwork", "UCell", "fgsea", "fcexpr", "brathering", "colrr"))
 
   message("GSEA results may give a nice picture of similarities.")
 

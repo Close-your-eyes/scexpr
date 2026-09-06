@@ -114,17 +114,11 @@ feature_plot_stat <- function(SO,
                               pwc_args = list(label = "p.signif", tip.length = 0, hide.ns = TRUE),
                               reorder = F) {
 
+  .ensure_packages(c("colrr", "brathering", "ggforce", "ggpubr", "ggtext"))
+
 
   # handle facetting
   # check fun from promotion
-
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-
 
   if (missing(SO)) {
     stop("Seurat object list or feature vector is missing.")
@@ -369,4 +363,3 @@ feature_plot_stat <- function(SO,
 
   return(plot)
 }
-

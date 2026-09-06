@@ -237,6 +237,18 @@ SO_prep02 <- function(SO_unprocessed,
                       use_nn_for_umap = F,
                       ...) {
 
+  .ensure_packages(c(
+    "BiocParallel",
+    "brathering",
+    "fcexpr",
+    "gt",
+    "harmony",
+    "patchwork",
+    "readr",
+    "SingleR",
+    "uwot"
+  ))
+
   pkg_checks()
   mydots <- list(...)
   options(future.globals.maxSize = 20 * 1024^3)
@@ -1340,9 +1352,7 @@ check_celltype_refs <- function(celltype_refs, celltype_label) {
       }
     }
 
-    if (!requireNamespace("SingleR", quietly = T)) {
-      BiocManager::install("SingleR")
-    }
+    .ensure_package("SingleR")
     return(celltype_label)
   }
 }
@@ -1765,9 +1775,7 @@ find_neighbor_and_cluster <- function(obj,
                                       verbose = TRUE,
                                       mc.cores = 10) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   if (!"resolution" %in% names(FindClusters_args)) {
@@ -1878,8 +1886,5 @@ make_equal_feature_order <-  function(x) {
 }
 
 pkg_checks <- function() {
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_package("colrr")
 }
-

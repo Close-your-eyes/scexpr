@@ -27,15 +27,7 @@ discretize_module_score_suggestive_clusters <- function(obj,
                                                         get_layer_args = list(),
                                                         gsea_overcluster_resolution = 2) {
 
-  if (!requireNamespace("UCell", quietly = T)) {
-    BiocManager::install("UCell")
-  }
-  if (!requireNamespace("fcexpr", quietly = T)) {
-    pak::pak("Close-your-eyes/fcexpr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("clue", "ggtext", "sp", "UCell", "fcexpr", "brathering"))
 
   method_score <- rlang::arg_match(method_score)
   method_cluster <- rlang::arg_match(method_cluster)
@@ -265,6 +257,10 @@ best_cluster_assignment_by_module_scores <- function(df,
                                                      score,
                                                      module,
                                                      cluster) {
+
+  .ensure_packages(c(
+    "clue"
+  ))
 
 
   mean_scores <- dplyr::summarise(

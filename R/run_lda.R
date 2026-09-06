@@ -49,6 +49,10 @@ run_lda <- function(obj,
                     reduction.name = "LDA",
                     reduction.key = paste0(reduction.name, "_")) {
 
+  .ensure_packages(c(
+    "MASS"
+  ))
+
   if (missing(groups) || !groups %in% names(obj@meta.data)) {
     stop("groups is missing or not found in obj@meta.data.")
   }

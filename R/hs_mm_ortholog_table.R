@@ -35,21 +35,7 @@ hs_mm_ortholog_table <- function(features_hs,
   #   dplyr::left_join(orthologs, by = c("feature" = "HGNC.symbol"))
 
 
-  if (!requireNamespace("UCell", quietly = T)) {
-    BiocManager::install("UCell")
-  }
-  if (!requireNamespace("scGate", quietly = T)) {
-    pak::pak("carmonalab/scGate")
-  }
-  if (!requireNamespace("ProjecTILs", quietly = T)) {
-    pak::pak("carmonalab/STACAS")
-  }
-  if (!requireNamespace("ProjecTILs", quietly = T)) {
-    pak::pak("carmonalab/ProjecTILs")
-  }
-  if (!requireNamespace("biomaRt", quietly = T)) {
-    BiocManager::install("biomaRt")
-  }
+  .ensure_packages("UCell", "scGate", "STACAS", "ProjecTILs", "biomaRt")
 
   hs_mart <- biomaRt::useMart("ensembl", dataset="hsapiens_gene_ensembl")
 

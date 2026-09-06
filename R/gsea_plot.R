@@ -130,9 +130,8 @@ gsea_plot <- function(data,
                       annotation = "{pval}<br>{es}<br>{nes}",
                       plot_ranking_color = T) {
 
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    BiocManager::install("fgsea")
-  }
+  .ensure_packages(c("fgsea", "ggrepel", "ggtext", "glue"))
+
 
   results <- data$data
   if (!is.null(padj_min)) {
@@ -208,9 +207,7 @@ make_gsea_plot <- function(data,
                            annotation = "{pval}<br>{es}<br>{nes}",
                            plot_ranking_color = T) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_package("colrr")
 
   data_colorbar <-
     as.data.frame(data$stats) |>

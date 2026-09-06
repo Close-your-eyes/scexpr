@@ -37,9 +37,7 @@ SCT_to_disk <- function(obj,
                         update_on_disk = T,
                         compression = 1L) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   if (!"SCT" %in% names(obj@assays)) {
     message("no SCT assay.")

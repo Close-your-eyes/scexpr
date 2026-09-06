@@ -56,6 +56,10 @@ raw_img_array_to_df <- function(raw_array,
                                 xrange = NULL,
                                 yrange = NULL) {
 
+  .ensure_packages(c(
+    "sp"
+  ))
+
   # raw array either 3d with rgb in third dim or 2d
 
   # set filters like hull or range to save memory and speed up

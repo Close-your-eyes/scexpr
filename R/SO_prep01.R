@@ -162,6 +162,24 @@ SO_prep01 <- function(data_dirs,
                       common_cells = F,
                       mc.cores = 4) {
 
+  .ensure_packages(c(
+    "BiocParallel",
+    "brathering",
+    "celda",
+    "colrr",
+    "fcexpr",
+    "gt",
+    "harmony",
+    "patchwork",
+    "readr",
+    "scDblFinder",
+    "scuttle",
+    "SingleR",
+    "SoupX",
+    "uwot",
+    "vroom"
+  ))
+
 
   install_pkgs(SoupX, scDblFinder, decontX)
   resolution <- resolution_checks(resolution_meta, resolution_SoupX, resolution, PCs_to_meta_clustering)
@@ -453,21 +471,15 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 
 install_pkgs <- function(SoupX, scDblFinder, decontX) {
-  if (scDblFinder && !requireNamespace("scDblFinder", quietly = T)) {
-    pak::pak("plger/scDblFinder")
+  if (scDblFinder) {
+    .ensure_package("scDblFinder")
   }
-  if (decontX && !requireNamespace("celda", quietly = T)) {
-    BiocManager::install("celda")
+  if (decontX) {
+    .ensure_package("celda")
   }
-  if (!requireNamespace("scuttle", quietly = T)) {
-    BiocManager::install("scuttle")
-  }
-  if (!requireNamespace("presto", quietly = T)) {
-    pak::pak("immunogenomics/presto")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("scuttle")
+  .ensure_package("presto")
+  .ensure_package("brathering")
 }
 
 
@@ -884,9 +896,7 @@ run_soupx <- function(ffbms,
 
 
 run_decontx <- function(SO, resolution, nhvf) {
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
   message("Running decontX.")
   SO <- purrr::map(SO, function(SO) {
     ## multi dirs: split matrix
@@ -1057,9 +1067,11 @@ make_equal_cells <- function(x) {
 #' }
 add_pct_featset_and_cc <- function(obj, species = "..auto..") {
 
-  if (!requireNamespace("UCell", quietly = T)) {
-    BiocManager::install("UCell")
-  }
+  .ensure_packages(c(
+    "vroom"
+  ))
+
+  .ensure_package("UCell")
 
   if (species == "..auto..") {
     species <- guess_species(get_gene_features(obj))

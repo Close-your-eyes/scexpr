@@ -68,12 +68,8 @@ composition_barplot <- function(SO,
                                 flip = F,
                                 bw_cutoff = 50) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("colrr")
+  .ensure_package("brathering")
 
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data

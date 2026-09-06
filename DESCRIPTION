@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Ways to analyze scRNAseq data sets
-Version: 0.1.8
+Version: 0.2.0
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -26,16 +26,19 @@ Imports:
     rlang,
     Matrix,
     stats,
-    ggrepel,
-    cowplot,
-    MASS,
     methods,
     Gmisc,
-    ggnewscale,
-    ggtext,
     Rcpp,
     zeallot,
     BiocManager,
+    pak,
+    stringi
+Suggests:
+    ggrepel,
+    cowplot,
+    MASS,
+    ggnewscale,
+    ggtext,
     uwot,
     patchwork,
     ggdendro,
@@ -54,11 +57,9 @@ Imports:
     lobstr,
     mclust,
     pROC,
-    pak,
     readr,
     sp,
     stringdist,
-    stringi,
     xgboost,
     MAST,
     psych,
@@ -68,8 +69,7 @@ Imports:
     SoupX,
     harmony,
     matrixTests,
-    knitr
-Suggests: 
+    knitr,
     presto,
     brathering,
     fcexpr,
@@ -98,6 +98,7 @@ Suggests:
     SingleCellExperiment,
     rmarkdown,
     DropletUtils,
-    CellChat
+    CellChat,
+    STACAS
 Config/roxygen2/version: 8.1.0
 VignetteBuilder: knitr

@@ -38,9 +38,7 @@ split_seurat <- function(obj,
                          diet = F,
                          diet_args = list(misc = F, layers = "counts", assays = "RNA")) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
 
   if (diet) {

@@ -30,12 +30,8 @@ meta_statplot <- function(obj,
                           group1 = "orig.ident",
                           group2,
                           features) {
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+
+  .ensure_packages(c("ggpubr", "brathering", "colrr"))
 
   avgexpr <- avg_expression(obj, group = group1, features = features)[[1]] |>
     as.data.frame() |>

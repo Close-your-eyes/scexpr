@@ -368,9 +368,7 @@ get_title <- function(feature_ex = NULL,
 
 get_legend_text <- function(data,
                             type = c("gene", "meta")) {
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   type <- rlang::arg_match(type)
   if (is.numeric(data[["feature"]])) {
@@ -406,9 +404,7 @@ get_col_pal <- function(data,
                         col_pal_c_args,
                         col_pal_d_args) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_package("colrr")
 
   if (is.numeric(data[["feature"]])) {
     col.pal <- colrr::make_col_pal(col_vec = col_pal_c_args[["name"]],
@@ -444,9 +440,7 @@ add_color_scale <- function(plot,
                             col_binary = F,
                             trans_log = F) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_package("colrr")
 
   if (col_binary && "title" %in% names(col_legend_d_args)) {
     if (col_legend_d_args[["title"]] == "..auto..") {
@@ -596,9 +590,7 @@ add_axes_expansion <- function(plot,
                                axes_lim_set = list(),
                                axes_lim_expand = list()) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   # lists can be w/o names
   # with x, y
@@ -690,9 +682,7 @@ add_labels <- function(plot = plot,
                          label.padding = ggplot2::unit(rep(0.1,4), "lines")),
                        finalize_plotting = F) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   data <- plot[["data"]] #|> tidyr::pivot_wider(names_from = feat, values_from = value)
   label_feature <- ifelse("label_feature" %in% names(attributes(plot[["data"]])), "label_feature", "feature")
@@ -733,7 +723,7 @@ add_labels <- function(plot = plot,
     ## calculate separate avg coordinates for multi clusters
     # collapse them if too few cells or if too close
     dtach <- !"mclust" %in% .packages()
-    requireNamespace("mclust")
+    .ensure_package("mclust")
     label_df_multi <- purrr::pmap_dfr(.l = asplit(dip_p, 2), .f = function(label_feature, SO.split, xp, yp) {
       set.seed(as.numeric(xp))
       datasub <-
@@ -854,7 +844,7 @@ get_dim_avg_multi <- function(data,
                               min_range_frac = 0.2,
                               label_center_fun) {
 
-  requireNamespace("mclust")
+  .ensure_package("mclust")
   mcl <- mclust::Mclust(data_dim1 <- data[[dim1]], verbose = F)
   cluster_split <- split(data_dim1, mcl[["classification"]])
   # filter low fraction splits
@@ -936,14 +926,12 @@ add_contour <- function(plot,
                         contour_path_label = NULL,
                         finalize_plotting_expr_freq_labels = F) {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
 
   if (contour_multi_try) {
     dtach <- !"mclust" %in% .packages()
-    requireNamespace("mclust")
+    .ensure_package("mclust")
   } else {
     dtach <- F
   }
@@ -1287,9 +1275,7 @@ co_add_feature_and_contour_labels <- function(plot,
                                               label_args,
                                               contour_label_nudge,
                                               contour_label_args) {
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_package("brathering")
 
   dimcol1 <- attr(plot[["data"]], "dim1")
   dimcol2 <- attr(plot[["data"]], "dim2")

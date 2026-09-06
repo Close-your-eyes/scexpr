@@ -36,12 +36,7 @@ coexpression_metrics <- function(obj,
 
   # weights?
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-  if (!requireNamespace("UCell", quietly = T)) {
-    BiocManager::install("UCell")
-  }
+  .ensure_packages(c("brathering", "UCell"))
 
   lay <- get_layer(
     obj = obj,

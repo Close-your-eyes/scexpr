@@ -36,6 +36,10 @@ get_cell_hulls <- function(obj,
                            cell_coords = obj@reductions$spatial@cell.embeddings,
                            hull_filter = NULL) {
 
+  .ensure_packages(c(
+    "sp"
+  ))
+
   mask <- get_mask_subset(obj = obj,
                           mask = mask,
                           cell_coords = cell_coords,
@@ -89,6 +93,10 @@ get_mask_subset <- function(obj,
                             cell_coords = NULL,
                             hull_filter = NULL,
                             subset_factor = 1) {
+
+  .ensure_packages(c(
+    "sp"
+  ))
 
   # optional cell_coords to increase speed of raw_img_array_to_df
   if (!is.null(cell_coords) && is.null(hull_filter)) {
@@ -167,6 +175,10 @@ get_img <- function(obj,
                     hull_filter = NULL,
                     subset_factor = 1,
                     col_conv_fun = NULL) {
+
+  .ensure_packages(c(
+    "sp"
+  ))
 
   img <- get_mask_subset(obj = obj,
                          mask = img_array,

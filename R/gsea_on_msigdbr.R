@@ -121,9 +121,8 @@ gsea_on_msigdbr <- function(gene_ranks,
                             fgsea_args = list(),
                             ...) {
 
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    BiocManager::install("fgsea")
-  }
+  .ensure_packages(c("fgsea", "msigdbr"))
+
   if (missing(gene_ranks)) {
     stop("gene_ranks has to be provided.")
   }
@@ -191,5 +190,3 @@ gsea_on_msigdbr <- function(gene_ranks,
   sets_cat <- sets |> dplyr::select(-gene_symbol) |> dplyr::distinct()
   return(list(sets = split(sets$gene_symbol, sets$gs_name), sets_cats = sets_cat))
 }
-
-

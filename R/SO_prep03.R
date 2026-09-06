@@ -22,6 +22,18 @@ SO_prep03 <- function(matrix_list,
                       interactive_pc_selection = F,
                       ...) {
 
+  .ensure_packages(c(
+    "BiocParallel",
+    "brathering",
+    "fcexpr",
+    "gt",
+    "harmony",
+    "patchwork",
+    "readr",
+    "SingleR",
+    "uwot"
+  ))
+
   if (!is.list(matrix_list)) {
     matrix_list <- list(matrix_list)
   }

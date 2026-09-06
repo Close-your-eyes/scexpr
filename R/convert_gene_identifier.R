@@ -68,12 +68,8 @@ convert_gene_identifier <- function (idents,
   # https://medium.com/computational-biology/gene-id-mapping-using-r-14ff50eec9ba
 
 
-  if (!requireNamespace("limma", quietly = T)) {
-    BiocManager::install("limma")
-  }
-  if (!requireNamespace("AnnotationDbi", quietly = T)) {
-    BiocManager::install("AnnotationDbi")
-  }
+  .ensure_package("limma")
+  .ensure_package("AnnotationDbi")
 
 
   if (missing(species) && ident_in %in% c("SYMBOL", "ALIAS")) {
@@ -95,16 +91,12 @@ convert_gene_identifier <- function (idents,
     return <- "data.frame"
   }
   if (species == "Hs") {
-    if (!requireNamespace("org.Hs.eg.db", quietly = T)) {
-      BiocManager::install("org.Hs.eg.db")
-    }
+    .ensure_package("org.Hs.eg.db")
     my.db <- org.Hs.eg.db::org.Hs.eg.db
     idents <- gsub("^MT-", "MT", idents, ignore.case = F)
   }
   if (species == "Mm") {
-    if (!requireNamespace("org.Mm.eg.db", quietly = T)) {
-      BiocManager::install("org.Mm.eg.db")
-    }
+    .ensure_package("org.Mm.eg.db")
     my.db <- org.Mm.eg.db::org.Mm.eg.db
     idents <- gsub("^mt-", "mt", idents, ignore.case = F)
   }
@@ -155,4 +147,3 @@ convert_gene_identifier <- function (idents,
   }
 
 }
-

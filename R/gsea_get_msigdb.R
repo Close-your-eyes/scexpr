@@ -80,6 +80,10 @@ gsea_get_msigdb <- function(collection = c("C1","C2","C3","C4","C5","C6","C7","C
                             return = c("list", "df"),
                             return_df = c("reduced", "full")) {
 
+  .ensure_packages(c(
+    "msigdbr"
+  ))
+
   return <- rlang::arg_match(return)
   return_df <- rlang::arg_match(return_df)
 
@@ -108,7 +112,6 @@ gsea_get_msigdb <- function(collection = c("C1","C2","C3","C4","C5","C6","C7","C
   return(list(sets = sets,
               collection = cats))
 }
-
 
 
 

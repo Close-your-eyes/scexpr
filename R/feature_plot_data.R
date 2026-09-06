@@ -273,12 +273,7 @@ feature_plot_data <- function(data,
                                                     linewidth = 0.1,
                                                     alpha = 1)) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("colrr", "brathering", "diptest", "ggnewscale"))
 
   if (!is.data.frame(data)) {
     stop("data must be data frame from scexpr::get_data")
@@ -501,7 +496,7 @@ feature_plot_data <- function(data,
 
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = name_anno_args)
       } else {
-        requireNamespace("ggtext")
+        .ensure_package("ggtext")
         plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
                                                                           label = annotation_freq_df$freq3),
                                                                      name_anno_args))

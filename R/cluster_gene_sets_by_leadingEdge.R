@@ -55,6 +55,10 @@ cluster_gene_sets_by_leadingEdge <- function(gsea_data_df,
                                              FindClusters_args = list(resolution = 0.6),
                                              seed = 42) {
 
+  .ensure_packages(c(
+    "uwot"
+  ))
+
   LE_genes <- unique(unlist(gsea_data_df$leadingEdge))
   LE_elements <- lapply(gsea_data_df$leadingEdge, function(x) LE_genes %in% x)
 

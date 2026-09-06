@@ -292,6 +292,15 @@ qc_plot2 <- function(SO,
                      reduction = "tsne",
                      save_as = c("png", "pdf")) {
 
+  .ensure_packages(c(
+    "forcats",
+    "ggforce",
+    "ggpubr",
+    "ggtext",
+    "patchwork",
+    "sp"
+  ))
+
 
   # SO@misc data is used here!
   save_as <- rlang::arg_match(save_as)

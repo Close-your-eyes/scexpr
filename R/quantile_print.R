@@ -49,6 +49,10 @@ quantile_print <- function(
     names = c("probs_cut", "probs", "pct"),
     kable = TRUE
 ) {
+
+  .ensure_packages(c(
+    "knitr"
+  ))
   names <- rlang::arg_match(names)
 
   qq <- stats::quantile(obj@meta.data[[meta_col]], probs = probs)

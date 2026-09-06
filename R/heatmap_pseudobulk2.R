@@ -247,18 +247,7 @@ heatmap_pseudobulk2 <- function(SO,
                                 pval_logfc = "logFC",
                                 pval_text_args = list(size = 5, vjust = 0.75)) {
 
-  if (!requireNamespace("presto", quietly = T)) {
-    pak::pak("immunogenomics/presto")
-  }
-  if (!requireNamespace("fcexpr", quietly = T)) {
-    pak::pak("Close-your-eyes/fcexpr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("presto", "fcexpr", "brathering", "cowplot", "colrr"))
 
   feature_order <- rlang::arg_match(feature_order)
   group_order <- rlang::arg_match(group_order)
@@ -798,4 +787,3 @@ add_sec_axis <- function(plot, convert_gene_identifier_args) {
   )
   return(plot)
 }
-

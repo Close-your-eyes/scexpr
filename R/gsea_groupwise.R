@@ -19,9 +19,7 @@ gsea_groupwise <- function(obj,
                            fgseaMultilevel_args = list(pathways = list(), nproc = 0),
                            get_layer_args = list()) {
 
-  if (!requireNamespace("fgsea", quietly = TRUE)) {
-    BiocManager::install("fgsea")
-  }
+  .ensure_package("fgsea")
   if (!"pathways" %in% names(fgseaMultilevel_args)) {
     stop("pathways in fgseaMultilevel_args missing.")
   }

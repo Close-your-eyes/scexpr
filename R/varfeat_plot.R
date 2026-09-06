@@ -14,12 +14,7 @@
 #' out <- varfeat_plot(seu) # a bit stupid because all are var_feat
 varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
 
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
+  .ensure_packages(c("patchwork", "colrr", "brathering"))
 
   hvfdat <- SeuratObject::HVFInfo(obj)
   names(n_varfeat) <- n_varfeat
@@ -70,4 +65,3 @@ varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
 
   return(patchwork::wrap_plots(varfeatplots))
 }
-

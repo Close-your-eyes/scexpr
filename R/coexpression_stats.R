@@ -49,12 +49,7 @@ coexpression_stats <- function(obj,
                                ref_feature,
                                metric = "coexpr_sum") {
 
-  if (!requireNamespace("brathering", quietly = T)) {
-    pak::pak("Close-your-eyes/brathering")
-  }
-  if (!requireNamespace("colrr", quietly = T)) {
-    pak::pak("Close-your-eyes/colrr")
-  }
+  .ensure_packages(c("brathering", "colrr"))
 
 
   combs <- purrr::list_flatten(

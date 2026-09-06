@@ -14,6 +14,10 @@ elbowplot2 <- function(obj,
                        npcs = min(30, length(Seurat::VariableFeatures(obj[[1]]))),
                        theme = ggplot2::theme_grey()) {
 
+  .ensure_packages(c(
+    "patchwork"
+  ))
+
   if (!is.list(obj)) {
     obj <- list("1" = obj)
   } else {
@@ -143,6 +147,5 @@ get_pca_captured_var <- function(obj, reduction = "pca") {
   sum(obj@reductions[[reduction]]@stdev^2)
   message("total var is approx. equal to nhvf (when pca was on scaled data): ", nrow(obj@reductions[[reduction]]@feature.loadings))
 }
-
 
 
