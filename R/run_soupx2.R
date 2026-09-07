@@ -27,7 +27,7 @@ run_soupx2 <- function(filt,
                        autoEstCont_args = list(),
                        adjustCounts_method = "subtraction") {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "SoupX"
   ))
 

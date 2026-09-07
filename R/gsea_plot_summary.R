@@ -48,7 +48,7 @@ gsea_plot_summary <- function(gsea_df,
                               title = NULL,
                               plot_order = c("NES", "leadingEdge_size_rel", "ES", "padj")) {
 
-  .ensure_packages(c("forcats", "colrr"))
+  scexpr:::.ensure_packages(c("forcats", "colrr"))
 
 
   x <- rlang::arg_match(x)
@@ -170,7 +170,7 @@ gsea_plot_summary_default_groups <- function(gsea_df,
                                              sep = "_",
                                              ...) {
 
-  .ensure_packages(c("forcats", "brathering"))
+  scexpr:::.ensure_packages(c("forcats", "brathering"))
 
   metric <- rlang::arg_match(metric)
 

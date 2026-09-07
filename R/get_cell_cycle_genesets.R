@@ -7,7 +7,7 @@
 #' ccgenelsz <- get_cell_cycle_genesets()
 get_cell_cycle_genesets <- function() {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "vroom"
   ))
 

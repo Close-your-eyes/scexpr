@@ -136,11 +136,11 @@ derive_cd4_cd8_tcell_lineage <- function(obj,
                                          ncores = 6,
                                          skip_module_scores = T) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "stringdist"
   ))
 
-  .ensure_package("UCell")
+  scexpr:::.ensure_package("UCell")
 
   obj <- infer_cd4_cd8_lineage(
     obj = obj,
@@ -619,11 +619,11 @@ add_cd4_cd8_scores <- function(obj,
                                label_col = "cd4cd8lin",
                                ncores = 8) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "stringdist"
   ))
 
-  .ensure_package("UCell")
+  scexpr:::.ensure_package("UCell")
 
   tmark <- find_all_marker(subset2(
     obj,

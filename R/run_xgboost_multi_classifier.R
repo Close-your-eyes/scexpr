@@ -372,7 +372,7 @@ run_xgboost_multi_classifier <- function(df,
                                          seed = sample.int(.Machine$integer.max, 1),
                                          ...) {
 
-  .ensure_packages(c("brathering", "caret", "pROC"))
+  scexpr:::.ensure_packages(c("brathering", "caret", "pROC"))
 
   # tune grid:
   # eta: learning rate, 0.01 → slow, safer, needs more trees, 0.3 → fast, risk of overfitting 0.1 → very common default

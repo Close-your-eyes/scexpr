@@ -72,7 +72,7 @@ freq_expression <- function(obj,
                             split_feature = NULL,
                             format_pct = F) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "stringdist"
   ))
 

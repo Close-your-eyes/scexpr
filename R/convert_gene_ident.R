@@ -24,7 +24,7 @@ convert_gene_ident <- function(x,
                                           "gene_biotype",
                                           "description")) {
 
-  .ensure_package("biomaRt")
+  scexpr:::.ensure_package("biomaRt")
 
   # make sure all input are in output
   output <- unique(c(output, input))

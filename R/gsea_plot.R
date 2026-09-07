@@ -130,7 +130,7 @@ gsea_plot <- function(data,
                       annotation = "{pval}<br>{es}<br>{nes}",
                       plot_ranking_color = T) {
 
-  .ensure_packages(c("fgsea", "ggrepel", "ggtext", "glue"))
+  scexpr:::.ensure_packages(c("fgsea", "ggrepel", "ggtext", "glue"))
 
 
   results <- data$data
@@ -207,7 +207,7 @@ make_gsea_plot <- function(data,
                            annotation = "{pval}<br>{es}<br>{nes}",
                            plot_ranking_color = T) {
 
-  .ensure_package("colrr")
+  scexpr:::.ensure_package("colrr")
 
   data_colorbar <-
     as.data.frame(data$stats) |>

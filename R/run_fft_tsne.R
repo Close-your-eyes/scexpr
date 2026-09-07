@@ -142,7 +142,7 @@ run_fft_tsne <- function(
     get_costs = FALSE,
     df = 1.0) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
 
   reduction <- match.arg(reduction, names(SO@reductions))

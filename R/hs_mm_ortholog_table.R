@@ -35,7 +35,7 @@ hs_mm_ortholog_table <- function(features_hs,
   #   dplyr::left_join(orthologs, by = c("feature" = "HGNC.symbol"))
 
 
-  .ensure_packages("UCell", "scGate", "STACAS", "ProjecTILs", "biomaRt")
+  scexpr:::.ensure_packages("UCell", "scGate", "STACAS", "ProjecTILs", "biomaRt")
 
   hs_mart <- biomaRt::useMart("ensembl", dataset="hsapiens_gene_ensembl")
 

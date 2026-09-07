@@ -75,7 +75,7 @@ find_marker_in_expr_dich <- function(obj,
                                      get_layer_args = list(),
                                      mc.cores = 4) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
   # dich  =  dichotomous
 

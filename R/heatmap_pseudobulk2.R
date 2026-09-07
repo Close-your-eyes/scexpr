@@ -247,7 +247,7 @@ heatmap_pseudobulk2 <- function(SO,
                                 pval_logfc = "logFC",
                                 pval_text_args = list(size = 5, vjust = 0.75)) {
 
-  .ensure_packages(c("presto", "fcexpr", "brathering", "cowplot", "colrr"))
+  scexpr:::.ensure_packages(c("presto", "fcexpr", "brathering", "cowplot", "colrr"))
 
   feature_order <- rlang::arg_match(feature_order)
   group_order <- rlang::arg_match(group_order)

@@ -40,7 +40,7 @@ qc_params_meta_cols <- function(SO,
                                 size = 0.4,
                                 col_pal = "custom") {
 
-  .ensure_packages(c("forcats", "colrr"))
+  scexpr:::.ensure_packages(c("forcats", "colrr"))
 
   if (missing(meta_cols)) {
     stop("Please provide meta_cols.")

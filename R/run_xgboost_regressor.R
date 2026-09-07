@@ -288,7 +288,7 @@ run_xgboost_regressor <- function(df,
                                   seed = 42,
                                   ...) {
 
-  .ensure_packages(c("brathering", "caret"))
+  scexpr:::.ensure_packages(c("brathering", "caret"))
 
   if (utils::compareVersion(as.character(utils::packageVersion("xgboost")), "1.8") == 1) {
     message("https://stackoverflow.com/questions/79849114/new-version-of-xgboost-package-is-not-working-under-caret-environment")

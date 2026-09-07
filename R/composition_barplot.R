@@ -68,8 +68,8 @@ composition_barplot <- function(SO,
                                 flip = F,
                                 bw_cutoff = 50) {
 
-  .ensure_package("colrr")
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("colrr")
+  scexpr:::.ensure_package("brathering")
 
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data

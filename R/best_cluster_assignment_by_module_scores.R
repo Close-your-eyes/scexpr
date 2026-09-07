@@ -27,7 +27,7 @@ discretize_module_score_suggestive_clusters <- function(obj,
                                                         get_layer_args = list(),
                                                         gsea_overcluster_resolution = 2) {
 
-  .ensure_packages(c("clue", "ggtext", "sp", "UCell", "fcexpr", "brathering"))
+  scexpr:::.ensure_packages(c("clue", "ggtext", "sp", "UCell", "fcexpr", "brathering"))
 
   method_score <- rlang::arg_match(method_score)
   method_cluster <- rlang::arg_match(method_cluster)
@@ -258,7 +258,7 @@ best_cluster_assignment_by_module_scores <- function(df,
                                                      module,
                                                      cluster) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "clue"
   ))
 

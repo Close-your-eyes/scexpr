@@ -42,7 +42,7 @@ avg_expression <- function(obj,
                            return_as = c("list", "df"),
                            na_to_zero = F) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
 
   return_as <- rlang::arg_match(return_as)

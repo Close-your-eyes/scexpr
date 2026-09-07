@@ -114,7 +114,7 @@ feature_plot_stat <- function(SO,
                               pwc_args = list(label = "p.signif", tip.length = 0, hide.ns = TRUE),
                               reorder = F) {
 
-  .ensure_packages(c("colrr", "brathering", "ggforce", "ggpubr", "ggtext"))
+  scexpr:::.ensure_packages(c("colrr", "brathering", "ggforce", "ggpubr", "ggtext"))
 
 
   # handle facetting

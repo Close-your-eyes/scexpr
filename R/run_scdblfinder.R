@@ -19,7 +19,7 @@ add_doublets <- function(obj,
                          prep_new_obj = T,
                          ...) {
 
-  .ensure_package("scDblFinder")
+  scexpr:::.ensure_package("scDblFinder")
 
   if (!methods::is(obj, "Seurat")) {
     stop("obj should be a Seurat.")
@@ -149,7 +149,7 @@ run_scdblfinder <- function(obj,
                             add_doublets = F,
                             add_doublets_tell = F) {
 
-  .ensure_package(c("scDblFinder", "brathering"))
+  scexpr:::.ensure_package(c("scDblFinder", "brathering"))
 
 
   if (any(!c(samples_col, clusters_col) %in% names(obj@meta.data))) {

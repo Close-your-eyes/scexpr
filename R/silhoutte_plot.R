@@ -30,7 +30,7 @@ silhouette_plot <- function(obj,
                            theme = colrr::theme_material(white = T),
                            col_pal = colrr::col_pal("custom")) {
 
-  .ensure_packages(c("cluster", "colrr"))
+  scexpr:::.ensure_packages(c("cluster", "colrr"))
 
   sil <- cluster::silhouette(x = as.numeric(as.character(obj@meta.data[[clustering]])),
                              dist = stats::dist(obj@reductions[[reduction]]@cell.embeddings))

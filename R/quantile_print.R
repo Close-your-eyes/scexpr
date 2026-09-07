@@ -50,7 +50,7 @@ quantile_print <- function(
     kable = TRUE
 ) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "knitr"
   ))
   names <- rlang::arg_match(names)

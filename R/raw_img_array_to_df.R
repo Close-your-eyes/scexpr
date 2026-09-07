@@ -56,7 +56,7 @@ raw_img_array_to_df <- function(raw_array,
                                 xrange = NULL,
                                 yrange = NULL) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "sp"
   ))
 

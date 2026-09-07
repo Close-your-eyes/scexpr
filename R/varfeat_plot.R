@@ -14,7 +14,7 @@
 #' out <- varfeat_plot(seu) # a bit stupid because all are var_feat
 varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
 
-  .ensure_packages(c("patchwork", "colrr", "brathering"))
+  scexpr:::.ensure_packages(c("patchwork", "colrr", "brathering"))
 
   hvfdat <- SeuratObject::HVFInfo(obj)
   names(n_varfeat) <- n_varfeat

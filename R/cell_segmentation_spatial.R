@@ -36,7 +36,7 @@ get_cell_hulls <- function(obj,
                            cell_coords = obj@reductions$spatial@cell.embeddings,
                            hull_filter = NULL) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "sp"
   ))
 
@@ -94,7 +94,7 @@ get_mask_subset <- function(obj,
                             hull_filter = NULL,
                             subset_factor = 1) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "sp"
   ))
 
@@ -176,7 +176,7 @@ get_img <- function(obj,
                     subset_factor = 1,
                     col_conv_fun = NULL) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "sp"
   ))
 

@@ -7,7 +7,7 @@
 #'
 #' @examples
 gsea_inspect_ranked_list <- function(x) {
-  .ensure_package("colrr")
+  scexpr:::.ensure_package("colrr")
 
   tab <- table(x)
   tabstack <- utils::stack(tab) |>

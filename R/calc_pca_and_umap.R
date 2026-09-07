@@ -30,7 +30,7 @@ calc_pca_and_umap <- function(x,
                                                verbose = T,
                                                scale = F)) {
 
-  .ensure_packages(c("factoextra", "FactoMineR", "fcexpr"))
+  scexpr:::.ensure_packages(c("factoextra", "FactoMineR", "fcexpr"))
 
   y <- factoextra::get_pca_ind(FactoMineR::PCA(x, ncp = npc, graph = F))$coord
   um <- fcexpr::ff_calc_umap_tsne(exprs = y, fun_args = umap_args)

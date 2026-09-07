@@ -17,7 +17,7 @@ volcano03_avg <- function(volc01_df_list,
                           pos_name,
                           logfc_avg_fun = mean) {
 
-  .ensure_package("metapod")
+  scexpr:::.ensure_package("metapod")
 
   id <- "volc_ind"
   logfc <- purrr::map_dfr(volc01_df_list, ~dplyr::select(.x, feature, avg_log2FC), .id = id) |>

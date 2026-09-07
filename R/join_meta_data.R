@@ -124,7 +124,7 @@ join_meta_data <- function(obj,
                            cols = NULL,
                            verbose = T) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
   original_meta <- obj@meta.data
   original_n <- nrow(original_meta)

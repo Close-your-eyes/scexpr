@@ -31,7 +31,7 @@ find_all_marker <- function(obj,
                             na_rm = F,
                             mc.cores = 1) {
 
-  .ensure_package("presto")
+  scexpr:::.ensure_package("presto")
 
   obj <- scexpr:::check.SO(
     obj,

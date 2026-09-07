@@ -20,7 +20,7 @@ cds_dimred_to_seurat <- function(cds,
 
 
 
-  .ensure_package("SingleCellExperiment")
+  scexpr:::.ensure_package("SingleCellExperiment")
 
   if (grepl("_", suffix)) {
     stop("suffix should not contain an underscore.")

@@ -55,7 +55,7 @@ cluster_gene_sets_by_leadingEdge <- function(gsea_data_df,
                                              FindClusters_args = list(resolution = 0.6),
                                              seed = 42) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "uwot"
   ))
 

@@ -37,7 +37,7 @@ SCT_to_disk <- function(obj,
                         update_on_disk = T,
                         compression = 1L) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
   if (!"SCT" %in% names(obj@assays)) {
     message("no SCT assay.")

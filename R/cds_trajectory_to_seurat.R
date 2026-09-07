@@ -23,7 +23,7 @@ cds_trajectory_to_seurat <- function(cds,
                                      name = "trajectory",
                                      pseudotime_metacol_name = "pseudotime") {
 
-  .ensure_packages(c("igraph", "SingleCellExperiment", "monocle3"))
+  scexpr:::.ensure_packages(c("igraph", "SingleCellExperiment", "monocle3"))
 
   if (!methods::is(cds, "cell_data_set")) {
     stop("cds has to be an cell_data_set object.")

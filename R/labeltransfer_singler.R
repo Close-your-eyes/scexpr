@@ -90,7 +90,7 @@ labeltransfer_singler <- function(test_obj,
                                   get_layer_args = list(layer = "data",
                                                         assay = "RNA")) {
 
-  .ensure_packages(c("BiocParallel", "brathering", "fcexpr", "gt", "SingleR", "colrr"))
+  scexpr:::.ensure_packages(c("BiocParallel", "brathering", "fcexpr", "gt", "SingleR", "colrr"))
 
 
   if (missing(ref_labels) || !length(ref_labels)) {
@@ -459,7 +459,7 @@ build_return_vars <- function(score_df,
 }
 
 singler_aggr <- function(test, clusters, num.threads) {
-  .ensure_package("scrapper")
+  scexpr:::.ensure_package("scrapper")
   if (!is.null(clusters)) {
     agg <- scrapper::aggregateAcrossCells(
       x = test,

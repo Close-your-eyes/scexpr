@@ -85,7 +85,7 @@ cluster_correlation2 <- function(objs,
                                  avg_expression_args = list(fun = Matrix::rowMeans,
                                                             fun2 = base::identity)) {
 
-  .ensure_packages(c("ggdendro", "psych", "colrr", "fcexpr", "brathering"))
+  scexpr:::.ensure_packages(c("ggdendro", "psych", "colrr", "fcexpr", "brathering"))
 
   # so1 <- readRDS("/Volumes/CMS_SSD_2TB/R_scRNAseq/2025_EnghardKlocke_DominoTx/data/SO_processed/SO_DTX_tissue_SCT_harmony_1_3000_25_251020_162905.rds")
   # so2 <- readRDS("/Volumes/CMS_SSD_2TB/R_scRNAseq/2025_Muto_GSE151302_PMID33850129/data/SO_processed/SO_healthy_scnuc_Muto_SCT_harmony_1_3000_25_251001_195449.rds")

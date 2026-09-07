@@ -237,7 +237,7 @@ SO_prep02 <- function(SO_unprocessed,
                       use_nn_for_umap = F,
                       ...) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "BiocParallel",
     "brathering",
     "fcexpr",
@@ -1352,7 +1352,7 @@ check_celltype_refs <- function(celltype_refs, celltype_label) {
       }
     }
 
-    .ensure_package("SingleR")
+    scexpr:::.ensure_package("SingleR")
     return(celltype_label)
   }
 }
@@ -1775,7 +1775,7 @@ find_neighbor_and_cluster <- function(obj,
                                       verbose = TRUE,
                                       mc.cores = 10) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   if (!"resolution" %in% names(FindClusters_args)) {
@@ -1886,5 +1886,5 @@ make_equal_feature_order <-  function(x) {
 }
 
 pkg_checks <- function() {
-  .ensure_package("colrr")
+  scexpr:::.ensure_package("colrr")
 }

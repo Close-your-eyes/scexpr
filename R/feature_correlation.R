@@ -41,7 +41,7 @@ feature_correlation <- function(SO,
                                 topn = c(10,10), # n for min and max
                                 ...) {
 
-  .ensure_packages(c("colrr", "psych", "brathering"))
+  scexpr:::.ensure_packages(c("colrr", "psych", "brathering"))
 
 
   if (missing(features)) {

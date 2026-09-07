@@ -143,7 +143,7 @@ get_data <- function(SO,
                      feature_ex = NULL,
                      try_df = F) {
 
-  .ensure_packages(c("stringdist", "brathering"))
+  scexpr:::.ensure_packages(c("stringdist", "brathering"))
 
   if (missing(SO)) {stop("Seurat object missing.")}
   if (length(dims) != 2 || !methods::is(dims, "numeric")) {stop("dims has to be a numeric vector of length 2, e.g. c(1,2).")}

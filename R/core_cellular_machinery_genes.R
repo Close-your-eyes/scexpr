@@ -63,7 +63,7 @@
 #' }
 core_cellular_machinery_genes <- function(obj = NULL) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "vroom"
   ))
 

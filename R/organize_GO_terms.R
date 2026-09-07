@@ -13,7 +13,7 @@
 #' get_GO_parents(go[1])
 #' #' }
 get_GO_parents <- function(goid) {
-  .ensure_packages(c("AnnotationDbi", "GO.db"))
+  scexpr:::.ensure_packages(c("AnnotationDbi", "GO.db"))
 
   y <- AnnotationDbi::mget(unique(goid), GO.db::GOBPPARENTS, ifnotfound=NA)
   y <- purrr::discard(y, anyNA)
@@ -91,7 +91,7 @@ get_GO_parents_recursive <- function(goid, seen = character()) {
 #' }
 get_GO_meta <- function(goid) {
 
-  .ensure_packages(c("AnnotationDbi", "GO.db"))
+  scexpr:::.ensure_packages(c("AnnotationDbi", "GO.db"))
   AnnotationDbi::mget(goid, GO.db::GOTERM, ifnotfound=NA)
 }
 
@@ -160,7 +160,7 @@ plot_GO_graph <- function(goid = "",
                           label_split = " |_|-",
                           ...) {
 
-  .ensure_packages(c("ggraph", "igraph", "brathering"))
+  scexpr:::.ensure_packages(c("ggraph", "igraph", "brathering"))
 
 
   multiline <- rlang::arg_match(multiline)

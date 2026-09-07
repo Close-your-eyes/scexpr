@@ -88,8 +88,8 @@ add_modules <- function(obj,
 
   # use kruskall for filtering? kw <- matrixTests::col_kruskalwallis(meta, so$MajorCluster2)
 
-  .ensure_package("BiocParallel")
-  .ensure_package("UCell")
+  scexpr:::.ensure_package("BiocParallel")
+  scexpr:::.ensure_package("UCell")
 
   stopifnot(inherits(obj, "Seurat"))
   stopifnot(is.list(modules))

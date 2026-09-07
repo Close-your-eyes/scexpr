@@ -38,7 +38,7 @@ split_seurat <- function(obj,
                          diet = F,
                          diet_args = list(misc = F, layers = "counts", assays = "RNA")) {
 
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
 
 
   if (diet) {

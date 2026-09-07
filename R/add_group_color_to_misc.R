@@ -30,7 +30,7 @@ add_group_color_to_misc <- function(obj,
   ## update_metacolor_slot
   ## no checking yet
 
-  .ensure_package("colrr")
+  scexpr:::.ensure_package("colrr")
 
   un_group <- sort(unique(obj@meta.data[[meta_col]]))
 

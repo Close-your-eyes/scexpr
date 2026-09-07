@@ -292,7 +292,7 @@ qc_plot2 <- function(SO,
                      reduction = "tsne",
                      save_as = c("png", "pdf")) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "forcats",
     "ggforce",
     "ggpubr",

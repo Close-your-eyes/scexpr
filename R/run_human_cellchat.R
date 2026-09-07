@@ -19,7 +19,7 @@
 #' cellchat <- run_human_cellchat(seurat_obj, metal_col = "cell_type")
 #' }
 run_human_cellchat <- function(obj, metal_col) {
-  .ensure_package("CellChat")
+  scexpr:::.ensure_package("CellChat")
   Seurat::DefaultAssay(obj) <- "RNA"
   cellchat <- CellChat::createCellChat(object = obj, group.by = metal_col)
   cellchat@DB <- CellChat::CellChatDB.human

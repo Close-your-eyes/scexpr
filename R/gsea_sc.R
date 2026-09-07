@@ -48,7 +48,7 @@ gsea_sc <- function(obj,
                     gene_sets,
                     mc.cores = 16) {
 
-  .ensure_packages(c("msigdbr", "brathering"))
+  scexpr:::.ensure_packages(c("msigdbr", "brathering"))
 
 
   if (missing(gene_sets)) {

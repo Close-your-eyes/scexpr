@@ -97,7 +97,7 @@ image_feature_plot <- function(obj,
                                col_binary = F,
                                expr_only = F) {
 
-  .ensure_packages(c("forcats", "ggnewscale", "sp", "colrr"))
+  scexpr:::.ensure_packages(c("forcats", "ggnewscale", "sp", "colrr"))
 
   if (length(feature) > 1) {
     stop("only one feature at a time, yet.")

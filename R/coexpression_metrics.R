@@ -36,7 +36,7 @@ coexpression_metrics <- function(obj,
 
   # weights?
 
-  .ensure_packages(c("brathering", "UCell"))
+  scexpr:::.ensure_packages(c("brathering", "UCell"))
 
   lay <- get_layer(
     obj = obj,

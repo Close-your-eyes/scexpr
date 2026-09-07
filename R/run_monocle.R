@@ -21,7 +21,7 @@
 #'}
 run_monocle <- function(obj) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "igraph"
   ))
 
@@ -37,7 +37,7 @@ run_monocle <- function(obj) {
 
   #obj <- readRDS("/Volumes/CMS_SSD_2TB/R_scRNAseq/2020_10XGenomics_PBMCs/data/SO_processed/full_objects/SO_SC3_v3_NextGem_SI_PBMC_10K_SCT_none_1_500_10_220617-154703.rds")
 
-  .ensure_package(c("monocle3", "SeuratWrappers"))
+  scexpr:::.ensure_package(c("monocle3", "SeuratWrappers"))
 
   reduction_method <- "UMAP"
   cds <- SeuratWrappers::as.cell_data_set(obj)

@@ -112,7 +112,7 @@ freq_pie_chart <- function(SO,
                            col_pal_args = list(missing_fct_to_na = T)) {
 
   #  panel.background = ggplot2::element_rect(fill = "white")
-  .ensure_packages(c("colrr", "brathering",))
+  scexpr:::.ensure_packages(c("colrr", "brathering",))
 
 
   if (fill[1] == "..auto..") {

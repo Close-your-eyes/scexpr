@@ -354,7 +354,7 @@ feature_plot2 <- function(
                           linewidth = 0.1,
                           alpha = 1)) {
 
-  .ensure_packages(c("colrr", "brathering", "ggtext", "sp"))
+  scexpr:::.ensure_packages(c("colrr", "brathering", "ggtext", "sp"))
 
   ## ggnewscale breaks the legend of dot colors; setting to F will avoid that but also does not allow to have a legend for contour lines
 

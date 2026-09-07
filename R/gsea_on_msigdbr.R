@@ -121,7 +121,7 @@ gsea_on_msigdbr <- function(gene_ranks,
                             fgsea_args = list(),
                             ...) {
 
-  .ensure_packages(c("fgsea", "msigdbr"))
+  scexpr:::.ensure_packages(c("fgsea", "msigdbr"))
 
   if (missing(gene_ranks)) {
     stop("gene_ranks has to be provided.")

@@ -49,7 +49,7 @@ run_lda <- function(obj,
                     reduction.name = "LDA",
                     reduction.key = paste0(reduction.name, "_")) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "MASS"
   ))
 

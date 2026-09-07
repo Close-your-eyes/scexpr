@@ -102,7 +102,7 @@ SO_prep04 <- function(SO,
                       use_nn_for_umap = F,
                       ...) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "harmony",
     "patchwork",
     "uwot"

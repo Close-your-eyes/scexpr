@@ -22,7 +22,7 @@ SO_prep03 <- function(matrix_list,
                       interactive_pc_selection = F,
                       ...) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "BiocParallel",
     "brathering",
     "fcexpr",

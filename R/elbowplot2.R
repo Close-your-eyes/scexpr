@@ -14,7 +14,7 @@ elbowplot2 <- function(obj,
                        npcs = min(30, length(Seurat::VariableFeatures(obj[[1]]))),
                        theme = ggplot2::theme_grey()) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "patchwork"
   ))
 

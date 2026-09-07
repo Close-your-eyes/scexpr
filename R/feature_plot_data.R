@@ -273,7 +273,7 @@ feature_plot_data <- function(data,
                                                     linewidth = 0.1,
                                                     alpha = 1)) {
 
-  .ensure_packages(c("colrr", "brathering", "diptest", "ggnewscale"))
+  scexpr:::.ensure_packages(c("colrr", "brathering", "diptest", "ggnewscale"))
 
   if (!is.data.frame(data)) {
     stop("data must be data frame from scexpr::get_data")
@@ -496,14 +496,13 @@ feature_plot_data <- function(data,
 
         plot <- plot + Gmisc::fastDoCall(ggtext::geom_richtext, args = name_anno_args)
       } else {
-        .ensure_package("ggtext")
-        plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = "richtext",
+        scexpr:::.ensure_package("ggtext")
+        plot <- plot + Gmisc::fastDoCall(ggplot2::annotate, args = c(list(geom = ggtext::GeomRichText,
                                                                           label = annotation_freq_df$freq3),
                                                                      name_anno_args))
       }
     }
   }
-
 
   label_label <- NULL
   if ("label_feature" %in% names(attributes(plot[["data"]]))) {

@@ -40,7 +40,7 @@ labeltransfer_module_gsea <- function(test_obj,
                                       skip_module_score = T,
                                       gsea_score = c("NES", "ES")) {
 
-  .ensure_packages(c("patchwork", "UCell", "fgsea", "fcexpr", "brathering", "colrr"))
+  scexpr:::.ensure_packages(c("patchwork", "UCell", "fgsea", "fcexpr", "brathering", "colrr"))
 
   message("GSEA results may give a nice picture of similarities.")
 

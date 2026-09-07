@@ -162,7 +162,7 @@ SO_prep01 <- function(data_dirs,
                       common_cells = F,
                       mc.cores = 4) {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "BiocParallel",
     "brathering",
     "celda",
@@ -472,14 +472,14 @@ check_dir <- function(data_dirs, SoupX = F) {
 
 install_pkgs <- function(SoupX, scDblFinder, decontX) {
   if (scDblFinder) {
-    .ensure_package("scDblFinder")
+    scexpr:::.ensure_package("scDblFinder")
   }
   if (decontX) {
-    .ensure_package("celda")
+    scexpr:::.ensure_package("celda")
   }
-  .ensure_package("scuttle")
-  .ensure_package("presto")
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("scuttle")
+  scexpr:::.ensure_package("presto")
+  scexpr:::.ensure_package("brathering")
 }
 
 
@@ -896,7 +896,7 @@ run_soupx <- function(ffbms,
 
 
 run_decontx <- function(SO, resolution, nhvf) {
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("brathering")
   message("Running decontX.")
   SO <- purrr::map(SO, function(SO) {
     ## multi dirs: split matrix
@@ -1067,11 +1067,11 @@ make_equal_cells <- function(x) {
 #' }
 add_pct_featset_and_cc <- function(obj, species = "..auto..") {
 
-  .ensure_packages(c(
+  scexpr:::.ensure_packages(c(
     "vroom"
   ))
 
-  .ensure_package("UCell")
+  scexpr:::.ensure_package("UCell")
 
   if (species == "..auto..") {
     species <- guess_species(get_gene_features(obj))

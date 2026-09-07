@@ -91,7 +91,7 @@ volcano01_calc <- function(SO,
                            mc.cores = 1,
                            ...) {
 
-  .ensure_packages(c("matrixTests", "colrr"))
+  scexpr:::.ensure_packages(c("matrixTests", "colrr"))
 
   if (missing(neg_cells) || missing(pos_cells)) {
     stop("pos_cells and neg_cells are required.")
@@ -236,7 +236,7 @@ calculate_DEG <- function(SO,
 
 
   if (method %in% c("MAST", "wilcox", "wilcox_limma", "bimod", "roc", "t", "negbinom", "poisson", "LR", "DESeq2")) {
-    .ensure_package("MAST")
+    scexpr:::.ensure_package("MAST")
 
     # Underlying MAST functions used:
     # Model fitting → MAST::zlm()
@@ -289,7 +289,7 @@ calculate_DEG <- function(SO,
 
 
   if (method == "limma") {
-    .ensure_package("limma")
+    scexpr:::.ensure_package("limma")
 
     SO <- get_layer(obj = SO, layer = layer)
 

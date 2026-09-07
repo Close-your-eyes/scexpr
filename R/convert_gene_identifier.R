@@ -68,8 +68,8 @@ convert_gene_identifier <- function (idents,
   # https://medium.com/computational-biology/gene-id-mapping-using-r-14ff50eec9ba
 
 
-  .ensure_package("limma")
-  .ensure_package("AnnotationDbi")
+  scexpr:::.ensure_package("limma")
+  scexpr:::.ensure_package("AnnotationDbi")
 
 
   if (missing(species) && ident_in %in% c("SYMBOL", "ALIAS")) {
@@ -91,12 +91,12 @@ convert_gene_identifier <- function (idents,
     return <- "data.frame"
   }
   if (species == "Hs") {
-    .ensure_package("org.Hs.eg.db")
+    scexpr:::.ensure_package("org.Hs.eg.db")
     my.db <- org.Hs.eg.db::org.Hs.eg.db
     idents <- gsub("^MT-", "MT", idents, ignore.case = F)
   }
   if (species == "Mm") {
-    .ensure_package("org.Mm.eg.db")
+    scexpr:::.ensure_package("org.Mm.eg.db")
     my.db <- org.Mm.eg.db::org.Mm.eg.db
     idents <- gsub("^mt-", "mt", idents, ignore.case = F)
   }

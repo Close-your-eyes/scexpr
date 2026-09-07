@@ -31,8 +31,8 @@ countmat_to_hdf5 <- function(mat,
                              types = c("sparse", "HDF5"),
                              min_split_cols = 10,
                              ...) {
-  .ensure_package("DropletUtils")
-  .ensure_package("brathering")
+  scexpr:::.ensure_package("DropletUtils")
+  scexpr:::.ensure_package("brathering")
 
   types <- rlang::arg_match(types, multiple = T)
   types <- sort(types, decreasing = T) # write sparse first

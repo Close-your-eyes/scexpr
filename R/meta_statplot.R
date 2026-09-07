@@ -31,7 +31,7 @@ meta_statplot <- function(obj,
                           group2,
                           features) {
 
-  .ensure_packages(c("ggpubr", "brathering", "colrr"))
+  scexpr:::.ensure_packages(c("ggpubr", "brathering", "colrr"))
 
   avgexpr <- avg_expression(obj, group = group1, features = features)[[1]] |>
     as.data.frame() |>
