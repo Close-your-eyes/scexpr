@@ -423,7 +423,7 @@ feature_plot_data <- function(data,
                                    col_binary = col_binary,
                                    trans_log = col_trans_log)
 
-  plot <- scexpr:::add_axes_expansion(plot = plot,
+  plot <- add_axes_expansion(plot = plot,
                                       axes_lim_set = axes_lim_set,
                                       axes_lim_expand = axes_lim_expand)
 
@@ -756,4 +756,159 @@ feature_plot_meta <- function(plot,
     }
   }
   return(plot)
+}
+
+
+#' Set or expand plot limits by axis name
+#'
+#' `axes_lims` and `axes_expand` are lists containing zero, one, or two
+#' two-element numeric vectors. Entries may be named `x`/`y` or with the
+#' corresponding dimension-column name. Named entries may appear in either
+#' order and either axis may be omitted. Unnamed entries are assigned to x and
+#' y in that order.
+#'
+#' @param plot A ggplot object whose data has `dim1` and `dim2` attributes.
+#' @param axes_lims Limits to set.
+#' @param axes_expand Values to add to the current lower and upper limits.
+#' @param axes_lim_set Deprecated alias for `axes_lims`.
+#' @param axes_lim_expand Deprecated alias for `axes_expand`.
+#'
+#' @return The modified ggplot object.
+add_axes_expansion <- function(plot,
+                               axes_lims = list(),
+                               axes_expand = list(),
+                               axes_lim_set = NULL,
+                               axes_lim_expand = NULL) {
+  scexpr:::.ensure_package("brathering")
+
+  if (!is.null(axes_lim_set)) {
+    if (length(axes_lims)) {
+      stop("Use only one of axes_lims and axes_lim_set.", call. = FALSE)
+    }
+    axes_lims <- axes_lim_set
+  }
+  if (!is.null(axes_lim_expand)) {
+    if (length(axes_expand)) {
+      stop("Use only one of axes_expand and axes_lim_expand.", call. = FALSE)
+    }
+    axes_expand <- axes_lim_expand
+  }
+
+  axis_names <- c("x", "y")
+  plot_data <- plot[["data"]]
+  dimcols <- vapply(
+    c("dim1", "dim2"),
+    function(attribute) {
+      value <- attr(plot_data, attribute, exact = TRUE)
+      if (length(value) == 1L && !is.na(value)) as.character(value) else NA_character_
+    },
+    character(1)
+  )
+
+  normalize_axes <- function(value, argument) {
+    if (is.null(value) || !length(value)) {
+      return(list())
+    }
+    if (!is.list(value)) {
+      stop(argument, " must be a list.", call. = FALSE)
+    }
+    if (length(value) > 2L) {
+      stop(argument, " must have at most two entries.", call. = FALSE)
+    }
+    if (any(vapply(value, length, integer(1)) != 2L)) {
+      stop(argument, " entries must be vectors of length two.", call. = FALSE)
+    }
+    if (any(!vapply(value, is.numeric, logical(1)))) {
+      stop(argument, " entries must be numeric vectors.", call. = FALSE)
+    }
+
+    supplied_names <- names(value)
+    if (is.null(supplied_names)) {
+      supplied_names <- rep.int("", length(value))
+    }
+
+    resolved_names <- rep.int(NA_character_, length(value))
+    has_name <- !is.na(supplied_names) & nzchar(supplied_names)
+
+    for (i in which(has_name)) {
+      supplied_name <- supplied_names[[i]]
+
+      if (supplied_name %in% axis_names) {
+        resolved_names[[i]] <- supplied_name
+        next
+      }
+
+      dim_matches <- which(!is.na(dimcols) & dimcols == supplied_name)
+      if (length(dim_matches) == 1L) {
+        resolved_names[[i]] <- axis_names[[dim_matches]]
+      } else if (length(dim_matches) > 1L) {
+        stop(
+          "Dimension name '", supplied_name, "' is ambiguous.",
+          call. = FALSE
+        )
+      } else {
+        valid_dimcols <- dimcols[!is.na(dimcols)]
+        valid_names <- unique(c(axis_names, valid_dimcols))
+        stop(
+          "Unknown axis name '", supplied_name, "' in ", argument,
+          ". Expected one of: ", paste(valid_names, collapse = ", "), ".",
+          call. = FALSE
+        )
+      }
+    }
+
+    unnamed <- which(!has_name)
+    if (length(unnamed)) {
+      remaining_axes <- setdiff(axis_names, resolved_names[has_name])
+      if (length(unnamed) > length(remaining_axes)) {
+        stop(argument, " identifies the same axis more than once.", call. = FALSE)
+      }
+      resolved_names[unnamed] <- remaining_axes[seq_along(unnamed)]
+    }
+
+    if (anyDuplicated(resolved_names)) {
+      stop(argument, " identifies the same axis more than once.", call. = FALSE)
+    }
+
+    names(value) <- resolved_names
+    value
+  }
+
+  axes_lims <- normalize_axes(axes_lims, "axes_lims")
+  axes_expand <- normalize_axes(axes_expand, "axes_expand")
+
+  if (length(axes_expand) && length(axes_lims)) {
+    message("axes_expand provided; axes_lims ignored.")
+    axes_lims <- list()
+  }
+
+  if (length(axes_expand)) {
+    current_lims <- normalize_axes(
+      as.list(brathering::gg_lims(plot)),
+      "limits returned by brathering::gg_lims(plot)"
+    )
+
+    missing_axes <- setdiff(names(axes_expand), names(current_lims))
+    if (length(missing_axes)) {
+      stop(
+        "brathering::gg_lims(plot) did not return limits for: ",
+        paste(missing_axes, collapse = ", "), ".",
+        call. = FALSE
+      )
+    }
+
+    axes_lims <- lapply(
+      names(axes_expand),
+      function(axis) current_lims[[axis]] + axes_expand[[axis]]
+    )
+    names(axes_lims) <- names(axes_expand)
+  }
+
+  scale_expansion <- ggplot2::expansion(mult = 0.02)
+  x_limits <- if ("x" %in% names(axes_lims)) axes_lims[["x"]] else NULL
+  y_limits <- if ("y" %in% names(axes_lims)) axes_lims[["y"]] else NULL
+
+  plot +
+    ggplot2::scale_x_continuous(limits = x_limits, expand = scale_expansion) +
+    ggplot2::scale_y_continuous(limits = y_limits, expand = scale_expansion)
 }

@@ -586,83 +586,83 @@ add_facet <- function(plot,
   return(plot)
 }
 
-add_axes_expansion <- function(plot,
-                               axes_lim_set = list(),
-                               axes_lim_expand = list()) {
-
-  scexpr:::.ensure_package("brathering")
-
-  # lists can be w/o names
-  # with x, y
-  # or actual dimnames
-  # when only one vector in list:
-
-  plot <- plot  +
-    ## needed to avoid expansion by annotation below
-    # also makes tight plot: 2 % expansion only
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.02)) +
-    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.02))
-
-  if (length(axes_lim_set) || length(axes_lim_expand)) {
-    axes_lims <- brathering::gg_lims(plot) # has dimcol names
-    dimcols <- c(attr(plot[["data"]], "dim1"), attr(plot[["data"]], "dim2"))
-    axes_lim_names <- c("x", "y")
-
-    if (length(axes_lim_set) > 2 || length(axes_lim_expand) > 2) {
-      stop("axes_lim_set or axes_lim_expand should be list of max length 2.")
-    }
-    if (any(lengths(axes_lim_set) != 2) || any(lengths(axes_lim_expand) != 2)) {
-      stop("axes_lim_set or axes_lim_expand should only contain vectors of length 2.")
-    }
-    if (length(axes_lim_expand) && length(axes_lim_set)) {
-      message("axes_lim_expand provided, axes_lim_set ignored.")
-      axes_lim_set <- NULL
-    }
-
-    if (length(axes_lim_set) && is.null(names(axes_lim_set))) {
-      names(axes_lim_set) <- c("x", "y")[seq_along(axes_lim_set)]
-    }
-    if (length(axes_lim_expand) && is.null(names(axes_lim_expand))) {
-      names(axes_lim_expand) <- dimcols[seq_along(axes_lim_expand)]
-    }
-
-    if (length(axes_lim_expand)) {
-      # axes_lim_set with axes_lim_expand
-      # axes_lim_expand need dimcol names
-      if (all(names(axes_lim_expand) == rev(dimcols)[seq_along(axes_lim_expand)]) ||
-          all(names(axes_lim_expand) == rev(axes_lim_names)[seq_along(axes_lim_expand)])) {
-        # when names are given and they are explicitly reverse, leave them reverse
-        # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
-        axes_lim_names <- rev(axes_lim_names)
-      }
-      names(axes_lim_expand) <- axes_lim_names[seq_along(axes_lim_expand)]
-      # has dimcol names
-      for (i in names(axes_lims)) {
-        axes_lims[[i]] <- axes_lims[[i]] + axes_lim_expand[[i]]
-      }
-      axes_lim_set <- axes_lims
-    }
-
-    axes_lim_names <- c("x", "y")
-    if (all(names(axes_lim_set) == rev(dimcols)[seq_along(axes_lim_set)]) ||
-        all(names(axes_lim_set) == rev(axes_lim_names)[seq_along(axes_lim_set)])) {
-      # when names are given and they are explicitly reverse, leave them reverse
-      # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
-      axes_lim_names <- rev(axes_lim_names)
-    }
-
-    names(axes_lim_set) <- axes_lim_names[seq_along(axes_lim_set)]
-    # plot <- plot + Gmisc::fastDoCall(ggplot2::expand_limits, args = axes_lim_set)
-    if ("x" %in% names(axes_lim_set)) {
-      plot <- plot + ggplot2::scale_x_continuous(limits = axes_lim_set[["x"]])
-    }
-    if ("y" %in% names(axes_lim_set)) {
-      plot <- plot + ggplot2::scale_x_continuous(limits = axes_lim_set[["y"]])
-    }
-
-  }
-  return(plot)
-}
+# add_axes_expansion <- function(plot,
+#                                axes_lim_set = list(),
+#                                axes_lim_expand = list()) {
+#
+#   scexpr:::.ensure_package("brathering")
+#
+#   # lists can be w/o names
+#   # with x, y
+#   # or actual dimnames
+#   # when only one vector in list:
+#
+#   plot <- plot  +
+#     ## needed to avoid expansion by annotation below
+#     # also makes tight plot: 2 % expansion only
+#     ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = 0.02)) +
+#     ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = 0.02))
+#
+#   if (length(axes_lim_set) || length(axes_lim_expand)) {
+#     axes_lims <- brathering::gg_lims(plot) # has dimcol names
+#     dimcols <- c(attr(plot[["data"]], "dim1"), attr(plot[["data"]], "dim2"))
+#     axes_lim_names <- c("x", "y")
+#
+#     if (length(axes_lim_set) > 2 || length(axes_lim_expand) > 2) {
+#       stop("axes_lim_set or axes_lim_expand should be list of max length 2.")
+#     }
+#     if (any(lengths(axes_lim_set) != 2) || any(lengths(axes_lim_expand) != 2)) {
+#       stop("axes_lim_set or axes_lim_expand should only contain vectors of length 2.")
+#     }
+#     if (length(axes_lim_expand) && length(axes_lim_set)) {
+#       message("axes_lim_expand provided, axes_lim_set ignored.")
+#       axes_lim_set <- NULL
+#     }
+#
+#     if (length(axes_lim_set) && is.null(names(axes_lim_set))) {
+#       names(axes_lim_set) <- c("x", "y")[seq_along(axes_lim_set)]
+#     }
+#     if (length(axes_lim_expand) && is.null(names(axes_lim_expand))) {
+#       names(axes_lim_expand) <- dimcols[seq_along(axes_lim_expand)]
+#     }
+#
+#     if (length(axes_lim_expand)) {
+#       # axes_lim_set with axes_lim_expand
+#       # axes_lim_expand need dimcol names
+#       if (all(names(axes_lim_expand) == rev(dimcols)[seq_along(axes_lim_expand)]) ||
+#           all(names(axes_lim_expand) == rev(axes_lim_names)[seq_along(axes_lim_expand)])) {
+#         # when names are given and they are explicitly reverse, leave them reverse
+#         # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
+#         axes_lim_names <- rev(axes_lim_names)
+#       }
+#       names(axes_lim_expand) <- axes_lim_names[seq_along(axes_lim_expand)]
+#       # has dimcol names
+#       for (i in names(axes_lims)) {
+#         axes_lims[[i]] <- axes_lims[[i]] + axes_lim_expand[[i]]
+#       }
+#       axes_lim_set <- axes_lims
+#     }
+#
+#     axes_lim_names <- c("x", "y")
+#     if (all(names(axes_lim_set) == rev(dimcols)[seq_along(axes_lim_set)]) ||
+#         all(names(axes_lim_set) == rev(axes_lim_names)[seq_along(axes_lim_set)])) {
+#       # when names are given and they are explicitly reverse, leave them reverse
+#       # otherwise assume that first vector is x-axis and second y-axis: axes_lim_names
+#       axes_lim_names <- rev(axes_lim_names)
+#     }
+#
+#     names(axes_lim_set) <- axes_lim_names[seq_along(axes_lim_set)]
+#     # plot <- plot + Gmisc::fastDoCall(ggplot2::expand_limits, args = axes_lim_set)
+#     if ("x" %in% names(axes_lim_set)) {
+#       plot <- plot + ggplot2::scale_x_continuous(limits = axes_lim_set[["x"]])
+#     }
+#     if ("y" %in% names(axes_lim_set)) {
+#       plot <- plot + ggplot2::scale_x_continuous(limits = axes_lim_set[["y"]])
+#     }
+#
+#   }
+#   return(plot)
+# }
 
 
 add_labels <- function(plot = plot,

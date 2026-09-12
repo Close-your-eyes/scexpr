@@ -22,6 +22,7 @@ feature_plot_stat(
   expr_freq_pct = F,
   expr_freq_hjust = 0.3,
   expr_freq_y_equal_max = F,
+  expr_freq_min_label = 0,
   plot_non_expr = T,
   plot_strip = T,
   legend_title = "object",
@@ -80,6 +81,8 @@ a boxplot is plotted only on those groups where median across all cells is zero.
 \item{expr_freq_hjust}{Numeric. Vertical offset for expression frequency labels.}
 
 \item{expr_freq_y_equal_max}{equal max y across all features to plot expr freq annotation?}
+
+\item{expr_freq_min_label}{min expression frequency to print label}
 
 \item{plot_non_expr}{Logical. Whether to include cells with zero expression.}
 

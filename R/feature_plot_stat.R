@@ -43,6 +43,7 @@
 #' @param reorder reorder x-axis by y-levels (only for one feature)
 #' @param color_by meta data column to color by
 #' @param pwc_args arugments to ggpubr::geom_pwc
+#' @param expr_freq_min_label min expression frequency to print label
 #'
 #' @details
 #' The function extracts expression data using \code{get_data()} and visualizes
@@ -91,6 +92,7 @@ feature_plot_stat <- function(SO,
                               expr_freq_pct = F,
                               expr_freq_hjust = 0.3,
                               expr_freq_y_equal_max = F,
+                              expr_freq_min_label = 0,
                               plot_non_expr = T,
                               plot_strip = T,
                               legend_title = "object",
@@ -205,11 +207,13 @@ feature_plot_stat <- function(SO,
     data[[meta_col]] <- factor(data[[meta_col]], levels = meta_order)
   }
 
+
   if (expr_freq_size>0) {
     stat <- data |>
       dplyr::mutate(max.feat.expr = max(feature), .by = feature_split) |>
       dplyr::group_by(dplyr::across(dplyr::all_of(c("feature_split", meta_col, "SO.split", "max.feat.expr")))) |>
       dplyr::summarise(pct.expr = sum(feature > 0)/dplyr::n(), .groups = "drop") |>
+      dplyr::filter(pct.expr > expr_freq_min_label) |>
       dplyr::mutate(pct.expr.adjust.pct = dplyr::case_when(pct.expr == 0 ~ "0 %",
                                                            pct.expr > 0 & pct.expr < 0.01 ~ "> 1 %",
                                                            pct.expr >= 0.01 ~ paste0(round(pct.expr*100, expr_freq_decimals), " %"))) |>
@@ -305,7 +309,6 @@ feature_plot_stat <- function(SO,
                                  fct_lvls = if (is.factor(data[[color_aes]])) levels(data[[color_aes]]) else sort(unique(data[[color_aes]])),
                                  missing_fct_to_na = ifelse("missing_fct_to_na" %in% names(col_pal_args), col_pal_args[["missing_fct_to_na"]], T),
                                  col_pal_args = col_pal_args[-which(names(col_pal_args) %in% c("name", "missing_fct_to_na"))])
-
 
   plot <-
     ggplot2::ggplot(data, ggplot2::aes(x = !!rlang::sym(meta_col), y = feature, color = !!rlang::sym(color_aes))) +
