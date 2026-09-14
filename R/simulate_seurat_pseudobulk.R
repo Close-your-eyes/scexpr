@@ -2,7 +2,7 @@
 #'
 #' Cells are sampled within groups and their raw counts are summed to create
 #' pseudobulk samples. Mixture proportions can be supplied explicitly or drawn
-#' from a Dirichlet distribution.
+#' from a Dirichlet distribution.#
 #'
 #' @param object A Seurat object.
 #' @param group_labels Either the name of a column in `object[[]]`, or a vector
