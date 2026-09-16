@@ -53,9 +53,11 @@ SO_prep02(
 )
 }
 \arguments{
-\item{SO_unprocessed}{A named list of sample-level Seurat objects, or a
-character vector of RDS paths containing such objects. For a single sample,
-supply a named list of length one.}
+\item{SO_unprocessed}{A Seurat object, a list of sample-level Seurat objects,
+a character vector of RDS paths, or a list containing one RDS path per
+element. Each RDS file may contain one Seurat object or a list of Seurat
+objects. Existing names are preserved; missing names are derived from file
+names or generated as \code{sample_1}, \code{sample_2}, and so on.}
 
 \item{samples}{Optional character vector naming the input samples to retain.
 Matching is case-insensitive. By default, all samples are used.}

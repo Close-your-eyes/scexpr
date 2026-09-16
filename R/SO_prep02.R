@@ -30,9 +30,11 @@
 #' feature and PC selection are automatically disabled outside an interactive R
 #' session.
 #'
-#' @param SO_unprocessed A named list of sample-level Seurat objects, or a
-#'   character vector of RDS paths containing such objects. For a single sample,
-#'   supply a named list of length one.
+#' @param SO_unprocessed A Seurat object, a list of sample-level Seurat objects,
+#'   a character vector of RDS paths, or a list containing one RDS path per
+#'   element. Each RDS file may contain one Seurat object or a list of Seurat
+#'   objects. Existing names are preserved; missing names are derived from file
+#'   names or generated as `sample_1`, `sample_2`, and so on.
 #' @param samples Optional character vector naming the input samples to retain.
 #'   Matching is case-insensitive. By default, all samples are used.
 #' @param cells Optional character vector of cell names to retain. Objects with
@@ -1395,31 +1397,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
                                              downsample_method,
                                              mc.cores = 8) {
 
-  if (methods::is(SO_unprocessed, "list")) {
-    SO_unprocessed <- SO_unprocessed
-  } else if (methods::is(SO_unprocessed, "character")) {
-    if (!any(file.exists(SO_unprocessed))) {
-      stop(paste0(SO_unprocessed, "not found."))
-    } else {
-      if (!any(grepl("\\.rds$", SO_unprocessed, ignore.case = T))) {
-        stop("all SO_unprocessed have to be .rds files.")
-      }
-      SO_unprocessed <- unlist(purrr::map(SO_unprocessed, readRDS))
-    }
-  } else {
-    stop("SO_unprocessed has to be named list of splitted Seurat objects or a path (character) to an .rds file of those. If it is only one Seurat object (one sample)
-         make it a list of length 1.")
-  }
-
-  if (methods::is(SO_unprocessed, "Seurat")) {
-    # if only one Seurat object is provided
-    SO_unprocessed <- list(SO_unprocessed)
-    names(SO_unprocessed) <- "sample"
-  }
-
-  if (is.null(names(SO_unprocessed))) {
-    stop("SO_unprocessed has no names.")
-  }
+  SO_unprocessed <- normalize_SO_unprocessed(SO_unprocessed)
 
   if (is.null(samples)) {
     samples <- names(SO_unprocessed)
@@ -1472,6 +1450,136 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
   # SO_unprocessed <- SO_unprocessed[which(names(SO_unprocessed) %in% samples)]
 
   return(list(SO_unprocessed, samples))
+}
+
+
+normalize_SO_unprocessed <- function(SO_unprocessed) {
+  is_seurat <- function(x) methods::is(x, "Seurat")
+
+  set_missing_names <- function(x, prefix = "sample") {
+    object_names <- names(x)
+    if (is.null(object_names)) {
+      object_names <- rep("", length(x))
+    }
+
+    missing_names <- is.na(object_names) | !nzchar(object_names)
+    if (any(missing_names)) {
+      object_names[missing_names] <- paste0(prefix, "_", which(missing_names))
+    }
+
+    unique_names <- make.unique(object_names, sep = "_")
+    if (!identical(unique_names, object_names)) {
+      message("Duplicate sample names made unique: ", paste(unique_names, collapse = ", "))
+    }
+    names(x) <- unique_names
+    x
+  }
+
+  as_seurat_list <- function(x, context, prefix = "sample") {
+    if (is_seurat(x)) {
+      x <- list(x)
+    }
+
+    if (!is.list(x) || !length(x) || !all(vapply(x, is_seurat, logical(1)))) {
+      stop(
+        context,
+        " must contain a Seurat object or a list containing only Seurat objects.",
+        call. = FALSE
+      )
+    }
+
+    set_missing_names(x, prefix = prefix)
+  }
+
+  read_seurat_rds <- function(path, supplied_name = "") {
+    value <- tryCatch(
+      readRDS(path),
+      error = function(error) {
+        stop(
+          "Failed to read RDS file '", path, "': ", conditionMessage(error),
+          call. = FALSE
+        )
+      }
+    )
+
+    file_prefix <- tools::file_path_sans_ext(basename(path))
+    if (is_seurat(value)) {
+      object_name <- if (!is.na(supplied_name) && nzchar(supplied_name)) {
+        supplied_name
+      } else {
+        file_prefix
+      }
+      value <- stats::setNames(list(value), object_name)
+    }
+    as_seurat_list(value, context = paste0("RDS file '", path, "'"), prefix = file_prefix)
+  }
+
+  if (is_seurat(SO_unprocessed)) {
+    return(stats::setNames(list(SO_unprocessed), "sample_1"))
+  }
+
+  if (is.list(SO_unprocessed)) {
+    if (!length(SO_unprocessed)) {
+      stop("SO_unprocessed cannot be an empty list.", call. = FALSE)
+    }
+
+    list_is_seurat <- vapply(SO_unprocessed, is_seurat, logical(1))
+    list_is_path <- vapply(
+      SO_unprocessed,
+      function(x) is.character(x) && length(x) == 1L && !is.na(x),
+      logical(1)
+    )
+
+    if (all(list_is_seurat)) {
+      return(set_missing_names(SO_unprocessed))
+    }
+    if (all(list_is_path)) {
+      supplied_names <- names(SO_unprocessed)
+      SO_unprocessed <- vapply(SO_unprocessed, identity, character(1), USE.NAMES = FALSE)
+      names(SO_unprocessed) <- supplied_names
+    } else {
+      stop(
+        "SO_unprocessed must be a list containing only Seurat objects or only single RDS paths.",
+        call. = FALSE
+      )
+    }
+  }
+
+  if (!is.character(SO_unprocessed) || !length(SO_unprocessed)) {
+    stop(
+      "SO_unprocessed must be a Seurat object, a list of Seurat objects, ",
+      "a character vector of RDS paths, or a list of single RDS paths.",
+      call. = FALSE
+    )
+  }
+  if (anyNA(SO_unprocessed) || any(!nzchar(SO_unprocessed))) {
+    stop("SO_unprocessed contains a missing or empty RDS path.", call. = FALSE)
+  }
+
+  invalid_extensions <- SO_unprocessed[!grepl("\\.rds$", SO_unprocessed, ignore.case = TRUE)]
+  if (length(invalid_extensions)) {
+    stop(
+      "All SO_unprocessed paths must end in .rds. Invalid paths: ",
+      paste(invalid_extensions, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  missing_files <- SO_unprocessed[!file.exists(SO_unprocessed)]
+  if (length(missing_files)) {
+    stop(
+      "SO_unprocessed files not found: ", paste(missing_files, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  supplied_names <- names(SO_unprocessed)
+  if (is.null(supplied_names)) {
+    supplied_names <- rep("", length(SO_unprocessed))
+  }
+  loaded <- Map(read_seurat_rds, unname(SO_unprocessed), supplied_names)
+  loaded <- do.call(c, unname(loaded))
+  set_missing_names(loaded)
 }
 
 subset_SO_unprocessed <- function(SO_unprocessed,
