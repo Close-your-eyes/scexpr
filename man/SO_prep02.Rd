@@ -47,6 +47,8 @@ SO_prep02(
     nrow(SO_unprocessed[[1]])), length.out = 11),
   interactive_pc_selection = F,
   use_nn_for_umap = F,
+  mc_cores_read = 8,
+  mc_cores_cluster = 10,
   ...
 )
 }
@@ -205,6 +207,10 @@ the number of PCs. Used only in an interactive R session.}
 \item{use_nn_for_umap}{Logical; reuse the ranked nearest-neighbor result from
 clustering and call \code{uwot::umap()} directly instead of
 \code{Seurat::RunUMAP()}.}
+
+\item{mc_cores_read}{parallel processes for initial normalization}
+
+\item{mc_cores_cluster}{parallel processes for cluster detection}
 
 \item{...}{Reserved for future use; currently ignored.}
 }

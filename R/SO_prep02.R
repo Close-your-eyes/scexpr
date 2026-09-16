@@ -146,6 +146,8 @@
 #' @param scaling how to create scale.data layer when normalization is RNA:
 #' i) with ScaleData from Seurat or proportional fit (shifted CLR) from
 #' Pachterlab: [proportional_fit_pachterlab()]
+#' @param mc_cores_read parallel processes for initial normalization
+#' @param mc_cores_cluster parallel processes for cluster detection
 #'
 #' @return A processed Seurat object. Depending on the selected workflow, it
 #'   contains normalized assays, variable features, PCA and optional batch-
@@ -235,6 +237,8 @@ SO_prep02 <- function(SO_unprocessed,
                                                                length.out = 11),
                       interactive_pc_selection = F,
                       use_nn_for_umap = F,
+                      mc_cores_read = 8,
+                      mc_cores_cluster = 10,
                       ...) {
 
   scexpr:::.ensure_packages(c(
@@ -307,7 +311,8 @@ SO_prep02 <- function(SO_unprocessed,
                                                                    cells = cells,
                                                                    downsample = downsample,
                                                                    min_cells = min_cells,
-                                                                   downsample_method = downsample_method)
+                                                                   downsample_method = downsample_method,
+                                                                   mc.cores = mc_cores_read)
 
   if (length(SO_unprocessed) == 1) {batch_corr <- "none"}
 
@@ -400,7 +405,7 @@ SO_prep02 <- function(SO_unprocessed,
                                   FindNeighbors_args = FindNeighbors_args,
                                   FindClusters_args = FindClusters_args,
                                   verbose = verbose,
-                                  mc.cores = 10)
+                                  mc.cores = mc_cores_cluster)
 
   ## pick clustering with decent cluster number
   ## derive cluster markers
@@ -1385,7 +1390,8 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
                                              cells,
                                              downsample,
                                              min_cells,
-                                             downsample_method) {
+                                             downsample_method,
+                                             mc.cores = 8) {
 
   if (methods::is(SO_unprocessed, "list")) {
     SO_unprocessed <- SO_unprocessed
@@ -1435,7 +1441,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
       SeuratObject::CreateSeuratObject() |>
       SeuratObject::AddMetaData(x@meta.data) |>
       Seurat::NormalizeData(verbose = F, assay = "RNA")
-  }, mc.cores = max(1, parallel::detectCores()-4))
+  }, mc.cores = mc.cores)
 
   if (batch_corr == "harmony" && length(SO_unprocessed) > 1) {
     if (!"group.by.vars" %in% names(RunHarmony_args)) {

@@ -32,7 +32,8 @@ Imports:
     zeallot,
     BiocManager,
     pak,
-    stringi
+    stringi,
+    glmGamPoi
 Suggests:
     ggrepel,
     cowplot,

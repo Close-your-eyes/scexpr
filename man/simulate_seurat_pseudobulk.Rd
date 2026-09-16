@@ -71,7 +71,7 @@ A list containing:
 \description{
 Cells are sampled within groups and their raw counts are summed to create
 pseudobulk samples. Mixture proportions can be supplied explicitly or drawn
-from a Dirichlet distribution.
+from a Dirichlet distribution.#
 }
 \examples{
 # Random, relatively heterogeneous mixtures:
