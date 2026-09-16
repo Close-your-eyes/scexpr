@@ -1,6 +1,6 @@
 Package: scexpr
 Title: Ways to analyze scRNAseq data sets
-Version: 0.2.0
+Version: 0.2.2
 Authors@R: 
     person(given = "Christopher Mark",
            family = "Skopnik",
@@ -32,8 +32,7 @@ Imports:
     zeallot,
     BiocManager,
     pak,
-    stringi,
-    glmGamPoi
+    stringi
 Suggests:
     ggrepel,
     cowplot,
@@ -100,6 +99,7 @@ Suggests:
     rmarkdown,
     DropletUtils,
     CellChat,
-    STACAS
+    STACAS,
+    glmGamPoi
 Config/roxygen2/version: 8.1.0
 VignetteBuilder: knitr

@@ -16,7 +16,8 @@
   "org.Hs.eg.db",
   "org.Mm.eg.db",
   "scrapper",
-  "scuttle"
+  "scuttle",
+  "glmGamPoi"
 )
 
 .scexpr_pak_packages <- c(

@@ -599,6 +599,10 @@ make_so_single <- function(SO_unprocessed,
   rm(SO_unprocessed)
   if (normalization == "SCT") {
 
+    if ("vst.flavor" %in% SCtransform_args && SCtransform_args[["vst.flavor"]] == "v2") {
+      scexpr:::.ensure_package("glmGamPoi")
+    }
+
     if (!is.null(var_feature_set)) {
       Seurat::VariableFeatures(SO) <- var_feature_set
     }
@@ -719,6 +723,9 @@ make_so_multi_integrate <- function(SO_unprocessed,
   k.score <- as.integer(min(30, min(sapply(SO_unprocessed, ncol))/6))
 
   if (normalization == "SCT") {
+    if ("vst.flavor" %in% SCtransform_args && SCtransform_args[["vst.flavor"]] == "v2") {
+      scexpr:::.ensure_package("glmGamPoi")
+    }
     SO_unprocessed <- lapply(SO_unprocessed, function(x) {
       x <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = x,
                                                                 assay = "RNA"),
