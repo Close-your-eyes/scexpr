@@ -31,10 +31,12 @@
 #' session.
 #'
 #' @param SO_unprocessed A Seurat object, a list of sample-level Seurat objects,
-#'   a character vector of RDS paths, or a list containing one RDS path per
-#'   element. Each RDS file may contain one Seurat object or a list of Seurat
-#'   objects. Existing names are preserved; missing names are derived from file
-#'   names or generated as `sample_1`, `sample_2`, and so on.
+#'   a named list of dense or sparse gene-by-cell UMI matrices, a character
+#'   vector of RDS paths, or a list containing one RDS path per element. Each
+#'   RDS file may contain one Seurat object or a list of Seurat objects. Existing
+#'   names are preserved; missing names are derived from file names or generated
+#'   as `sample_1`, `sample_2`, and so on. Matrix lists must be named, and every
+#'   matrix must have unique, non-empty gene and cell names.
 #' @param samples Optional character vector naming the input samples to retain.
 #'   Matching is case-insensitive. By default, all samples are used.
 #' @param cells Optional character vector of cell names to retain. Objects with
@@ -1455,6 +1457,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
 
 normalize_SO_unprocessed <- function(SO_unprocessed) {
   is_seurat <- function(x) methods::is(x, "Seurat")
+  is_count_matrix <- function(x) is.matrix(x) || methods::is(x, "Matrix")
 
   set_missing_names <- function(x, prefix = "sample") {
     object_names <- names(x)
@@ -1491,6 +1494,49 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
     set_missing_names(x, prefix = prefix)
   }
 
+  matrix_to_seurat <- function(x, sample_name) {
+    if (!nrow(x) || !ncol(x)) {
+      stop(
+        "UMI matrix '", sample_name, "' must contain at least one gene and one cell.",
+        call. = FALSE
+      )
+    }
+
+    gene_names <- rownames(x)
+    cell_names <- colnames(x)
+    if (is.null(gene_names) || anyNA(gene_names) || any(!nzchar(gene_names))) {
+      stop("UMI matrix '", sample_name, "' has missing or empty gene names.", call. = FALSE)
+    }
+    if (is.null(cell_names) || anyNA(cell_names) || any(!nzchar(cell_names))) {
+      stop("UMI matrix '", sample_name, "' has missing or empty cell names.", call. = FALSE)
+    }
+    if (anyDuplicated(gene_names)) {
+      stop("UMI matrix '", sample_name, "' has duplicated gene names.", call. = FALSE)
+    }
+    if (anyDuplicated(cell_names)) {
+      stop("UMI matrix '", sample_name, "' has duplicated cell names.", call. = FALSE)
+    }
+
+    stored_values <- if (methods::is(x, "sparseMatrix") && "x" %in% methods::slotNames(x)) {
+      methods::slot(x, "x")
+    } else if (methods::is(x, "sparseMatrix")) {
+      1
+    } else {
+      x
+    }
+    if (!is.numeric(stored_values) && !is.integer(stored_values) && !is.logical(stored_values)) {
+      stop("UMI matrix '", sample_name, "' must contain numeric counts.", call. = FALSE)
+    }
+    if (anyNA(stored_values) || any(!is.finite(stored_values))) {
+      stop("UMI matrix '", sample_name, "' contains missing or non-finite counts.", call. = FALSE)
+    }
+    if (any(stored_values < 0)) {
+      stop("UMI matrix '", sample_name, "' contains negative counts.", call. = FALSE)
+    }
+
+    SeuratObject::CreateSeuratObject(counts = x, project = sample_name)
+  }
+
   read_seurat_rds <- function(path, supplied_name = "") {
     value <- tryCatch(
       readRDS(path),
@@ -1524,6 +1570,7 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
     }
 
     list_is_seurat <- vapply(SO_unprocessed, is_seurat, logical(1))
+    list_is_matrix <- vapply(SO_unprocessed, is_count_matrix, logical(1))
     list_is_path <- vapply(
       SO_unprocessed,
       function(x) is.character(x) && length(x) == 1L && !is.na(x),
@@ -1533,13 +1580,24 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
     if (all(list_is_seurat)) {
       return(set_missing_names(SO_unprocessed))
     }
+    if (all(list_is_matrix)) {
+      matrix_names <- names(SO_unprocessed)
+      if (is.null(matrix_names) || anyNA(matrix_names) || any(!nzchar(matrix_names))) {
+        stop("A list of UMI matrices supplied to SO_unprocessed must be named.", call. = FALSE)
+      }
+      SO_unprocessed <- set_missing_names(SO_unprocessed)
+      matrix_names <- names(SO_unprocessed)
+      SO_unprocessed <- Map(matrix_to_seurat, SO_unprocessed, matrix_names)
+      names(SO_unprocessed) <- matrix_names
+      return(SO_unprocessed)
+    }
     if (all(list_is_path)) {
       supplied_names <- names(SO_unprocessed)
       SO_unprocessed <- vapply(SO_unprocessed, identity, character(1), USE.NAMES = FALSE)
       names(SO_unprocessed) <- supplied_names
     } else {
       stop(
-        "SO_unprocessed must be a list containing only Seurat objects or only single RDS paths.",
+        "SO_unprocessed must be a list containing only Seurat objects, only gene-by-cell UMI matrices, or only single RDS paths.",
         call. = FALSE
       )
     }
@@ -1548,7 +1606,8 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
   if (!is.character(SO_unprocessed) || !length(SO_unprocessed)) {
     stop(
       "SO_unprocessed must be a Seurat object, a list of Seurat objects, ",
-      "a character vector of RDS paths, or a list of single RDS paths.",
+      "a named list of gene-by-cell UMI matrices, a character vector of RDS paths, ",
+      "or a list of single RDS paths.",
       call. = FALSE
     )
   }
