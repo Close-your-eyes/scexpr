@@ -33,7 +33,6 @@
 #'   `feature_ex`, `feature_cut`, `feature_cut_expr`, `label_feature`,
 #'   `contour_feature`, `split_feature`, and `shape_feature`.
 #'
-#' @section Feature selection and filtering:
 #' @param feature_ex Optional feature used to exclude cells.
 #' @param feature_cut Optional feature used for expression/value cutoff-based
 #'   filtering.
@@ -44,7 +43,6 @@
 #'   facets.
 #' @param shape_feature Optional metadata feature mapped to point shape.
 #'
-#' @section Point appearance:
 #' @param pt_size Base point size.
 #' @param pt_size_fct Multiplicative size factor for expressing cells.
 #' @param col_expr Colour used for expressing cells.
@@ -57,7 +55,6 @@
 #' @param col_binary Logical; show gene expression as binary expressing vs.
 #'   non-expressing values.
 #'
-#' @section Colour scales:
 #' @param col_pal_c_args Arguments for continuous colour palettes.
 #' @param col_pal_d_args Arguments for discrete colour palettes. If
 #'   `name = "..auto.."`, colours may be read from `SO@misc$metacolors`.
@@ -85,12 +82,10 @@
 #' @param legendbreaks Legend break specification.
 #' @param legendlabels Optional labels for legend breaks.
 #'
-#' @section Legends:
 #' @param shape_legend_args Arguments passed to `ggplot2::guide_legend()` for
 #'   shape legends.
 #' @param shape_legend_hide Logical; hide the shape legend.
 #'
-#' @section Titles and annotations:
 #' @param feature_alias Named character vector mapping original feature names to
 #'   display aliases.
 #' @param freq_plot Logical or `"..auto.."`; draw expression frequency labels.
@@ -106,7 +101,6 @@
 #' @param title Optional superordinate title. Added as a patchwork annotation
 #'   for combined plots, otherwise as a ggplot title.
 #'
-#' @section Themes and facets:
 #' @param theme Base ggplot theme.
 #' @param theme_args Additional arguments passed to `ggplot2::theme()`.
 #' @param facet_scales Facet scale behaviour.
@@ -115,12 +109,10 @@
 #' @param nrow_inner Number of rows for inner facets.
 #' @param ncol_inner Number of columns for inner facets.
 #'
-#' @section Axes:
 #' @param axes_lim_set Named list of fixed axis limits.
 #' @param axes_lim_expand Named list of axis expansion values.
 #' @param axes_arrows Logical; draw coordinate axes as arrows.
 #'
-#' @section Labels:
 #' @param label_filter_cells Restrict label position calculation to included
 #'   cells.
 #' @param label_center_fun Method for label centres: `"median"` or `"mean"`.
@@ -130,7 +122,6 @@
 #' @param label_multi_max Maximum number of labels per split cluster attempt.
 #' @param label_args Arguments passed to label geoms.
 #'
-#' @section Contours:
 #' @param contour_filter_cells Restrict contour calculation to included cells.
 #' @param contour_rm_outlier Remove outlier cells before drawing contours.
 #' @param contour_rm_lowfreq_subcluster Remove low-frequency subclusters before
@@ -147,14 +138,12 @@
 #' @param contour_fun Contour drawing function.
 #' @param contour_path_label Label used when `contour_fun` is a text-path geom.
 #'
-#' @section Ordering and split plotting:
 #' @param order_discr_explicit Explicit drawing order for discrete metadata
 #'   values. Use leading `^` to draw a group first and trailing `$` to draw it
 #'   last, e.g. `c("^healthy", "disease$")`.
 #' @param plot_all_across_split Logical; draw all cells in each split facet
 #'   using `col_split`.
 #'
-#' @section Spatial plotting:
 #' @param img_plot Logical; draw the spatial image underneath the points.
 #'   Supported only for a single Seurat object.
 #' @param img_subset_fct Subsampling factor passed to `get_img()`.

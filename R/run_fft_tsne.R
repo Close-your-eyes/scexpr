@@ -49,16 +49,10 @@
 #'      sets learning rate to N/exaggeration_factor where N is the sample size, or to 200 if
 #'      N/exaggeration_factor < 200.
 #' @param n_trees used in conjunction with search_k
-#' @param search_k
-#' if (search_k == -1) {
-#'   if (perplexity > 0) {
-#'     search_k <- n_trees * perplexity * 3
-#'   } else if (perplexity == 0) {
-#'     search_k <- n_trees * max(perplexity_list) * 3
-#'   } else {
-#'     search_k <- n_trees * K
-#'   }
-#' }
+#' @param search_k Number of nodes inspected during nearest-neighbor search.
+#'   When set to `-1`, it is calculated as `n_trees * perplexity * 3` when
+#'   `perplexity > 0`, as `n_trees * max(perplexity_list) * 3` when
+#'   `perplexity == 0`, or as `n_trees * K` otherwise.
 #' @param rand_seed random seed. passed to set.seed when not equal to -1.
 #' @param nterms If using FIt-SNE, this is the number of
 #'   interpolation points per sub-interval

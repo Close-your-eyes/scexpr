@@ -105,15 +105,10 @@ N/exaggeration_factor < 200.}
 
 \item{n_trees}{used in conjunction with search_k}
 
-\item{search_k}{if (search_k == -1) {
-if (perplexity > 0) {
-search_k <- n_trees * perplexity * 3
-} else if (perplexity == 0) {
-search_k <- n_trees * max(perplexity_list) * 3
-} else {
-search_k <- n_trees * K
-}
-}}
+\item{search_k}{Number of nodes inspected during nearest-neighbor search.
+When set to \code{-1}, it is calculated as \code{n_trees * perplexity * 3} when
+\code{perplexity > 0}, as \code{n_trees * max(perplexity_list) * 3} when
+\code{perplexity == 0}, or as \code{n_trees * K} otherwise.}
 
 \item{rand_seed}{random seed. passed to set.seed when not equal to -1.}
 

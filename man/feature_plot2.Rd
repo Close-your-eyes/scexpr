@@ -349,50 +349,6 @@ feature automatically, preferring active Seurat identities, then
 \code{seurat_clusters}, then \code{orig.ident}, and finally the first shared metadata
 column across all provided Seurat objects.
 }
-\section{Feature selection and filtering}{
-
-}
-
-\section{Point appearance}{
-
-}
-
-\section{Colour scales}{
-
-}
-
-\section{Legends}{
-
-}
-
-\section{Titles and annotations}{
-
-}
-
-\section{Themes and facets}{
-
-}
-
-\section{Axes}{
-
-}
-
-\section{Labels}{
-
-}
-
-\section{Contours}{
-
-}
-
-\section{Ordering and split plotting}{
-
-}
-
-\section{Spatial plotting}{
-
-}
-
 \examples{
 SO <- readRDS(system.file("extdata", "SO_5k_pbmc_v3_RNA_none_1_800_12_small.rds", package = "scexpr"))
 feature_plot2(

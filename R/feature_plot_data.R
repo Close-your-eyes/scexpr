@@ -11,7 +11,6 @@
 #'
 #' @param data A data frame returned by `scexpr::get_data()`.
 #'
-#' @section Point appearance:
 #' @param pt_size Base point size.
 #' @param pt_size_fct Multiplicative factor applied to expressing cells.
 #' @param col_expr Colour used for expressing cells.
@@ -24,7 +23,6 @@
 #' @param col_binary Logical; if `TRUE`, gene expression is shown as binary
 #'   (expressing vs. non-expressing) instead of continuous.
 #'
-#' @section Colour scales:
 #' @param col_pal_c_args Arguments passed to the continuous palette generator.
 #'   The palette can be specified by name, a single colour, or a vector of
 #'   colours.
@@ -53,12 +51,10 @@
 #' @param col_legend_c_args Arguments passed to the continuous colour guide.
 #' @param col_legend_d_args Arguments passed to the discrete colour guide.
 #'
-#' @section Legends:
 #' @param shape_legend_args Arguments passed to
 #'   `ggplot2::guide_legend()` for point shapes.
 #' @param shape_legend_hide Logical; hide the shape legend.
 #'
-#' @section Feature labels:
 #' @param feature_alias Named character vector mapping original feature names
 #'   to display names.
 #' @param freq_plot Logical or `"..auto.."`. Display expression frequency
@@ -67,7 +63,6 @@
 #' @param freq_size Font size of frequency annotations.
 #' @param freq_col Colour of frequency annotations.
 #'
-#' @section Plot titles and annotations:
 #' @param name Plot title template. Supports glue syntax using
 #'   `{feature}`, `{freq}` and `{feature_cut_ex}`.
 #' @param anno Annotation template. Supports the same glue variables as `name`.
@@ -76,22 +71,18 @@
 #' @param name_anno_args Arguments passed to `ggplot2::annotate()`
 #'   or `ggtext::geom_richtext()`.
 #'
-#' @section Themes:
 #' @param theme Base ggplot theme.
 #' @param theme_args Additional arguments passed to `ggplot2::theme()`.
 #'
-#' @section Faceting:
 #' @param facet_scales Scale behaviour for facets.
 #' @param facet_grid_row_var Optional variable used as facet grid rows.
 #' @param nrow_inner Number of facet rows.
 #' @param ncol_inner Number of facet columns.
 #'
-#' @section Axes:
 #' @param axes_lim_set Named list of fixed axis limits.
 #' @param axes_lim_expand Named list of axis expansion values.
 #' @param axes_arrows Logical; draw coordinate axes as arrows.
 #'
-#' @section Labels:
 #' @param label_filter_cells Restrict label placement to included cells.
 #' @param label_center_fun Method used to calculate label centres.
 #' @param label_nudge Named list of x/y offsets for labels.
@@ -101,7 +92,6 @@
 #'   `label_multi_try`.
 #' @param label_args Arguments passed to `ggtext::geom_richtext()`.
 #'
-#' @section Contours:
 #' @param contour_filter_cells Restrict contour computation to included cells.
 #' @param contour_rm_outlier Remove outlier cells before contour estimation.
 #' @param contour_rm_lowfreq_subcluster Remove small subclusters detected
@@ -118,14 +108,11 @@
 #' @param contour_fun Contour drawing function.
 #' @param contour_path_label Label used by text-path contour functions.
 #'
-#' @section Split plotting:
 #' @param plot_all_across_split Logical; draw all cells in the background of
 #'   split panels.
 #'
-#' @section Ordering:
 #' @param order_discr_explicit Explicit plotting order for discrete values.
 #'
-#' @section Spatial plotting:
 #' @param img_df Optional raster image data frame.
 #' @param hull_df Optional polygon data frame.
 #' @param cell_hull_args Arguments passed to `geom_polygon()` when plotting

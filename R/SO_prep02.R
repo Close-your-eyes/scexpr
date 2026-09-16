@@ -242,16 +242,13 @@ SO_prep02 <- function(SO_unprocessed,
                       ...) {
 
   scexpr:::.ensure_packages(c(
-    "BiocParallel",
     "brathering",
-    "fcexpr",
-    "gt",
-    "harmony",
-    "patchwork",
-    "readr",
-    "SingleR",
     "uwot"
   ))
+
+  if (interactive_varfeat_selection) {
+    scexpr:::.ensure_packages("patchwork")
+  }
 
   pkg_checks()
   mydots <- list(...)
@@ -567,13 +564,12 @@ SO_prep02 <- function(SO_unprocessed,
     }
     dir.create(save_path, showWarnings = F, recursive = T)
     if (save_ext == "rds") {
-      readr::write_rds(
-        SO,
-        file.path(save_path, save.name),
-        compress = "gz",
-        version = 3,
-        compression = 3
-      )
+      if (!requireNamespace("readr", quietly = TRUE)) {
+        brathering::saverds2(SO, file.path(save_path, save.name))
+      } else {
+        saveRDS(SO, file.path(save_path, save.name))
+      }
+
     }
     message("SO saved to: ")
     message(file.path(save_path, save.name))
@@ -940,7 +936,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                   var_feature_set,
                                   scaling) {
 
-
+  scexpr:::.ensure_packages("harmony")
   ### run SCT separately on unmerged SOs?
   # https://hbctraining.github.io/scRNA-seq_online/lessons/06a_integration_harmony.html
   # https://github.com/immunogenomics/harmony/issues/41
@@ -1364,7 +1360,6 @@ check_celltype_refs <- function(celltype_refs, celltype_label) {
       }
     }
 
-    scexpr:::.ensure_package("SingleR")
     return(celltype_label)
   }
 }
@@ -1633,6 +1628,7 @@ run_celltyping <- function(SO,
                            celltype_refs,
                            celltype_ref_clusters,
                            celltype_label) {
+  scexpr:::.ensure_package("SingleR")
   if (!is.null(celltype_refs) && !is.null(celltype_ref_clusters) && !celltype_ref_clusters %in% names(SO@meta.data)) {
     message("celltype_ref_clusters not found in SO meta data. Will be set to NULL and SingleR will operate on single cell level.")
     celltype_ref_clusters <- NULL

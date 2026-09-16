@@ -3,7 +3,8 @@
 #' Find out the expression of which features is correlated or anti-correlated using simple correlation metrics like pearson or spearman.
 #' The analysis may be applied to a subset of cells or subset of features (see arguments). Due to dropouts in some scRNAseq technologies
 #' this analysis is not super-clean but may still provide a valid, relative, comparison of feature correlations.
-#' Other methods considering the dropout-effect exist: \href{"https://academic.oup.com/nargab/article/3/3/lqab072/6348150"}{COTAN}.
+#' Other methods considering the dropout-effect exist:
+#' [COTAN](https://academic.oup.com/nargab/article/3/3/lqab072/6348150).
 #'
 #'
 #' @param SO Seurat object
