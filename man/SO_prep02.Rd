@@ -8,6 +8,8 @@ SO_prep02(
   SO_unprocessed,
   samples = NULL,
   cells = NULL,
+  features = NULL,
+  features_invert = F,
   min_cells = 50,
   downsample = 1,
   downsample_method = c("uniform", "leverage"),
@@ -56,9 +58,10 @@ SO_prep02(
 \item{SO_unprocessed}{A Seurat object, a list of sample-level Seurat objects,
 a named list of dense or sparse gene-by-cell UMI matrices, a character
 vector of RDS paths, or a list containing one RDS path per element. Each
-RDS file may contain one Seurat object or a list of Seurat objects. Existing
-names are preserved; missing names are derived from file names or generated
-as \code{sample_1}, \code{sample_2}, and so on. Matrix lists must be named, and every
+RDS file may contain one Seurat object, one dense or sparse UMI matrix, a
+list of Seurat objects, or a named list of UMI matrices. Existing names are
+preserved; missing names are derived from file names or generated as
+\code{sample_1}, \code{sample_2}, and so on. Matrix lists must be named, and every
 matrix must have unique, non-empty gene and cell names.}
 
 \item{samples}{Optional character vector naming the input samples to retain.
@@ -66,6 +69,10 @@ Matching is case-insensitive. By default, all samples are used.}
 
 \item{cells}{Optional character vector of cell names to retain. Objects with
 no matching cells are removed. By default, all cells are used.}
+
+\item{features}{select subset of features}
+
+\item{features_invert}{invert feature selection (exclude selected)}
 
 \item{min_cells}{Minimum number of cells required after cell selection and
 downsampling. Smaller objects are removed. Defaults to \code{50}.}

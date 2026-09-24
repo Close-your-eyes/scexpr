@@ -10,6 +10,8 @@
 #' @param cells filter for cells
 #' @param as what to return, sparse or dense matrix or data frame
 #' @param transpose apply Matrix::t() ?
+#' @param features_invert invert feature selection. exclude the ones provided.
+#' @param cells_invert invert cell selection. exclude the ones provided.
 #'
 #' @returns matrix (sparse/dense) or data frame
 #' @export
@@ -26,6 +28,8 @@ get_layer <- function(obj,
                       layer = "data",
                       features = NULL,
                       cells = NULL,
+                      features_invert = F,
+                      cells_invert = F,
                       as = c("sparse", "dense", "df"),
                       transpose = F) {
 
@@ -97,6 +101,14 @@ get_layer <- function(obj,
   if (!all(features %in% rownames(x))) {
     message("get_layer: some features not found.")
     features <- features[which(features %in% rownames(x))]
+  }
+
+  if (features_invert) {
+    features <- setdiff(rownames(x), features)
+  }
+
+  if (cells_invert) {
+    cells <- setdiff(colnames(x), cells)
   }
 
   x <- x[features, cells, drop = F]

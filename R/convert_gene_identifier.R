@@ -1,69 +1,114 @@
 #' Convert gene identifiers
 #'
-#' Convert gene identifiers between supported identifier types using
-#' `AnnotationDbi` organism annotation databases. Human genes are mapped with
-#' `org.Hs.eg.db`; mouse genes are mapped with `org.Mm.eg.db`.
+#' @description
+#' Map gene identifiers using \pkg{AnnotationDbi} and the organism annotation
+#' databases \pkg{org.Hs.eg.db} for human or \pkg{org.Mm.eg.db} for mouse.
+#' Optionally collapse alias and Ensembl mappings and retain one row per
+#' input identifier.
 #'
-#' The function also handles a small set of known duplicate mappings and, when
-#' possible, uses `limma::alias2SymbolTable()` to resolve aliases before filling
-#' missing output identifiers.
-#'
-#' @param idents Character vector of gene identifiers to convert.
-#' @param ident_in Input identifier type. Must be one of
-#'   `AnnotationDbi::keytypes()` for the selected organism database. Defaults
-#'   to `"SYMBOL"`.
-#' @param ident_out Character vector of output identifier types. Must be one or
-#'   more valid key types for the selected organism database. Defaults to
-#'   `c("ENTREZID", "ALIAS", "GENENAME")`.
-#' @param species Species annotation database to use. Either `"Hs"` for human
-#'   or `"Mm"` for mouse. If omitted and `ident_in` is `"SYMBOL"` or `"ALIAS"`,
-#'   the function tries to infer species from gene-name capitalisation.
-#' @param return Return format. Either `"data.frame"` or `"vector"`. Vector
-#'   output is only used when a single `ident_out` is requested.
-#'
-#' @return
-#' If `return = "data.frame"`, a data frame containing the input identifier
-#' column and the requested output identifier columns. If `return = "vector"`,
-#' a vector containing the requested converted identifier.
+#' @param idents Vector of gene identifiers. Values are converted to character,
+#'   and only unique input values are submitted for annotation.
+#' @param ident_in Input identifier type. Must be a valid key type in the
+#'   selected organism database. Defaults to \code{"SYMBOL"}.
+#' @param ident_out Character vector of requested output identifier types.
+#'   Each must be a valid key type in the selected organism database.
+#'   Defaults to \code{c("ENTREZID", "ALIAS", "GENENAME")}.
+#' @param species Species database: \code{"Hs"} for human or \code{"Mm"}
+#'   for mouse. If omitted for \code{ident_in = "SYMBOL"} or \code{"ALIAS"},
+#'   all-uppercase identifiers select human; otherwise, identifiers whose
+#'   characters after the first are lowercase select mouse. An error is
+#'   raised if neither rule applies. For other input types, defaults to
+#'   \code{"Hs"}.
+#' @param return Output format: \code{"data.frame"} (default) or
+#'   \code{"vector"}. If multiple output types are requested,
+#'   \code{"vector"} is changed to \code{"data.frame"} with a message.
+#' @param collapse_alias How to combine values in the \code{ALIAS} column:
+#'   \code{"paste"} (default) joins sorted values with \code{", "};
+#'   \code{"list"} stores sorted values in a list-column; \code{"not"}
+#'   leaves mappings uncollapsed. Rows are grouped by all other columns.
+#'   Applies whenever an \code{ALIAS} column is present.
+#' @param collapse_ensembl How to combine values in the \code{ENSEMBL}
+#'   column. Accepts \code{"paste"} (default), \code{"list"}, or
+#'   \code{"not"}, with the same behavior as \code{collapse_alias}.
+#'   Applied after alias collapsing, whenever an \code{ENSEMBL}
+#'   column is present.
+#' @param make_distinct Logical. If \code{TRUE} (default), retain the first
+#'   row per input identifier after filtering and collapsing, and report
+#'   duplicated identifiers. If \code{FALSE}, retain remaining multiple
+#'   mappings in data-frame output. Vector mode always retains only the
+#'   first row per input identifier.
 #'
 #' @details
-#' Valid identifier types depend on the selected annotation database and can be
-#' inspected with `AnnotationDbi::keytypes(org.Hs.eg.db::org.Hs.eg.db)` or
-#' `AnnotationDbi::keytypes(org.Mm.eg.db::org.Mm.eg.db)`.
+#' Supported identifier types can be inspected with
+#' \code{AnnotationDbi::keytypes(org.Hs.eg.db::org.Hs.eg.db)} or
+#' \code{AnnotationDbi::keytypes(org.Mm.eg.db::org.Mm.eg.db)}.
 #'
-#' Common key types include `"SYMBOL"`, `"ALIAS"`, `"ENSEMBL"`, `"ENTREZID"`,
-#' `"GENENAME"`, `"REFSEQ"` and `"UNIPROT"`.
+#' When both \code{SYMBOL} and \code{ENTREZID} are present, the following
+#' mappings are excluded: \code{MEMO1}/\code{7795},
+#' \code{TEC}/\code{100124696}, \code{MMD2}/\code{100505381}, and
+#' \code{HBD}/\code{100187828}. The filtering expressions also drop rows
+#' for which the exclusion condition evaluates to \code{NA}.
 #'
-#' For human symbols, mitochondrial identifiers beginning with `"MT-"` are
-#' normalised to `"MT"`. For mouse symbols, identifiers beginning with `"mt-"`
-#' are normalised to `"mt"`.
+#' Collapsing sorts values without removing duplicates. Missing values
+#' are removed by sorting; an all-missing group therefore produces an
+#' empty string in \code{"paste"} mode or an empty vector in
+#' \code{"list"} mode.
 #'
-#' When duplicate mappings are returned by `AnnotationDbi::select()`, the first
-#' distinct mapping is retained after reporting the affected identifiers.
+#' Input identifier strings are passed to annotation lookup without
+#' mitochondrial-prefix rewriting. No additional alias-resolution step
+#' is performed to fill missing annotations.
+#'
+#' Output is not guaranteed to have one entry per original input or to
+#' preserve input order. Repeated inputs are queried only once, and
+#' filtering, collapsing, or multiple mappings may change the number of
+#' returned rows. A message is emitted when the resulting size differs
+#' from the input length.
+#'
+#' @return
+#' For \code{return = "data.frame"}, a data frame or tibble containing
+#' the input identifier column and requested annotation columns.
+#' Collapsed columns contain character values or lists, depending on
+#' the corresponding collapse option.
+#'
+#' For \code{return = "vector"}, the requested output column after
+#' retaining the first row per input identifier. The current implementation
+#' uses single-bracket column extraction, so a tibble result remains a
+#' one-column tibble rather than becoming a vector.
 #'
 #' @examples
 #' \dontrun{
 #' convert_gene_identifier(
 #'   idents = c("MS4A1", "CD3D", "LYZ"),
-#'   ident_in = "SYMBOL",
 #'   ident_out = c("ENTREZID", "GENENAME"),
 #'   species = "Hs"
 #' )
 #'
+#' # Retain separate Ensembl mappings for feature alignment.
+#' convert_gene_identifier(
+#'   idents = c("MS4A1", "CD3D", "LYZ"),
+#'   ident_out = "ENSEMBL",
+#'   species = "Hs",
+#'   collapse_ensembl = "not",
+#'   make_distinct = FALSE
+#' )
+#'
 #' convert_gene_identifier(
 #'   idents = c("Ms4a1", "Cd3d", "Lyz2"),
-#'   ident_in = "SYMBOL",
 #'   ident_out = "ENTREZID",
 #'   species = "Mm",
 #'   return = "vector"
 #' )
-#'}
+#' }
+#'
 #' @export
 convert_gene_identifier <- function (idents,
                                      ident_in = "SYMBOL",
                                      ident_out = c("ENTREZID", "ALIAS", "GENENAME"),
                                      species = c("Hs", "Mm"),
-                                     return = c("data.frame", "vector")) {
+                                     return = c("data.frame", "vector"),
+                                     collapse_alias = c("paste", "list", "not"),
+                                     collapse_ensembl = c("paste", "list", "not"),
+                                     make_distinct = TRUE) {
 
   # https://medium.com/computational-biology/gene-id-mapping-using-r-14ff50eec9ba
 
@@ -83,22 +128,24 @@ convert_gene_identifier <- function (idents,
     }
   }
 
-  species <- match.arg(species, c("Hs", "Mm"))
-  return <- match.arg(return, c("data.frame", "vector"))
+  species <- rlang::arg_match(species)
+  return <- rlang::arg_match(return)
+  collapse_alias <- rlang::arg_match(collapse_alias)
+  collapse_ensembl <- rlang::arg_match(collapse_ensembl)
 
   if (return == "vector" && length(ident_out) > 1) {
-    print("ident_out has more than one entry, setting return to 'data.frame'.")
+    message("ident_out has more than one entry, setting return to 'data.frame'.")
     return <- "data.frame"
   }
   if (species == "Hs") {
     scexpr:::.ensure_package("org.Hs.eg.db")
     my.db <- org.Hs.eg.db::org.Hs.eg.db
-    idents <- gsub("^MT-", "MT", idents, ignore.case = F)
+    #idents <- gsub("^MT-", "MT", idents, ignore.case = F)
   }
   if (species == "Mm") {
     scexpr:::.ensure_package("org.Mm.eg.db")
     my.db <- org.Mm.eg.db::org.Mm.eg.db
-    idents <- gsub("^mt-", "mt", idents, ignore.case = F)
+    #idents <- gsub("^mt-", "mt", idents, ignore.case = F)
   }
   ident_in <- match.arg(ident_in, AnnotationDbi::keytypes(my.db))
   ident_out <- match.arg(ident_out, AnnotationDbi::keytypes(my.db), several.ok = T)
@@ -113,35 +160,52 @@ convert_gene_identifier <- function (idents,
     idents <- dplyr::filter(idents, !(SYMBOL == "MMD2" & ENTREZID == "100505381"))
     idents <- dplyr::filter(idents, !(SYMBOL == "HBD" & ENTREZID == "100187828"))
   }
-  if (any(duplicated(idents[,ident_in]))) {
-    print(paste0("Duplicate return by ident_out for: ", paste(idents[,ident_in][which(duplicated(idents[,ident_in]))], collapse = ", ")))
-    print("Made distinct with dplyr::distinct")
-    idents <- dplyr::distinct(idents, !!rlang::sym(ident_in), .keep_all = T)
-  }
 
-  if ("SYMBOL" %in% names(idents)) {
-    idents$ALIAS <- suppressWarnings(limma::alias2SymbolTable(alias = idents$SYMBOL, species = species))
-    for (i in ident_out) {
-      # use ALIAS to find ident_out
-      rows <- intersect(which(is.na(idents[,i])), which(!is.na(idents[,"ALIAS"])))
-      if (length(rows) > 0) {
-        idents[rows, i] <- suppressMessages(AnnotationDbi::mapIds(my.db, keys = as.character(idents[rows, "ALIAS"]), keytype = "SYMBOL", column = i, multiVals = "first"))
-      }
+  if ("ALIAS" %in% names(idents)) {
+    if (collapse_alias == "paste") {
+      idents <- dplyr::summarise(idents, ALIAS = paste(sort(ALIAS), collapse = ", "), .by = -ALIAS)
+    } else if (collapse_alias == "list") {
+      idents <- dplyr::summarise(idents, ALIAS = list(sort(ALIAS)), .by = -ALIAS)
+    }
+  }
+  if ("ENSEMBL" %in% names(idents)) {
+    if (collapse_ensembl == "paste") {
+      idents <- dplyr::summarise(idents, ENSEMBL = paste(sort(ENSEMBL), collapse = ", "), .by = -ENSEMBL)
+    } else if (collapse_ensembl == "list") {
+      idents <- dplyr::summarise(idents, ENSEMBL = list(sort(ENSEMBL)), .by = -ENSEMBL)
     }
   }
 
-  if (nrow(idents) != start_len) {
-    print("input length and output length are not identical.")
+  if (anyDuplicated(idents[[ident_in]]) && make_distinct) {
+    print(paste0("Duplicate return by ident_out for: ", paste(idents[[ident_in]][which(duplicated(idents[[ident_in]]))], collapse = ", ")))
+    message("Made distinct with dplyr::distinct")
+    idents <- dplyr::distinct(idents, !!rlang::sym(ident_in), .keep_all = T)
   }
 
+  # if ("SYMBOL" %in% names(idents)) {
+  #   idents$ALIAS <- suppressWarnings(limma::alias2SymbolTable(alias = idents$SYMBOL, species = species))
+  #   for (i in ident_out) {
+  #     # use ALIAS to find ident_out
+  #     rows <- intersect(which(is.na(idents[,i])), which(!is.na(idents[,"ALIAS"])))
+  #     if (length(rows) > 0) {
+  #       idents[rows, i] <- suppressMessages(AnnotationDbi::mapIds(my.db, keys = as.character(idents[rows, "ALIAS"]), keytype = "SYMBOL", column = i, multiVals = "first"))
+  #     }
+  #   }
+  # }
+
+
   if (return == "data.frame") {
+    if (nrow(idents) != start_len) {
+      message("input length and output length are not identical.")
+    }
+
     return(idents)
   }
   if (return == "vector") {
     idents <- dplyr::distinct(idents, !!rlang::sym(ident_in), .keep_all = T)
-    idents <- idents[,ident_out]
+    idents <- idents[[ident_out]]
     if (length(idents) != start_len) {
-      print("input length and output length are not identical.")
+      message("input length and output length are not identical.")
     }
     return(idents)
   }

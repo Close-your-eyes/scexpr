@@ -2,32 +2,86 @@
 % Please edit documentation in R/merge_objects.R
 \name{merge_objects}
 \alias{merge_objects}
-\title{Merge list of Seurat objects}
+\title{Merge RNA counts and metadata from Seurat objects}
 \usage{
 merge_objects(
   obj_list,
   obj_ident_col = "obj_ident",
   merge_reductions = F,
-  misc_from_first = F
+  misc_from_first = F,
+  align_features_species = "Hs"
 )
 }
 \arguments{
-\item{obj_list}{list of Seurat objects.}
+\item{obj_list}{A nonempty list of Seurat objects with RNA counts. List names
+identify the source objects and must be unique, nonmissing, and nonempty.
+Unnamed lists receive positional names, such as \code{"1"}, \code{"2"}.}
 
-\item{obj_ident_col}{new column name to identify origin of cells by object}
+\item{obj_ident_col}{Name of the metadata column recording each cell's source
+object, using the list names. An existing column with this name is overwritten.}
 
-\item{merge_reductions}{try to merge reductions?}
+\item{merge_reductions}{Logical; whether to stack cell embeddings for reduction
+names present in every object. Defaults to \code{FALSE}. See Details for
+coordinate-system requirements.}
 
-\item{misc_from_first}{use misc slot from first obj in list?}
+\item{misc_from_first}{Logical; whether to copy named entries of the first
+object's \code{misc} slot. Defaults to \code{FALSE}.}
+
+\item{align_features_species}{Species used for gene annotation during feature
+alignment: \code{"Hs"} for human (default) or \code{"Mm"} for mouse.}
 }
 \value{
-merged seurat
+A Seurat object containing merged RNA counts, newly normalized data,
+combined cell metadata, and the source-object column. Common reduction
+embeddings and the first object's named \code{misc} entries are included
+only when requested.
 }
 \description{
-Currently counts of RNA assay and meta data only.
+Align shared features across Seurat objects, combine their RNA counts and
+cell metadata, and normalize the merged counts.
+}
+\details{
+Features are aligned by \code{align_features_seurat()}, using the first object
+as the master. Only features shared according to that alignment are retained;
+output feature symbols and order follow the master. An error is raised if no
+shared features remain, master symbols are missing, empty, or duplicated, or
+aligned features cannot be matched uniquely to RNA counts rows.
+
+Before alignment, the function prints the fraction of each object's RNA-count
+feature names present in every object. These fractions use exact feature-name
+matches before annotation-based alignment, so they may differ from the final
+retained fractions. An empty feature set is reported as zero.
+
+If cell names overlap across objects, all cells are prefixed with their source
+list name and an underscore. Any remaining collisions are resolved with
+\code{make.unique()}. Counts, metadata, and reductions are renamed together.
+Otherwise, original cell names are retained. Input objects are not modified.
+
+A new Seurat object is constructed from the retained RNA counts and combined
+metadata. \code{Seurat::NormalizeData()} is then run with its default
+normalization settings. Other assays, existing normalized or scaled expression,
+graphs, and reduction loadings are not copied.
+
+With \code{merge_reductions = TRUE}, common reductions are combined by stacking
+their existing cell embeddings. This is meaningful only when inputs already
+share the same coordinate system: independently computed PCA or UMAP embeddings
+are not aligned by this operation. Embedding columns must be compatible; the
+function does not explicitly validate this. The assay reference and key are
+taken from the first object. A message explains this limitation when common
+reductions are merged.
 }
 \examples{
 \dontrun{
-so <- merge_objects(obj_list = list(so1,so2,so3))
+merged <- merge_objects(list(sample1 = so1, sample2 = so2))
+
+# Mouse data; source labels are stored in the sample column.
+merged_mouse <- merge_objects(
+  list(sample1 = mouse1, sample2 = mouse2),
+  obj_ident_col = "sample",
+  align_features_species = "Mm"
+)
 }
+}
+\seealso{
+\code{\link{align_features_seurat}}, \code{\link{get_layer}}
 }

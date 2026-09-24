@@ -89,6 +89,7 @@ volcano01_calc <- function(SO,
                                                                 c(neg_name, pos_name)),
                                          missing_fct_to_na = F)),
                            mc.cores = 1,
+                           species = "Hs",
                            ...) {
 
   scexpr:::.ensure_packages(c("matrixTests", "colrr"))
@@ -124,6 +125,10 @@ volcano01_calc <- function(SO,
   if (length(unique(c(sapply(SO, nrow), length(intersect_features)))) != 1) {
     message("Different features across SOs detected. Will use intersecting ones only.")
   }
+
+  # if (length(SO) > 1 && any(lengths(nonintersect_features) > 1)) {
+  #   dfs <- align_features_seurat(SO)
+  # }
 
   colname <- "volcano_groups"
   SO <- lapply(SO, function(x) {

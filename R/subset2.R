@@ -48,6 +48,7 @@
 #' Seurat::Idents(so) <- so@meta.data$orig.ident
 #' }
 subset2 <- function(obj, ..., min_obs = 1, by = "orig.ident") {
+
   obj <- subset(obj, ...)
 
   for (i in names(obj@assays)) {

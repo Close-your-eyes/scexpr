@@ -33,9 +33,10 @@
 #' @param SO_unprocessed A Seurat object, a list of sample-level Seurat objects,
 #'   a named list of dense or sparse gene-by-cell UMI matrices, a character
 #'   vector of RDS paths, or a list containing one RDS path per element. Each
-#'   RDS file may contain one Seurat object or a list of Seurat objects. Existing
-#'   names are preserved; missing names are derived from file names or generated
-#'   as `sample_1`, `sample_2`, and so on. Matrix lists must be named, and every
+#'   RDS file may contain one Seurat object, one dense or sparse UMI matrix, a
+#'   list of Seurat objects, or a named list of UMI matrices. Existing names are
+#'   preserved; missing names are derived from file names or generated as
+#'   `sample_1`, `sample_2`, and so on. Matrix lists must be named, and every
 #'   matrix must have unique, non-empty gene and cell names.
 #' @param samples Optional character vector naming the input samples to retain.
 #'   Matching is case-insensitive. By default, all samples are used.
@@ -152,6 +153,8 @@
 #' Pachterlab: [proportional_fit_pachterlab()]
 #' @param mc_cores_read parallel processes for initial normalization
 #' @param mc_cores_cluster parallel processes for cluster detection
+#' @param features select subset of features
+#' @param features_invert invert feature selection (exclude selected)
 #'
 #' @return A processed Seurat object. Depending on the selected workflow, it
 #'   contains normalized assays, variable features, PCA and optional batch-
@@ -198,6 +201,8 @@
 SO_prep02 <- function(SO_unprocessed,
                       samples = NULL,
                       cells = NULL,
+                      features = NULL,
+                      features_invert = F,
                       min_cells = 50,
                       downsample = 1,
                       downsample_method = c("uniform", "leverage"),
@@ -280,6 +285,10 @@ SO_prep02 <- function(SO_unprocessed,
     stop("save_path has to be a character; a path to a folder where to save Seurat objects to.")
   }
 
+  if (!is.null(var_feature_filter) && !is.character(var_feature_filter)) {
+    stop("var_feature_filter has to be a character vector.")
+  }
+
   if (interactive_pc_selection) {
     npcs <- max(50, npcs)
   }
@@ -306,6 +315,8 @@ SO_prep02 <- function(SO_unprocessed,
 
   c(SO_unprocessed, samples) %<-% check_SO_unprocessed_and_samples(SO_unprocessed = SO_unprocessed,
                                                                    samples = samples,
+                                                                   features = features,
+                                                                   features_invert = features_invert,
                                                                    batch_corr = batch_corr,
                                                                    RunHarmony_args = RunHarmony_args,
                                                                    verbose = verbose,
@@ -1035,6 +1046,7 @@ make_so_multi_harmony <- function(SO_unprocessed,
       #                                                            assay = "RNA"),
       #                                                       SCtransform_args))
 
+
       if (!is.null(var_feature_set)) {
         Seurat::VariableFeatures(SO) <- var_feature_set
       }
@@ -1390,6 +1402,8 @@ check_celltype_ref_clusters <- function(celltype_ref_clusters,
 
 check_SO_unprocessed_and_samples <- function(SO_unprocessed,
                                              samples,
+                                             features,
+                                             features_invert,
                                              batch_corr,
                                              RunHarmony_args,
                                              verbose,
@@ -1419,7 +1433,7 @@ check_SO_unprocessed_and_samples <- function(SO_unprocessed,
 
   # create objects from scratch to rm all previous traces like commands or so
   SO_unprocessed <- parallel::mclapply(SO_unprocessed, function(x) {
-    get_layer(obj = x, assay = "RNA", layer = "counts") |>
+    get_layer(obj = x, assay = "RNA", layer = "counts", features = features, features_invert = features_invert) |>
       SeuratObject::CreateSeuratObject() |>
       SeuratObject::AddMetaData(x@meta.data) |>
       Seurat::NormalizeData(verbose = F, assay = "RNA")
@@ -1537,6 +1551,19 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
     SeuratObject::CreateSeuratObject(counts = x, project = sample_name)
   }
 
+  matrix_list_to_seurat <- function(x, context) {
+    matrix_names <- names(x)
+    if (is.null(matrix_names) || anyNA(matrix_names) || any(!nzchar(matrix_names))) {
+      stop(context, " must be a named list of UMI matrices.", call. = FALSE)
+    }
+
+    x <- set_missing_names(x)
+    matrix_names <- names(x)
+    x <- Map(matrix_to_seurat, x, matrix_names)
+    names(x) <- matrix_names
+    x
+  }
+
   read_seurat_rds <- function(path, supplied_name = "") {
     value <- tryCatch(
       readRDS(path),
@@ -1549,6 +1576,18 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
     )
 
     file_prefix <- tools::file_path_sans_ext(basename(path))
+    if (is_count_matrix(value)) {
+      object_name <- if (!is.na(supplied_name) && nzchar(supplied_name)) {
+        supplied_name
+      } else {
+        file_prefix
+      }
+      value <- stats::setNames(list(value), object_name)
+      return(matrix_list_to_seurat(value, context = paste0("RDS file '", path, "'")))
+    }
+    if (is.list(value) && length(value) && all(vapply(value, is_count_matrix, logical(1)))) {
+      return(matrix_list_to_seurat(value, context = paste0("RDS file '", path, "'")))
+    }
     if (is_seurat(value)) {
       object_name <- if (!is.na(supplied_name) && nzchar(supplied_name)) {
         supplied_name
@@ -1581,15 +1620,7 @@ normalize_SO_unprocessed <- function(SO_unprocessed) {
       return(set_missing_names(SO_unprocessed))
     }
     if (all(list_is_matrix)) {
-      matrix_names <- names(SO_unprocessed)
-      if (is.null(matrix_names) || anyNA(matrix_names) || any(!nzchar(matrix_names))) {
-        stop("A list of UMI matrices supplied to SO_unprocessed must be named.", call. = FALSE)
-      }
-      SO_unprocessed <- set_missing_names(SO_unprocessed)
-      matrix_names <- names(SO_unprocessed)
-      SO_unprocessed <- Map(matrix_to_seurat, SO_unprocessed, matrix_names)
-      names(SO_unprocessed) <- matrix_names
-      return(SO_unprocessed)
+      return(matrix_list_to_seurat(SO_unprocessed, context = "SO_unprocessed"))
     }
     if (all(list_is_path)) {
       supplied_names <- names(SO_unprocessed)

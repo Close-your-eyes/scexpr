@@ -24,6 +24,7 @@ volcano01_calc(
     stats::setNames(colrr::col_pal("custom")[2:3], c(neg_name, pos_name)),
     missing_fct_to_na = F)),
   mc.cores = 1,
+  species = "Hs",
   ...
 )
 }

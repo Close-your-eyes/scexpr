@@ -10,6 +10,8 @@ get_layer(
   layer = "data",
   features = NULL,
   cells = NULL,
+  features_invert = F,
+  cells_invert = F,
   as = c("sparse", "dense", "df"),
   transpose = F
 )
@@ -24,6 +26,10 @@ get_layer(
 \item{features}{filter for features}
 
 \item{cells}{filter for cells}
+
+\item{features_invert}{invert feature selection. exclude the ones provided.}
+
+\item{cells_invert}{invert cell selection. exclude the ones provided.}
 
 \item{as}{what to return, sparse or dense matrix or data frame}
 

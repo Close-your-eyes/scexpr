@@ -45,7 +45,7 @@ varfeat_plot <- function(obj, n_varfeat = seq(200, 2000, 200)) {
       ggplot2::facet_wrap(nvarfeat)
   })
 
-  hvfdat$density <- brathering::density_est(x = hvfdat$mean, y = hvfdat$variance.standardized)$raw
+  hvfdat$density <- brathering::density_est(x = hvfdat[[xvar]], y = hvfdat[[yvar]])$raw
   varfeatplots <- c(list(density = ggplot2::ggplot(hvfdat, ggplot2::aes(!!rlang::sym(xvar), !!rlang::sym(yvar), color = density)) +
                            ggplot2::geom_point(size = 0.2) +
                            colrr::theme_material() +
