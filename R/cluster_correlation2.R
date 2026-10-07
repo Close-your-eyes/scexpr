@@ -222,21 +222,8 @@ cluster_correlation2 <- function(objs,
 
   dendroplot <- NULL
   hc <- NULL
-  if (isSymmetric(corr_mat)) {
-    dist_mat <- stats::as.dist(1 - corr_mat)
-    hc <- stats::hclust(dist_mat)
-    hcdata <- ggdendro::dendro_data(hc, type = "rectangle")
-    dendroplot <- ggplot2::ggplot() +
-      ggplot2::geom_segment(data = ggdendro::segment(hcdata),
-                            ggplot2::aes(x = x, y = y, xend = xend, yend = yend)) +
-      ggplot2::geom_text(data = ggdendro::label(hcdata),
-                         ggplot2::aes(x = x, y = y, label = label, hjust = 0),
-                         size = 3) +
-      ggplot2::coord_flip() +
-      ggplot2::scale_y_reverse(expand = c(0.2, 0)) +
-      ggplot2::theme_void()
-  }
 
+  c(hc, dendroplot) %<-% brathering::dendro_plot(corrmat = corr_mat)
 
   rdf <- brathering::mat_to_df_long(corr_mat,
                                     rownames_to = names(objs)[1],

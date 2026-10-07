@@ -545,7 +545,7 @@ feature_plot_data <- function(data,
   if (axes_arrows) {
     bckgr <- scexpr:::get_background_col(plot)
     suggest_bw <- brathering::bw_txt(bckgr, cutoff = 40)
-    browser()
+
     plot <- brathering::gg_axes_arrows(plot,
                                        annotate_args = list(size = 3, color = suggest_bw),
                                        arrow_args = list(angle = 25,

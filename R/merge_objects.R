@@ -90,7 +90,7 @@ merge_objects <- function(obj_list,
   }
 
   # Rename whole objects so counts, metadata, and reductions stay in sync.
-  cell_names <- unlist(lapply(obj_list, colnames), use.names = FALSE)
+  cell_names <- unlist(purrr::map(obj_list, ~cells2(.x)), use.names = FALSE)
   if (anyDuplicated(cell_names)) {
     prefixed <- purrr::imap(obj_list, ~paste0(.y, "_", colnames(.x)))
     unique_names <- make.unique(unlist(prefixed, use.names = FALSE))

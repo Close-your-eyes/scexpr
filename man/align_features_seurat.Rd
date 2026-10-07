@@ -4,7 +4,7 @@
 \alias{align_features_seurat}
 \title{Align shared gene features across Seurat objects}
 \usage{
-align_features_seurat(obj_list, species = "Hs", ...)
+align_features_seurat(obj_list, assay = "RNA", species = "Hs", ...)
 }
 \arguments{
 \item{obj_list}{A nonempty list of Seurat objects. List names identify

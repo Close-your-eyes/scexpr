@@ -44,7 +44,7 @@ composition_barplot <- function(SO,
                                 x_cat, #x_var
                                 fill_cat, #fill_var
                                 y = c("rel", "abs"),
-                                col_pal = "custom",
+                                col_pal = "..auto..",
                                 geom_col_args = list(color = "black"),
                                 plot_rel_labels = F,
                                 label_only_largest = F,
@@ -70,6 +70,10 @@ composition_barplot <- function(SO,
 
   scexpr:::.ensure_package("colrr")
   scexpr:::.ensure_package("brathering")
+
+  if (col_pal == "..auto.." && "metacolors" %in% names(SO@misc) && fill_cat %in% names(SO@misc$metacolors)) {
+    col_pal <- SO@misc$metacolors[[fill_cat]]
+  }
 
   if (methods::is(SO, "Seurat")) {
     SO <- SO@meta.data

@@ -9,7 +9,7 @@ composition_barplot(
   x_cat,
   fill_cat,
   y = c("rel", "abs"),
-  col_pal = "custom",
+  col_pal = "..auto..",
   geom_col_args = list(color = "black"),
   plot_rel_labels = F,
   label_only_largest = F,

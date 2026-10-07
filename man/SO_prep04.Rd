@@ -9,7 +9,7 @@ SO_prep04(
   reductions = c("umap"),
   nhvf = 800,
   npcs = 20,
-  normalization = c("SCT", "RNA", "LogNormalize"),
+  normalization = c("RNA", "SCT", "LogNormalize"),
   batch_corr = c("harmony", "none"),
   vars.to.regress = NULL,
   seed = 42,

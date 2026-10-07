@@ -302,7 +302,8 @@ SO_prep02 <- function(SO_unprocessed,
     npcs = npcs,
     nhvf = nhvf,
     seed = seed,
-    verbose = verbose)
+    verbose = verbose,
+    var_feature_set = var_feature_set)
 
   c(RunHarmony_args, batch_corr) %<-% check_RunHarmony_args(RunHarmony_args = RunHarmony_args,
                                                             RunPCA_args = RunPCA_args,
@@ -332,7 +333,8 @@ SO_prep02 <- function(SO_unprocessed,
                                              nhvf = nhvf,
                                              vars.to.regress = vars.to.regress,
                                              verbose = verbose,
-                                             seed = seed)
+                                             seed = seed,
+                                             var_feature_set = var_feature_set)
 
   FindVariableFeatures_args <- check_FindVariableFeatures_args(FindVariableFeatures_args = FindVariableFeatures_args,
                                                                nhvf = nhvf,
@@ -703,7 +705,8 @@ make_so_single <- function(SO_unprocessed,
       npcs = RunPCA_args[["npcs"]],
       seed = RunPCA_args[["seed"]],
       nhvf = FindVariableFeatures_args[["nfeatures"]],
-      verbose = RunPCA_args[["verbose"]])
+      verbose = RunPCA_args[["verbose"]],
+      var_feature_set = var_feature_set)
 
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
   }
@@ -926,7 +929,8 @@ make_so_multi_integrate <- function(SO_unprocessed,
       npcs = RunPCA_args[["npcs"]],
       seed = RunPCA_args[["seed"]],
       nhvf = FindVariableFeatures_args[["nfeatures"]],
-      verbose = RunPCA_args[["verbose"]])
+      verbose = RunPCA_args[["verbose"]],
+      var_feature_set = var_feature_set)
 
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
   }
@@ -1198,7 +1202,8 @@ make_so_multi_harmony <- function(SO_unprocessed,
       npcs = RunPCA_args[["npcs"]],
       seed = RunPCA_args[["seed"]],
       nhvf = SCtransform_args[["variable.features.n"]],
-      verbose = RunPCA_args[["verbose"]])
+      verbose = RunPCA_args[["verbose"]],
+      var_feature_set = var_feature_set)
 
     SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
 
@@ -1303,7 +1308,8 @@ check_RunPCA_args <- function(RunPCA_args,
                               npcs,
                               nhvf,
                               seed = 42,
-                              verbose = T) {
+                              verbose = T,
+                              var_feature_set) {
   # actually only very few arguments are allowed to be passed by RunPCA_args. Otherwise the function would break.
 
   pca_ext <- ifelse(normalization == "LogNormalize", "RNA", normalization)
@@ -1312,7 +1318,7 @@ check_RunPCA_args <- function(RunPCA_args,
   RunPCA_args[["npcs"]] <- npcs
   RunPCA_args[["seed.use"]] <- seed
   RunPCA_args[["verbose"]] <- verbose
-  redname <- paste0("pca", npcs, "_", pca_ext, nhvf)
+  redname <- paste0("pca", npcs, "_", pca_ext, ifelse(is.null(var_feature_set), nhvf, length(var_feature_set)))
   RunPCA_args[["reduction.name"]] <- redname
 
   # i <- 0
@@ -1765,11 +1771,14 @@ check_SCtransform_args <- function(SCtransform_args,
                                    nhvf,
                                    vars.to.regress,
                                    verbose,
-                                   seed) {
+                                   seed,
+                                   var_feature_set) {
   # prep SCtransform args once for all
   SCtransform_args <- SCtransform_args[which(!names(SCtransform_args) %in% c("object", "assay", "new.assay.name", "seed.use", "verbose"))]
 
-  SCtransform_args[["variable.features.n"]] <- nhvf
+  SCtransform_args[["variable.features.n"]] <- ifelse(is.null(var_feature_set), nhvf, length(var_feature_set))
+  # Character vector of genes to compute residuals for. Default NULL (all genes). If set, these become the assay’s variable features.
+  SCtransform_args[["residual.features"]] <- var_feature_set
   SCtransform_args[["verbose"]] <- verbose
   SCtransform_args[["seed.use"]] <- seed
 

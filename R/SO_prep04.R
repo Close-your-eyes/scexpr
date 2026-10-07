@@ -74,7 +74,7 @@ SO_prep04 <- function(SO,
                       reductions = c("umap"),
                       nhvf = 800,
                       npcs = 20,
-                      normalization = c("SCT", "RNA", "LogNormalize"),
+                      normalization = c("RNA", "SCT", "LogNormalize"),
                       batch_corr = c("harmony", "none"),
                       vars.to.regress = NULL,
                       seed = 42,
@@ -120,14 +120,16 @@ SO_prep04 <- function(SO,
     npcs = npcs,
     nhvf = nhvf,
     seed = seed,
-    verbose = verbose)
+    verbose = verbose,
+    var_feature_set = var_feature_set)
 
   SCtransform_args <- scexpr:::check_SCtransform_args(
     SCtransform_args = SCtransform_args,
     nhvf = nhvf,
     vars.to.regress = vars.to.regress,
     verbose = verbose,
-    seed = seed)
+    seed = seed,
+    var_feature_set = var_feature_set)
 
   FindVariableFeatures_args <- scexpr:::check_FindVariableFeatures_args(
     FindVariableFeatures_args = FindVariableFeatures_args,
@@ -296,9 +298,9 @@ make_so_simple <- function(SO,
         (normalization %in% names(SO@assays) && SCtransform_args[["variable.features.n"]] != length(SO@assays[["SCT"]]@var.features)) ||
         recalculate) {
 
-      if (!is.null(var_feature_set)) {
-        Seurat::VariableFeatures(SO) <- var_feature_set
-      }
+      # if (!is.null(var_feature_set)) {
+      #   Seurat::VariableFeatures(SO) <- var_feature_set
+      # }
 
       if (interactive_varfeat_selection && is.null(var_feature_set)) {
         SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO),
@@ -313,7 +315,11 @@ make_so_simple <- function(SO,
         SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
                                                                    assay = "RNA"),
                                                               SCtransform_args))
-        varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
+        try(expr = {
+          vfplot <- varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
+          print(vfplot)
+        }, silent = T)
+
       }
 
       # remove var features which are to filter
@@ -336,6 +342,7 @@ make_so_simple <- function(SO,
   } else if (normalization %in% c("LogNormalize", "RNA")) {
 
     ## always recalculate for now
+    SeuratObject::DefaultAssay(SO) <- normalization
 
     SO <- Seurat::NormalizeData(SO, verbose = verbose)
     SO <- Gmisc::fastDoCall(Seurat::FindVariableFeatures, args = c(list(object = SO),
@@ -353,7 +360,10 @@ make_so_simple <- function(SO,
                                                                           assay = "RNA"),
                                                                      FindVariableFeatures_args))
     } else {
-      varfeat_plot(obj = SO, n_varfeat = FindVariableFeatures_args[["nfeatures"]])
+      try(expr = {
+        vfplot <- varfeat_plot(obj = SO, n_varfeat = FindVariableFeatures_args[["nfeatures"]])
+        print(vfplot)
+      }, silent = T)
     }
 
     # if (!is.null(var_feature_filter)) {
@@ -373,7 +383,6 @@ make_so_simple <- function(SO,
     normalization <- "RNA"
   }
 
-  SeuratObject::DefaultAssay(SO) <- normalization
   message("DefaultAssay: ", SeuratObject::DefaultAssay(SO))
 
   if (!RunPCA_args[["reduction.name"]] %in% names(SO@reductions) || recalculate) {
@@ -383,13 +392,14 @@ make_so_simple <- function(SO,
       print(scexpr::elbowplot2(SO, npcs = RunPCA_args[["npcs"]])[["plot"]])
       RunPCA_args[["npcs"]] <- get_numeric_input("select number of pc.")
 
-      RunPCA_args <- check_RunPCA_args(
+      RunPCA_args <- scexpr:::check_RunPCA_args(
         RunPCA_args = RunPCA_args,
         normalization = normalization,
         npcs = RunPCA_args[["npcs"]],
         seed = RunPCA_args[["seed"]],
         nhvf = SCtransform_args[["variable.features.n"]],
-        verbose = RunPCA_args[["verbose"]])
+        verbose = RunPCA_args[["verbose"]],
+        var_feature_set = var_feature_set)
 
       SO <- Gmisc::fastDoCall(Seurat::RunPCA, args = c(list(object = SO), RunPCA_args))
 

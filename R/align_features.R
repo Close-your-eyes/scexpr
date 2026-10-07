@@ -242,14 +242,15 @@ align_features <- function(feature_dfs,
 #' @seealso \code{\link{align_features}}
 #' @export
 align_features_seurat <- function(obj_list,
+                                  assay = "RNA",
                                   species = "Hs",
                                   ...) {
 
   obj_list <- purrr::map(obj_list, function(x) {
-    if ("RNA" %in% names(x@assays)) {
-      SeuratObject::DefaultAssay(x) <- "RNA"
+    if (assay %in% names(x@assays)) {
+      SeuratObject::DefaultAssay(x) <- assay
     } else {
-      message("align_features_seurat: RNA assay not found.")
+      message("align_features_seurat: ", assay, " assay not found.")
     }
     return(x)
   })
