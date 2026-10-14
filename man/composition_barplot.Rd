@@ -5,10 +5,10 @@
 \title{Plot composition of one category by another}
 \usage{
 composition_barplot(
-  SO,
-  x_cat,
-  fill_cat,
-  y = c("rel", "abs"),
+  obj,
+  xvar,
+  fillvar,
+  yvar = c("rel", "abs"),
   col_pal = "..auto..",
   geom_col_args = list(color = "black"),
   plot_rel_labels = F,
@@ -29,74 +29,137 @@ composition_barplot(
   label_total_abs_nudge = c(0, 0),
   label_position = NULL,
   flip = F,
-  bw_cutoff = 50
+  bw_cutoff = 50,
+  theme = colrr::theme_material(white = T),
+  theme_args = list(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1))
 )
 }
 \arguments{
-\item{SO}{Seurat object or data frame, meta.data of SO is used}
+\item{obj}{A Seurat object or a data frame. For a Seurat object, the
+\code{meta.data} slot supplies the observations.}
 
-\item{x_cat}{column to use as x axis}
+\item{xvar}{Character scalar naming the column used for the x-axis categories.
+Numeric columns are not supported; convert them to character or factor.}
 
-\item{fill_cat}{column to use fill category for bar segments}
+\item{fillvar}{Character scalar naming the column used for bar segments.}
 
-\item{y}{use absolute (n) or relative (\%) y axis}
+\item{yvar}{Character scalar: \code{"rel"} for frequencies within each x-axis category
+or \code{"abs"} for observation counts.}
 
-\item{col_pal}{color palette for bar filling}
+\item{col_pal}{Palette name or color vector passed to
+\code{\link[colrr:make_col_pal]{colrr::make_col_pal()}}. The default,
+\code{"..auto.."}, uses \code{obj@misc$metacolors[[fillvar]]} when available and
+otherwise uses the \code{"custom"} palette.}
 
-\item{geom_col_args}{args to geom_col}
+\item{geom_col_args}{Named list of arguments passed to \code{\link[ggplot2:geom_col]{ggplot2::geom_col()}}.
+Label positions assume the default stacked bars.}
 
-\item{plot_rel_labels}{plot relative labels of bar segment sizes}
+\item{plot_rel_labels}{Logical. Display within-category frequencies inside
+bar segments.}
 
-\item{label_only_largest}{label only the largest bar segment per x_cat,
-e.g if there are two groups only per x_cat}
+\item{label_only_largest}{Logical. Restrict segment labels to the largest
+eligible segment in each x-axis category. Ties retain all largest segments.}
 
-\item{plot_abs_labels}{plot absolute labels of bar segment sizes}
+\item{plot_abs_labels}{Logical. Display observation counts inside bar segments.}
 
-\item{plot_total_rel_labels}{plot total labels on top of bar showing how much the
-x_cat occupies from total}
+\item{plot_total_rel_labels}{Logical. Display each x-axis category's share
+of all observations above its bar.}
 
-\item{plot_total_abs_labels}{see plot_total_rel_labels}
+\item{plot_total_abs_labels}{Logical. Display the total observation count
+for each x-axis category above its bar.}
 
-\item{min_label_freq}{minimum frequency per x_cat to plot labels}
+\item{min_label_freq}{Numeric scalar. Minimum within-category fraction for a
+segment to receive a label, regardless of \code{yvar}. Defaults to \code{0.05}.}
 
-\item{label_rel_pct}{plot relative label as percent (TRUE) or as fraction (FALSE);
-this also affects the axis if y = "rel"}
+\item{label_rel_pct}{Logical. Display relative labels as percentages when
+\code{TRUE} and as fractions otherwise. Also controls the scale of the relative
+y-axis when \code{yvar = "rel"}.}
 
-\item{label_rel_decimals}{number of decimal places for percent values}
+\item{label_rel_decimals}{Number of decimal places for relative labels.
+When omitted, uses zero for percentages and two for fractions.}
 
-\item{label_rel_rm_zero}{remove leading zero from relative label?}
+\item{label_rel_rm_zero}{Logical. Remove the leading zero from relative
+segment labels displayed as fractions.}
 
-\item{summarize_all_x}{add an extra column that summarizes (averages) all others}
+\item{summarize_all_x}{Logical. Add a bar named \code{"___all___"} pooling all
+observations. Its frequencies reflect pooled counts, rather than an
+unweighted average of the individual bars.}
 
-\item{label_rel_nudge}{list of x and y values to nudge relative labels;
-list may have names of x_cat but names only apply if there is max. 1 label per x_cat,
-e.g. when label_only_largest = T}
+\item{label_rel_nudge}{List of numeric pairs giving x and y offsets for
+relative segment labels. Recycled to the number of eligible labels.
+Names can match x-axis categories when both the names and the eligible
+x-axis categories are unique; missing named entries use zero offsets.}
 
-\item{label_abs_nudge}{see label_rel_nudge}
+\item{label_abs_nudge}{List of x and y offset pairs for absolute segment
+labels, with the same recycling and naming rules as \code{label_rel_nudge}.}
 
-\item{label_size_rel}{vector of size for relative labels}
+\item{label_size_rel}{Numeric vector of relative segment label sizes,
+recycled to the number of labels and passed to \code{\link[ggplot2:geom_text]{ggplot2::geom_text()}}.}
 
-\item{label_size_abs}{see label_size_rel}
+\item{label_size_abs}{Numeric vector of absolute segment label sizes,
+recycled in the same way as \code{label_size_rel}.}
 
-\item{label_total_rel_nudge}{x and y nudging of total label on top}
+\item{label_total_rel_nudge}{Numeric pair giving x and y offsets for all
+relative total labels.}
 
-\item{label_total_abs_nudge}{see label_total_rel_nudge}
+\item{label_total_abs_nudge}{Numeric pair giving x and y offsets for all
+absolute total labels.}
 
-\item{label_position}{overwrite calculated label positions, which by default are centered in bar segments}
+\item{label_position}{Optional numeric vector replacing the vertical segment
+label positions, in the plotted y-axis units. Its length must match the
+number of eligible labels. Unique names can match x-axis categories when
+each category has at most one eligible label; missing named positions use
+the calculated centers. Applies to both relative and absolute labels.}
 
-\item{flip}{flip x and y axis}
+\item{flip}{Logical. Flip the axes using \code{\link[ggplot2:coord_flip]{ggplot2::coord_flip()}}.}
 
-\item{bw_cutoff}{cutoff value for label to switch between black and white
-depend upon background}
+\item{bw_cutoff}{Numeric cutoff passed to \code{\link[brathering:bw_txt]{brathering::bw_txt()}} to select
+black or white segment label text from the segment background color.}
+
+\item{theme}{A ggplot2 theme object. Defaults to
+\code{colrr::theme_material(white = TRUE)}.}
+
+\item{theme_args}{Named list of additional modifications passed to
+\code{\link[ggplot2:theme]{ggplot2::theme()}} after applying \code{theme}. By default, x-axis text is
+rotated by 45 degrees and right-aligned.}
 }
 \value{
-list of plot and data
+A named list containing:
+\describe{
+\item{plot}{A ggplot object.}
+\item{data}{An ungrouped tibble of segment counts (\code{n}), category totals
+(\code{x_total} and \code{fill_total}), within-category frequencies (\code{rel_x} and
+\code{rel_fill}), and columns used for colors and label positioning.}
+\item{data_total}{A data frame of x-axis category counts, relative totals,
+and total-label positions when either total-label option is enabled;
+otherwise \code{NULL}.}
+}
 }
 \description{
-Plot composition of one category by another
+Count observations for each combination of two metadata columns and display
+their composition as stacked bars. Each row of the input represents one
+observation. Bars can show within-category frequencies or absolute counts.
+}
+\details{
+Segment labels are centered using cumulative segment sizes before filtering
+by \code{min_label_freq}. If both label types are enabled, they share the same
+centers unless different nudges are supplied. Explicit nudges or positions
+print the eligible label rows in the order used for positioning.
+
+Total labels use a common height above the bars. The pooled bar, when
+requested, has a relative total of 100 percent, or one when fractions are used.
+
+Missing values in \code{fillvar} currently prevent segment labels from rendering.
 }
 \examples{
-\dontrun{
-combarlst <- scexpr::composition_barplot(SO, x_cat = "meta_res.0.8_PC2", fill_cat = "orig.ident")
-}
+metadata <- data.frame(
+  sample = c("sample_1", "sample_1", "sample_2", "sample_2"),
+  cell_type = c("T cell", "B cell", "T cell", "T cell")
+)
+result <- composition_barplot(
+  metadata, xvar = "sample", fillvar = "cell_type",
+  col_pal = "custom", plot_rel_labels = TRUE
+)
+result$plot
+result$data
 }

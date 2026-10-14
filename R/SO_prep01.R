@@ -425,45 +425,65 @@ SO_prep01 <- function(data_dirs,
 # out <- lapply(out, prefer_h5_per_type)
 #
 
-check_dir <- function(data_dirs, SoupX = F) {
+check_dir <- function(data_dirs, SoupX = FALSE) {
+  filtered <- c("filtered_feature_bc_matrix",
+                "filtered_gene_bc_matrices")
+  raw <- c("raw_feature_bc_matrix",
+           "raw_gene_bc_matrices")
 
-  dir_roots <- unlist(lapply(data_dirs, function(x) {
-    dd <- list.dirs(x)
-    dirname(dd[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices", basename(dd)))])
+  find_matrices <- function(path, recursive = FALSE) {
+    dirs <- list.dirs(path, recursive = recursive)
+    files <- list.files(path, recursive = recursive,
+                        full.names = TRUE, pattern = "\\.h5$")
+
+    paths <- unique(c(dirs, files))
+    types <- sub("\\.h5$", "", basename(paths))
+    paths[types %in% c(filtered, raw)]
+  }
+
+  dir_roots <- unlist(lapply(data_dirs, function(path) {
+    paths <- find_matrices(path, recursive = TRUE)
+    types <- sub("\\.h5$", "", basename(paths))
+    unique(dirname(paths[types %in% filtered]))
   }))
+  dir_roots <- dir_roots[!duplicated(dir_roots)]
+
+  if (!length(dir_roots)) {
+    stop("No filtered matrix directories or .h5 files found.")
+  }
 
   if (is.null(names(dir_roots))) {
     names(dir_roots) <- basename(dir_roots)
-    names(dir_roots)[which(names(dir_roots) == "outs")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "outs")]
-    names(dir_roots)[which(names(dir_roots) == "count")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "count")]
-    names(dir_roots)[which(names(dir_roots) == "SoupX")] <- basename(dirname(dir_roots))[which(names(dir_roots) == "SoupX")]
+    generic <- names(dir_roots) %in% c("outs", "count", "SoupX")
+    names(dir_roots)[generic] <- basename(dirname(dir_roots[generic]))
   }
 
-  if (any(duplicated(names(dir_roots)))) {
-    dup_inds <- which(duplicated(basename(dir_roots)))
-    dup_names <- basename(dir_roots)[dup_inds]
-    stop("Duplicated names found: ", paste(dup_names, collapse = ", "), ". Please fix.")
+  if (anyDuplicated(names(dir_roots))) {
+    stop("Duplicated sample names found. Please fix.")
   }
-  message(length(dir_roots), " folders with filtered_feature_bc_matrix and/or filtered_gene_bc_matrices found in data_dirs.")
+  message(length(dir_roots), " sample roots with filtered matrix directories or .h5 files found in data_dirs.")
 
-  message("searching for partial matches with filtered_feature_bc_matrix|raw_feature_bc_matrix or filtered_gene_bc_matrices|raw_gene_bc_matrices.")
-  raw_and_filt <- unlist(lapply(dir_roots, function(x) {
-    sub_folders <- basename(list.dirs(x, recursive = F))
-    return(sum(grepl("filtered_feature_bc_matrix|raw_feature_bc_matrix", sub_folders)) == 2 ||
-             sum(grepl("filtered_gene_bc_matrices|raw_gene_bc_matrices", sub_folders)) == 2)
-  }))
-
-  if (any(!raw_and_filt) && SoupX) {
-    message(length(raw_and_filt) - sum(raw_and_filt), " of ", length(raw_and_filt), " folder(s) (", paste(names(dir_roots[which(!raw_and_filt)]), collapse = ", "), ") do not contain raw_feature_bc_matrix. Hence, SoupX cannot be run and is set to FALSE.")
-    SoupX <- F
-  }
-
-  dir_folders <- lapply(dir_roots, function(x) {
-    dir_temp <- list.dirs(x, recursive = F)
-    dir_temp[which(grepl("filtered_feature_bc_matrix|filtered_gene_bc_matrices|raw_feature_bc_matrix|raw_gene_bc_matrices", basename(dir_temp)))]
+  dir_folders <- lapply(dir_roots, function(path) {
+    paths <- find_matrices(path)
+    # Prefer HDF5 when both formats exist for the same matrix type.
+    paths <- paths[order(!grepl("\\.h5$", paths))]
+    types <- sub("\\.h5$", "", basename(paths))
+    paths[!duplicated(types)]
   })
 
-  # length(dir_roots) == 1 sets SoupX_return
+  paired <- vapply(dir_folders, function(paths) {
+    types <- sub("\\.h5$", "", basename(paths))
+    all(c(filtered[1], raw[1]) %in% types) ||
+      all(c(filtered[2], raw[2]) %in% types)
+  }, logical(1))
+
+  if (SoupX && any(!paired)) {
+    message("Missing raw/filtered pairs for: ",
+            paste(names(dir_roots)[!paired], collapse = ", "),
+            ". SoupX set to FALSE.")
+    SoupX <- FALSE
+  }
+
   return(list(dir_folders, SoupX, length(dir_roots) == 1))
 }
 
@@ -555,7 +575,11 @@ read_10X_data <- function(path,
                           invert_cells = F) {
 
 
-  h5files <- list.files(path, pattern = "\\.h5$", full.names = T)
+  h5files <- if (!dir.exists(path) && grepl("\\.h5$", path)) {
+    path
+  } else {
+    list.files(path, pattern = "\\.h5$", full.names = TRUE)
+  }
   if (length(h5files)) {
     if (length(h5files) > 1 && verbose) {
       message("Found more than one .h5 file in ", path, ". Will use the first: ", h5files[1])
@@ -1117,6 +1141,9 @@ guess_species <- function(genes) {
 
 check_inputs2 <- function(sample_folders) {
   files_missing <- purrr::map_lgl(sample_folders, function(x) {
+    if (!dir.exists(x) && grepl("\\.h5$", x)) {
+      return(!file.exists(x))
+    }
     files <- list.files(x)
     if (any(tools::file_ext(files) == "h5")) {
       return(FALSE)
