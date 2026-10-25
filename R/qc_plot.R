@@ -363,9 +363,9 @@ qc_plot2 <- function(SO,
       )
     })
 
-    p3 <- composition_barplot(SO = SO,
-                              x_cat = clust_name,
-                              fill_cat = "orig.ident")[["plot"]] +
+    p3 <- composition_barplot(obj = SO,
+                              xvar = clust_name,
+                              fillvar = "orig.ident")[["plot"]] +
       ggplot2::theme_bw() +
       ggplot2::theme(legend.position = "none",
                      panel.grid.major.y = ggplot2::element_line(color = "grey95"),

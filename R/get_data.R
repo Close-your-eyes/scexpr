@@ -395,9 +395,17 @@ get_data <- function(SO,
       attr(data[[i]], "feature_type") <- "meta"
     }
     attr(data[[i]], "feature") <- feature[i]
+    attr(data[[i]], "assay") <- assay
     attr(data[[i]], "layer") <- layer
     attr(data[[i]], "qmin") <- qmin
     attr(data[[i]], "qmax") <- qmax
+
+    attr(data[[i]], "normalization") <- NULL
+    cmd <- paste0("NormalizeData.", assay)
+    if (cmd %in% SeuratObject::Command(SO[[1]])) {
+      attr(data[[i]], "normalization") <- SO[[1]]@commands[[cmd]]$normalization.method
+    }
+
     if (!is.null(reduction)) {
       reduction <- tolower(reduction)
       attr(data[[i]], "dim1") <- paste0(reduction, "_", dims[1])

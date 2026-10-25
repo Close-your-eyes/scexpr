@@ -268,24 +268,25 @@ feature_plot_data <- function(data,
 
 
   if (freq_plot == "..auto..") {
-    freq_plot <- nlevels(data[["SO.split"]]) > 1
+    if (!is.null(attr(data, "assay")) && attr(data, "assay") %in% c("RNA", "SCT")) {
+      freq_plot <- nlevels(data[["SO.split"]]) == 1
+    } else {
+      # e.g. ADT assay
+      freq_plot <- F
+    }
+
   } else if (!is.logical(freq_plot)) {
     stop("freq_plot has to be ..auto.., TRUE or FALSE.")
   }
 
-  # if (freq_plot && name_anno == "..auto..") {
-  #   name_anno <- "{feature} in {feature_cut_ex}"
-  # } else if (!freq_plot && name_anno == "..auto..") {
-  #   name_anno <- "{feature} ({freq}) in {feature_cut_ex}"
-  # }
-  if (freq_plot && anno == "..auto..") {
+  if (!freq_plot && anno == "..auto..") {
     anno <- "{feature} in {feature_cut_ex}"
-  } else if (!freq_plot && anno == "..auto..") {
+  } else if (freq_plot && anno == "..auto..") {
     anno <- "{feature} ({freq}) in {feature_cut_ex}"
   }
-  if (freq_plot && name == "..auto..") {
+  if (!freq_plot && name == "..auto..") {
     name <- "{feature} in {feature_cut_ex}"
-  } else if (!freq_plot && name == "..auto..") {
+  } else if (freq_plot && name == "..auto..") {
     name <- "{feature} ({freq}) in {feature_cut_ex}"
   }
 
@@ -358,7 +359,6 @@ feature_plot_data <- function(data,
     theme +
     Gmisc::fastDoCall(ggplot2::theme, args = theme_args)
 
-
   if (attr(data, "feature_type") == "gene") {
     freqs <- scexpr:::get_freqs(data = data)
     plot <- do.call(feature_plot_gene, args = list(plot = plot,
@@ -396,30 +396,33 @@ feature_plot_data <- function(data,
                              facet_scales = facet_scales,
                              nrow_inner = nrow_inner,
                              ncol_inner = ncol_inner)
-  # scexpr:::
 
-  plot <- scexpr:::add_color_scale(plot = plot,
-                                   col.pal = col.pal,
-                                   col_legend_c_args = col_legend_c_args,
-                                   col_legend_d_args = col_legend_d_args,
-                                   col_steps = col_steps,
-                                   legendbreaks = legendbreaks,
-                                   legendlabels = legendlabels,
-                                   col_steps_nice = col_steps_nice,
-                                   col_na = col_na,
-                                   col_binary = col_binary,
-                                   trans_log = col_trans_log)
+  plot <- add_color_scale(plot = plot,
+                          col.pal = col.pal,
+                          col_legend_c_args = col_legend_c_args,
+                          col_legend_d_args = col_legend_d_args,
+                          col_steps = col_steps,
+                          legendbreaks = legendbreaks,
+                          legendlabels = legendlabels,
+                          col_steps_nice = col_steps_nice,
+                          col_na = col_na,
+                          col_binary = col_binary,
+                          trans_log = col_trans_log)
 
   plot <- add_axes_expansion(plot = plot,
-                                      axes_lim_set = axes_lim_set,
-                                      axes_lim_expand = axes_lim_expand)
+                             axes_lim_set = axes_lim_set,
+                             axes_lim_expand = axes_lim_expand)
 
   if (!is.null(name_anno_pos)) {
+
+    ital <- F
+    ital <- attr(data, "feature_type") == "gene" && !is.null(attr(data, "assay")) && attr(data, "assay") %in% c("RNA", "SCT")
+
     title_freq_df <- scexpr:::get_title(feature_ex = attr(data, "feature_ex", exact = T),
                                         feature_cut = attr(data, "feature_cut", exact = T),
                                         feature_cut_expr = attr(data, "feature_cut_expr"),
                                         freq_df = freqs[["freq.expr"]],
-                                        feature_italic = attr(data, "feature_type") == "gene",
+                                        feature_italic = ital,
                                         feature = attr(data, "feature"),
                                         name_anno = name,
                                         #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
@@ -439,7 +442,7 @@ feature_plot_data <- function(data,
                                              feature_cut = attr(data, "feature_cut", exact = T),
                                              feature_cut_expr = attr(data, "feature_cut_expr"),
                                              freq_df = freq_df,
-                                             feature_italic = attr(data, "feature_type") == "gene",
+                                             feature_italic = ital,
                                              feature = attr(data, "feature"),
                                              name_anno = anno,
                                              #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
@@ -898,4 +901,166 @@ add_axes_expansion <- function(plot,
   plot +
     ggplot2::scale_x_continuous(limits = x_limits, expand = scale_expansion) +
     ggplot2::scale_y_continuous(limits = y_limits, expand = scale_expansion)
+}
+
+get_legend_text <- function(data,
+                            type = c("gene", "meta")) {
+  scexpr:::.ensure_package("brathering")
+
+  type <- rlang::arg_match(type)
+  if (is.numeric(data[["feature"]])) {
+    temp <- dplyr::filter(data, cells == 1 & !is.na(feature))
+    if (nrow(temp) == 0) {
+      return(NULL)
+    }
+    if (all(temp[["feature"]] == 0)) {
+      scale.max <- 0
+      scale.min <- 0
+      scale.mid <- 0
+    } else {
+
+      scale.max <- max(data[intersect(which(data[["cells"]] == 1), which(is.finite(data[["feature"]]))), "feature"], na.rm = T)
+      if (type == "gene") {
+        scale.min <- min(data[Reduce(intersect, list(which(data[["feature"]] != 0), which(data[["cells"]] == 1), which(is.finite(data[["feature"]])))), "feature"], na.rm = T) # != 0 for module scores
+      } else {
+        scale.min <- min(data[Reduce(intersect, list(which(data[["cells"]] == 1), which(is.finite(data[["feature"]])))), "feature"], na.rm = T) # != 0 for module scores
+      }
+      scale.mid <- scale.min + ((scale.max - scale.min) / 2)
+      decimals <- brathering::decimals_adaptive(data[intersect(which(data[["cells"]] == 1), which(is.finite(data[["feature"]]))), "feature"])
+      scale.max <- as.numeric(format(brathering::floor2(scale.max, decimals), nsmall = decimals))
+      scale.min <- as.numeric(format(brathering::ceiling2(scale.min, decimals), nsmall = decimals))
+      scale.mid <- as.numeric(format(round(scale.mid, decimals), nsmall = decimals))
+
+    }
+    return(list(scale.min, scale.mid, scale.max))
+  }
+  return(NULL)
+}
+
+add_color_scale <- function(plot,
+                            col.pal,
+                            col_legend_c_args = list(title = "..auto.."),
+                            col_legend_d_args = list(title = "..auto.."),
+                            col_steps = "..auto..",
+                            legendbreaks = "..auto..",
+                            legendlabels = "..auto..",
+                            col_steps_nice = T,
+                            col_na = "grey50",
+                            col_binary = F,
+                            trans_log = F) {
+
+  scexpr:::.ensure_package("colrr")
+
+  if (col_binary && "title" %in% names(col_legend_d_args)) {
+    if (col_legend_d_args[["title"]] == "..auto..") {
+      col_legend_d_args[["title"]] <- "UMI"
+    }
+    guide_fun <- ggplot2::guide_legend
+
+    col_legend_args <- col_legend_d_args
+  } else {
+
+
+    if (is.numeric(plot[["data"]][["feature"]])) {
+      if ("title" %in% names(col_legend_c_args) && col_legend_c_args[["title"]] == "..auto..") {
+        if (attr(plot[["data"]], "feature_type") == "gene") {
+
+          if (attr(plot[["data"]], "assay") %in% c("RNA", "SCT", "ADT")) {
+            if (!is.null(attr(plot[["data"]], "layer"))) {
+              if (attr(plot[["data"]], "layer") == "data") {
+
+                if (!is.null(attr(plot[["data"]], "normalization"))) {
+                  if (attr(plot[["data"]], "normalization") == "CLR") {
+                    col_legend_c_args[["title"]] <- "CLR\nUMI"
+                  } else if (attr(plot[["data"]], "normalization") == "LogNormalize") {
+                    col_legend_c_args[["title"]] <- "log\nnorm\nUMI"
+                  } else {
+                    col_legend_c_args[["title"]] <- "UMI"
+                  }
+                } else {
+                  col_legend_c_args[["title"]] <- "UMI"
+                }
+
+              } else if (attr(plot[["data"]], "layer") == "counts") {
+                col_legend_c_args[["title"]] <- "UMI"
+              } else {
+                col_legend_c_args[["title"]] <- attr(plot[["data"]], "layer")
+              }
+            }
+          } else {
+            col_legend_c_args[["title"]] <- "UMI"
+          }
+
+        } else if (attr(plot[["data"]], "feature_type") == "meta") {
+          col_legend_c_args[["title"]] <- "" # omit by default as names shows up through names_anno
+        }
+      }
+
+      c(scale.min, scale.mid, scale.max) %<-% get_legend_text(data = plot[["data"]],
+                                                              type = attr(plot[["data"]], "feature_type"))
+      qmin <- attr(plot[["data"]], "qmin")
+      qmax <- attr(plot[["data"]], "qmax")
+
+      if (length(unique(c(scale.min, scale.mid, scale.max))) > 1) {
+
+        # change this
+        if (qmin > 0) {min.lab <- paste0(scale.min, " (q", round(qmin*100, 0), ")")} else {min.lab <- scale.min}
+        if (qmax < 1) {max.lab <- paste0(scale.max, " (q", round(qmax*100, 0), ")")} else {max.lab <- scale.max}
+
+        if (legendbreaks == "minmidmax") {
+          legendbreaks <- c(scale.min, scale.mid, scale.max)
+        }
+        if (legendlabels == "auto" && (qmin > 0 || qmax < 1)) {
+          legendlabels <- c(min.lab, scale.mid, max.lab)
+        } else if (legendlabels != "auto" && (qmin > 0 || qmax < 1)) {
+          message("qmax and/or qmin not shown in legend.")
+        }
+
+        #type = "color",
+        scale_color <- colrr::get_scale_color_fun(values = plot[["data"]][["feature"]],
+                                                  zscored = F,
+                                                  steps = col_steps,
+                                                  legendbreaks = legendbreaks,
+                                                  legendlabels = legendlabels,
+                                                  palette = col.pal,
+                                                  steps_nice = col_steps_nice,
+                                                  col_na = col_na,
+                                                  qmin = attr(plot[["data"]], "qmin"),
+                                                  qmax = attr(plot[["data"]], "qmax"),
+                                                  scale_min = scale.min,
+                                                  trans_log = trans_log)
+
+        if (grepl("coloursteps", scale_color[["guide"]])) {
+          guide_fun <- ggplot2::guide_colorsteps
+        } else {
+          guide_fun <- ggplot2::guide_colorbar
+        }
+
+        plot <- plot + scale_color
+      } else {
+        # if no expressers are found: breaks and labels would be of different lengths
+        plot <- plot + ggplot2::scale_color_gradientn(colors = col.pal,
+                                                      limits = c(scale.min, scale.max),
+                                                      breaks = c(scale.min, scale.mid, scale.max),
+                                                      na.value = col_na)
+        guide_fun <- ggplot2::guide_colorbar
+      }
+
+      col_legend_args <- col_legend_c_args
+
+    } else {
+
+      if (col_legend_d_args[["title"]] == "..auto..") {
+        col_legend_d_args[["title"]] <- "" # or ""; omit by default as it shows up in annotation or title, may take too much space as legend title
+      }
+
+      plot <- plot + ggplot2::scale_color_manual(values = col.pal,
+                                                 na.value = col_na)
+      guide_fun <- ggplot2::guide_legend
+      col_legend_args <- col_legend_d_args
+    }
+  }
+
+  plot <- plot + ggplot2::guides(color = Gmisc::fastDoCall(guide_fun, args = col_legend_args))
+  return(plot)
 }

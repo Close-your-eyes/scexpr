@@ -633,7 +633,10 @@ make_so_single <- function(SO_unprocessed,
       SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
                                                                  assay = "RNA"),
                                                             SCtransform_args))
-      varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
+      try(expr = {
+        varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
+      }, silent = T)
+
     }
 
     # remove var features which are to filter
@@ -667,7 +670,10 @@ make_so_single <- function(SO_unprocessed,
                                                                           assay = "RNA"),
                                                                      FindVariableFeatures_args))
     } else {
-      varfeat_plot(obj = SO, n_varfeat = FindVariableFeatures_args[["nfeatures"]])
+      try(expr = {
+        varfeat_plot(obj = SO, n_varfeat = FindVariableFeatures_args[["nfeatures"]])
+      }, silent = T)
+
     }
 
     if (!is.null(var_feature_filter)) {
@@ -1068,7 +1074,10 @@ make_so_multi_harmony <- function(SO_unprocessed,
         SO <- Gmisc::fastDoCall(Seurat::SCTransform, args = c(list(object = SO,
                                                                    assay = "RNA"),
                                                               SCtransform_args))
-        varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
+        try(expr = {
+          varfeat_plot(obj = SO, n_varfeat = SCtransform_args[["variable.features.n"]])
+        }, silent = T)
+
       }
 
       # remove var features which are to filter
@@ -1159,7 +1168,9 @@ make_so_multi_harmony <- function(SO_unprocessed,
                                                                             assay = "RNA"),
                                                                        FindVariableFeatures_args))
       } else {
-        varfeat_plot(obj = SO, n_varfeat = FindVariableFeatures_args[["nfeatures"]])
+        try(expr = {
+          varfeat_plot(obj = SO, n_varfeat = FindVariableFeatures_args[["nfeatures"]])
+        }, silent = T)
       }
 
       if (!is.null(var_feature_filter)) {
@@ -2024,6 +2035,7 @@ find_neighbor_and_cluster <- function(obj,
       rownames(object) <- seq(1, nrow(object))
     }
   }
+
   nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = object,
                                                   verbose = verbose),
                                              FindNeighbors_args))

@@ -150,9 +150,11 @@ FindNeighbors2 <- function(
     if (verbose) {
       message("Computing SNN")
     }
+    nthreads <- Seurat:::getThreads(verbose = FALSE)
     snn.matrix <- Seurat:::ComputeSNN(
       nn_ranked = nn.ranked,
-      prune = prune.SNN
+      prune = prune.SNN,
+      nthreads = nthreads
     )
     rownames(x = snn.matrix) <- rownames(x = object)
     colnames(x = snn.matrix) <- rownames(x = object)
