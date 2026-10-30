@@ -132,6 +132,16 @@
 #' filtered <- c(sample_A = "sample_A/filtered_feature_bc_matrix",
 #'               sample_B = "sample_B/filtered_feature_bc_matrix")
 #' out_early <- SO_prep01(ffbms = filtered, early_exit = TRUE)
+#'
+#' filt_data <- Seurat::Read10X(data.dir = "/outs/filtered_feature_bc_matrix")
+#' TR_feat_aggr_list <- list(grep("^TRAV|^TRAC|^TRAJ", rownames(filt_data), value = T),
+#'                           grep("^TRBV|^TRBC|^TRBJ", rownames(filt_data), value = T),
+#'                           grep("^TRGV|^TRGC|^TRGJ", rownames(filt_data), value = T),
+#'                           grep("^TRDV|^TRDC|^TRDJ", rownames(filt_data), value = T))
+#' TR_feat_aggr_list <- setNames(TR_feat_aggr_list, c("TRAV", "TRBV", "TRGV", "TRDV"))
+#' out1 <- SO_prep01(data_dirs = samples,
+#'                   scDblFinder = T,
+#'                   feature_aggr = TR_feat_aggr_list)
 #' }
 SO_prep01 <- function(data_dirs,
                       nhvf = 2000,

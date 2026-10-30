@@ -569,8 +569,8 @@ vote_cd4_cd8_lineage_snn <- function(
   print(composition_barplot(
     object,
     y = "abs",
-    x_cat = label_col,
-    fill_cat = output_col
+    xvar = label_col,
+    fillvar = output_col
   )$plot)
 
   return(object)

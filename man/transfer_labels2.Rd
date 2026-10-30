@@ -60,8 +60,8 @@ When multiple labels are retained, they are concatenated using
 \examples{
 \dontrun{
 compbar_main <- scexpr::composition_barplot(test,
-                                            x_cat = "SCT_snn_res.2",
-                                            fill_cat = "celltype__labels__single__main")
+                                            xvar = "SCT_snn_res.2",
+                                            fillvar = "celltype__labels__single__main")
 compbar_main_data <- compbar_main[["data"]]
 transfer_labels2(compbar_main_data)
 }

@@ -152,7 +152,8 @@ convert_gene_identifier <- function (idents,
 
   start_len <- length(idents)
   # use select here to get multiple hits which can be filtered below
-  idents <- suppressMessages(AnnotationDbi::select(my.db, keys = as.character(unique(idents)), keytype = ident_in, column = ident_out))
+  idents <- suppressMessages(AnnotationDbi::select(my.db, keys = as.character(unique(idents)),
+                                                   keytype = ident_in, column = ident_out))
 
   if ("SYMBOL" %in% names(idents) && "ENTREZID" %in% names(idents)) {
     idents <- dplyr::filter(idents, !(SYMBOL == "MEMO1" & ENTREZID == "7795"))

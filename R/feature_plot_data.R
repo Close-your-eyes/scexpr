@@ -368,7 +368,7 @@ feature_plot_data <- function(data,
                                                    col_expr = col_expr,
                                                    col_non_expr = col_non_expr,
                                                    col_binary = col_binary,
-                                                   freq_plot = freq_plot,
+                                                   freq_plot = FALSE, # freq_plot,
                                                    freq_pos = freq_pos,
                                                    freq_size = freq_size,
                                                    freq_col = freq_col,
@@ -447,6 +447,7 @@ feature_plot_data <- function(data,
                                              name_anno = anno,
                                              #markdown = "element_markdown" %in% class(plot[["theme"]][["plot.title"]])
                                              markdown = T)
+
 
     if ("title" %in% name_anno_pos) {
       plot <- plot + ggplot2::labs(title = title_freq_df$freq3)

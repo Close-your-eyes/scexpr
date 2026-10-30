@@ -32,8 +32,23 @@ convert_gene_ident <- function(x,
   #Sys.setenv(ALL_PROXY = "YOUR_PROXY_HOST")
   #Sys.setenv(ALL_PROXY = "")
 
-  # mart <- biomaRt::useEnsembl("genes", dataset="hsapiens_gene_ensembl")
+ # mart <- biomaRt::useEnsembl("genes", dataset="hsapiens_gene_ensembl")
+  # mart <- biomaRt::useEnsembl(
+  #   biomart = "genes",
+  #   dataset = "hsapiens_gene_ensembl",
+  #   mirror = "useast"
+  # )
   mart <- biomaRt::useMart("ensembl", dataset = "hsapiens_gene_ensembl", host = "https://dec2021.archive.ensembl.org/")
+  # mart <- biomaRt::useEnsembl(
+  #   biomart = "genes",
+  #   dataset = "hsapiens_gene_ensembl",
+  #   host = "https://jun2026.archive.ensembl.org"
+  # )
+
+  # useEnsembl_args = list(biomart = "ensembl",
+  #                        dataset = "hsapiens_gene_ensembl")
+  # mart <- do.call(biomaRt::useEnsembl, args = useEnsembl_args)
+
   res <- data.frame()
   i <- 1
 
