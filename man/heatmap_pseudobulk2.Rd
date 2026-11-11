@@ -60,7 +60,9 @@ heatmap_pseudobulk2(
   pval_filter = c("top", "pos_fc"),
   pval_logfc = "logFC",
   pval_text_args = list(size = 5, vjust = 0.75),
-  featuregroup_color_on_x_axis_text = F
+  featuregroup_color_on_x_axis_text = F,
+  featuregroup_by_peak = FALSE,
+  featuregroup_membership = c("top", "all")
 )
 }
 \arguments{
@@ -72,15 +74,17 @@ multiple objects, supply a shared column name or one name per object. If
 
 \item{levels_calc}{Character vector (or list of vectors when multiple Seurat
 objects are supplied) defining which groups are included when calculating
-group means and marker statistics. If \code{NULL}, all levels are used. Marker
-statistics require at least two calculated groups.}
+group means and marker statistics. If \code{NULL}, all levels are used.
+Objects with no selected cells in the assay's \code{data} layer are skipped.
+Marker statistics require at least two calculated groups.}
 
 \item{levels_plot}{Character vector (or list of vectors) defining which
-groups are displayed. \code{NULL} displays all calculated groups. Entries
-outside \code{levels_calc} are omitted. With \code{group_order = "none"}, the plot
-follows the order in \code{levels_plot}. Group means, marker statistics, and
-scaling are calculated before filtering to the displayed groups. The
-displayed groups can still affect which features are retained.}
+groups are displayed. \code{NULL} displays all calculated groups with a
+nonmissing metadata label. Entries outside \code{levels_calc} are omitted.
+With \code{group_order = "none"}, the plot follows the order in \code{levels_plot}.
+Group means, marker statistics, and scaling are calculated before filtering
+to the displayed groups. The displayed groups can still affect which
+features are retained.}
 
 \item{assay}{Assay whose \code{data} layer supplies expression values. The assay
 must be present in every object.}
@@ -101,7 +105,10 @@ supply a named list of feature vectors to define feature groups. If \code{NULL},
 start with detected features shared across the supplied objects.}
 
 \item{featuregroup_style}{How feature groups should be displayed. Can include
-\code{"facet"} and/or \code{"color"}. Default: use both.}
+\code{"facet"} and/or \code{"color"}. The default uses both. For genes assigned to
+multiple feature groups, use the color of the matching cluster with the
+highest mean expression, including calculated clusters omitted from the
+plot. Ties and assignments without matching clusters use the list order.}
 
 \item{featuregroup_col_name}{Legend title for feature group colours.}
 
@@ -200,7 +207,8 @@ This option is designed for \code{feature_order = "custom"}.}
 \item{theme}{ggplot2 theme applied to the plot.}
 
 \item{legend_fill_args}{Named list of arguments forwarded to
-\code{guide_colorbar()} or \code{guide_colorsteps()}.}
+\code{guide_colorbar()} or \code{guide_colorsteps()}. Use \code{title = NULL} to suppress
+the title.}
 
 \item{legend_size_args}{Named list of arguments forwarded to
 \code{guide_legend()} for the dot-size legend.}
@@ -245,6 +253,17 @@ layer.}
 \item{featuregroup_color_on_x_axis_text}{Logical. When features are grouped
 and \code{featuregroup_style} includes \code{"color"}, color matching group labels on
 the horizontal axis, or on the vertical axis if \code{axes_flip = TRUE}.}
+
+\item{featuregroup_by_peak}{Logical. When \code{TRUE}, build a named feature
+list from the calculation groups where \code{find_all_marker()} reports positive
+\code{logFC} and \code{padj} below 1e-4. Plot features with at least one qualifying
+group. Label color follows the highest mean expression among qualifying
+groups. A supplied named list takes precedence.}
+
+\item{featuregroup_membership}{When using automatic feature groups,
+\code{"all"} puts each feature in all qualifying groups. \code{"top"} keeps the
+qualifying group with the highest unscaled mean expression. Ties follow
+the \code{levels_calc} order.}
 }
 \value{
 A named list with the following components.
@@ -272,8 +291,9 @@ heatmap, the feature and group factor levels in \code{plot$data} contain the plo
 order. Hierarchical clustering requires at least two entries on the axis
 being clustered. A single feature or displayed group keeps its position.
 
-When calculated group labels overlap across objects, all group labels are
-prefixed with their object names in the result.
+When calculated group labels overlap across objects, the result prefixes
+all group labels with their object names and adds suffixes to resolve any
+remaining collisions.
 }
 \examples{
 \dontrun{

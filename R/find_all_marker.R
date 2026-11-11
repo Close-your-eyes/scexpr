@@ -12,7 +12,9 @@
 #' @param features features selection to increase speed further
 #' @param layer which layer to pull expression matrix from
 #' @param mc.cores multicores for calc_avglog2fc
-#' @param na_rm remove NA?
+#' @param na_rm Logical. If `TRUE`, exclude cells with missing group labels.
+#' Otherwise, keep them in a separate group labeled `"NA"` or a suffixed
+#' variant if that label is already in use.
 #'
 #' @returns data frame with DEG
 #' @export
@@ -70,21 +72,53 @@ find_all_marker <- function(obj,
     presto_feat <- intersect(presto_feat, features) # change that?
   }
 
-  X = Gmisc::fastDoCall(cbind, # get_layer orders features, so cbind works
-                        purrr::map(obj, ~get_layer( # expm1
-                          obj = .x,
-                          layer = layer,
-                          assay = assay,
-                          features = presto_feat)))
+  if (!length(presto_feat)) {
+    stop("No expressed features remain for marker calculation.", call. = FALSE)
+  }
 
-  y <- unlist(purrr::map2(obj, meta_col, ~.x@meta.data[,.y,drop=T]), use.names = F)
+  layer_matrices <- purrr::map(obj, ~get_layer(
+    obj = .x,
+    layer = layer,
+    assay = assay,
+    features = presto_feat
+  ))
+  group_labels <- purrr::map2(obj, meta_col, function(so, column) {
+    metadata <- so@meta.data
+    stats::setNames(metadata[, column, drop = TRUE], rownames(metadata))
+  })
+  layer_labels <- purrr::map2(group_labels, layer_matrices, function(labels, mat) {
+    cells <- colnames(mat)
+    if (is.null(cells) || any(!cells %in% names(labels))) {
+      stop("Could not match assay layer cells to metadata.", call. = FALSE)
+    }
+    labels[cells]
+  })
+
+  # Unlisting a mixture of factors and strings would use the factor codes.
+  factor_labels <- vapply(layer_labels, is.factor, logical(1))
+  if (any(factor_labels) && !all(factor_labels)) {
+    layer_labels[factor_labels] <- lapply(layer_labels[factor_labels], as.character)
+  }
+  y <- unlist(layer_labels, use.names = FALSE)
+  if (is.factor(y) && anyNA(levels(y))) {
+    y <- droplevels(y, exclude = NA)
+  }
+  X <- Gmisc::fastDoCall(cbind, layer_matrices)
+  rm(layer_matrices)
 
   if (anyNA(y)) {
+    labeled <- !is.na(y)
     if (na_rm) {
-      X <- X[, which(!is.na(y))]
-      y <- y[which(!is.na(y))]
+      X <- X[, labeled, drop = FALSE]
+      y <- y[labeled]
     } else {
-      y[which(is.na(y))] <- "NA"
+      # Reserve labels from metadata even when their cells are outside the layer.
+      used_labels <- unique(unlist(lapply(group_labels, as.character), use.names = FALSE))
+      missing_group <- utils::tail(make.unique(c(used_labels[!is.na(used_labels)], "NA")), 1L)
+      if (is.factor(y)) {
+        levels(y) <- union(levels(y), missing_group)
+      }
+      y[!labeled] <- missing_group
     }
   }
 

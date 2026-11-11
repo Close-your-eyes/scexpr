@@ -1,7 +1,9 @@
 #' Get layer data with a few fallback mechanisms
 #'
-#' Works with v4 and v5 objects. Join layers in v5 objects if possible
-#' and necessary. Returns NULL if layer is 0x0 matrix.
+#' Works with v4 and v5 objects. For v5 assays, an exact layer name takes
+#' precedence. If it is absent, use layers whose names start with the
+#' requested name followed by a period, joining them when needed.
+#' Returns `NULL` for a zero-by-zero matrix.
 #'
 #' @param obj Seurat object
 #' @param assay assay
@@ -57,39 +59,17 @@ get_layer <- function(obj,
     }
   }
 
-  if (inherits(obj[[assay]], "Assay5")) {
-    x <- get_layer_v5(obj = obj, assay = assay, layer = layer)
+  assay_obj <- obj[[assay]]
+  if (inherits(assay_obj, "StdAssay")) {
+    x <- get_layer_v5(assay_obj, layer)
   } else {
-    x <- get_layer_v4(obj = obj, assay = assay, layer = layer)
+    x <- get_layer_v4(assay_obj, layer)
   }
 
-  # if (utils::compareVersion(as.character(obj@version), "4.9.9") == 1) {
-  #   x <- tryCatch(expr = {
-  #     get_layer_v5(obj = obj, assay = assay, layer = layer)
-  #   }, error = function(err) {
-  #     # fallback to v4 method, e.g. for integrated assay which looks in v5 object
-  #     # like assay from v4
-  #     return(get_layer_v4(obj = obj, assay = assay, layer = layer))
-  #   })
-  # } else {
-  #   x <- get_layer_v4(obj = obj, assay = assay, layer = layer)
-  # }
-
-  if (all(dim(x) == c(0,0))) {
+  if (is.null(x) || all(dim(x) == c(0, 0))) {
     message("get_layer: layer ", layer, " is empty.")
     return(NULL)
   }
-
-  Seurat::DefaultAssay(obj) <- assay
-  ## error with SCT ?!
-
-  rownames(x) <- rownames(x) %||% names(which(obj@assays[[assay]]@features[,layer]@.Data[,1]))
-  colnames(x) <- tryCatch(expr = {
-    colnames(x) %||% names(which(obj@assays[[assay]]@cells[,layer]@.Data[,1]))
-  },
-  error = function(err) {
-    cells2(obj)
-  })
 
   features <- features %||% rownames(x)
   cells <- cells %||% colnames(x)
@@ -111,7 +91,9 @@ get_layer <- function(obj,
     cells <- setdiff(colnames(x), cells)
   }
 
-  x <- x[features, cells, drop = F]
+  if (!identical(features, rownames(x)) || !identical(cells, colnames(x))) {
+    x <- x[features, cells, drop = FALSE]
+  }
 
   if (transpose) {
     x <- Matrix::t(x)
@@ -126,23 +108,39 @@ get_layer <- function(obj,
   return(x)
 }
 
-get_layer_v4 <- function(obj, assay, layer) {
-  layer <- rlang::arg_match(layer, setdiff(methods::slotNames(obj@assays[[assay]]),
+get_layer_v4 <- function(assay_obj, layer) {
+  layer <- rlang::arg_match(layer, setdiff(methods::slotNames(assay_obj),
                                            c("assay.orig", "var.featuress", "meta.featuress", "misc", "key")))
-  return(methods::slot(obj@assays[[assay]], layer))
+  methods::slot(assay_obj, layer)
 }
 
-get_layer_v5 <- function(obj, assay, layer) {
-  if (!layer %in% names(obj@assays[[assay]]@layers)) {
-    # fallback 1: check for unjoined layers
-    newlayer <- gsub("\\.[[:digit:]]{1,}$", "", names(obj@assays[[assay]]@layers))
-    if (sum(newlayer == layer) > 1) {
-      message("get_layer: joining layers to pull data.")
-      obj <- SeuratObject::JoinLayers(obj, assay = assay)
-    } else {
-      # get the error
-      layer <- rlang::arg_match(layer, names(obj@assays[[assay]]@layers))
-    }
+resolve_assay_layers <- function(assay_obj, layer) {
+  available <- SeuratObject::Layers(assay_obj)
+  if (layer %in% available) {
+    return(layer)
   }
-  return(obj@assays[[assay]]@layers[[layer]])
+  split_layers <- available[startsWith(available, paste0(layer, "."))]
+  if (length(split_layers)) {
+    return(split_layers)
+  }
+  rlang::arg_match(layer, available)
+}
+
+get_layer_v5 <- function(assay_obj, layer) {
+  layers <- resolve_assay_layers(assay_obj, layer)
+  if (length(layers) > 1L) {
+    message("get_layer: joining layers to pull data.")
+    pattern <- paste0("^", stringr::str_escape(layer), "\\.")
+    assay_obj <- SeuratObject::JoinLayers(assay_obj, layers = pattern, new = layer)
+    layers <- layer
+  }
+  SeuratObject::LayerData(assay_obj, layer = layers)
+}
+
+get_layer_cells <- function(assay_obj, layer) {
+  if (inherits(assay_obj, "StdAssay")) {
+    layers <- resolve_assay_layers(assay_obj, layer)
+    return(SeuratObject::Cells(assay_obj, layer = layers))
+  }
+  colnames(get_layer_v4(assay_obj, layer))
 }

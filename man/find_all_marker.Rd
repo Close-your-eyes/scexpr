@@ -32,7 +32,9 @@ of means (wrong naming)}
 
 \item{features}{features selection to increase speed further}
 
-\item{na_rm}{remove NA?}
+\item{na_rm}{Logical. If \code{TRUE}, exclude cells with missing group labels.
+Otherwise, keep them in a separate group labeled \code{"NA"} or a suffixed
+variant if that label is already in use.}
 
 \item{mc.cores}{multicores for calc_avglog2fc}
 }

@@ -13,15 +13,17 @@
 #'
 #' @param levels_calc Character vector (or list of vectors when multiple Seurat
 #' objects are supplied) defining which groups are included when calculating
-#' group means and marker statistics. If `NULL`, all levels are used. Marker
-#' statistics require at least two calculated groups.
+#' group means and marker statistics. If `NULL`, all levels are used.
+#' Objects with no selected cells in the assay's `data` layer are skipped.
+#' Marker statistics require at least two calculated groups.
 #'
 #' @param levels_plot Character vector (or list of vectors) defining which
-#' groups are displayed. `NULL` displays all calculated groups. Entries
-#' outside `levels_calc` are omitted. With `group_order = "none"`, the plot
-#' follows the order in `levels_plot`. Group means, marker statistics, and
-#' scaling are calculated before filtering to the displayed groups. The
-#' displayed groups can still affect which features are retained.
+#' groups are displayed. `NULL` displays all calculated groups with a
+#' nonmissing metadata label. Entries outside `levels_calc` are omitted.
+#' With `group_order = "none"`, the plot follows the order in `levels_plot`.
+#' Group means, marker statistics, and scaling are calculated before filtering
+#' to the displayed groups. The displayed groups can still affect which
+#' features are retained.
 #'
 #' @param assay Assay whose `data` layer supplies expression values. The assay
 #' must be present in every object.
@@ -29,6 +31,17 @@
 #' @param features Character vector of features (genes) to plot. Alternatively,
 #' supply a named list of feature vectors to define feature groups. If `NULL`,
 #' start with detected features shared across the supplied objects.
+#'
+#' @param featuregroup_by_peak Logical. When `TRUE`, build a named feature
+#' list from the calculation groups where `find_all_marker()` reports positive
+#' `logFC` and `padj` below 1e-4. Plot features with at least one qualifying
+#' group. Label color follows the highest mean expression among qualifying
+#' groups. A supplied named list takes precedence.
+#'
+#' @param featuregroup_membership When using automatic feature groups,
+#' `"all"` puts each feature in all qualifying groups. `"top"` keeps the
+#' qualifying group with the highest unscaled mean expression. Ties follow
+#' the `levels_calc` order.
 #'
 #' @param features_topn Number of top marker genes to select per group. Each
 #' eligible gene is assigned to its group or tied groups with the highest mean
@@ -52,7 +65,10 @@
 #' displayed group. This also applies to manually supplied features.
 #'
 #' @param featuregroup_style How feature groups should be displayed. Can include
-#' `"facet"` and/or `"color"`. Default: use both.
+#' `"facet"` and/or `"color"`. The default uses both. For genes assigned to
+#' multiple feature groups, use the color of the matching cluster with the
+#' highest mean expression, including calculated clusters omitted from the
+#' plot. Ties and assignments without matching clusters use the list order.
 #'
 #' @param featuregroup_col_name Legend title for feature group colours.
 #'
@@ -133,7 +149,8 @@
 #' `geom_hline()`.
 #'
 #' @param legend_fill_args Named list of arguments forwarded to
-#' `guide_colorbar()` or `guide_colorsteps()`.
+#' `guide_colorbar()` or `guide_colorsteps()`. Use `title = NULL` to suppress
+#' the title.
 #'
 #' @param legend_size_args Named list of arguments forwarded to
 #' `guide_legend()` for the dot-size legend.
@@ -188,8 +205,9 @@
 #' order. Hierarchical clustering requires at least two entries on the axis
 #' being clustered. A single feature or displayed group keeps its position.
 #'
-#' When calculated group labels overlap across objects, all group labels are
-#' prefixed with their object names in the result.
+#' When calculated group labels overlap across objects, the result prefixes
+#' all group labels with their object names and adds suffixes to resolve any
+#' remaining collisions.
 #'
 #' @return A named list with the following components.
 #' \describe{
@@ -300,7 +318,9 @@ heatmap_pseudobulk2 <- function(SO,
                                 pval_filter = c("top", "pos_fc"),
                                 pval_logfc = "logFC",
                                 pval_text_args = list(size = 5, vjust = 0.75),
-                                featuregroup_color_on_x_axis_text = F) {
+                                featuregroup_color_on_x_axis_text = F,
+                                featuregroup_by_peak = FALSE,
+                                featuregroup_membership = c( "top", "all")) {
 
   scexpr:::.ensure_packages(c("presto", "fcexpr", "brathering", "cowplot", "colrr"))
 
@@ -308,6 +328,7 @@ heatmap_pseudobulk2 <- function(SO,
   group_order <- rlang::arg_match(group_order)
   topn_metric <- rlang::arg_match(topn_metric, multiple = T)
   featuregroup_style <- rlang::arg_match(featuregroup_style, multiple = T)
+  featuregroup_membership <- rlang::arg_match(featuregroup_membership)
   pval_filter <- rlang::arg_match(pval_filter)
 
   if (!is.null(features_topn)) {
@@ -319,7 +340,7 @@ heatmap_pseudobulk2 <- function(SO,
     message("Providing features and features_topn may not be meaningful.")
   }
 
-  if ("title" %in% names(legend_fill_args) && legend_fill_args[["title"]] == "..auto..") {
+  if (identical(legend_fill_args[["title"]], "..auto..")) {
     if (scale == "zscore") {
       legend_fill_args[["title"]] <- "transcription\nlevel\n[z-score]"
     } else if (scale == "none") {
@@ -352,18 +373,19 @@ heatmap_pseudobulk2 <- function(SO,
     levels_calc,
     levels_plot) %<-% check_meta_and_levels(
       SO = SO,
+      assay = assay,
       meta_col = meta_col,
       levels_calc = levels_calc,
       levels_plot = levels_plot)
+  plot_groups <- unlist(levels_plot, use.names = FALSE)
+  plot_groups <- plot_groups[!is.na(plot_groups)]
 
   c(wil_auc_raw,
     wil_auc) %<-% determine_features(
       SO = SO,
       assay = assay,
       features = features,
-      levels_plot = levels_plot,
       meta_col = meta_col)
-  # groups not present in levels_plot become NA in wil_auc
 
   # optional scaling
   # issue: scaling before vs. after selection for topn features
@@ -397,17 +419,17 @@ heatmap_pseudobulk2 <- function(SO,
       dplyr::filter(padj <= max_padj) |>
       dplyr::mutate(padj = -padj) |> # rank smaller adjusted p-values first
       dplyr::slice_max(order_by = avgExpr, n = 1, by = feature) |>
-      dplyr::slice_max(order_by = tibble::tibble(!!!rlang::syms(as.list(topn_metric))), n = features_topn,
+      dplyr::slice_max(order_by = tibble::tibble(!!!rlang::syms(as.list(topn_metric))),
+                       n = features_topn,
                        by = group, with_ties = topn_ties) |>
-      # filter here but not in determine_features to not bias feature selection by levels_plot
-      dplyr::filter(group %in% unlist(levels_plot)) |>
+      dplyr::filter(group %in% .env$plot_groups) |>
       dplyr::pull(feature)
     wil_auc <- wil_auc[which(wil_auc[["feature"]] %in% select),,drop = F]
   } else if (is.null(features_topn) && min_pct_force) {
     select <-
       wil_auc |>
       dplyr::filter(pct_in >= min_pct) |>
-      dplyr::filter(group %in% unlist(levels_plot)) |>
+      dplyr::filter(group %in% .env$plot_groups) |>
       dplyr::pull(feature)
     rm_feat <- setdiff(as.character(unique(wil_auc$feature)), select)
     if (length(rm_feat)) {
@@ -417,19 +439,72 @@ heatmap_pseudobulk2 <- function(SO,
 
     wil_auc <- wil_auc[which(wil_auc[["feature"]] %in% select),,drop = F]
   }
-  # filter here after feature selection
-  wil_auc <- dplyr::filter(wil_auc, group %in% unlist(levels_plot))
+
+  # Apply the display order after filtering by the original group labels.
+  wil_auc <- wil_auc |>
+    dplyr::filter(group %in% .env$plot_groups) |>
+    dplyr::mutate(group = factor(group, levels = .env$plot_groups))
   if (!any(!is.na(wil_auc[[values]]))) {
     stop("No expression values remain for plotting. Check levels_plot, feature filters, and scale.")
   }
 
+  if (featuregroup_by_peak && is.null(feature_groups)) {
+    calc_groups <- unlist(levels_calc, use.names = FALSE)
+    calc_groups <- calc_groups[!is.na(calc_groups)]
+    retained_features <- levels(droplevels(wil_auc$feature))
+
+    markers <- wil_auc_raw |>
+      dplyr::filter(
+        feature %in% .env$retained_features,
+        group %in% .env$calc_groups,
+        logFC > 0,
+        padj < 1e-4
+      )
+    if (featuregroup_membership == "top") {
+      markers <- markers |>
+        dplyr::arrange(match(group, .env$calc_groups)) |>
+        dplyr::slice_max(order_by = avgExpr, n = 1L, by = feature, with_ties = FALSE)
+    }
+    markers <- dplyr::arrange(markers, match(feature, .env$retained_features))
+    marker_groups <- factor(markers$group, levels = calc_groups)
+    feature_groups <- split(markers$feature, marker_groups, drop = TRUE)
+    marker_features <- unique(unlist(feature_groups, use.names = FALSE))
+    if (!length(marker_features)) {
+      stop("No retained features have positive logFC and padj below 1e-4 in any named group.",
+           call. = FALSE)
+    }
+    excluded <- length(setdiff(retained_features, marker_features))
+    if (excluded > 0L) {
+      message("Omitting ", excluded, " features without a qualifying marker group.")
+    }
+    wil_auc <- wil_auc |>
+      dplyr::filter(feature %in% .env$marker_features) |>
+      dplyr::mutate(feature = factor(feature, levels = .env$marker_features))
+  }
+
   featuregroup <- NULL
+  feature_label_groups <- NULL
   if (!is.null(feature_groups)) {
     feat_group <- stats::setNames(utils::stack(feature_groups), c("feature", "featgroup"))
+    if ("color" %in% featuregroup_style) {
+      marker_peaks <- feat_group |>
+        dplyr::inner_join(
+          wil_auc_raw[c("feature", "group", "avgExpr")],
+          by = c("feature", "featgroup" = "group"),
+          relationship = "many-to-one"
+        ) |>
+        dplyr::slice_max(
+          order_by = avgExpr, n = 1L, by = feature,
+          with_ties = FALSE, na_rm = TRUE
+        )
+      feature_label_groups <- stats::setNames(as.character(marker_peaks$featgroup), marker_peaks$feature)
+    }
     # many-to-many is fine??
     # same genes can occur in different feat_group
     # features in wil_auc exist for every group
+    feature_levels <- levels(droplevels(wil_auc$feature))
     wil_auc <- dplyr::left_join(wil_auc, feat_group, by = "feature", relationship = "many-to-many")
+    wil_auc$feature <- factor(wil_auc$feature, levels = feature_levels)
     featuregroup <- "featgroup"
   }
 
@@ -482,7 +557,8 @@ heatmap_pseudobulk2 <- function(SO,
                                   pval_symnum_args = pval_symnum_args,
                                   pval_filter = pval_filter,
                                   pval_logfc = pval_logfc,
-                                  pval_text_args = pval_text_args)
+                                  pval_text_args = pval_text_args,
+                                  feature_label_groups = feature_label_groups)
 
 
   # if (!is.null(feature_groups)) {
@@ -733,7 +809,7 @@ check.levels <- function(SO, meta_col, levels = NULL, append_by_missing = F) {
 # }
 
 
-check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
+check_meta_and_levels <- function(SO, assay, meta_col, levels_calc, levels_plot) {
 
   ## checking meta_col, levels_plot and levels_calc
   if (is.null(meta_col)) {
@@ -790,37 +866,53 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
   }
   levels_plot <- purrr::map2(levels_plot, levels_calc, intersect)
 
-  # subset levels for calculation
-  SO <- purrr::pmap(list(x = SO, y = levels_calc, z = meta_col), function(x,y,z) {
-    if (length(y) < length(unique(x@meta.data[,z,drop=T]))) {
-      x <- subset2(x, cells = rownames(x@meta.data[,z,drop=F][which(x@meta.data[,z] %in% y),,drop=F]))
+  selected_cells <- purrr::pmap(list(SO, meta_col, levels_calc), function(obj, column, groups) {
+    metadata <- obj@meta.data
+    cells <- rownames(metadata)[metadata[[column]] %in% groups]
+    if (length(cells) && any(cells %in% scexpr:::get_layer_cells(obj[[assay]], "data"))) {
+      return(cells)
     }
-    return(x)
+    character()
   })
-
-  # this problem was discovered by chance (":" are replaced by Seurat::AverageExpression by "_"); maybe other symbols will also cause problems.
-  ## use make portable?
-  for (i in seq_along(SO)) {
-    if (any(grepl(":", unique(SO[[i]]@meta.data[,meta_col[[i]]])))) {
-      message("Found colon (:) in factor levels of meta_col. Will replace those with underscores (_).")
-      SO[[i]]@meta.data[,meta_col[[i]]] <- gsub(":", "_", SO[[i]]@meta.data[,meta_col[[i]]])
-      levels_plot[[i]] <- gsub(":", "_", levels_plot[[i]])
-      levels_calc[[i]] <- gsub(":", "_", levels_calc[[i]])
-    }
+  keep <- lengths(selected_cells) > 0L
+  if (!any(keep)) {
+    stop("No cells in the assay data layers match levels_calc.", call. = FALSE)
+  }
+  if (any(!keep)) {
+    message("Skipping objects with no selected cells in the data layer: ",
+            paste(names(SO)[!keep], collapse = ", "), ".")
   }
 
-  # Prefix all group labels consistently when calculated groups overlap.
-  if (length(SO) > 1 && anyDuplicated(unlist(levels_calc, use.names = FALSE))) {
-    prefixes <- make.unique(names(SO))
-    prefix_groups <- function(groups, prefix) {
-      ifelse(is.na(groups), NA_character_, paste0(prefix, "___", groups))
+  SO <- purrr::map2(SO[keep], selected_cells[keep], function(obj, cells) {
+    if (length(cells) < ncol(obj)) {
+      obj <- subset2(obj, cells = cells)
     }
-    SO <- purrr::pmap(list(SO, meta_col, prefixes), function(obj, col, prefix) {
-      obj@meta.data[[col]] <- prefix_groups(obj@meta.data[[col]], prefix)
-      obj
-    })
-    levels_calc <- purrr::map2(levels_calc, prefixes, prefix_groups)
-    levels_plot <- purrr::map2(levels_plot, prefixes, prefix_groups)
+    obj
+  })
+  meta_col <- meta_col[keep]
+  levels_calc <- levels_calc[keep]
+  levels_plot <- levels_plot[keep]
+
+  groups <- unlist(levels_calc, use.names = FALSE)
+  labeled <- !is.na(groups)
+  if (length(SO) > 1 && anyDuplicated(groups[labeled])) {
+    prefixes <- rep(make.unique(names(SO)), lengths(levels_calc))
+    labels <- rep(NA_character_, length(groups))
+    labels[labeled] <- make.unique(paste0(prefixes[labeled], "___", groups[labeled]))
+    labels_by_object <- utils::relist(labels, levels_calc)
+
+    SO <- purrr::pmap(
+      list(SO, meta_col, levels_calc, labels_by_object),
+      function(obj, col, original, labels) {
+        obj@meta.data[[col]] <- labels[match(obj@meta.data[[col]], original)]
+        obj
+      }
+    )
+    levels_plot <- purrr::pmap(
+      list(levels_plot, levels_calc, labels_by_object),
+      function(plot_groups, original, labels) labels[match(plot_groups, original)]
+    )
+    levels_calc <- labels_by_object
   }
   return(list(SO, meta_col, levels_calc, levels_plot))
 }
@@ -829,7 +921,6 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
 determine_features <- function(SO,
                                assay,
                                features,
-                               levels_plot,
                                meta_col) {
 
   wil_auc_raw <- find_all_marker(obj = SO,
@@ -843,13 +934,8 @@ determine_features <- function(SO,
     features <- wil_auc_raw$feature
   }
 
-  wil_auc <-
-    wil_auc_raw |>
+  wil_auc <- wil_auc_raw |>
     dplyr::filter(feature %in% features) |>
-    # pre-filtering for levels_plot before selecting features_topn may cause deviating topn features depend upon the groups included
-    # so somehow the selection procedure still has relativeness in it
-    #dplyr::filter(group %in% unlist(levels_plot)) |>
-    dplyr::mutate(group = factor(group, levels = unlist(levels_plot))) |>
     dplyr::mutate(feature = factor(feature, levels = unique(features)))
 
   return(list(wil_auc_raw, wil_auc))

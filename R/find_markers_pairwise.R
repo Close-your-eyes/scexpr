@@ -4,6 +4,8 @@
 #' @param group column in meta data
 #' @param mc.cores multiple threads?
 #' @param ... arguments to Seurat::FindMarkers
+#' @param features Character vector of feature names to test in each comparison.
+#'   If \code{NULL}, use the selected method's default feature set.
 #' @param split column in obj to split by before marker calculation
 #' @param method use scexpr::find_all_marker or Seurat::FindMarkers
 #' @param redundant return redundant results?
@@ -31,7 +33,8 @@ find_markers_pairwise <- function(obj,
                                   mc.cores = 1,
                                   method = c("scexpr", "seurat"),
                                   redundant = F,
-                                  ...) {
+                                  ...,
+                                  features = NULL) {
 
   method <- rlang::arg_match(method)
 
@@ -55,7 +58,7 @@ find_markers_pairwise <- function(obj,
     out <- parallel::mclapply(all_pairs, function(z) {
       out <- tryCatch(expr = {
         if (method == "scexpr") {
-          temp <- find_all_marker(subset2(ob, idents = z)) |>
+          temp <- find_all_marker(subset2(ob, idents = z), features = features) |>
             dplyr::rename("ident.1" = group) |>
             dplyr::select(-avgExpr, -statistic)
           temp <- split(temp, temp$ident.1)
@@ -67,7 +70,8 @@ find_markers_pairwise <- function(obj,
             temp[[1]] # just return first half
           }
         } else if (method == "seurat") {
-          temp <- Seurat::FindMarkers(ob, ident.1 = z[1], ident.2 = z[2], ...) |>
+          temp <- Seurat::FindMarkers(ob, ident.1 = z[1], ident.2 = z[2],
+                                      features = features, ...) |>
             dplyr::mutate(ident.1 = z[1], ident.2 = z[2]) |>
             tibble::rownames_to_column("feature")
           ## must be made redundant if required

@@ -39,8 +39,10 @@ get_layer(
 matrix (sparse/dense) or data frame
 }
 \description{
-Works with v4 and v5 objects. Join layers in v5 objects if possible
-and necessary. Returns NULL if layer is 0x0 matrix.
+Works with v4 and v5 objects. For v5 assays, an exact layer name takes
+precedence. If it is absent, use layers whose names start with the
+requested name followed by a period, joining them when needed.
+Returns \code{NULL} for a zero-by-zero matrix.
 }
 \examples{
 \dontrun{

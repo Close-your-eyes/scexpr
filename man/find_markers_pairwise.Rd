@@ -11,7 +11,8 @@ find_markers_pairwise(
   mc.cores = 1,
   method = c("scexpr", "seurat"),
   redundant = F,
-  ...
+  ...,
+  features = NULL
 )
 }
 \arguments{
@@ -28,6 +29,9 @@ find_markers_pairwise(
 \item{redundant}{return redundant results?}
 
 \item{...}{arguments to Seurat::FindMarkers}
+
+\item{features}{Character vector of feature names to test in each comparison.
+If \code{NULL}, use the selected method's default feature set.}
 }
 \value{
 data.frame
