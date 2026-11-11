@@ -2,12 +2,12 @@
 % Please edit documentation in R/run_scdblfinder.R
 \name{run_scdblfinder}
 \alias{run_scdblfinder}
-\title{Run scDblFinder with accessory code lines}
+\title{Detect doublets in a Seurat object with scDblFinder}
 \usage{
 run_scdblfinder(
   obj,
   assay = "RNA",
-  features = scexpr::get_var_features(so),
+  features = NULL,
   samples_col = "orig.ident",
   clusters_col = "seurat_clusters",
   min_umi = 300,
@@ -18,36 +18,90 @@ run_scdblfinder(
 )
 }
 \arguments{
-\item{obj}{seurat object}
+\item{obj}{A Seurat object containing a counts layer and the metadata
+columns named by \code{samples_col} and \code{clusters_col}.}
 
-\item{assay}{which assay}
+\item{assay}{Name of the assay whose counts are used for doublet inference
+and the minimum UMI filter. Defaults to \code{"RNA"}.}
 
-\item{features}{gene features to use}
+\item{features}{Character vector of feature names used for doublet
+inference and for calculating the UMI total per cell. Passed to
+\code{scDblFinder::scDblFinder()} as \code{nfeatures}. If empty, the
+function attempts to find variable features in the RNA assay.}
 
-\item{samples_col}{samples to treat separately, vector of idents}
+\item{samples_col}{Name of the cell metadata column identifying samples
+to process separately, typically independent cell captures. Defaults to
+\code{"orig.ident"}. Supply a column name, not a vector of sample labels.}
 
-\item{clusters_col}{cluster dents to help the algorithm and optionally to
-add_doublets}
+\item{clusters_col}{Name of the cell metadata column containing cluster
+labels. Used to identify small sample-cluster groups and, when
+\code{add_doublets = TRUE}, to generate artificial doublets. These labels
+are not passed to the final \code{scDblFinder::scDblFinder()} call.}
 
-\item{min_umi}{minimum total UMI sum across features per cell; cells below
-are not considered for doublet inference}
+\item{min_umi}{Minimum total counts across \code{features} required for
+a cell to enter doublet inference. Cells below this threshold remain in
+the returned object but are excluded from inference. Defaults to 300.}
 
-\item{min_cells_per_group}{min number of cell per group}
+\item{min_cells_per_group}{Minimum number of cells in an observed
+sample-cluster group. If any such group is smaller than this threshold,
+the entire corresponding sample is excluded from inference. Group sizes
+are calculated before the minimum UMI filter. Defaults to 20.}
 
-\item{dims}{arg to scDblFinder::scDblFinder}
+\item{dims}{Number of dimensions passed to
+\code{scDblFinder::scDblFinder()}. Defaults to the number of components
+in \code{obj}'s PCA cell embeddings; provide this argument explicitly
+when the input has no PCA reduction.}
 
-\item{add_doublets}{add artificial doublets}
+\item{add_doublets}{Logical; whether to add artificial doublets separately
+within each sample using \code{clusters_col}, then rerun preprocessing
+with \code{SO_prep02()}. Defaults to \code{FALSE}.}
 
-\item{add_doublets_tell}{tell scDblFinder::scDblFinder about artificial doublets}
+\item{add_doublets_tell}{Logical; whether to pass the artificial-doublet
+indicators to scDblFinder as \code{knownDoublets}, with
+\code{knownUse = "positive"}. Only used when
+\code{add_doublets = TRUE}. Defaults to \code{FALSE}.}
 }
 \value{
-seurat
+A Seurat object with scDblFinder metadata added for cells used
+in inference. The \code{scDblFinder.} prefix is replaced by
+\code{dbl_}, including \code{dbl_score} and \code{dbl_class}.
+Class labels are \code{"singlet_infer"} and \code{"doublet_calc"}.
+Cells excluded from inference receive no new inference results.
+When \code{add_doublets = TRUE}, the returned object also includes
+any artificial doublets and the \code{dbl_type} and \code{dbl_cluster}
+metadata created by the helper.
 }
 \description{
-Run scDblFinder with accessory code lines
+Runs scDblFinder on assay counts, treating samples separately, and adds
+doublet scores and classifications to the object's cell metadata.
+Optionally adds artificial doublets before inference.
+}
+\details{
+Both metadata columns must exist, even when artificial doublets are not
+requested. Samples excluded by the group-size filter and cells excluded
+by the UMI filter remain in the returned object; inference is performed
+only on the retained subset.
+
+Artificial doublets are generated from RNA counts before the
+assay-specific inference filters are applied. Samples with no expected
+artificial doublets retain their original cells.
 }
 \examples{
 \dontrun{
-so <- run_scdblfinder(so)
+# Use variable features from the input object and process each sample
+# separately. The input must contain both metadata columns.
+so <- run_scdblfinder(
+  obj = so,
+  features = scexpr::get_var_features(so),
+  samples_col = "orig.ident",
+  clusters_col = "seurat_clusters",
+  dims = 20
+)
+
+table(so$dbl_class, useNA = "ifany")
 }
+}
+\seealso{
+\code{scDblFinder::scDblFinder()},
+\code{scDblFinder::addDoublets()}
 }

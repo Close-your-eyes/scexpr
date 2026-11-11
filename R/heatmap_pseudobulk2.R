@@ -1,63 +1,80 @@
 #' Plot a pseudobulk expression heatmap across groups
 #'
 #' Generates a heatmap (or dot plot) of average gene expression across groups
-#' (e.g. clusters or cell types) from one or more Seurat objects. Expression
-#' values are calculated on pseudobulked groups, optionally scaled, and can be
-#' filtered to display marker genes or user-defined features.
+#' (e.g. clusters or cell types) from one or more Seurat objects. The function
+#' averages expression across cells in each group and can scale those averages
+#' and filter them to marker genes or user-defined features.
 #'
 #' @param SO A Seurat object or a list of Seurat objects.
 #'
-#' @param meta_col Character vector specifying the metadata column(s) used to
-#' define groups. If `NULL`, the current `Idents(SO)` are used.
+#' @param meta_col Name of the metadata column used to define groups. For
+#' multiple objects, supply a shared column name or one name per object. If
+#' `NULL`, use each object's active identities.
 #'
 #' @param levels_calc Character vector (or list of vectors when multiple Seurat
-#' objects are supplied) defining which group levels are included in expression
-#' calculations. If `NULL`, all levels are used. The order determines the group
-#' order during calculations and clustering.
+#' objects are supplied) defining which groups are included when calculating
+#' group means and marker statistics. If `NULL`, all levels are used. Marker
+#' statistics require at least two calculated groups.
 #'
 #' @param levels_plot Character vector (or list of vectors) defining which
-#' groups are displayed. Must be a subset of `levels_calc`. This affects only
-#' plotting and ordering, not expression calculations.
+#' groups are displayed. `NULL` displays all calculated groups. Entries
+#' outside `levels_calc` are omitted. With `group_order = "none"`, the plot
+#' follows the order in `levels_plot`. Group means, marker statistics, and
+#' scaling are calculated before filtering to the displayed groups. The
+#' displayed groups can still affect which features are retained.
 #'
-#' @param assay Assay from which expression values are obtained.
+#' @param assay Assay whose `data` layer supplies expression values. The assay
+#' must be present in every object.
 #'
 #' @param features Character vector of features (genes) to plot. Alternatively,
-#' a named list can be supplied to define feature groups. If `NULL`,
-#' `features_topn` determines which genes are selected.
+#' supply a named list of feature vectors to define feature groups. If `NULL`,
+#' start with detected features shared across the supplied objects.
 #'
-#' @param features_topn Integer specifying the number of top marker genes to
-#' display per group when `features` is `NULL`. If both `features` and
-#' `features_topn` are `NULL`, all detected features are plotted.
+#' @param features_topn Number of top marker genes to select per group. Each
+#' eligible gene is assigned to its group or tied groups with the highest mean
+#' expression among eligible rows, then ranked within each group by
+#' `topn_metric`. If `features` is supplied, selection is limited to those
+#' genes. If `NULL`, retain candidate features subject to `min_pct_force`.
 #'
-#' @param topn_metric Ranking metric used for marker selection. One or more of
-#' `"padj"`, `"auc"`, or `"logFC"` may be supplied.
+#' @param topn_metric One or more columns used in the supplied order to rank
+#' candidates for `features_topn`. `"padj"` ranks smaller values first,
+#' while `"auc"` and `"logFC"` rank larger values first.
 #'
-#' @param min_pct Minimum percentage of expressing cells required for a gene to
-#' be considered during marker selection.
+#' @param min_pct Minimum percentage of expressing cells within a group. Used
+#' to filter candidates when `features_topn` is set, or to filter by expression
+#' in the displayed groups when `min_pct_force` applies.
 #'
-#' @param max_padj Maximum adjusted p-value for a gene to be considered a
-#' marker during feature selection.
+#' @param max_padj Maximum adjusted p-value for a feature to qualify in a
+#' group when `features_topn` is set.
 #'
-#' @param min_pct_force Logical. If `TRUE`, genes below `min_pct` are removed
-#' even when features are provided manually.
+#' @param min_pct_force Logical. When `features_topn` is `NULL` and this is
+#' `TRUE`, retain a feature only if it reaches `min_pct` in at least one
+#' displayed group. This also applies to manually supplied features.
 #'
 #' @param featuregroup_style How feature groups should be displayed. Can include
-#' `"facet"` and/or `"color"`.
+#' `"facet"` and/or `"color"`. Default: use both.
 #'
 #' @param featuregroup_col_name Legend title for feature group colours.
 #'
 #' @param featuregroup_col_pal Colour palette passed to
 #' `colrr::col_pal()`.
 #'
-#' @param feature_order Method used to order features:
-#' * `"custom"`: preserve supplied order,
-#' * `"hclust"`: hierarchical clustering,
-#' * `"none"`: no explicit ordering.
+#' @param feature_order Method used to order features.
+#' * `"custom"` sorts features by the group where their plotted expression is
+#'   highest, following the group order, then by that expression in ascending
+#'   order.
+#' * `"hclust"` uses hierarchical clustering of feature expression profiles.
+#' * `"none"` keeps the order supplied in `features`. If `features` is `NULL`,
+#'   it keeps the order of features in the marker results.
 #'
-#' @param group_order Method used to order groups:
-#' * `"custom"`: preserve supplied order,
-#' * `"hclust"`: hierarchical clustering,
-#' * `"none"`: no explicit ordering.
+#' @param group_order Method used to order groups.
+#' * `"hclust"` uses hierarchical clustering of group expression profiles.
+#' * `"none"` keeps the order in `levels_plot`.
+#' * `"custom"` sorts groups by the feature where their plotted expression is
+#'   highest, following the feature order, then by that expression in
+#'   ascending order. With feature facets, it follows the visible feature
+#'   order from the bottom panel upward, or from the left panel rightward
+#'   when `axes_flip = TRUE`.
 #'
 #' @param topn_ties Logical; if `TRUE`, tied genes are retained, potentially
 #' displaying more than `features_topn` genes per group.
@@ -68,40 +85,49 @@
 #' @param dotsize_range Numeric vector of length two defining the minimum and
 #' maximum dot sizes.
 #'
-#' @param fill Colour palette used for expression values. `"auto"` selects a
-#' default diverging palette.
+#' @param fill Vector of colours or a palette name for expression values.
+#' `"..auto.."` uses a reversed 11-colour `"RdBu"` palette.
 #'
 #' @param color Border colour for heatmap tiles or dots. `"NA"` disables
-#' borders. `"auto"` chooses a suitable default.
+#' borders. `"..auto.."` uses grey borders for tile heatmaps with at most 100
+#' feature levels and omits borders for larger tile heatmaps and dot plots.
 #'
-#' @param scale Expression scaling method:
-#' * `"zscore"`: gene-wise z-score,
-#' * `"1"`: scale each gene to `[-1, 1]`,
-#' * `"none"`: no scaling.
+#' @param scale Expression scaling method applied to each gene's group means.
+#' * `"zscore"` standardizes the values within each gene.
+#' * `"1"` rescales each gene's values to the range from minus one to one.
+#' * `"none"` uses the unscaled group means.
 #'
 #' @param featurelabels Feature labels to display. `NULL` plots all labels,
-#' `""` plots none, `"auto"` suppresses labels for large heatmaps. A named
-#' vector may be used to provide aliases.
+#' `""` plots none, and `"..auto.."` omits labels when more than 200 features
+#' are plotted. Supply a character vector of feature IDs to label a subset.
+#' The names of this vector, when supplied, are the display labels.
 #'
-#' @param featurelabels_repel Logical; repel overlapping feature labels.
+#' @param featurelabels_repel Logical. Draw feature labels in a separate panel
+#' with repulsion to reduce overlap.
 #'
 #' @param featuresitalic Logical; display feature labels in italic font.
 #'
-#' @param color_linewidth Line width of tile or dot borders.
+#' @param color_linewidth Line width of tile borders or stroke width of dot
+#' borders.
 #'
-#' @param legendbreaks Legend break positions. May be `"auto"`,
-#' `"minmidmax"`, a numeric vector, or a single number.
+#' @param legendbreaks Fill legend breaks. Use `"..auto.."` for automatic
+#' breaks, `"minmidmax"` for breaks at the minimum, midpoint, and maximum,
+#' a single number for the break count, or a numeric vector of positions.
 #'
-#' @param legendlabels Labels corresponding to `legendbreaks`.
+#' @param legendlabels Labels corresponding to `legendbreaks`, or
+#' `"..auto.."` for automatic labels.
 #'
-#' @param colorsteps Controls discretization of the colour scale. Can be
-#' `NULL`, `"auto"`, a numeric vector, or a single integer.
+#' @param colorsteps Use `NULL` for a continuous colour bar, `"..auto.."` for
+#' automatic steps, a single number for the requested number of steps, or a
+#' numeric vector of step boundaries.
 #'
 #' @param colorsteps_nice Logical; use aesthetically pleasing colour breaks.
 #'
 #' @param axes_flip Logical; transpose the heatmap axes.
 #'
-#' @param group_seplines Logical; draw separator lines between feature groups.
+#' @param group_seplines Logical. Draw separator lines based on runs of
+#' features assigned to the same group by their highest plotted expression.
+#' This option is designed for `feature_order = "custom"`.
 #'
 #' @param seplines_args Named list of additional arguments passed to
 #' `geom_hline()`.
@@ -117,36 +143,63 @@
 #' @param theme_args Named list of additional arguments passed to
 #' `ggplot2::theme()`.
 #'
-#' @param repel_args Named list of arguments controlling feature label
-#' repulsion.
+#' @param repel_args Named list controlling the label panel when
+#' `featurelabels_repel` is `TRUE`. Use `featurelabels_width` for the relative
+#' panel width and `featurelabels_nudge_x` for the horizontal nudge.
 #'
-#' @param sec_axis Logical; if `TRUE`, add a secondary y-axis showing gene
-#' names converted with `scexpr::convert_gene_identifier()`.
+#' @param sec_axis Logical. Add a panel on the right with feature IDs
+#' converted by `scexpr::convert_gene_identifier()`.
 #'
 #' @param convert_gene_identifier_args Named list of arguments passed to
 #' `scexpr::convert_gene_identifier()`.
 #'
-#' @param pvals Optional data frame containing p-values for annotation.
+#' @param pvals Optional name of a p-value column in the plotting data, such
+#' as `"pval"` or `"padj"`, used to annotate cells with significance symbols.
 #'
-#' @param pval_features Features for which p-value annotations should be shown.
+#' @param pval_features Feature IDs eligible for p-value annotations. `NULL`
+#' makes all plotted features eligible.
 #'
-#' @param pval_max Maximum p-value displayed.
+#' @param pval_max Maximum p-value eligible for annotation.
 #'
 #' @param pval_symnum_args Arguments passed to `symnum()` for significance
 #' symbol generation.
 #'
-#' @param pval_filter Strategy for filtering p-value annotations.
+#' @param pval_filter Strategy for filtering p-value annotations. `"top"`
+#' selects the cells with the highest plotted value for each feature.
+#' `"pos_fc"` selects cells with a positive value in the column named by
+#' `pval_logfc`. In either case, `pval_features` and `pval_max` further
+#' restrict which cells are annotated.
 #'
-#' @param pval_logfc Name of the log-fold change column in `pvals`.
+#' @param pval_logfc Name of the effect-size column in the plotting data used
+#' by `pval_filter = "pos_fc"`. The default `"logFC"` column from `presto`
+#' contains differences in mean expression on the assay data scale.
 #'
 #' @param pval_text_args Named list of arguments passed to the text annotation
 #' layer.
+#' @param featuregroup_color_on_x_axis_text Logical. When features are grouped
+#' and `featuregroup_style` includes `"color"`, color matching group labels on
+#' the horizontal axis, or on the vertical axis if `axes_flip = TRUE`.
 #'
-#' @return A named list containing:
+#' @details
+#' The function passes `feature_order` and `group_order` in the
+#' `heatmap_ordering_args` list supplied to `fcexpr::heatmap_long_df()`.
+#' Ordering takes place after feature selection and scaling. For a standard
+#' heatmap, the feature and group factor levels in `plot$data` contain the plot
+#' order. Hierarchical clustering requires at least two entries on the axis
+#' being clustered. A single feature or displayed group keeps its position.
+#'
+#' When calculated group labels overlap across objects, all group labels are
+#' prefixed with their object names in the result.
+#'
+#' @return A named list with the following components.
 #' \describe{
-#'   \item{plot}{The ggplot object.}
-#'   \item{data}{Processed plotting data after filtering and scaling.}
-#'   \item{complete_data}{Complete marker statistics prior to filtering.}
+#'   \item{plot}{The ggplot object, with an additional panel when repelled
+#'   labels or converted identifiers are requested.}
+#'   \item{data}{Marker statistics after feature and group filtering and
+#'   optional scaling, before plot ordering. Scaled group means are in
+#'   \code{avgExprScale} when scaling is enabled.}
+#'   \item{complete_data}{Marker statistics for the calculated groups and
+#'   tested features before plot filtering and scaling.}
 #' }
 #'
 #' @importFrom zeallot %<-%
@@ -158,13 +211,14 @@
 #' hm <- heatmap_pseudobulk2(
 #'   SO,
 #'   meta_col = "celltype",
-#'   features_topn = 10
+#'   features_topn = 10,
+#'   dotplot = TRUE
 #' )
 #'
 #' hm$plot
 #'
 #' hm$plot +
-#'   scale_size_continuous(
+#'   ggplot2::scale_size_continuous(
 #'     breaks = c(1, 5, 10, 20, 50),
 #'     range = c(1, 10)
 #'   )
@@ -235,7 +289,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   legend.box = "horizontal"
                                 ),
                                 repel_args = list(featurelabels_width = 0.2,
-                                                  featurelabels_nudhe_x = -1),
+                                                  featurelabels_nudge_x = -0.05),
                                 sec_axis = F,
                                 convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
                                 pvals = NULL,
@@ -245,7 +299,8 @@ heatmap_pseudobulk2 <- function(SO,
                                                         symbols = c("*", "ns")),
                                 pval_filter = c("top", "pos_fc"),
                                 pval_logfc = "logFC",
-                                pval_text_args = list(size = 5, vjust = 0.75)) {
+                                pval_text_args = list(size = 5, vjust = 0.75),
+                                featuregroup_color_on_x_axis_text = F) {
 
   scexpr:::.ensure_packages(c("presto", "fcexpr", "brathering", "cowplot", "colrr"))
 
@@ -302,15 +357,12 @@ heatmap_pseudobulk2 <- function(SO,
       levels_plot = levels_plot)
 
   c(wil_auc_raw,
-    wil_auc,
-    features,
-    feature_order) %<-% determine_features(
+    wil_auc) %<-% determine_features(
       SO = SO,
       assay = assay,
       features = features,
       levels_plot = levels_plot,
-      meta_col = meta_col,
-      feature_order = feature_order)
+      meta_col = meta_col)
   # groups not present in levels_plot become NA in wil_auc
 
   # optional scaling
@@ -319,12 +371,19 @@ heatmap_pseudobulk2 <- function(SO,
   # but what if features are selected manually with features argument?
   # for scaling of each feature it is only relevant that all groups are still included
   # determine_features does not remove groups but features only
+
+  # Inside mutate(), dplyr looks for bare names in the data first. .env$scale explicitly reads the scale argument passed to heatmap_pseudobulk2(), even if the data later gains a column named scale.
+  # The old .default = avgExpr fallback was redundant. arg_match() allows only "zscore", "1", and "none". The outer branch handles "none" by plotting avgExpr directly, so the inner if/`else` only needs to handle the two scaling modes.
   if (scale != "none") {
-    wil_auc <- dplyr::mutate(wil_auc, avgExprScale = dplyr::case_when(
-      scale == "zscore" ~ as.vector(scale(avgExpr)),
-      scale == "1" ~ brathering::scale2(avgExpr, min = -1, max = 1),
-      .default = avgExpr  # fallback (optional), not needed here but anyway
-    ), .by = feature)
+    wil_auc <- dplyr::mutate(
+      wil_auc,
+      avgExprScale = if (.env$scale == "zscore") {
+        as.vector(base::scale(avgExpr))
+      } else {
+        as.vector(brathering::scale2(avgExpr, min = -1, max = 1))
+      },
+      .by = feature
+    )
     values <- "avgExprScale"
   } else {
     values <- "avgExpr"
@@ -334,9 +393,9 @@ heatmap_pseudobulk2 <- function(SO,
   if (!is.null(features_topn)) {
     select <-
       wil_auc |>
-      dplyr::mutate(padj = -padj) |> # make negative so that slice_max works equally for all three metrics (c("padj", "logFC", "auc")),
       dplyr::filter(pct_in >= min_pct) |>
       dplyr::filter(padj <= max_padj) |>
+      dplyr::mutate(padj = -padj) |> # rank smaller adjusted p-values first
       dplyr::slice_max(order_by = avgExpr, n = 1, by = feature) |>
       dplyr::slice_max(order_by = tibble::tibble(!!!rlang::syms(as.list(topn_metric))), n = features_topn,
                        by = group, with_ties = topn_ties) |>
@@ -360,18 +419,27 @@ heatmap_pseudobulk2 <- function(SO,
   }
   # filter here after feature selection
   wil_auc <- dplyr::filter(wil_auc, group %in% unlist(levels_plot))
+  if (!any(!is.na(wil_auc[[values]]))) {
+    stop("No expression values remain for plotting. Check levels_plot, feature filters, and scale.")
+  }
 
   featuregroup <- NULL
   if (!is.null(feature_groups)) {
     feat_group <- stats::setNames(utils::stack(feature_groups), c("feature", "featgroup"))
-    wil_auc <- dplyr::left_join(wil_auc, feat_group, by = "feature")
+    # many-to-many is fine??
+    # same genes can occur in different feat_group
+    # features in wil_auc exist for every group
+    wil_auc <- dplyr::left_join(wil_auc, feat_group, by = "feature", relationship = "many-to-many")
     featuregroup <- "featgroup"
   }
 
 
 
   dotsizes <- if (dotplot) "pct_in" else NULL
-  # fcexpr::
+  color_group_labels <- featuregroup_color_on_x_axis_text &&
+    !is.null(featuregroup) && "color" %in% featuregroup_style &&
+    any(levels(wil_auc$group) %in% wil_auc[[featuregroup]])
+  defer_repel <- featurelabels_repel && color_group_labels
 
   plot <- fcexpr::heatmap_long_df(df = wil_auc,
                                   groups = "group",
@@ -391,7 +459,7 @@ heatmap_pseudobulk2 <- function(SO,
                                   color = color,
                                   scale = "none",
                                   featurelabels = featurelabels,
-                                  featurelabels_repel = featurelabels_repel,
+                                  featurelabels_repel = featurelabels_repel && !defer_repel,
                                   featuresitalic = featuresitalic,
                                   color_linewidth = color_linewidth,
                                   legendbreaks = legendbreaks,
@@ -442,19 +510,70 @@ heatmap_pseudobulk2 <- function(SO,
   #     )
   # }
 
+  if (color_group_labels) {
+    plot <- color_heatmap_group_labels(plot, axes_flip)
+  }
+  if (sec_axis) {
+    sec_axis_features <- levels(as.factor(plot$data$feature))
+  }
+  if (defer_repel) {
+    # Reuse the resolved feature labels before the repeller adds its own scale.
+    labels <- plot$scales$get_scales("y")$breaks
+    plot$scales$scales <- plot$scales$scales[!plot$scales$find("y")]
+    plot_data <- plot$data
+    plot_data$feature <- as.factor(plot_data$feature)
+    plot <- fcexpr:::repel_features(
+      df = plot_data,
+      plot = plot,
+      repel_args = repel_args,
+      featurelabels = labels,
+      featuresitalic = featuresitalic
+    )
+  }
   if (sec_axis) {
     plot <- add_sec_axis(
       plot = plot,
+      features = sec_axis_features,
       convert_gene_identifier_args = convert_gene_identifier_args
     )
   }
 
   return(list(
     plot = plot,
-    data = dplyr::mutate(wil_auc, padj = -padj),
+    data = wil_auc,
     complete_data = wil_auc_raw
   ))
 }
+
+color_heatmap_group_labels <- function(plot, axes_flip) {
+  group_colors <- brathering::gg_get_scale_mapping(plot, aesthetic = "colour")
+  axis_element <- if (axes_flip) "axis.text.y.left" else "axis.text.x.bottom"
+  axis_text <- ggplot2::calc_element(axis_element, plot$theme)
+  if (inherits(axis_text, "element_blank") ||
+      !any(levels(plot$data$group) %in% names(group_colors))) {
+    return(plot)
+  }
+
+  # The group scale still maps x when coord_flip() draws it vertically.
+  group_scale <- plot$scales$get_scales("x")
+  group_scale$labels <- function(groups) {
+    colors <- unname(group_colors[groups])
+    matched <- !is.na(colors)
+    labels <- gsub("([[:punct:]])", "\\\\\\1", groups, perl = TRUE)
+    labels[matched] <- sprintf('<span style="color:%s">%s</span>', colors[matched], labels[matched])
+    labels
+  }
+
+  if (!inherits(axis_text, "element_markdown")) {
+    fields <- c("family", "face", "size", "colour", "hjust", "vjust",
+                "angle", "lineheight", "margin", "debug")
+    text_args <- stats::setNames(lapply(fields, function(field) axis_text[[field]]), fields)
+    axis_text <- do.call(ggtext::element_markdown, text_args)
+  }
+  plot$theme[[axis_element]] <- axis_text
+  plot
+}
+
 
 check.levels <- function(SO, meta_col, levels = NULL, append_by_missing = F) {
 
@@ -647,16 +766,7 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
   }
 
 
-  if (!is.null(levels_plot) && !is.null(levels_calc)) {
-    levels_plot <- mapply(x = levels_plot, y = levels_calc, function(x,y) {
-      if (any(!x %in% y)) {
-        print("levels_plot has more levels than levels_calc. levels_plot is reduced to levels_calc.")
-        x <- x[which(x %in% y)]
-      }
-      return(x)
-    }, SIMPLIFY = F)
-  }
-
+  levels_plot_supplied <- !is.null(levels_plot)
   if (!is.null(levels_calc)) {
     if (length(levels_calc) != length(SO)) {
       stop("levels_calc has to have same length as SO.")
@@ -675,6 +785,10 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
   # this will replace NA with all available levels
   levels_calc <- purrr::pmap(list(x = SO, y = levels_calc, z = meta_col), function(x,y,z) check.levels(SO = x, meta_col = z, levels = y, append_by_missing = F))
   levels_plot <- purrr::pmap(list(x = SO, y = levels_plot, z = meta_col), function(x,y,z) check.levels(SO = x, meta_col = z, levels = y, append_by_missing = F))
+  if (levels_plot_supplied && any(purrr::map2_lgl(levels_plot, levels_calc, ~ any(!.x %in% .y)))) {
+    message("Some levels_plot are absent from levels_calc and will be omitted.")
+  }
+  levels_plot <- purrr::map2(levels_plot, levels_calc, intersect)
 
   # subset levels for calculation
   SO <- purrr::pmap(list(x = SO, y = levels_calc, z = meta_col), function(x,y,z) {
@@ -686,7 +800,7 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
 
   # this problem was discovered by chance (":" are replaced by Seurat::AverageExpression by "_"); maybe other symbols will also cause problems.
   ## use make portable?
-  for (i in length(SO)) {
+  for (i in seq_along(SO)) {
     if (any(grepl(":", unique(SO[[i]]@meta.data[,meta_col[[i]]])))) {
       message("Found colon (:) in factor levels of meta_col. Will replace those with underscores (_).")
       SO[[i]]@meta.data[,meta_col[[i]]] <- gsub(":", "_", SO[[i]]@meta.data[,meta_col[[i]]])
@@ -695,21 +809,18 @@ check_meta_and_levels <- function(SO, meta_col, levels_calc, levels_plot) {
     }
   }
 
-  # make cluster names unique if there is intersection
-  ## this will prohibit to define cluster order
-  if (length(SO) > 1) {
-    if (length(Reduce(intersect, levels_plot)) > 1 || length(Reduce(intersect, levels_calc)) > 1) {
-      SO <- purrr::pmap(list(x = SO, y = meta_col, z = names(SO)), function(x,y,z) {
-        x@meta.data[,y] <- paste0(z, "___", x@meta.data[,y,drop=T])
-        return(x)
-      })
+  # Prefix all group labels consistently when calculated groups overlap.
+  if (length(SO) > 1 && anyDuplicated(unlist(levels_calc, use.names = FALSE))) {
+    prefixes <- make.unique(names(SO))
+    prefix_groups <- function(groups, prefix) {
+      ifelse(is.na(groups), NA_character_, paste0(prefix, "___", groups))
     }
-    if (length(Reduce(intersect, levels_plot)) > 1) {
-      levels_plot <- mapply(x = names(SO), y = levels_plot, function(x,y) paste0(x, "___", y), SIMPLIFY = F)
-    }
-    if (length(Reduce(intersect, levels_calc)) > 1) {
-      levels_calc <- mapply(x = names(SO), y = levels_calc, function(x,y) paste0(x, "___", y), SIMPLIFY = F)
-    }
+    SO <- purrr::pmap(list(SO, meta_col, prefixes), function(obj, col, prefix) {
+      obj@meta.data[[col]] <- prefix_groups(obj@meta.data[[col]], prefix)
+      obj
+    })
+    levels_calc <- purrr::map2(levels_calc, prefixes, prefix_groups)
+    levels_plot <- purrr::map2(levels_plot, prefixes, prefix_groups)
   }
   return(list(SO, meta_col, levels_calc, levels_plot))
 }
@@ -719,8 +830,7 @@ determine_features <- function(SO,
                                assay,
                                features,
                                levels_plot,
-                               meta_col,
-                               feature_order) {
+                               meta_col) {
 
   wil_auc_raw <- find_all_marker(obj = SO,
                                  meta_col = meta_col,
@@ -730,9 +840,6 @@ determine_features <- function(SO,
                                  features = features)
 
   if (is.null(features)) {
-    if (feature_order == "none") {
-      feature_order <- "custom"
-    }
     features <- wil_auc_raw$feature
   }
 
@@ -745,14 +852,14 @@ determine_features <- function(SO,
     dplyr::mutate(group = factor(group, levels = unlist(levels_plot))) |>
     dplyr::mutate(feature = factor(feature, levels = unique(features)))
 
-  return(list(wil_auc_raw, wil_auc, features, feature_order))
+  return(list(wil_auc_raw, wil_auc))
 }
 
 
-add_sec_axis <- function(plot, convert_gene_identifier_args) {
+add_sec_axis <- function(plot, features, convert_gene_identifier_args) {
   axis.df <-
     Gmisc::fastDoCall(scexpr::convert_gene_identifier,
-                      args = c(list(idents = levels(plot[["data"]]$feature)), convert_gene_identifier_args)) |>
+                      args = c(list(idents = features), convert_gene_identifier_args)) |>
     dplyr::mutate(y = dplyr::row_number())
   axis <- ggplot2::ggplot(axis.df, ggplot2::aes(x = 0, y = y, label = GENENAME)) +
     ggplot2::geom_text(hjust = 0) +

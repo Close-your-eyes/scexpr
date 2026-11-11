@@ -446,6 +446,9 @@ check_dir <- function(data_dirs, SoupX = FALSE) {
     files <- list.files(path, recursive = recursive,
                         full.names = TRUE, pattern = "\\.h5$")
 
+    matrix_dirs <- dirs[basename(dirs) %in% c(filtered, raw)]
+    files <- files[!dirname(files) %in% matrix_dirs]
+
     paths <- unique(c(dirs, files))
     types <- sub("\\.h5$", "", basename(paths))
     paths[types %in% c(filtered, raw)]
@@ -535,6 +538,8 @@ resolution_checks <- function(resolution_meta, resolution_SoupX, resolution, PCs
 
 add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
 
+  # different use case as run_scdblfinder. keep separate.
+
   var_feat <- Seurat::VariableFeatures(Seurat::FindVariableFeatures(SO,
                                                                     selection.method = "vst",
                                                                     nfeatures = nhvf,
@@ -567,6 +572,7 @@ add_dbl_score_to_metadata <- function(SO, nhvf, min_UMI_var_feat, npcs) {
   scf <- scDblFinder::scDblFinder(sce = get_layer(obj = SO,
                                                   assay = "RNA",
                                                   layer = "counts"),
+                                  clusters = T,
                                   nfeatures = var_feat,
                                   dims = npcs)
   SO@meta.data$dbl_score <- scf@colData$scDblFinder.score

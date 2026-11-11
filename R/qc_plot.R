@@ -336,47 +336,52 @@ qc_plot2 <- function(SO,
 
   qc_p2 <- purrr::map2(purrr::set_names(red_name), clust_name,
                        function(red_name, clust_name) {
-    p1 <- patchwork::wrap_plots(feature_plot2(SO,
+
+                         p11 <- feature_plot2(SO,
                                               features = clust_name,
                                               reduction = red_name,
-                                              pt_size = 0.5),
-                                feature_plot2(SO,
+                                              pt_size = 0.5)
+                         p12 <- feature_plot2(SO,
                                               features = "orig.ident",
                                               reduction = red_name,
                                               pt_size = 0.5,
-                                              get_data_args = list(shuffle = T, order_discr = F)),
-                                freq_pie_chart(
-                                  SO = SO,
-                                  meta_col = clust_name,
-                                  label_rel_cutoff = 0.04)[["plot"]] +
-                                  ggplot2::theme(panel.background = ggplot2::element_rect(fill = "white")),
-                                ncol = 1,
-                                heights = c(0.35,0.35,0.3)
-    )
-    p2 <- purrr::map(purrr::set_names(qc_cols), function(feature) {
-      make_stat_plot(
-        SO = SO,
-        feature = feature,
-        clust_name = clust_name,
-        geom2 = geom2,
-        breaks = breaks
-      )
-    })
+                                              get_data_args = list(shuffle = T, order_discr = F))
+                         if (length(SO$orig.ident) > 20) {
+                           p12 <- p12 + ggplot2::theme(legend.position = "none")
+                         }
+                         p13 <- freq_pie_chart(
+                           SO = SO,
+                           meta_col = clust_name,
+                           label_rel_cutoff = 0.04)[["plot"]] +
+                           ggplot2::theme(panel.background = ggplot2::element_rect(fill = "white"))
 
-    p3 <- composition_barplot(obj = SO,
-                              xvar = clust_name,
-                              fillvar = "orig.ident")[["plot"]] +
-      ggplot2::theme_bw() +
-      ggplot2::theme(legend.position = "none",
-                     panel.grid.major.y = ggplot2::element_line(color = "grey95"),
-                     axis.title.y = ggplot2::element_blank(),
-                     axis.text.x = ggplot2::element_blank(),
-                     panel.grid.major.x = ggplot2::element_blank(),
-                     axis.title.x = ggplot2::element_blank()) +
-      ggplot2::facet_wrap(ggplot2::vars("rel cluster comp"))
+                         p1 <- patchwork::wrap_plots(p11, p12, p13,
+                                                     ncol = 1,
+                                                     heights = c(0.35,0.35,0.3))
+                         p2 <- purrr::map(purrr::set_names(qc_cols), function(feature) {
+                           make_stat_plot(
+                             SO = SO,
+                             feature = feature,
+                             clust_name = clust_name,
+                             geom2 = geom2,
+                             breaks = breaks
+                           )
+                         })
 
-    return(patchwork::wrap_plots(p1, patchwork::wrap_plots(c(list(p3), p2), ncol = 2), nrow = 1, widths = c(0.4, 0.6)))
-  })
+                         p3 <- composition_barplot(obj = SO,
+                                                   xvar = clust_name,
+                                                   fillvar = "orig.ident")[["plot"]] +
+                           ggplot2::theme_bw() +
+                           ggplot2::theme(legend.position = "none",
+                                          panel.grid.major.y = ggplot2::element_line(color = "grey95"),
+                                          axis.title.y = ggplot2::element_blank(),
+                                          axis.text.x = ggplot2::element_blank(),
+                                          panel.grid.major.x = ggplot2::element_blank(),
+                                          axis.title.x = ggplot2::element_blank()) +
+                           ggplot2::facet_wrap(ggplot2::vars("rel cluster comp"))
+
+                         return(patchwork::wrap_plots(p1, patchwork::wrap_plots(c(list(p3), p2), ncol = 2), nrow = 1, widths = c(0.4, 0.6)))
+                       })
 
   qc_p3 <- qc_params_meta_cols(SO, meta_cols = "orig.ident", qc_cols = gsub("_log", "", qc_cols))
 
@@ -413,7 +418,7 @@ qc_plot2 <- function(SO,
       plot = qc_p3,
       device = save_as,
       path = save_path,
-      width = 4+0.5*length(unique(SO@meta.data$orig.ident)),
+      width = min(49, 4+0.5*length(unique(SO@meta.data$orig.ident))),
       height = 4+length(qc_cols)
     )
   }

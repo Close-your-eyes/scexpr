@@ -50,7 +50,7 @@ heatmap_pseudobulk2(
   theme_args = list(axis.title = ggplot2::element_blank(), panel.grid =
     ggplot2::element_blank(), axis.text.x = ggplot2::element_text(angle = 40, hjust = 1),
     legend.position = "right", legend.direction = "vertical", legend.box = "horizontal"),
-  repel_args = list(featurelabels_width = 0.2, featurelabels_nudhe_x = -1),
+  repel_args = list(featurelabels_width = 0.2, featurelabels_nudge_x = -0.05),
   sec_axis = F,
   convert_gene_identifier_args = list(ident_in = "SYMBOL", ident_out = "GENENAME"),
   pvals = NULL,
@@ -59,63 +59,79 @@ heatmap_pseudobulk2(
   pval_symnum_args = list(cutpoints = c(0, 0.0001, Inf), symbols = c("*", "ns")),
   pval_filter = c("top", "pos_fc"),
   pval_logfc = "logFC",
-  pval_text_args = list(size = 5, vjust = 0.75)
+  pval_text_args = list(size = 5, vjust = 0.75),
+  featuregroup_color_on_x_axis_text = F
 )
 }
 \arguments{
 \item{SO}{A Seurat object or a list of Seurat objects.}
 
-\item{meta_col}{Character vector specifying the metadata column(s) used to
-define groups. If \code{NULL}, the current \code{Idents(SO)} are used.}
+\item{meta_col}{Name of the metadata column used to define groups. For
+multiple objects, supply a shared column name or one name per object. If
+\code{NULL}, use each object's active identities.}
 
 \item{levels_calc}{Character vector (or list of vectors when multiple Seurat
-objects are supplied) defining which group levels are included in expression
-calculations. If \code{NULL}, all levels are used. The order determines the group
-order during calculations and clustering.}
+objects are supplied) defining which groups are included when calculating
+group means and marker statistics. If \code{NULL}, all levels are used. Marker
+statistics require at least two calculated groups.}
 
 \item{levels_plot}{Character vector (or list of vectors) defining which
-groups are displayed. Must be a subset of \code{levels_calc}. This affects only
-plotting and ordering, not expression calculations.}
+groups are displayed. \code{NULL} displays all calculated groups. Entries
+outside \code{levels_calc} are omitted. With \code{group_order = "none"}, the plot
+follows the order in \code{levels_plot}. Group means, marker statistics, and
+scaling are calculated before filtering to the displayed groups. The
+displayed groups can still affect which features are retained.}
 
-\item{assay}{Assay from which expression values are obtained.}
+\item{assay}{Assay whose \code{data} layer supplies expression values. The assay
+must be present in every object.}
 
-\item{min_pct}{Minimum percentage of expressing cells required for a gene to
-be considered during marker selection.}
+\item{min_pct}{Minimum percentage of expressing cells within a group. Used
+to filter candidates when \code{features_topn} is set, or to filter by expression
+in the displayed groups when \code{min_pct_force} applies.}
 
-\item{max_padj}{Maximum adjusted p-value for a gene to be considered a
-marker during feature selection.}
+\item{max_padj}{Maximum adjusted p-value for a feature to qualify in a
+group when \code{features_topn} is set.}
 
-\item{min_pct_force}{Logical. If \code{TRUE}, genes below \code{min_pct} are removed
-even when features are provided manually.}
+\item{min_pct_force}{Logical. When \code{features_topn} is \code{NULL} and this is
+\code{TRUE}, retain a feature only if it reaches \code{min_pct} in at least one
+displayed group. This also applies to manually supplied features.}
 
 \item{features}{Character vector of features (genes) to plot. Alternatively,
-a named list can be supplied to define feature groups. If \code{NULL},
-\code{features_topn} determines which genes are selected.}
+supply a named list of feature vectors to define feature groups. If \code{NULL},
+start with detected features shared across the supplied objects.}
 
 \item{featuregroup_style}{How feature groups should be displayed. Can include
-\code{"facet"} and/or \code{"color"}.}
+\code{"facet"} and/or \code{"color"}. Default: use both.}
 
 \item{featuregroup_col_name}{Legend title for feature group colours.}
 
 \item{featuregroup_col_pal}{Colour palette passed to
 \code{colrr::col_pal()}.}
 
-\item{feature_order}{Method used to order features:
+\item{feature_order}{Method used to order features.
 \itemize{
-\item \code{"custom"}: preserve supplied order,
-\item \code{"hclust"}: hierarchical clustering,
-\item \code{"none"}: no explicit ordering.
+\item \code{"custom"} sorts features by the group where their plotted expression is
+highest, following the group order, then by that expression in ascending
+order.
+\item \code{"hclust"} uses hierarchical clustering of feature expression profiles.
+\item \code{"none"} keeps the order supplied in \code{features}. If \code{features} is \code{NULL},
+it keeps the order of features in the marker results.
 }}
 
-\item{group_order}{Method used to order groups:
+\item{group_order}{Method used to order groups.
 \itemize{
-\item \code{"custom"}: preserve supplied order,
-\item \code{"hclust"}: hierarchical clustering,
-\item \code{"none"}: no explicit ordering.
+\item \code{"hclust"} uses hierarchical clustering of group expression profiles.
+\item \code{"none"} keeps the order in \code{levels_plot}.
+\item \code{"custom"} sorts groups by the feature where their plotted expression is
+highest, following the feature order, then by that expression in
+ascending order. With feature facets, it follows the visible feature
+order from the bottom panel upward, or from the left panel rightward
+when \code{axes_flip = TRUE}.
 }}
 
-\item{topn_metric}{Ranking metric used for marker selection. One or more of
-\code{"padj"}, \code{"auc"}, or \code{"logFC"} may be supplied.}
+\item{topn_metric}{One or more columns used in the supplied order to rank
+candidates for \code{features_topn}. \code{"padj"} ranks smaller values first,
+while \code{"auc"} and \code{"logFC"} rank larger values first.}
 
 \item{topn_ties}{Logical; if \code{TRUE}, tied genes are retained, potentially
 displaying more than \code{features_topn} genes per group.}
@@ -126,46 +142,57 @@ the percentage of expressing cells instead of a heatmap.}
 \item{dotsize_range}{Numeric vector of length two defining the minimum and
 maximum dot sizes.}
 
-\item{fill}{Colour palette used for expression values. \code{"auto"} selects a
-default diverging palette.}
+\item{fill}{Vector of colours or a palette name for expression values.
+\code{"..auto.."} uses a reversed 11-colour \code{"RdBu"} palette.}
 
 \item{color}{Border colour for heatmap tiles or dots. \code{"NA"} disables
-borders. \code{"auto"} chooses a suitable default.}
+borders. \code{"..auto.."} uses grey borders for tile heatmaps with at most 100
+feature levels and omits borders for larger tile heatmaps and dot plots.}
 
-\item{scale}{Expression scaling method:
+\item{scale}{Expression scaling method applied to each gene's group means.
 \itemize{
-\item \code{"zscore"}: gene-wise z-score,
-\item \code{"1"}: scale each gene to \verb{[-1, 1]},
-\item \code{"none"}: no scaling.
+\item \code{"zscore"} standardizes the values within each gene.
+\item \code{"1"} rescales each gene's values to the range from minus one to one.
+\item \code{"none"} uses the unscaled group means.
 }}
 
-\item{features_topn}{Integer specifying the number of top marker genes to
-display per group when \code{features} is \code{NULL}. If both \code{features} and
-\code{features_topn} are \code{NULL}, all detected features are plotted.}
+\item{features_topn}{Number of top marker genes to select per group. Each
+eligible gene is assigned to its group or tied groups with the highest mean
+expression among eligible rows, then ranked within each group by
+\code{topn_metric}. If \code{features} is supplied, selection is limited to those
+genes. If \code{NULL}, retain candidate features subject to \code{min_pct_force}.}
 
 \item{featurelabels}{Feature labels to display. \code{NULL} plots all labels,
-\code{""} plots none, \code{"auto"} suppresses labels for large heatmaps. A named
-vector may be used to provide aliases.}
+\code{""} plots none, and \code{"..auto.."} omits labels when more than 200 features
+are plotted. Supply a character vector of feature IDs to label a subset.
+The names of this vector, when supplied, are the display labels.}
 
-\item{featurelabels_repel}{Logical; repel overlapping feature labels.}
+\item{featurelabels_repel}{Logical. Draw feature labels in a separate panel
+with repulsion to reduce overlap.}
 
 \item{featuresitalic}{Logical; display feature labels in italic font.}
 
-\item{color_linewidth}{Line width of tile or dot borders.}
+\item{color_linewidth}{Line width of tile borders or stroke width of dot
+borders.}
 
-\item{legendbreaks}{Legend break positions. May be \code{"auto"},
-\code{"minmidmax"}, a numeric vector, or a single number.}
+\item{legendbreaks}{Fill legend breaks. Use \code{"..auto.."} for automatic
+breaks, \code{"minmidmax"} for breaks at the minimum, midpoint, and maximum,
+a single number for the break count, or a numeric vector of positions.}
 
-\item{legendlabels}{Labels corresponding to \code{legendbreaks}.}
+\item{legendlabels}{Labels corresponding to \code{legendbreaks}, or
+\code{"..auto.."} for automatic labels.}
 
-\item{colorsteps}{Controls discretization of the colour scale. Can be
-\code{NULL}, \code{"auto"}, a numeric vector, or a single integer.}
+\item{colorsteps}{Use \code{NULL} for a continuous colour bar, \code{"..auto.."} for
+automatic steps, a single number for the requested number of steps, or a
+numeric vector of step boundaries.}
 
 \item{colorsteps_nice}{Logical; use aesthetically pleasing colour breaks.}
 
 \item{axes_flip}{Logical; transpose the heatmap axes.}
 
-\item{group_seplines}{Logical; draw separator lines between feature groups.}
+\item{group_seplines}{Logical. Draw separator lines based on runs of
+features assigned to the same group by their highest plotted expression.
+This option is designed for \code{feature_order = "custom"}.}
 
 \item{seplines_args}{Named list of additional arguments passed to
 \code{geom_hline()}.}
@@ -181,57 +208,86 @@ vector may be used to provide aliases.}
 \item{theme_args}{Named list of additional arguments passed to
 \code{ggplot2::theme()}.}
 
-\item{repel_args}{Named list of arguments controlling feature label
-repulsion.}
+\item{repel_args}{Named list controlling the label panel when
+\code{featurelabels_repel} is \code{TRUE}. Use \code{featurelabels_width} for the relative
+panel width and \code{featurelabels_nudge_x} for the horizontal nudge.}
 
-\item{sec_axis}{Logical; if \code{TRUE}, add a secondary y-axis showing gene
-names converted with \code{scexpr::convert_gene_identifier()}.}
+\item{sec_axis}{Logical. Add a panel on the right with feature IDs
+converted by \code{scexpr::convert_gene_identifier()}.}
 
 \item{convert_gene_identifier_args}{Named list of arguments passed to
 \code{scexpr::convert_gene_identifier()}.}
 
-\item{pvals}{Optional data frame containing p-values for annotation.}
+\item{pvals}{Optional name of a p-value column in the plotting data, such
+as \code{"pval"} or \code{"padj"}, used to annotate cells with significance symbols.}
 
-\item{pval_features}{Features for which p-value annotations should be shown.}
+\item{pval_features}{Feature IDs eligible for p-value annotations. \code{NULL}
+makes all plotted features eligible.}
 
-\item{pval_max}{Maximum p-value displayed.}
+\item{pval_max}{Maximum p-value eligible for annotation.}
 
 \item{pval_symnum_args}{Arguments passed to \code{symnum()} for significance
 symbol generation.}
 
-\item{pval_filter}{Strategy for filtering p-value annotations.}
+\item{pval_filter}{Strategy for filtering p-value annotations. \code{"top"}
+selects the cells with the highest plotted value for each feature.
+\code{"pos_fc"} selects cells with a positive value in the column named by
+\code{pval_logfc}. In either case, \code{pval_features} and \code{pval_max} further
+restrict which cells are annotated.}
 
-\item{pval_logfc}{Name of the log-fold change column in \code{pvals}.}
+\item{pval_logfc}{Name of the effect-size column in the plotting data used
+by \code{pval_filter = "pos_fc"}. The default \code{"logFC"} column from \code{presto}
+contains differences in mean expression on the assay data scale.}
 
 \item{pval_text_args}{Named list of arguments passed to the text annotation
 layer.}
+
+\item{featuregroup_color_on_x_axis_text}{Logical. When features are grouped
+and \code{featuregroup_style} includes \code{"color"}, color matching group labels on
+the horizontal axis, or on the vertical axis if \code{axes_flip = TRUE}.}
 }
 \value{
-A named list containing:
+A named list with the following components.
 \describe{
-\item{plot}{The ggplot object.}
-\item{data}{Processed plotting data after filtering and scaling.}
-\item{complete_data}{Complete marker statistics prior to filtering.}
+\item{plot}{The ggplot object, with an additional panel when repelled
+labels or converted identifiers are requested.}
+\item{data}{Marker statistics after feature and group filtering and
+optional scaling, before plot ordering. Scaled group means are in
+\code{avgExprScale} when scaling is enabled.}
+\item{complete_data}{Marker statistics for the calculated groups and
+tested features before plot filtering and scaling.}
 }
 }
 \description{
 Generates a heatmap (or dot plot) of average gene expression across groups
-(e.g. clusters or cell types) from one or more Seurat objects. Expression
-values are calculated on pseudobulked groups, optionally scaled, and can be
-filtered to display marker genes or user-defined features.
+(e.g. clusters or cell types) from one or more Seurat objects. The function
+averages expression across cells in each group and can scale those averages
+and filter them to marker genes or user-defined features.
+}
+\details{
+The function passes \code{feature_order} and \code{group_order} in the
+\code{heatmap_ordering_args} list supplied to \code{fcexpr::heatmap_long_df()}.
+Ordering takes place after feature selection and scaling. For a standard
+heatmap, the feature and group factor levels in \code{plot$data} contain the plot
+order. Hierarchical clustering requires at least two entries on the axis
+being clustered. A single feature or displayed group keeps its position.
+
+When calculated group labels overlap across objects, all group labels are
+prefixed with their object names in the result.
 }
 \examples{
 \dontrun{
 hm <- heatmap_pseudobulk2(
   SO,
   meta_col = "celltype",
-  features_topn = 10
+  features_topn = 10,
+  dotplot = TRUE
 )
 
 hm$plot
 
 hm$plot +
-  scale_size_continuous(
+  ggplot2::scale_size_continuous(
     breaks = c(1, 5, 10, 20, 50),
     range = c(1, 10)
   )
