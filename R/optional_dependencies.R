@@ -31,7 +31,8 @@
   monocle3 = "cole-trapnell-lab/monocle3",
   presto = "immunogenomics/presto",
   scDblFinder = "plger/scDblFinder",
-  scGate = "carmonalab/scGate"
+  scGate = "carmonalab/scGate",
+  clustree = "lazappi/clustree"
 )
 
 .scexpr_cran_packages <- c(

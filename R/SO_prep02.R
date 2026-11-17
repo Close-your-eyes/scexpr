@@ -1,8 +1,8 @@
 #' Prepare a Seurat object for downstream analysis
 #'
 #' Normalize one or more sample-level Seurat objects, select variable features,
-#' merge or integrate samples, run PCA, correct batch effects, build neighbor
-#' graphs, cluster cells, calculate UMAP and/or t-SNE embeddings, and optionally
+#' merge or integrate samples, run PCA, correct batch effects, find neighbors,
+#' cluster cells, calculate UMAP and/or t-SNE embeddings, and optionally
 #' transfer reference cell-type labels. The result can also be reduced in size
 #' and saved as an RDS file.
 #'
@@ -42,6 +42,10 @@
 #'   Matching is case-insensitive. By default, all samples are used.
 #' @param cells Optional character vector of cell names to retain. Objects with
 #'   no matching cells are removed. By default, all cells are used.
+#' @param features Optional character vector of genes to retain when rebuilding
+#'   each sample from RNA counts. By default, all genes are used.
+#' @param features_invert Logical. If `TRUE`, exclude the genes listed in
+#'   `features`.
 #' @param min_cells Minimum number of cells required after cell selection and
 #'   downsampling. Smaller objects are removed. Defaults to `50`.
 #' @param downsample Per-object downsampling target. A value between `0` and `1`
@@ -54,17 +58,21 @@
 #'   so that a target cell count can be derived.
 #' @param export_prefix Optional string included in the generated RDS filename.
 #' @param reductions Character vector containing one or both of `"umap"` and
-#'   `"tsne"`. Requested embeddings are calculated from the PCA, Harmony, or
-#'   integrated reduction selected by the workflow.
+#'   `"tsne"`, or `NULL` to skip both. Embeddings use Harmony coordinates when
+#'   Harmony is active and PCA coordinates otherwise. In the Seurat integration
+#'   workflow, PCA is calculated after integration.
 #' @param nhvf Number of highly variable features requested from
 #'   `SCTransform()`, `FindVariableFeatures()`, or
 #'   `SelectIntegrationFeatures()`, as applicable.
-#' @param npcs Number of principal components to calculate and use for neighbor
-#'   finding, clustering, and dimensionality reduction. Interactive PC selection
-#'   initially calculates at least 50 components.
+#' @param npcs Number of principal components to calculate. This also sets the
+#'   upper end of the default dimension selections in `RunUMAP_args`.
+#'   Interactive PC selection initially calculates at least 50 components.
 #' @param normalization Normalization method. `"SCT"` uses `SCTransform()`;
 #'   `"RNA"` and `"LogNormalize"` both use the standard log-normalization
 #'   workflow.
+#' @param scaling Scaling method for log-normalized data. `"scale"` uses
+#'   `Seurat::ScaleData()` and `"clr_shifted"` uses
+#'   [proportional_fit_pachterlab()].
 #' @param hvf_determination_before_merge Logical; determine variable features
 #'   separately in each sample before merging. If `FALSE`, determine them on the
 #'   merged object. This option also determines whether SCT is first run per
@@ -90,9 +98,9 @@
 #' @param celltype_ref_clusters Optional metadata column containing clusters for
 #'   grouped SingleR annotation. When omitted or unavailable in the processed
 #'   object, annotation is performed at single-cell resolution.
-#' @param sacrifice_count_slot Logical; run `sacrifice_count_slot` before returning and
-#'   saving the object. RNA count column sums are stored in
-#'   `Misc(SO, "RNA_count_colSums")` before counts are removed.
+#' @param sacrifice_count_slot Logical. If `TRUE`, remove the RNA counts before
+#'   returning or saving the object. RNA count column sums are always stored in
+#'   `Misc(SO, "RNA_count_colSums")`.
 #' @param var_feature_filter Optional character vector of genes to exclude from
 #'   the variable-feature set. Variable-feature selection may be rerun to retain
 #'   the requested number of features after exclusion. This changes PCA and all
@@ -112,9 +120,30 @@
 #' @param RunPCA_args Named list of additional arguments for
 #'   `Seurat::RunPCA()`. `npcs`, `seed.use`, `verbose`, and `reduction.name` are
 #'   controlled internally; `assay` and `reduction.key` are ignored.
-#' @param RunUMAP_args Named list of additional arguments for
-#'   `Seurat::RunUMAP()` or, when `use_nn_for_umap = TRUE`, compatible arguments
-#'   for `uwot::umap()`. PCA dimensions are used by default.
+#' @param RunUMAP_args Named list containing `dims` and UMAP settings. Supply
+#'   `dims` as a vector of component indices for one dimension set, such as
+#'   `dims = seq_len(20)`, or as a list of vectors for multiple sets. Neighbor
+#'   finding and clustering use each set even when `reductions` omits UMAP.
+#'   With clustering enabled, include `dims` in a custom list and use at
+#'   least two indices per set. With clustering disabled, omitting `dims`
+#'   uses all selected components for one UMAP embedding.
+#'
+#'   The default list uses cosine distance and Python's `"umap-learn"`. With
+#'   at least three selected PCs, it starts with all selected components and
+#'   drops the last one at each step down to the first three components.
+#'
+#'   With `use_nn_for_umap = FALSE`, each dimension set produces one
+#'   [Seurat::RunUMAP()] call using the same settings. Specify
+#'   `umap.method = "uwot"` for the R implementation or
+#'   `umap.method = "umap-learn"` for Python, which this function requests
+#'   in a managed reticulate environment. Use Seurat argument names such as
+#'   `n.neighbors` and `min.dist`. Seurat's Python backend ignores extra
+#'   Python arguments such as `init` and `n_jobs`.
+#'   The wrapper sets `object`, `seed.use`, `reduction`, `reduction.name`,
+#'   and `verbose`. The generated name includes the smallest and largest
+#'   dimension indices followed by the input reduction name. For example,
+#'   Seurat stores `umap1-20_pca20_rna800` as `umap1.20_pca20_rna800`.
+#'   Use distinct endpoint pairs for distinct names.
 #' @param RunTSNE_args Named list of additional arguments for
 #'   `scexpr::run_fft_tsne()`. If that call fails, the function falls back to
 #'   `Seurat::RunTSNE()`.
@@ -123,7 +152,9 @@
 #'   controlled internally.
 #' @param FindClusters_args Named list of additional arguments for
 #'   `Seurat::FindClusters()`. Its `resolution` element may contain multiple
-#'   resolutions; the default is `seq(0.1, 0.8, 0.1)`.
+#'   resolutions. The default list contains 0.1, 0.2, 0.3, and 0.4. A custom
+#'   list without `resolution` uses 0.1. Set `resolution = NULL` to skip
+#'   neighbor finding and clustering.
 #' @param RunHarmony_args Named list of additional arguments for Harmony.
 #'   `group.by.vars` must identify metadata columns when Harmony is requested.
 #'   The input reduction, output reduction name, and dimensions are set from the
@@ -144,21 +175,21 @@
 #'   variable-feature counts displayed during interactive selection.
 #' @param interactive_pc_selection Logical; display an elbow plot and prompt for
 #'   the number of PCs. Used only in an interactive R session.
-#' @param use_nn_for_umap Logical; reuse the ranked nearest-neighbor result from
-#'   clustering and call `uwot::umap()` directly instead of
-#'   `Seurat::RunUMAP()`.
-#' @param ... Reserved for future use; currently ignored.
-#' @param scaling how to create scale.data layer when normalization is RNA:
-#' i) with ScaleData from Seurat or proportional fit (shifted CLR) from
-#' Pachterlab: [proportional_fit_pachterlab()]
-#' @param mc_cores_read parallel processes for initial normalization
-#' @param mc_cores_cluster parallel processes for cluster detection
-#' @param features select subset of features
-#' @param features_invert invert feature selection (exclude selected)
+#' @param use_nn_for_umap Logical. `TRUE` selects the direct [uwot::umap()]
+#'   path for a single dimension set. This path accepts uwot argument names
+#'   such as `min_dist` and requires ranked neighbors from clustering. The
+#'   current clustering helper discards those neighbors, so leave this at
+#'   `FALSE` to obtain a UMAP embedding.
+#' @param mc_cores_read Number of workers for reconstructing and initially
+#'   normalizing the sample objects.
+#' @param mc_cores_cluster Maximum number of workers for neighbor finding and
+#'   clustering. Workers are distributed across dimension sets or, for a
+#'   single set, across clustering resolutions.
+#' @param ... Reserved for future use and currently ignored.
 #'
 #' @return A processed Seurat object. Depending on the selected workflow, it
 #'   contains normalized assays, variable features, PCA and optional batch-
-#'   corrected reductions, neighbor graphs, cluster metadata, and requested
+#'   corrected reductions, cluster metadata, and requested
 #'   UMAP/t-SNE embeddings. Additional metadata may include `id`, `barcode`,
 #'   `prefix`, and SingleR labels. The `misc` slot records clustering columns,
 #'   RNA count column sums, the generated object filename, and related plotting
@@ -169,12 +200,29 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Process one sample with log normalization and UMAP.
+#' # Process one sample and run UMAP on the first 20 PCs using R's uwot.
 #' prepared <- SO_prep02(
 #'   SO_unprocessed = list(sample_1 = sample_1),
 #'   normalization = "LogNormalize",
 #'   batch_corr = "none",
-#'   reductions = "umap"
+#'   npcs = 20,
+#'   reductions = "umap",
+#'   RunUMAP_args = list(
+#'     dims = seq_len(20),
+#'     umap.method = "uwot",
+#'     min.dist = 0.15
+#'   )
+#' )
+#'
+#' # Compare UMAP embeddings and clusterings using 20 and 10 PCs.
+#' prepared <- SO_prep02(
+#'   SO_unprocessed = list(sample_1 = sample_1),
+#'   npcs = 20,
+#'   RunUMAP_args = list(
+#'     dims = list(seq_len(20), seq_len(10)),
+#'     umap.method = "umap-learn",
+#'     n.neighbors = 30L
+#'   )
 #' )
 #'
 #' # Merge samples, correct sample effects with Harmony, and save the result.
@@ -209,7 +257,7 @@ SO_prep02 <- function(SO_unprocessed,
                       export_prefix = "",
                       reductions = c("umap"),
                       nhvf = 800,
-                      npcs = 20,
+                      npcs = 15,
                       normalization = c("RNA", "SCT", "LogNormalize"),
                       scaling = c("scale", "clr_shifted"),
                       hvf_determination_before_merge = F,
@@ -232,10 +280,15 @@ SO_prep02 <- function(SO_unprocessed,
                         conserve.memory = T,
                         residual_type = "pearson"),
                       RunPCA_args = list(weight.by.var = T),
-                      RunUMAP_args = list(metric = "cosine"),
+                      RunUMAP_args = list(metric = "cosine",
+                                          umap.method = "umap-learn",
+                                          #compatibility_layout = FALSE,
+                                          #init = "recursive",
+                                          #n_jobs = 4L,
+                                          dims = purrr::map(seq(RunPCA_args[["npcs"]],3,-1), ~seq_len(.x))),
                       RunTSNE_args = list(theta = 0.01),
                       FindNeighbors_args = list(),
-                      FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
+                      FindClusters_args = list(resolution = seq(0.1,0.4,0.1)),
                       RunHarmony_args = list(group.by.vars = "orig.ident"),
                       FindIntegrationAnchors_args = list(reduction = "rpca"),
                       IntegrateData_args = list(),
@@ -249,6 +302,14 @@ SO_prep02 <- function(SO_unprocessed,
                       mc_cores_read = 8,
                       mc_cores_cluster = 10,
                       ...) {
+
+  # The default dims depend on the final PCA configuration.
+  if (!missing(RunUMAP_args)) {
+    dims <- RunUMAP_args[["dims"]]
+    if (is.atomic(dims) && is.vector(dims)) {
+      RunUMAP_args[["dims"]] <- list(dims)
+    }
+  }
 
   scexpr:::.ensure_packages(c(
     "brathering",
@@ -413,9 +474,10 @@ SO_prep02 <- function(SO_unprocessed,
   )
   names_wo_clust <- names(SO@meta.data)
 
+
   SO <- find_neighbor_and_cluster(obj = SO,
                                   red = red,
-                                  npcs = RunPCA_args[["npcs"]],
+                                  npcs = RunUMAP_args$dims,
                                   FindNeighbors_args = FindNeighbors_args,
                                   FindClusters_args = FindClusters_args,
                                   verbose = verbose,
@@ -428,19 +490,51 @@ SO_prep02 <- function(SO_unprocessed,
 
 
   if (any(grepl("umap", reductions, ignore.case = T))) {
+
     RunUMAP_args <- RunUMAP_args[which(!names(RunUMAP_args) %in% c("object", "seed.use", "reduction", "verbose"))]
-    if (!"dims" %in% names(RunUMAP_args)) {
-      RunUMAP_args <- c(list(dims = 1:RunPCA_args[["npcs"]]), RunUMAP_args)
+
+
+    ## calculate multiple umaps with umap-learn. for every additional pc, one more
+    if ("umap.method" %in% names(RunUMAP_args) && RunUMAP_args[["umap.method"]] == "umap-learn") {
+      Sys.setenv(RETICULATE_PYTHON = "managed")
+      reticulate::py_require("umap-learn", python_version = "==3.13.18")
+      reticulate::py_config()
+      message("umap-learn version: ", reticulate::import("umap")$`__version__`)
     }
+
+    if (!"dims" %in% names(RunUMAP_args)) {
+      RunUMAP_args <- c(list(dims = list(1:RunPCA_args[["npcs"]])), RunUMAP_args)
+    } else if (length(RunUMAP_args[["dims"]]) > 1 && use_nn_for_umap) {
+      stop("use multiple dims vectors in RunUMAP_args with use_nn_for_umap=FALSE.")
+    } else {
+      message("calculating ", length(RunUMAP_args[["dims"]]), " umaps.")
+    }
+
+    dims <- RunUMAP_args[["dims"]]
+    RunUMAP_args[["dims"]] <- NULL
+
+    ## ?? how to use the arguments ??
+    #compatibility_layout = FALSE,
+    #init = "recursive",
+    #n_jobs = 4L,
 
     tryCatch(expr = {
       if (!use_nn_for_umap) {
-        SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
-                                                               reduction = red,
-                                                               reduction.name = paste0("umap_", red),
-                                                               seed.use = seed,
-                                                               verbose = verbose),
-                                                          RunUMAP_args))
+
+        for (i in dims) {
+          name <- paste0("umap", min(i), ".", max(i),"_", red)
+          SO <- Gmisc::fastDoCall(Seurat::RunUMAP, args = c(list(object = SO,
+                                                                 reduction = red,
+                                                                 reduction.name = name,
+                                                                 seed.use = seed,
+                                                                 dims = i,
+                                                                 verbose = verbose),
+                                                            RunUMAP_args))
+
+        }
+
+
+
       } else {
         RunUMAP_args <- RunUMAP_args[which(names(RunUMAP_args) %in% names(formals(uwot::umap)))]
         RunUMAP_args <- c(list(X = NULL,
@@ -1905,35 +1999,36 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 }
 
 
-#' Calculate nearest-neighbor graphs and clustering assignments
+#' Cluster cells across dimension sets and resolutions
 #'
 #' Computes nearest-neighbor (NN) and shared nearest-neighbor (SNN) graphs
 #' from a dimensional reduction (typically PCA) and performs clustering
-#' across one or more resolutions using Seurat's clustering framework.
-#'
-#' For Seurat objects, the resulting NN/SNN graphs are stored in
-#' `obj@graphs`, ranked neighbors are stored in `obj@misc[["nn.ranked"]]`,
-#' and cluster assignments are added to the metadata.
+#' for each requested set and resolution using Seurat's clustering framework.
 #'
 #' @param obj A Seurat object containing a dimensional reduction specified by
 #'   `red`, or a matrix of cell embeddings/features to be used directly for
 #'   neighbor calculation.
 #' @param red Character scalar specifying the dimensional reduction to use
 #'   when `obj` is a Seurat object. Default is `"pca"`.
-#' @param npcs Integer specifying the number of dimensions/components from the
-#'   reduction to use. Default is `10`.
+#' @param npcs List of integer vectors specifying the component indices for
+#'   each dimension set. For example, `list(seq_len(10))` selects the first
+#'   ten components together. A bare vector is processed one index at a time.
+#'   Use at least two indices per set to keep the input as a matrix. The
+#'   signature default `10` selects the tenth component alone, so supply a
+#'   list explicitly for clustering.
 #' @param FindNeighbors_args Named list of additional arguments passed to
 #'   `FindNeighbors2()`. Arguments `object`, `reduction`, and `verbose`
-#'   are ignored if supplied. By default, `dims = 1:npcs`.
+#'   are ignored if supplied. The input columns are selected using `npcs`.
 #' @param FindClusters_args Named list of additional arguments passed to
 #'   `Seurat::FindClusters()`. Arguments `object` and `verbose`
-#'   are ignored if supplied. By default, clustering is performed at
-#'   resolutions `0.1` through `0.8`.
+#'   are ignored if supplied. The default list contains resolutions 0.1, 0.2,
+#'   0.3, and 0.4. A custom list without `resolution` uses 0.1. Set
+#'   `resolution = NULL` to return the input unchanged.
 #' @param verbose Logical indicating whether progress messages should be
 #'   printed. Default is `TRUE`.
-#' @param mc.cores Integer specifying the number of CPU cores to use for
-#'   parallel clustering across resolutions. Passed to
-#'   `parallel::mclapply()`. Default is `10`.
+#' @param mc.cores Maximum number of workers, capped by available cores.
+#'   Workers are distributed across dimension sets or, for a single set,
+#'   across resolutions. Default is `10`.
 #'
 #' @details
 #' The function first computes nearest-neighbor and shared nearest-neighbor
@@ -1941,30 +2036,19 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 #' for each requested resolution using the SNN graph.
 #'
 #' Cluster labels are post-processed with
-#' `pad_default_cluster_numbers()` and added as metadata columns with names
-#' of the form:
+#' `pad_default_cluster_numbers()`. For Seurat objects, metadata column names
+#' include the reduction, the minimum and maximum dimension indices, and the
+#' clustering resolution.
 #'
 #' \preformatted{
-#' <reduction>_snn_res_<resolution>
-#' }
-#'
-#' For example:
-#'
-#' \preformatted{
-#' pca_snn_res_0.4
-#' pca_snn_res_0.8
+#' pca_snn1-20_res_0.1
+#' pca_snn1-20_res_0.4
 #' }
 #'
 #' @return
-#' If `obj` is a Seurat object, returns the modified Seurat object with:
-#' \itemize{
-#'   \item NN and SNN graphs stored in `@graphs`.
-#'   \item Ranked nearest neighbors stored in `@misc[["nn.ranked"]]`.
-#'   \item Cluster assignments added to metadata.
-#' }
-#'
-#' Otherwise, returns a data frame containing cluster assignments for all
-#' requested resolutions.
+#' A Seurat object with cluster assignments added to its metadata, or a data
+#' frame of cluster assignments for matrix input. Neighbor graphs and ranked
+#' neighbors are discarded after clustering.
 #'
 #' @seealso
 #' \code{\link[Seurat]{FindClusters}},
@@ -1978,12 +2062,13 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 #' seu <- find_neighbor_and_cluster(
 #'   seu,
 #'   red = "pca",
-#'   npcs = 20
+#'   npcs = list(seq_len(20))
 #' )
 #'
 #' # Run clustering at custom resolutions
 #' seu <- find_neighbor_and_cluster(
 #'   seu,
+#'   npcs = list(seq_len(20)),
 #'   FindClusters_args = list(
 #'     resolution = c(0.2, 0.5, 1.0)
 #'   )
@@ -1991,14 +2076,18 @@ chunk_wise_cbind <- function(x, nchunk = 0.2) {
 #'
 #' # Use a matrix of embeddings directly
 #' cl <- find_neighbor_and_cluster(
-#'   Embeddings(seu, "pca")[, 1:20]
+#'   Seurat::Embeddings(seu, "pca"),
+#'   npcs = list(seq_len(20))
 #' )
+#'
+#' # https://stats.stackexchange.com/questions/263539/clustering-on-the-output-of-t-sne
+#'
 #' }
 find_neighbor_and_cluster <- function(obj,
                                       red = "pca",
                                       npcs = 10,
                                       FindNeighbors_args = list(),
-                                      FindClusters_args = list(resolution = seq(0.1,0.8,0.1)),
+                                      FindClusters_args = list(resolution = seq(0.1,0.4,0.1)),
                                       verbose = TRUE,
                                       mc.cores = 10) {
 
@@ -2006,7 +2095,7 @@ find_neighbor_and_cluster <- function(obj,
 
   FindClusters_args <- FindClusters_args[which(!names(FindClusters_args) %in% c("object", "verbose"))]
   if (!"resolution" %in% names(FindClusters_args)) {
-    FindClusters_args[["resolution"]] <- 0.8
+    FindClusters_args[["resolution"]] <- 0.1
   } else {
     if (is.null(FindClusters_args[["resolution"]])) {
       return(obj)
@@ -2026,42 +2115,64 @@ find_neighbor_and_cluster <- function(obj,
   #   fun <- scexpr::FindNeighbors2
   # }
 
-  if (methods::is(obj, "Seurat")) {
-    object <- obj@reductions[[red]]@cell.embeddings[,1:npcs]
-  } else {
-    object <- obj
-    if (is.null(rownames(object))) {
-      message("adding rownames")
-      rownames(object) <- seq(1, nrow(object))
+
+  if (mc.cores>1 && Seurat::getThreads(verbose = F) > 1) {
+    message("setting seurat threads to 1 to avoid error: Seurat::setThreads(1).")
+    Seurat::setThreads(1)
+  }
+
+  # if (methods::is(obj, "Seurat")) {
+  #   npcs <- min(npcs, ncol(obj@reductions[[red]]@cell.embeddings))
+  # } else {
+  #   npcs <- min(npcs, ncol(object))
+  # }
+  #
+  # npcs <- 4:npcs
+  worker_budget <- min(mc.cores, parallelly::availableCores(omit = 1L))
+  outer_workers <- min(length(npcs), worker_budget) # even with =10 memory pressure was very acceptable at 11600 cells
+  inner_workers <- if (length(npcs) == 1L) worker_budget else 1L
+
+  cl <- parallel::mclapply(npcs, function(y) {
+    if (methods::is(obj, "Seurat")) {
+      object <- obj@reductions[[red]]@cell.embeddings[,y]
+    } else {
+      object <- obj[,y]
+      if (is.null(rownames(object))) {
+        message("adding rownames")
+        rownames(object) <- seq(1, nrow(object))
+      }
     }
-  }
 
-  nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = object,
-                                                  verbose = verbose),
-                                             FindNeighbors_args))
+    nn_list <- Gmisc::fastDoCall(fun, args = c(list(object = object,
+                                                    verbose = verbose),
+                                               FindNeighbors_args))
 
-  if (methods::is(obj, "Seurat")) {
-    names(nn_list[["graphs"]]) <- paste0(red, "_", c("nn", "snn")) # norm, "_",
-    obj@graphs <- nn_list[["graphs"]]
-    obj@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
-  }
+    if (methods::is(obj, "Seurat")) {
+      names(nn_list[["graphs"]]) <- paste0(red, "_", c("nn", "snn"), paste0(min(y), ".", max(y))) # norm, "_",
+      obj@graphs <- nn_list[["graphs"]]
+      obj@misc[["nn.ranked"]] <- nn_list[["nn.ranked"]]
+    }
 
-  cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
-                           snn = nn_list[["graphs"]][[2]],
-                           args = FindClusters_args,
-                           FUN = function(x, snn, args) {
-                             args$resolution <- x
-                             Gmisc::fastDoCall(Seurat::FindClusters,
-                                               args = c(list(object = snn,
-                                                             verbose = F),
-                                                        args))
-                           }, mc.cores = mc.cores)
+    # message("set Seurat::setThreads(1). parallel processing of clustering with Seurat::setThreads > 1 caused errors.")
+    cl <- parallel::mclapply(X = FindClusters_args[["resolution"]],
+                             snn = nn_list[["graphs"]][[2]],
+                             args = FindClusters_args,
+                             FUN = function(x, snn, args) {
+                               args$resolution <- x
+                               Gmisc::fastDoCall(Seurat::FindClusters,
+                                                 args = c(list(object = snn,
+                                                               verbose = F),
+                                                          args))
+                             }, mc.cores = inner_workers)
+
+    cl <- dplyr::bind_cols(cl)
+    cl <- pad_default_cluster_numbers(cl)
+    names(cl) <- paste0(names(nn_list[["graphs"]])[2], "_", gsub("res\\.", "res_", names(cl)))
+    names(cl) <- sub("(res_[1-9])$", "\\1.0", names(cl))
+    return(cl)
+  }, mc.cores = outer_workers)
 
   cl <- dplyr::bind_cols(cl)
-  cl <- pad_default_cluster_numbers(cl)
-  names(cl) <- paste0(names(nn_list[["graphs"]])[2], "_", gsub("res\\.", "res_", names(cl)))
-  names(cl) <- sub("(res_[1-9])$", "\\1.0", names(cl))
-  #names(cl) <- unname(sapply(brathering::strsplit2(names(cl), "_"), "[", 2))
 
   if (methods::is(obj, "Seurat")) {
     obj <- Seurat::AddMetaData(obj, cl)

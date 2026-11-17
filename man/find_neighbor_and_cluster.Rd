@@ -2,14 +2,14 @@
 % Please edit documentation in R/SO_prep02.R
 \name{find_neighbor_and_cluster}
 \alias{find_neighbor_and_cluster}
-\title{Calculate nearest-neighbor graphs and clustering assignments}
+\title{Cluster cells across dimension sets and resolutions}
 \usage{
 find_neighbor_and_cluster(
   obj,
   red = "pca",
   npcs = 10,
   FindNeighbors_args = list(),
-  FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
+  FindClusters_args = list(resolution = seq(0.1, 0.4, 0.1)),
   verbose = TRUE,
   mc.cores = 10
 )
@@ -22,63 +22,53 @@ neighbor calculation.}
 \item{red}{Character scalar specifying the dimensional reduction to use
 when \code{obj} is a Seurat object. Default is \code{"pca"}.}
 
-\item{npcs}{Integer specifying the number of dimensions/components from the
-reduction to use. Default is \code{10}.}
+\item{npcs}{List of integer vectors specifying the component indices for
+each dimension set. For example, \code{list(seq_len(10))} selects the first
+ten components together. A bare vector is processed one index at a time.
+Use at least two indices per set to keep the input as a matrix. The
+signature default \code{10} selects the tenth component alone, so supply a
+list explicitly for clustering.}
 
 \item{FindNeighbors_args}{Named list of additional arguments passed to
 \code{FindNeighbors2()}. Arguments \code{object}, \code{reduction}, and \code{verbose}
-are ignored if supplied. By default, \code{dims = 1:npcs}.}
+are ignored if supplied. The input columns are selected using \code{npcs}.}
 
 \item{FindClusters_args}{Named list of additional arguments passed to
 \code{Seurat::FindClusters()}. Arguments \code{object} and \code{verbose}
-are ignored if supplied. By default, clustering is performed at
-resolutions \code{0.1} through \code{0.8}.}
+are ignored if supplied. The default list contains resolutions 0.1, 0.2,
+0.3, and 0.4. A custom list without \code{resolution} uses 0.1. Set
+\code{resolution = NULL} to return the input unchanged.}
 
 \item{verbose}{Logical indicating whether progress messages should be
 printed. Default is \code{TRUE}.}
 
-\item{mc.cores}{Integer specifying the number of CPU cores to use for
-parallel clustering across resolutions. Passed to
-\code{parallel::mclapply()}. Default is \code{10}.}
+\item{mc.cores}{Maximum number of workers, capped by available cores.
+Workers are distributed across dimension sets or, for a single set,
+across resolutions. Default is \code{10}.}
 }
 \value{
-If \code{obj} is a Seurat object, returns the modified Seurat object with:
-\itemize{
-\item NN and SNN graphs stored in \verb{@graphs}.
-\item Ranked nearest neighbors stored in \verb{@misc[["nn.ranked"]]}.
-\item Cluster assignments added to metadata.
-}
-
-Otherwise, returns a data frame containing cluster assignments for all
-requested resolutions.
+A Seurat object with cluster assignments added to its metadata, or a data
+frame of cluster assignments for matrix input. Neighbor graphs and ranked
+neighbors are discarded after clustering.
 }
 \description{
 Computes nearest-neighbor (NN) and shared nearest-neighbor (SNN) graphs
 from a dimensional reduction (typically PCA) and performs clustering
-across one or more resolutions using Seurat's clustering framework.
+for each requested set and resolution using Seurat's clustering framework.
 }
 \details{
-For Seurat objects, the resulting NN/SNN graphs are stored in
-\code{obj@graphs}, ranked neighbors are stored in \code{obj@misc[["nn.ranked"]]},
-and cluster assignments are added to the metadata.
-
 The function first computes nearest-neighbor and shared nearest-neighbor
 graphs using \code{FindNeighbors2()}. Clustering is then performed separately
 for each requested resolution using the SNN graph.
 
 Cluster labels are post-processed with
-\code{pad_default_cluster_numbers()} and added as metadata columns with names
-of the form:
+\code{pad_default_cluster_numbers()}. For Seurat objects, metadata column names
+include the reduction, the minimum and maximum dimension indices, and the
+clustering resolution.
 
 \preformatted{
-<reduction>_snn_res_<resolution>
-}
-
-For example:
-
-\preformatted{
-pca_snn_res_0.4
-pca_snn_res_0.8
+pca_snn1-20_res_0.1
+pca_snn1-20_res_0.4
 }
 }
 \examples{
@@ -87,12 +77,13 @@ pca_snn_res_0.8
 seu <- find_neighbor_and_cluster(
   seu,
   red = "pca",
-  npcs = 20
+  npcs = list(seq_len(20))
 )
 
 # Run clustering at custom resolutions
 seu <- find_neighbor_and_cluster(
   seu,
+  npcs = list(seq_len(20)),
   FindClusters_args = list(
     resolution = c(0.2, 0.5, 1.0)
   )
@@ -100,8 +91,12 @@ seu <- find_neighbor_and_cluster(
 
 # Use a matrix of embeddings directly
 cl <- find_neighbor_and_cluster(
-  Embeddings(seu, "pca")[, 1:20]
+  Seurat::Embeddings(seu, "pca"),
+  npcs = list(seq_len(20))
 )
+
+# https://stats.stackexchange.com/questions/263539/clustering-on-the-output-of-t-sne
+
 }
 }
 \seealso{

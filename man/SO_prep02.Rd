@@ -16,7 +16,7 @@ SO_prep02(
   export_prefix = "",
   reductions = c("umap"),
   nhvf = 800,
-  npcs = 20,
+  npcs = 15,
   normalization = c("RNA", "SCT", "LogNormalize"),
   scaling = c("scale", "clr_shifted"),
   hvf_determination_before_merge = F,
@@ -36,10 +36,11 @@ SO_prep02(
   SCtransform_args = list(vst.flavor = "v2", method = "glmGamPoi", conserve.memory = T,
     residual_type = "pearson"),
   RunPCA_args = list(weight.by.var = T),
-  RunUMAP_args = list(metric = "cosine"),
+  RunUMAP_args = list(metric = "cosine", umap.method = "umap-learn", dims =
+    purrr::map(seq(RunPCA_args[["npcs"]], 3, -1), ~seq_len(.x))),
   RunTSNE_args = list(theta = 0.01),
   FindNeighbors_args = list(),
-  FindClusters_args = list(resolution = seq(0.1, 0.8, 0.1)),
+  FindClusters_args = list(resolution = seq(0.1, 0.4, 0.1)),
   RunHarmony_args = list(group.by.vars = "orig.ident"),
   FindIntegrationAnchors_args = list(reduction = "rpca"),
   IntegrateData_args = list(),
@@ -70,9 +71,11 @@ Matching is case-insensitive. By default, all samples are used.}
 \item{cells}{Optional character vector of cell names to retain. Objects with
 no matching cells are removed. By default, all cells are used.}
 
-\item{features}{select subset of features}
+\item{features}{Optional character vector of genes to retain when rebuilding
+each sample from RNA counts. By default, all genes are used.}
 
-\item{features_invert}{invert feature selection (exclude selected)}
+\item{features_invert}{Logical. If \code{TRUE}, exclude the genes listed in
+\code{features}.}
 
 \item{min_cells}{Minimum number of cells required after cell selection and
 downsampling. Smaller objects are removed. Defaults to \code{50}.}
@@ -90,24 +93,25 @@ so that a target cell count can be derived.}
 \item{export_prefix}{Optional string included in the generated RDS filename.}
 
 \item{reductions}{Character vector containing one or both of \code{"umap"} and
-\code{"tsne"}. Requested embeddings are calculated from the PCA, Harmony, or
-integrated reduction selected by the workflow.}
+\code{"tsne"}, or \code{NULL} to skip both. Embeddings use Harmony coordinates when
+Harmony is active and PCA coordinates otherwise. In the Seurat integration
+workflow, PCA is calculated after integration.}
 
 \item{nhvf}{Number of highly variable features requested from
 \code{SCTransform()}, \code{FindVariableFeatures()}, or
 \code{SelectIntegrationFeatures()}, as applicable.}
 
-\item{npcs}{Number of principal components to calculate and use for neighbor
-finding, clustering, and dimensionality reduction. Interactive PC selection
-initially calculates at least 50 components.}
+\item{npcs}{Number of principal components to calculate. This also sets the
+upper end of the default dimension selections in \code{RunUMAP_args}.
+Interactive PC selection initially calculates at least 50 components.}
 
 \item{normalization}{Normalization method. \code{"SCT"} uses \code{SCTransform()};
 \code{"RNA"} and \code{"LogNormalize"} both use the standard log-normalization
 workflow.}
 
-\item{scaling}{how to create scale.data layer when normalization is RNA:
-i) with ScaleData from Seurat or proportional fit (shifted CLR) from
-Pachterlab: \code{\link[=proportional_fit_pachterlab]{proportional_fit_pachterlab()}}}
+\item{scaling}{Scaling method for log-normalized data. \code{"scale"} uses
+\code{Seurat::ScaleData()} and \code{"clr_shifted"} uses
+\code{\link[=proportional_fit_pachterlab]{proportional_fit_pachterlab()}}.}
 
 \item{hvf_determination_before_merge}{Logical; determine variable features
 separately in each sample before merging. If \code{FALSE}, determine them on the
@@ -143,9 +147,9 @@ element of \code{celltype_refs}. Each entry may contain multiple label fields.}
 grouped SingleR annotation. When omitted or unavailable in the processed
 object, annotation is performed at single-cell resolution.}
 
-\item{sacrifice_count_slot}{Logical; run \code{sacrifice_count_slot} before returning and
-saving the object. RNA count column sums are stored in
-\code{Misc(SO, "RNA_count_colSums")} before counts are removed.}
+\item{sacrifice_count_slot}{Logical. If \code{TRUE}, remove the RNA counts before
+returning or saving the object. RNA count column sums are always stored in
+\code{Misc(SO, "RNA_count_colSums")}.}
 
 \item{var_feature_filter}{Optional character vector of genes to exclude from
 the variable-feature set. Variable-feature selection may be rerun to retain
@@ -172,9 +176,30 @@ and \code{verbose} are controlled internally; \code{variable.features.n} is set 
 \code{Seurat::RunPCA()}. \code{npcs}, \code{seed.use}, \code{verbose}, and \code{reduction.name} are
 controlled internally; \code{assay} and \code{reduction.key} are ignored.}
 
-\item{RunUMAP_args}{Named list of additional arguments for
-\code{Seurat::RunUMAP()} or, when \code{use_nn_for_umap = TRUE}, compatible arguments
-for \code{uwot::umap()}. PCA dimensions are used by default.}
+\item{RunUMAP_args}{Named list containing \code{dims} and UMAP settings. Supply
+\code{dims} as a vector of component indices for one dimension set, such as
+\code{dims = seq_len(20)}, or as a list of vectors for multiple sets. Neighbor
+finding and clustering use each set even when \code{reductions} omits UMAP.
+With clustering enabled, include \code{dims} in a custom list and use at
+least two indices per set. With clustering disabled, omitting \code{dims}
+uses all selected components for one UMAP embedding.
+
+The default list uses cosine distance and Python's \code{"umap-learn"}. With
+at least three selected PCs, it starts with all selected components and
+drops the last one at each step down to the first three components.
+
+With \code{use_nn_for_umap = FALSE}, each dimension set produces one
+\code{\link[Seurat:RunUMAP]{Seurat::RunUMAP()}} call using the same settings. Specify
+\code{umap.method = "uwot"} for the R implementation or
+\code{umap.method = "umap-learn"} for Python, which this function requests
+in a managed reticulate environment. Use Seurat argument names such as
+\code{n.neighbors} and \code{min.dist}. Seurat's Python backend ignores extra
+Python arguments such as \code{init} and \code{n_jobs}.
+The wrapper sets \code{object}, \code{seed.use}, \code{reduction}, \code{reduction.name},
+and \code{verbose}. The generated name includes the smallest and largest
+dimension indices followed by the input reduction name. For example,
+Seurat stores \verb{umap1-20_pca20_rna800} as \code{umap1.20_pca20_rna800}.
+Use distinct endpoint pairs for distinct names.}
 
 \item{RunTSNE_args}{Named list of additional arguments for
 \code{scexpr::run_fft_tsne()}. If that call fails, the function falls back to
@@ -186,7 +211,9 @@ controlled internally.}
 
 \item{FindClusters_args}{Named list of additional arguments for
 \code{Seurat::FindClusters()}. Its \code{resolution} element may contain multiple
-resolutions; the default is \code{seq(0.1, 0.8, 0.1)}.}
+resolutions. The default list contains 0.1, 0.2, 0.3, and 0.4. A custom
+list without \code{resolution} uses 0.1. Set \code{resolution = NULL} to skip
+neighbor finding and clustering.}
 
 \item{RunHarmony_args}{Named list of additional arguments for Harmony.
 \code{group.by.vars} must identify metadata columns when Harmony is requested.
@@ -215,20 +242,25 @@ variable-feature counts displayed during interactive selection.}
 \item{interactive_pc_selection}{Logical; display an elbow plot and prompt for
 the number of PCs. Used only in an interactive R session.}
 
-\item{use_nn_for_umap}{Logical; reuse the ranked nearest-neighbor result from
-clustering and call \code{uwot::umap()} directly instead of
-\code{Seurat::RunUMAP()}.}
+\item{use_nn_for_umap}{Logical. \code{TRUE} selects the direct \code{\link[uwot:umap]{uwot::umap()}}
+path for a single dimension set. This path accepts uwot argument names
+such as \code{min_dist} and requires ranked neighbors from clustering. The
+current clustering helper discards those neighbors, so leave this at
+\code{FALSE} to obtain a UMAP embedding.}
 
-\item{mc_cores_read}{parallel processes for initial normalization}
+\item{mc_cores_read}{Number of workers for reconstructing and initially
+normalizing the sample objects.}
 
-\item{mc_cores_cluster}{parallel processes for cluster detection}
+\item{mc_cores_cluster}{Maximum number of workers for neighbor finding and
+clustering. Workers are distributed across dimension sets or, for a
+single set, across clustering resolutions.}
 
-\item{...}{Reserved for future use; currently ignored.}
+\item{...}{Reserved for future use and currently ignored.}
 }
 \value{
 A processed Seurat object. Depending on the selected workflow, it
 contains normalized assays, variable features, PCA and optional batch-
-corrected reductions, neighbor graphs, cluster metadata, and requested
+corrected reductions, cluster metadata, and requested
 UMAP/t-SNE embeddings. Additional metadata may include \code{id}, \code{barcode},
 \code{prefix}, and SingleR labels. The \code{misc} slot records clustering columns,
 RNA count column sums, the generated object filename, and related plotting
@@ -237,8 +269,8 @@ as a compressed RDS file.
 }
 \description{
 Normalize one or more sample-level Seurat objects, select variable features,
-merge or integrate samples, run PCA, correct batch effects, build neighbor
-graphs, cluster cells, calculate UMAP and/or t-SNE embeddings, and optionally
+merge or integrate samples, run PCA, correct batch effects, find neighbors,
+cluster cells, calculate UMAP and/or t-SNE embeddings, and optionally
 transfer reference cell-type labels. The result can also be reduced in size
 and saved as an RDS file.
 }
@@ -269,12 +301,29 @@ session.
 }
 \examples{
 \dontrun{
-# Process one sample with log normalization and UMAP.
+# Process one sample and run UMAP on the first 20 PCs using R's uwot.
 prepared <- SO_prep02(
   SO_unprocessed = list(sample_1 = sample_1),
   normalization = "LogNormalize",
   batch_corr = "none",
-  reductions = "umap"
+  npcs = 20,
+  reductions = "umap",
+  RunUMAP_args = list(
+    dims = seq_len(20),
+    umap.method = "uwot",
+    min.dist = 0.15
+  )
+)
+
+# Compare UMAP embeddings and clusterings using 20 and 10 PCs.
+prepared <- SO_prep02(
+  SO_unprocessed = list(sample_1 = sample_1),
+  npcs = 20,
+  RunUMAP_args = list(
+    dims = list(seq_len(20), seq_len(10)),
+    umap.method = "umap-learn",
+    n.neighbors = 30L
+  )
 )
 
 # Merge samples, correct sample effects with Harmony, and save the result.

@@ -516,7 +516,8 @@ heatmap_pseudobulk2 <- function(SO,
     any(levels(wil_auc$group) %in% wil_auc[[featuregroup]])
   defer_repel <- featurelabels_repel && color_group_labels
 
-  plot <- fcexpr::heatmap_long_df(df = wil_auc,
+  # fcexpr::
+  plot <- heatmap_long_df(df = wil_auc,
                                   groups = "group",
                                   features = "feature",
                                   featuregroup = featuregroup,
